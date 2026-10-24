@@ -19,6 +19,8 @@ interface TimelineRow {
   readonly durationMs: number;
   /** The span's own logs, in call order. */
   readonly logs: readonly TimelineLog[];
+  /** Set on a span that started after the response, as deferred work does. */
+  readonly afterResponse?: true;
 }
 
 export interface Timeline {
@@ -27,7 +29,11 @@ export interface Timeline {
   readonly totalMs: number;
 }
 
-export function buildTimeline(roots: readonly TelemetrySpan[]): Timeline {
+/** `respondedAt` (epoch ms) marks the spans that started after it. */
+export function buildTimeline(
+  roots: readonly TelemetrySpan[],
+  respondedAt?: number,
+): Timeline {
   let windowStart = Infinity;
   let windowEnd = -Infinity;
   const visit = (span: TelemetrySpan): void => {
@@ -50,6 +56,8 @@ export function buildTimeline(roots: readonly TelemetrySpan[]): Timeline {
         message: log.message,
         offsetMs: log.at - windowStart,
       })),
+      ...(respondedAt !== undefined &&
+        span.startedAt > respondedAt && { afterResponse: true }),
     });
     for (const child of span.children) flatten(child, depth + 1);
   };

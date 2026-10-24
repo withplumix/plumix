@@ -91,4 +91,25 @@ describe("buildTimeline", () => {
       }),
     ]);
   });
+
+  test("marks a span that starts after the response as after-response work", () => {
+    const timeline = buildTimeline(
+      [
+        span("dispatch", 1000, 40, [
+          span("render", 1010, 20),
+          span("defer", 1030, 100, [span("purge", 1045, 80)]),
+        ]),
+      ],
+      1040,
+    );
+
+    expect(
+      timeline.rows.map((row) => [row.name, row.afterResponse === true]),
+    ).toEqual([
+      ["dispatch", false],
+      ["render", false],
+      ["defer", false],
+      ["purge", true],
+    ]);
+  });
 });

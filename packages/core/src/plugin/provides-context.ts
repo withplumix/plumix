@@ -55,6 +55,7 @@ const APP_CONTEXT_BASE_KEYS: ReadonlySet<string> = new Set([
   // request-time `key in target` shadow check never sees it — this
   // registration-time rejection is the only guard.
   "telemetryConsumers",
+  "telemetryDelivery",
   "auth",
   "authenticator",
   "entries",

@@ -112,6 +112,11 @@ export function createPlumixHandler(
     void promise.then(forget, forget);
   };
 
+  // Holds the snapshots of the deferred work `track` drains; `dispose()` fires
+  // it so each is delivered before it returns. Replaced after, as a disposed
+  // handler serves again.
+  let shutdown = new AbortController();
+
   let slots: BoundSlots | undefined;
   const bindOnce = (env: PlumixEnv): BoundSlots =>
     (slots ??= bindSlots(app, env));
@@ -162,6 +167,7 @@ export function createPlumixHandler(
       request,
       db: scoped.db,
       defer: invocation.waitUntil ?? track,
+      telemetryShutdown: invocation.waitUntil ? undefined : shutdown.signal,
       slots: bindOnce(invocation.env),
     });
     return { scoped, ctx };
@@ -184,6 +190,7 @@ export function createPlumixHandler(
           request,
           db: scoped.db,
           defer: invocation.waitUntil ?? track,
+          telemetryShutdown: invocation.waitUntil ? undefined : shutdown.signal,
           slots: bindOnce(invocation.env),
         });
         const response = await requestStore.run(ctx, () => dispatcher(ctx));
@@ -201,9 +208,17 @@ export function createPlumixHandler(
       const deadline = Date.now() + timeoutMs;
       // Deferred work defers more; the absolute deadline stops a chain of quick
       // tasks extending shutdown.
-      while (pending.size > 0 && Date.now() < deadline) {
-        await settleWithin([...pending], deadline - Date.now());
-      }
+      const drain = async (): Promise<void> => {
+        while (pending.size > 0 && Date.now() < deadline) {
+          await settleWithin([...pending], deadline - Date.now());
+        }
+      };
+      await drain();
+      // Every waiting snapshot is delivered now, its open spans unfinished;
+      // the exports that starts are drained in whatever time is left.
+      shutdown.abort();
+      shutdown = new AbortController();
+      await drain();
       const abandoned = pending.size;
       // Giving up is final: a supervisor escalating SIGTERM to SIGINT would
       // otherwise buy the same stuck task another full timeout.
@@ -346,6 +361,7 @@ interface RequestContextInput {
   readonly clientAddress: string | undefined;
   readonly db: Db;
   readonly defer: DeferFn;
+  readonly telemetryShutdown?: AbortSignal;
   readonly assets: AssetsBinding | undefined;
   readonly slots: BoundSlots;
   readonly logger?: Logger;
@@ -368,6 +384,7 @@ export function requestContextArgs({
   clientAddress,
   db,
   defer,
+  telemetryShutdown,
   assets,
   slots,
   logger,
@@ -390,6 +407,7 @@ export function requestContextArgs({
     user: undefined,
     tokenScopes: undefined,
     defer,
+    telemetryShutdown,
     assets,
     storage: slots.storage,
     cdn: slots.cdn,
@@ -414,6 +432,7 @@ interface AppContextArgs {
   readonly request: Request;
   readonly db: unknown;
   readonly defer: DeferFn;
+  readonly telemetryShutdown: AbortSignal | undefined;
   readonly slots: BoundSlots;
 }
 
@@ -424,6 +443,7 @@ function buildAppContext({
   request,
   db,
   defer,
+  telemetryShutdown,
   slots,
 }: AppContextArgs): AppContext {
   const { env, clientAddress } = invocation;
@@ -435,6 +455,7 @@ function buildAppContext({
       clientAddress,
       db: db as Db,
       defer,
+      telemetryShutdown,
       assets: options.assets?.(env),
       slots,
       logger: options.logger,

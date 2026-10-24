@@ -377,6 +377,18 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
     );
   });
 
+  test("an unfinished span exports with its status unset and an attribute marking it unfinished", async () => {
+    const { calls } = await exportSnapshot(
+      snapshotWith({
+        spans: [{ ...spanWith("defer", []), status: "unfinished" }],
+      }),
+    );
+
+    const span = exportedSpans(calls[0]).find((s) => s.name === "defer");
+    expect(span?.status).toEqual({});
+    expect(attr(span, "plumix.unfinished")).toEqual({ boolValue: true });
+  });
+
   test("timestamped records become span events on the root, named by namespace", async () => {
     const recorder = definePlugin("recorder", {
       setup: (ctx) => {

@@ -61,7 +61,7 @@ const errorListInput = v.object({});
 export const errorListTool: McpTool<typeof errorListInput> = {
   name: "error_list",
   description:
-    "List the failures the dev server recently produced. Browser failures forwarded from the dev client — uncaught exceptions, unhandled rejections, island and hydration errors (source=client, with the offending component/island label and no request id) — lead, ahead of server 5xx responses (source=server, with request path, timestamp, and the originating request id); each run is newest-first. Every entry carries source, level, message, and stack. Pivot a server entry into telemetry_request_get by its requestId to see the full trace that led to it.",
+    "List the failures the dev server recently produced. Browser failures forwarded from the dev client — uncaught exceptions, unhandled rejections, island and hydration errors (source=client, with the offending component/island label and no request id) — lead, ahead of server failures, 5xx responses and errors in work a request deferred past its response (source=server, with request path, timestamp, and the originating request id); each run is newest-first. Every entry carries source, level, message, and stack. Pivot a server entry into telemetry_request_get by its requestId to see the full trace that led to it.",
   inputSchema: errorListInput,
   async run(ctx): Promise<ErrorEntry[]> {
     // Client entries carry no timestamp (no request behind them), so the two
@@ -70,12 +70,32 @@ export const errorListTool: McpTool<typeof errorListInput> = {
   },
 };
 
+/**
+ * Deferred work fails after the response went out, so its error sits on a
+ * `defer` span of a request that may have answered 200.
+ */
+function deferredError(
+  spans: readonly TelemetrySpan[],
+): TelemetrySpanError | undefined {
+  for (const span of spans) {
+    if (span.name === "defer" && span.status === "error" && span.error) {
+      return span.error;
+    }
+    const deeper = deferredError(span.children);
+    if (deeper) return deeper;
+  }
+  return undefined;
+}
+
 function serverErrors(ctx: AppContext): ServerErrorEntry[] {
-  return (ctx.dev?.history.get() ?? [])
-    .filter((entry) => entry.status >= 500)
-    .map((entry) => {
-      const error = fatalError(entry.snapshot.spans);
-      return {
+  return (ctx.dev?.history.get() ?? []).flatMap((entry) => {
+    const failed = entry.status >= 500;
+    const error = failed
+      ? fatalError(entry.snapshot.spans)
+      : deferredError(entry.snapshot.spans);
+    if (!failed && error === undefined) return [];
+    return [
+      {
         source: "server",
         level: "error",
         message: error?.message ?? `HTTP ${entry.status}`,
@@ -83,8 +103,9 @@ function serverErrors(ctx: AppContext): ServerErrorEntry[] {
         path: entry.snapshot.context.path,
         timestamp: entry.startedAt,
         requestId: entry.id,
-      } satisfies ServerErrorEntry;
-    });
+      } satisfies ServerErrorEntry,
+    ];
+  });
 }
 
 /**

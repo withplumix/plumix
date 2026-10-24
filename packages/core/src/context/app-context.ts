@@ -34,7 +34,11 @@ import type {
 import type { RequestAuthenticator } from "./authenticator.js";
 import type { DevRuntime } from "./dev-runtime.js";
 import type { RequestMemo } from "./memo.js";
-import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
+import type {
+  TelemetryCollector,
+  TelemetryConsumer,
+  TelemetryDelivery,
+} from "./telemetry.js";
 
 /**
  * Mapped, not `typeof coreSchema`: a namespace type prints in a plugin's
@@ -230,6 +234,11 @@ export interface AppContextBase<
    * (and `telemetry` is the no-op). Internal to the dispatcher.
    */
   readonly telemetryConsumers?: readonly TelemetryConsumer[];
+  /**
+   * What delivering the snapshot reads beyond `telemetry`, present with
+   * `telemetryConsumers`. Internal to delivery.
+   */
+  readonly telemetryDelivery?: TelemetryDelivery;
   readonly auth: AuthNamespace;
   readonly authenticator: RequestAuthenticator;
   /**

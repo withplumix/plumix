@@ -6,7 +6,7 @@ import type {
   TelemetrySpan,
   TelemetrySpanLog,
 } from "../telemetry-snapshot.js";
-import type { AppContext, LogMeta } from "./app-context.js";
+import type { AppContext, DeferFn, LogMeta } from "./app-context.js";
 
 // The collected data's shapes live below the context, so an exporter can name
 // them without reaching it.
@@ -54,6 +54,30 @@ export interface TelemetryCollector {
   getSpans(): readonly TelemetrySpan[];
   /** Counts of entries discarded by the per-request caps. */
   getDropped(): TelemetryDropped;
+}
+
+/** What delivering a sampled request's snapshot reads beyond its collector. */
+export interface TelemetryDelivery {
+  /**
+   * Settles once every piece of the request's deferred work has, work that
+   * work deferred in turn included.
+   */
+  settled(): Promise<void>;
+  /**
+   * A copy of the span tree as of `at`, which later work cannot change. A span
+   * still open is `unfinished`, timed up to `at`.
+   */
+  spansAt(at: number): TelemetrySpan[];
+  /**
+   * The runtime's own `defer`, undefined when it gave none: what it is handed
+   * opens no span and is not deferred work the snapshot waits for.
+   */
+  readonly defer: DeferFn | undefined;
+  /**
+   * Fires when a shutdown needs every waiting snapshot delivered now. A
+   * snapshot it holds is not handed to `defer` while it waits.
+   */
+  readonly shutdown: AbortSignal | undefined;
 }
 
 /** A telemetry consumer, handed the request's `AppContext`. */

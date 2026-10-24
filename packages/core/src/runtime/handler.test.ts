@@ -1422,12 +1422,12 @@ describe("createPlumixHandler — span logs", () => {
     const snapshot = await snapshotOfWork((appCtx) =>
       appCtx.telemetry.span("x", async () => {
         appCtx.defer(Promise.reject(new Error("purge failed")));
-        // The rejection is logged a microtask later, still inside `x`.
         await Promise.resolve();
       }),
     );
 
-    expect(findSpan(snapshot?.spans ?? [], "x")?.logs).toEqual([
+    // The rejection is logged inside the `defer` span the call opened.
+    expect(findSpan(snapshot?.spans ?? [], "defer")?.logs).toEqual([
       expect.objectContaining({
         level: "error",
         message: "[plumix] deferred promise rejected: purge failed",
@@ -1492,5 +1492,243 @@ describe("createPlumixHandler — span logs", () => {
     expect(findSpan(snapshot?.spans ?? [], "x")?.logs[0]?.attributes).toEqual({
       unserializable: expect.stringContaining("BigInt") as unknown,
     });
+  });
+});
+
+describe("createPlumixHandler — deferred work in the snapshot", () => {
+  test("a ctx.defer call inside span x is a defer span under x, and the spans its work opened nest under it", async () => {
+    const snapshot = await snapshotOfWork((appCtx) =>
+      appCtx.telemetry.span("x", () => {
+        appCtx.defer(
+          appCtx.telemetry.span("purge", async () => {
+            await Promise.resolve();
+            appCtx.telemetry.span("purge call", () => undefined);
+          }),
+        );
+      }),
+    );
+
+    const x = findSpan(snapshot?.spans ?? [], "x");
+    expect(x?.children.map((c) => c.name)).toEqual(["defer"]);
+    const defer = x?.children[0];
+    expect(defer).toMatchObject({ status: "ok" });
+    expect(defer?.children.map((c) => c.name)).toEqual(["purge"]);
+    expect(defer?.children[0]?.children.map((c) => c.name)).toEqual([
+      "purge call",
+    ]);
+  });
+
+  test("a deferred promise that rejects is its defer span's error, and is still logged", async () => {
+    const logger = spyLogger();
+    const snapshot = await snapshotOfWork(
+      (appCtx) =>
+        appCtx.telemetry.span("x", () => {
+          appCtx.defer(Promise.reject(new TypeError("purge failed")));
+        }),
+      logger,
+    );
+
+    const defer = findSpan(snapshot?.spans ?? [], "defer");
+    expect(defer).toMatchObject({
+      status: "error",
+      error: { name: "TypeError", message: "purge failed" },
+    });
+    expect(logger.error).toHaveBeenCalledWith(
+      "[plumix] deferred promise rejected: purge failed",
+      expect.anything(),
+    );
+  });
+
+  test("the consumer gets the snapshot only once deferred work, and the work it defers, has settled", async () => {
+    const outer = manualPromise();
+    const inner = manualPromise();
+    const snapshots: TelemetrySnapshot[] = [];
+    const handler = await handlerFor({
+      plugins: [
+        working((appCtx) => {
+          appCtx.defer(outer.promise.then(() => appCtx.defer(inner.promise)));
+        }),
+      ],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    vi.useFakeTimers();
+    onTestFinished(() => void vi.useRealTimers());
+
+    await handler.fetch(new Request("https://cms.example/work"), {
+      env: {},
+      waitUntil: () => undefined,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(snapshots).toEqual([]);
+
+    outer.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(snapshots).toEqual([]);
+
+    inner.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(snapshots).toHaveLength(1);
+    const defers: TelemetrySpan[] = [];
+    const collect = (spans: readonly TelemetrySpan[]): void => {
+      for (const span of spans) {
+        if (span.name === "defer") defers.push(span);
+        collect(span.children);
+      }
+    };
+    collect(snapshots[0]?.spans ?? []);
+    expect(defers.map((d) => d.status)).toEqual(["ok", "ok"]);
+  });
+
+  test("deferred work that never settles is delivered at 10s, its span unfinished and timed to the deadline", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const handler = await handlerFor({
+      plugins: [
+        working((appCtx) => {
+          appCtx.defer(new Promise(() => undefined));
+        }),
+      ],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    vi.useFakeTimers();
+    onTestFinished(() => void vi.useRealTimers());
+
+    await handler.fetch(new Request("https://cms.example/work"), {
+      env: {},
+      waitUntil: () => undefined,
+    });
+    const respondedAt = Date.now();
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(snapshots).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(snapshots).toHaveLength(1);
+    const defer = findSpan(snapshots[0]?.spans ?? [], "defer");
+    expect(defer?.status).toBe("unfinished");
+    expect((defer?.startedAt ?? 0) + (defer?.durationMs ?? 0)).toBe(
+      respondedAt + 10_000,
+    );
+  });
+
+  test("request.durationMs is the time to the response, not to when deferred work settled", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const handler = await handlerFor({
+      plugins: [
+        working(async (appCtx) => {
+          await after(30);
+          appCtx.defer(after(5_000));
+        }),
+      ],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    vi.useFakeTimers();
+    onTestFinished(() => void vi.useRealTimers());
+
+    const responded = handler.fetch(new Request("https://cms.example/work"), {
+      env: {},
+      waitUntil: () => undefined,
+    });
+    await vi.advanceTimersByTimeAsync(30);
+    await responded;
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(snapshots[0]?.request.durationMs).toBe(30);
+    expect(findSpan(snapshots[0]?.spans ?? [], "defer")?.durationMs).toBe(
+      5_000,
+    );
+  });
+
+  test("dispose() with a 5s drain delivers a waiting snapshot before it returns, its open spans unfinished", async () => {
+    const order: string[] = [];
+    const snapshots: TelemetrySnapshot[] = [];
+    const handler = await handlerFor(
+      {
+        plugins: [
+          working((appCtx) => {
+            appCtx.defer(new Promise(() => undefined));
+          }),
+        ],
+        telemetry: {
+          consumers: [
+            {
+              id: "in-test",
+              onRequestEnd: (s) => {
+                order.push("delivered");
+                snapshots.push(s);
+              },
+            },
+          ],
+        },
+      },
+      { disposeTimeoutMs: 5_000 },
+    );
+    vi.useFakeTimers();
+    onTestFinished(() => void vi.useRealTimers());
+    await handler.fetch(new Request("https://cms.example/work"), { env: {} });
+    const respondedAt = Date.now();
+
+    const disposing = handler
+      .dispose?.()
+      .then(() => void order.push("disposed"));
+    await vi.advanceTimersByTimeAsync(5_000);
+    await disposing;
+
+    expect(order).toEqual(["delivered", "disposed"]);
+    const defer = findSpan(snapshots[0]?.spans ?? [], "defer");
+    expect(defer?.status).toBe("unfinished");
+    expect((defer?.startedAt ?? 0) + (defer?.durationMs ?? 0)).toBe(
+      respondedAt + 5_000,
+    );
+  });
+
+  test("a scheduled run's deferred work is in that run's snapshot", async () => {
+    const later = manualPromise();
+    const snapshots: TelemetrySnapshot[] = [];
+    const deferringTask = definePlugin("reports", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "digest",
+          handler: (appCtx) => {
+            appCtx.defer(
+              later.promise.then(() =>
+                appCtx.telemetry.span("send digest", () => undefined),
+              ),
+            );
+          },
+        });
+      },
+    });
+    const handler = await handlerFor({
+      plugins: [deferringTask],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const waited: Promise<unknown>[] = [];
+
+    await handler.scheduled?.(
+      { scheduledTime: 0, cron: UNCLAIMED_CRON },
+      { env: {}, waitUntil: (promise) => void waited.push(promise) },
+    );
+    expect(snapshots).toEqual([]);
+    later.resolve();
+    await Promise.all(waited);
+
+    const task = findSpan(snapshots[0]?.spans ?? [], "cron: digest");
+    expect(findSpan(task?.children ?? [], "defer")?.status).toBe("ok");
+    expect(findSpan(task?.children ?? [], "send digest")).toBeDefined();
   });
 });
