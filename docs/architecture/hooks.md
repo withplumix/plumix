@@ -60,7 +60,6 @@ Core's hook names, by the module that declares them (paths under `packages/core/
 | `route/archive-entries.ts`                      | `archive:entries` (sync, narrows an `EntryQuery`)                                                                                                                   | same file                                                                          |
 | `route/render/render-template.tsx`              | `render:document`                                                                                                                                                   | same file                                                                          |
 | `hooks/block-render.ts`                         | `block:before_render`, `block:after_render` (sync), `blocks:loader:error`                                                                                           | `route/render/render-template.tsx`                                                 |
-| `admin-bar/types.ts`                            | `admin_bar:nodes` (isolated)                                                                                                                                        | `admin-bar/collect.ts`                                                             |
 | `search/admin-search.ts`                        | `admin:search:results` (handlers run by the caller)                                                                                                                 | same file                                                                          |
 | `dev/**/types.ts`                               | `debug:panels`, `error_page:panels`, `error_page:hints` (dev only)                                                                                                  | `dev/**/collect.ts(x)`                                                             |
 
@@ -68,7 +67,9 @@ First-party plugins declare their own the same way: `comment:*` (`plugins/commen
 
 ## How it works
 
-`HookRegistry` holds one sorted-on-read list per name. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: admin bar contributors, search handlers, `registerCorePurgeInvalidator` (which queues cache tags from entry, term and user actions), and dev panels and hints when `process.env.PLUMIX_DEV` is set.
+`HookRegistry` holds one sorted-on-read list per name. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: search handlers, `registerCorePurgeInvalidator` (which queues cache tags from entry, term and user actions), and dev panels and hints when `process.env.PLUMIX_DEV` is set.
+
+The admin bar takes no hook. Its nodes, core's included, are registrations made with `registerAdminBarNode` and held in the plugin registry's `adminBarNodes` (see [Plugin system](./plugin-system.md)), so no handler can remove another plugin's node ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)).
 
 Handlers take their context as an argument; most payloads end in `ctx: AppContext`. A handler can also read `requestStore`.
 

@@ -30,6 +30,7 @@ import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
 import type { ArchiveTypeData } from "../route/contract/resolved-entry.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
+import type { RegisteredAdminBarNode } from "./admin-bar-node.js";
 import type {
   MetaBoxField,
   MetaBoxFieldInput,
@@ -885,6 +886,8 @@ export interface PluginRegistry {
   readonly loginLinks: readonly RegisteredLoginLink[];
   readonly adminPages: ReadonlyMap<string, RegisteredAdminPage>;
   readonly dashboardWidgets: ReadonlyMap<string, RegisteredDashboardWidget>;
+  /** In registration order: core's first, then each plugin's. */
+  readonly adminBarNodes: ReadonlyMap<string, RegisteredAdminBarNode>;
   readonly fieldTypes: ReadonlyMap<string, RegisteredFieldType>;
   readonly blockSpecs: ReadonlyMap<string, RegisteredBlock>;
   readonly markSpecs: ReadonlyMap<string, RegisteredMark>;
@@ -923,6 +926,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly loginLinks: RegisteredLoginLink[];
   readonly adminPages: Map<string, RegisteredAdminPage>;
   readonly dashboardWidgets: Map<string, RegisteredDashboardWidget>;
+  readonly adminBarNodes: Map<string, RegisteredAdminBarNode>;
   readonly fieldTypes: Map<string, RegisteredFieldType>;
   readonly blockSpecs: Map<string, RegisteredBlock>;
   readonly markSpecs: Map<string, RegisteredMark>;
@@ -959,6 +963,7 @@ export function createPluginRegistry(
     loginLinks: [],
     adminPages: new Map(),
     dashboardWidgets: new Map(),
+    adminBarNodes: new Map(),
     fieldTypes: new Map(),
     blockSpecs: new Map(),
     markSpecs: new Map(),

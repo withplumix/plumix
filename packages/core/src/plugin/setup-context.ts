@@ -384,6 +384,16 @@ function createContextBase({
       );
     },
 
+    registerAdminBarNode: (options) => {
+      claimKey(
+        registry.adminBarNodes,
+        "admin bar node",
+        options.id,
+        pluginId,
+        () => ({ ...options, registeredBy: pluginId }),
+      );
+    },
+
     registerFieldType: (options) => {
       assertValidFieldTypeName(pluginId, options.type);
       claimKey(
