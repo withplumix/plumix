@@ -498,6 +498,28 @@ describe("a failing action handler in a booted app", () => {
   });
 });
 
+describe("a failing action handler outside a request", () => {
+  test("is reported to the console, naming the action and the plugin", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    onTestFinished(() => consoleError.mockRestore());
+    const hooks = new HookRegistry();
+    hooks.addAction("test:throws", () => {
+      throw new Error("boom");
+    });
+
+    await hooks.doAction("test:throws");
+
+    expect(consoleError.mock.calls).toEqual([
+      [
+        "[plumix] action failed hook=test:throws plugin=core",
+        new Error("boom"),
+      ],
+    ]);
+  });
+});
+
 function flatten(spans: readonly TelemetrySpan[]): TelemetrySpan[] {
   return spans.flatMap((span) => [span, ...flatten(span.children)]);
 }
