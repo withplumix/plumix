@@ -21,6 +21,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { DocumentManifest } from "../document-manifest.js";
 import type { EntryQuery } from "../entries/contract/query.js";
 import type { Label } from "../i18n/label.js";
 import type { RestErrors } from "../rest/contract/errors.js";
@@ -900,6 +901,8 @@ export interface PluginRegistry {
   readonly imageRoles: ReadonlyMap<string, RegisteredImageRole>;
   /** In registration order: core's first, then each plugin's. */
   readonly searchProviders: ReadonlyMap<string, RegisteredSearchProvider>;
+  /** In plugin config order; merged after the theme's own at boot. */
+  readonly documentManifests: readonly DocumentManifest[];
   /**
    * Fixed before any plugin runs, so every compile of the route map reads the
    * same answer.
@@ -940,6 +943,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
   readonly templateDeps: Map<string, RegisteredTemplateDep>;
   readonly imageRoles: Map<string, RegisteredImageRole>;
   readonly searchProviders: Map<string, RegisteredSearchProvider>;
+  readonly documentManifests: DocumentManifest[];
 }
 
 export function createPluginRegistry(
@@ -982,6 +986,7 @@ export function createPluginRegistry(
       ["ogImage", { name: "ogImage", single: false, registeredBy: null }],
     ]),
     searchProviders: new Map(),
+    documentManifests: [],
     frameworkRoutes,
   };
 }

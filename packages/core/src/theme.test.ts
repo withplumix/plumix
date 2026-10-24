@@ -47,8 +47,8 @@ declare module "./theme.js" {
   }
 }
 
-describe("buildApp — theme:document filter", () => {
-  test("app.document mirrors theme.document when no plugin filters are registered", async () => {
+describe("buildApp — registerDocumentManifest", () => {
+  test("app.document mirrors theme.document when no plugin registers a manifest", async () => {
     const theme = defineTheme({
       templates: [fallback(() => null)],
       document: { link: [{ rel: "icon", href: "/favicon.svg" }] },
@@ -66,27 +66,78 @@ describe("buildApp — theme:document filter", () => {
     });
   });
 
-  test("multiple plugin filters compose in registration order", async () => {
+  test("two plugins' manifests merge after the theme's in config order", async () => {
     const firstPlugin = definePlugin("first", {
       setup: (ctx) => {
-        ctx.addFilter("theme:document", (manifest) => ({
-          ...manifest,
-          meta: [
-            ...(manifest.meta ?? []),
-            { name: "viewport", content: "first" },
-          ],
-        }));
+        ctx.registerDocumentManifest({
+          meta: [{ name: "viewport", content: "first" }],
+          titleTemplate: "%s | first",
+        });
       },
     });
     const secondPlugin = definePlugin("second", {
       setup: (ctx) => {
-        ctx.addFilter("theme:document", (manifest) => ({
-          ...manifest,
-          meta: [
-            ...(manifest.meta ?? []),
-            { name: "viewport", content: "second" },
-          ],
-        }));
+        ctx.registerDocumentManifest({
+          meta: [{ name: "viewport", content: "second" }],
+          titleTemplate: "%s | second",
+        });
+      },
+    });
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          document: { meta: [{ name: "theme-color", content: "#fff" }] },
+        }),
+        plugins: [secondPlugin, firstPlugin],
+      }),
+    );
+    expect(app.document.meta).toEqual([
+      { name: "theme-color", content: "#fff" },
+      { name: "viewport", content: "second" },
+      { name: "viewport", content: "first" },
+    ]);
+    expect(app.document.titleTemplate).toBe("%s | first");
+  });
+
+  test("a plugin's html and body attributes merge by key over the theme's, with className concatenated", async () => {
+    const plugin = definePlugin("attrs", {
+      setup: (ctx) => {
+        ctx.registerDocumentManifest({
+          html: { lang: "fr", className: "plugin" },
+          body: { className: "plugin-body" },
+        });
+      },
+    });
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          document: { html: { lang: "en", className: "site", dir: "ltr" } },
+        }),
+        plugins: [plugin],
+      }),
+    );
+    expect(app.document.html).toEqual({
+      lang: "fr",
+      className: "site plugin",
+      dir: "ltr",
+    });
+    expect(app.document.body).toEqual({ className: "plugin-body" });
+  });
+
+  test("a plugin's manifest applies when the theme has no `document`", async () => {
+    const plugin = definePlugin("scripts", {
+      setup: (ctx) => {
+        ctx.registerDocumentManifest({
+          script: [{ src: "https://cdn.example/a.js" }],
+        });
       },
     });
     const app = await buildApp(
@@ -95,38 +146,21 @@ describe("buildApp — theme:document filter", () => {
         database: stubDatabase,
         auth: stubAuth,
         theme: defineTheme({ templates: [fallback(() => null)] }),
-        plugins: [firstPlugin, secondPlugin],
+        plugins: [plugin],
       }),
     );
-    expect(app.document.meta).toEqual([
-      { name: "viewport", content: "first" },
-      { name: "viewport", content: "second" },
-    ]);
+    expect(app.document.script).toEqual([{ src: "https://cdn.example/a.js" }]);
   });
 
-  test("plugins receive {} when the theme has no `document`", async () => {
-    let observedInput: unknown;
-    const probePlugin = definePlugin("probe", {
+  test("the merged app.document is deep-frozen", async () => {
+    const plugin = definePlugin("meta", {
       setup: (ctx) => {
-        ctx.addFilter("theme:document", (manifest) => {
-          observedInput = manifest;
-          return manifest;
+        ctx.registerDocumentManifest({
+          meta: [{ name: "robots", content: "index" }],
+          html: { lang: "en" },
         });
       },
     });
-    await buildApp(
-      plumix({
-        runtime: stubAdapter,
-        database: stubDatabase,
-        auth: stubAuth,
-        theme: defineTheme({ templates: [fallback(() => null)] }),
-        plugins: [probePlugin],
-      }),
-    );
-    expect(observedInput).toEqual({});
-  });
-
-  test("app.document is frozen — mutation throws in strict mode", async () => {
     const app = await buildApp(
       plumix({
         runtime: stubAdapter,
@@ -136,25 +170,22 @@ describe("buildApp — theme:document filter", () => {
           templates: [fallback(() => null)],
           document: { meta: [{ name: "viewport", content: "x" }] },
         }),
+        plugins: [plugin],
       }),
     );
     expect(Object.isFrozen(app.document)).toBe(true);
+    expect(Object.isFrozen(app.document.meta)).toBe(true);
+    expect(Object.isFrozen(app.document.meta?.[1])).toBe(true);
+    expect(Object.isFrozen(app.document.html)).toBe(true);
     expect(() => {
       (app.document as { meta?: unknown }).meta = "mutated";
     }).toThrow(TypeError);
   });
 
-  test("validation throws when post-filter `link[]` entry is missing `rel`", async () => {
+  test("a registered `link[]` entry missing `rel` fails boot", async () => {
     const broken = definePlugin("broken-link", {
       setup: (ctx) => {
-        ctx.addFilter("theme:document", (manifest) => ({
-          ...manifest,
-          link: [
-            ...(manifest.link ?? []),
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- exercise the post-filter validator with a JS-shaped contribution
-            { href: "/orphan.css" } as any,
-          ],
-        }));
+        ctx.registerDocumentManifest({ link: [{ href: "/orphan.css" }] });
       },
     });
     await expect(
@@ -173,13 +204,10 @@ describe("buildApp — theme:document filter", () => {
     });
   });
 
-  test("validation throws when post-filter `script[]` has neither src nor inline content", async () => {
+  test("a registered `script[]` entry with neither src nor inline content fails boot", async () => {
     const broken = definePlugin("broken-script", {
       setup: (ctx) => {
-        ctx.addFilter("theme:document", (manifest) => ({
-          ...manifest,
-          script: [...(manifest.script ?? []), { type: "module" }],
-        }));
+        ctx.registerDocumentManifest({ script: [{ type: "module" }] });
       },
     });
     await expect(
@@ -196,58 +224,6 @@ describe("buildApp — theme:document filter", () => {
       name: "ThemeRegistrationError",
       code: "document_invalid_script",
     });
-  });
-
-  test("buildApp rejects when a theme:document filter throws", async () => {
-    const explode = definePlugin("explode", {
-      setup: (ctx) => {
-        ctx.addFilter("theme:document", () => {
-          throw new Error("filter blew up");
-        });
-      },
-    });
-    await expect(
-      buildApp(
-        plumix({
-          runtime: stubAdapter,
-          database: stubDatabase,
-          auth: stubAuth,
-          theme: defineTheme({ templates: [fallback(() => null)] }),
-          plugins: [explode],
-        }),
-      ),
-    ).rejects.toThrow(/filter blew up/);
-  });
-
-  test("a single plugin filter merges into app.document", async () => {
-    const seoPlugin = definePlugin("seo", {
-      setup: (ctx) => {
-        ctx.addFilter("theme:document", (manifest) => ({
-          ...manifest,
-          meta: [
-            ...(manifest.meta ?? []),
-            { property: "og:site_name", content: "Demo" },
-          ],
-        }));
-      },
-    });
-    const theme = defineTheme({
-      templates: [fallback(() => null)],
-      document: { link: [{ rel: "icon", href: "/favicon.svg" }] },
-    });
-    const app = await buildApp(
-      plumix({
-        runtime: stubAdapter,
-        database: stubDatabase,
-        auth: stubAuth,
-        theme,
-        plugins: [seoPlugin],
-      }),
-    );
-    expect(app.document.link).toEqual([{ rel: "icon", href: "/favicon.svg" }]);
-    expect(app.document.meta).toEqual([
-      { property: "og:site_name", content: "Demo" },
-    ]);
   });
 });
 
@@ -320,17 +296,16 @@ describe("buildApp — ctx.theme", () => {
     ]);
   });
 
-  // A shortcode and a document filter are read by different registries, so
+  // A shortcode and a document manifest are read by different registries, so
   // the two assertions cover both.
   test("registrations made from the theme reach every registry", async () => {
     const contributor = definePlugin("contributor", {
       setup: (ctx) => {
         for (const card of ctx.theme.testCards ?? []) {
           ctx.registerShortcode({ name: card, render: () => card });
-          ctx.addFilter("theme:document", (manifest) => ({
-            ...manifest,
-            meta: [...(manifest.meta ?? []), { name: "card", content: card }],
-          }));
+          ctx.registerDocumentManifest({
+            meta: [{ name: "card", content: card }],
+          });
         }
       },
     });

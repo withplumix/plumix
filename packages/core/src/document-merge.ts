@@ -1,8 +1,9 @@
 import type { DocumentAttrs, DocumentManifest } from "./document-manifest.js";
 
 /**
- * Theme first, template last, so template overrides win. Arrays append with no
- * dedupe; attributes are last-wins except `className`, which concatenates.
+ * Base first, fragment last, so the fragment wins (a template over the theme,
+ * a plugin over what came before). Arrays append, no dedupe; attributes are
+ * last-wins except `className`, which concatenates.
  */
 export function mergeDocumentManifest(
   theme: DocumentManifest,

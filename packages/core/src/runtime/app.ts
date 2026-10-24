@@ -66,6 +66,7 @@ import { registerCoreDebugPanels } from "../dev/debug-panels/core-panels.js";
 import { registerDevItem } from "../dev/registrations.js";
 import { registerCoreDevRoutes } from "../dev/routes.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
+import { mergeDocumentManifest } from "../document-merge.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { loadOnce } from "../load-once.js";
 import { createMailCatalogs } from "../mail/catalogs.js";
@@ -230,8 +231,8 @@ export interface PlumixApp {
    */
   readonly htmlAllowlist: HtmlAllowlist;
   /**
-   * After the `theme:document` filter chain, resolved once at boot and
-   * deep-frozen.
+   * The theme's own manifest with every `registerDocumentManifest` merged
+   * after it, resolved once at boot and deep-frozen.
    */
   readonly document: DocumentManifest;
   /** Empty in dev, where Vite serves source, and without a full Vite build. */
@@ -419,7 +420,10 @@ export async function buildApp(
     config.blocks?.htmlAllowlist,
   );
 
-  const document = await resolveDocumentManifest(hooks, config.theme.document);
+  const document = resolveDocumentManifest(
+    config.theme.document,
+    registry.documentManifests,
+  );
 
   const assetManifest = runtime.assetManifest ?? {};
   const renderEnv: RenderEnv = {
@@ -512,12 +516,11 @@ export async function buildApp(
  * Deep-frozen: a shallow freeze would let a plugin mutate `app.document.meta`
  * and corrupt later requests.
  */
-async function resolveDocumentManifest(
-  hooks: HookRegistry,
+function resolveDocumentManifest(
   themeManifest: DocumentManifest | undefined,
-): Promise<DocumentManifest> {
-  const seed: DocumentManifest = themeManifest ?? {};
-  const merged = await hooks.applyFilter("theme:document", seed);
+  registered: readonly DocumentManifest[],
+): DocumentManifest {
+  const merged = registered.reduce(mergeDocumentManifest, themeManifest ?? {});
   validateDocumentManifest(merged);
   return deepFreezeManifest(merged);
 }
