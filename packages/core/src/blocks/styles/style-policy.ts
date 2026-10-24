@@ -1,6 +1,10 @@
 import type { BlockNode } from "../render-block-tree.js";
 import type { ResponsiveStyleSlot } from "./style-emitter.js";
-import type { ThemeTokens, TokenCategory } from "./types.js";
+import type {
+  KnownTokenCategory,
+  ThemeTokens,
+  TokenCategory,
+} from "./types.js";
 import {
   normalizeStyleValue,
   styleCategoryForProperty,
@@ -9,17 +13,26 @@ import {
 } from "./style-emitter.js";
 
 /**
- * A style property's category: its token category, or for a property with no
- * shared scale, the property itself.
+ * A style property's category: a token category, or the property itself for
+ * one with no shared scale. Closed, so a misspelled category fails to compile.
  */
 export type StyleCategory =
-  | TokenCategory
+  | KnownTokenCategory
   | "width"
   | "height"
   | "minWidth"
   | "minHeight"
   | "maxHeight"
-  | "opacity";
+  | "opacity"
+  | "display"
+  | "flexDirection"
+  | "justifyContent"
+  | "alignItems"
+  | "alignSelf"
+  | "textAlign"
+  | "fontStyle"
+  | "textDecoration"
+  | "borderStyle";
 
 /** `true` allows custom values everywhere; an array names the categories that keep them. */
 export type AllowCustomStyles = boolean | readonly StyleCategory[];
@@ -47,9 +60,9 @@ export function resolveStylePolicy(theme: {
  */
 export function allowsCustomStyles(
   policy: StylePolicy,
-  category?: StyleCategory,
+  category?: TokenCategory,
 ): boolean {
-  const allow = policy.allowCustomStyles;
+  const allow: boolean | readonly string[] = policy.allowCustomStyles;
   if (typeof allow === "boolean") return allow;
   if (category === undefined) return false;
   return allow.includes(category);
@@ -101,7 +114,7 @@ export function refusesStyleValue(
 /** `var(--plumix-<category>-<id>)` or `var(…-<id>, <fallback>)`, `<id>` declared. */
 function isDeclaredToken(
   value: string,
-  category: StyleCategory,
+  category: TokenCategory,
   tokens: ThemeTokens,
 ): boolean {
   const id = tokenIdFromCssVar(value, category);

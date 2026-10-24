@@ -495,4 +495,13 @@ describe("defineTheme — allowCustomStyles", () => {
       boolean | readonly StyleCategory[] | undefined
     >();
   });
+  test("refuses a category no style property has", () => {
+    defineTheme({
+      templates: [fallback(() => null)],
+      // @ts-expect-error a misspelled category is not a StyleCategory
+      allowCustomStyles: ["colour"],
+    });
+
+    expectTypeOf<"colour">().not.toExtend<StyleCategory>();
+  });
 });

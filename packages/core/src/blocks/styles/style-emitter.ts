@@ -1,4 +1,3 @@
-import type { StyleCategory } from "./style-policy.js";
 import type {
   ResolvedThemeTokens,
   ThemeTokens,
@@ -73,7 +72,7 @@ export function tokenCategoryForProperty(
 }
 
 /** The category the style policy reads a property under. */
-export function styleCategoryForProperty(property: string): StyleCategory {
+export function styleCategoryForProperty(property: string): TokenCategory {
   // A stored bucket key can be `__proto__`, which an index read would resolve.
   return Object.hasOwn(PROPERTY_TO_CATEGORY, property)
     ? (PROPERTY_TO_CATEGORY[property] ?? property)
