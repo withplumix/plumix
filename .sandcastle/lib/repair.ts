@@ -20,6 +20,7 @@ import {
   syncRepoToMain,
 } from "./github.js";
 import { say } from "./log.js";
+import { blockFor, retryWhatGitHubDroppedNow } from "./outage.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
 import { untilTheRunCompletes } from "./run-completion.js";
 import {
@@ -120,11 +121,15 @@ export const gatesARepairRuns = (
 };
 
 const gh = (args: readonly string[], cwd = REPO_ROOT): string =>
-  execFileSync("gh", [...args], {
-    cwd,
-    encoding: "utf8",
-    maxBuffer: 32 * 1024 * 1024,
-  });
+  retryWhatGitHubDroppedNow(
+    () =>
+      execFileSync("gh", [...args], {
+        cwd,
+        encoding: "utf8",
+        maxBuffer: 32 * 1024 * 1024,
+      }),
+    blockFor,
+  );
 
 const git = (args: readonly string[]): string =>
   execFileSync("git", [...args], { cwd: REPO_ROOT, encoding: "utf8" });

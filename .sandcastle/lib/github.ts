@@ -10,7 +10,11 @@ import type {
 import { stillInTheLoopsHands, ticketOfLoopBranch } from "./in-flight.js";
 import { someTicketWaitsOnAMovingBlocker } from "./moving-blockers.js";
 import { blockersNamedIn } from "./named-blockers.js";
-import { retryWhatGitHubDropped, retryWhatGitHubDroppedNow } from "./outage.js";
+import {
+  blockFor,
+  retryWhatGitHubDropped,
+  retryWhatGitHubDroppedNow,
+} from "./outage.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -38,10 +42,6 @@ export interface QueuedPullRequest {
 }
 
 export type { MergeOutcome } from "./verdict.js";
-
-const blockFor = (ms: number): void => {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-};
 
 const gh = (args: readonly string[]): string =>
   retryWhatGitHubDroppedNow(
