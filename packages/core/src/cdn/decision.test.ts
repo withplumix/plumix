@@ -44,7 +44,7 @@ describe("cdnBypassReason", () => {
   it("caches a non-anonymous shared segment (keyed separately)", () => {
     for (const segment of [
       "authenticated",
-      "role:editor",
+      "capability:user:list",
       "members",
     ] as const) {
       expect(
@@ -125,7 +125,11 @@ describe("cdnBypassReason", () => {
   });
 
   it("bypasses a non-anonymous segment on a provider that cannot key by segment", () => {
-    for (const segment of ["authenticated", "role:editor", "members"]) {
+    for (const segment of [
+      "authenticated",
+      "capability:user:list",
+      "members",
+    ]) {
       expect(
         bypassReason({
           method: "GET",
@@ -195,7 +199,10 @@ describe("segmentCdnKey", () => {
       new Request("https://site.test/x"),
       "authenticated",
     );
-    const b = segmentCdnKey(new Request("https://site.test/x"), "role:editor");
+    const b = segmentCdnKey(
+      new Request("https://site.test/x"),
+      "capability:user:list",
+    );
     const c = segmentCdnKey(
       new Request("https://site.test/x"),
       "authenticated",

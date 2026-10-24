@@ -5,10 +5,10 @@ import type { AppContext } from "../context/app-context.js";
 import type { CdnStore, ConnectedCdn } from "../runtime/contract/slots.js";
 import {
   authenticatedPolicy,
+  capabilityPolicy,
   challenge,
   definePolicy,
   grant,
-  rolePolicy,
 } from "../access/policy.js";
 import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
@@ -290,7 +290,7 @@ describe("public route dispatch — access policy", () => {
   });
 
   test("a reader who fails a hard challenge gets the challenge response", async () => {
-    const { plugin, handler } = policied(rolePolicy("editor"));
+    const { plugin, handler } = policied(capabilityPolicy("user:list"));
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },
     });
@@ -304,7 +304,7 @@ describe("public route dispatch — access policy", () => {
   });
 
   test("a reader who passes the gate reaches the handler as themselves", async () => {
-    const { plugin } = policied(rolePolicy("editor"));
+    const { plugin } = policied(capabilityPolicy("user:list"));
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },
     });
@@ -315,7 +315,7 @@ describe("public route dispatch — access policy", () => {
     response.assertStatus(200);
     expect(await response.json()).toEqual({
       userId: editor.id,
-      segment: "role:editor",
+      segment: "capability:user:list",
     });
   });
 
@@ -323,7 +323,7 @@ describe("public route dispatch — access policy", () => {
     const { cdn, match, put } = cdnStub(
       new Response("CACHED", { status: 200 }),
     );
-    const { plugin, handler } = policied(rolePolicy("editor"), {
+    const { plugin, handler } = policied(capabilityPolicy("user:list"), {
       cacheable: true,
     });
     const harness = await createDispatcherHarness({
@@ -342,7 +342,7 @@ describe("public route dispatch — access policy", () => {
   });
 
   test("a reader-specific response forbids downstream caches from storing it", async () => {
-    const { plugin } = policied(rolePolicy("editor"));
+    const { plugin } = policied(capabilityPolicy("user:list"));
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },
     });

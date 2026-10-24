@@ -30,13 +30,13 @@ import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import {
   anonymousPolicy,
   authenticatedPolicy,
+  capabilityPolicy,
   challenge,
   definePolicy,
   entitlement,
   entitlementSegment,
   grant,
   redirectToLogin,
-  rolePolicy,
 } from "./policy.js";
 
 /**
@@ -68,7 +68,7 @@ const gatedPlugin = definePlugin("gated", {
     });
     ctx.registerArchiveType("staff", {
       routes: ["/staff"],
-      access: rolePolicy("editor"),
+      access: capabilityPolicy("user:list"),
       resolve: () => ({
         data: { kind: "archiveType", name: "staff", label: "staff-area" },
         title: "Staff",
@@ -119,7 +119,7 @@ describe("access gate — hard gate through the dispatcher", () => {
     expect(await response.text()).toContain('data-testid="members"');
   });
 
-  test("denies an under-privileged visitor at a role gate with a 403", async () => {
+  test("denies an under-privileged visitor at a capability gate with a 403", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [gatedPlugin], theme: gatedTheme },
     });
@@ -129,7 +129,7 @@ describe("access gate — hard gate through the dispatcher", () => {
     expect(response.headers.get("x-plumix-challenge")).toBe("forbidden");
   });
 
-  test("admits a sufficiently-privileged visitor at a role gate", async () => {
+  test("admits a sufficiently-privileged visitor at a capability gate", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [gatedPlugin], theme: gatedTheme },
     });
@@ -265,6 +265,22 @@ const membersPlugin = definePlugin("member-articles", {
 });
 
 /**
+ * An entry type only viewers holding `briefing:read` may read. Granted to a
+ * role that never opens the admin, so its render carries no admin bar and
+ * stays shareable (ADR 0030).
+ */
+const briefingsPlugin = definePlugin("briefings", {
+  setup: (ctx) => {
+    ctx.registerCapability("briefing:read", { grantTo: ["subscriber"] });
+    ctx.registerEntryType("briefing", {
+      label: "Briefings",
+      isPublic: true,
+      access: { default: capabilityPolicy("briefing:read") },
+    });
+  },
+});
+
+/**
  * … versus one whose policy grants the reserved `private` segment: gated, yet
  * never shared-cached.
  */
@@ -341,6 +357,61 @@ describe("access gate — segment-keyed caching (#1740)", () => {
     });
     const second = await h.dispatch(await authed(h, "/article/gated", bob.id));
     expect(await second.text()).toBe("SHARED-VARIANT");
+    expect(store.size).toBe(1);
+  });
+
+  test("every holder of a capability shares one cdn entry keyed by its capability segment", async () => {
+    const { cdn, store } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [briefingsPlugin] },
+    });
+    await seedEntry(h, "briefing", "weekly");
+    const alice = await h.seedUser("subscriber");
+    const bob = await h.seedUser("subscriber");
+
+    const first = await h.dispatch(
+      await authed(h, "/briefing/weekly", alice.id),
+    );
+    await h.drainDeferred();
+    expect(first.status).toBe(200);
+
+    expect(store.size).toBe(1);
+    const key = [...store.keys()][0];
+    if (key === undefined) throw new Error("expected a stored cdn entry");
+    expect(new URL(key).searchParams.get(SEGMENT_KEY_PARAM)).toBe(
+      "capability:briefing:read",
+    );
+
+    store.set(key, {
+      response: new Response("SHARED-VARIANT", { status: 200 }),
+      tags: [],
+    });
+    const second = await h.dispatch(
+      await authed(h, "/briefing/weekly", bob.id),
+    );
+    expect(await second.text()).toBe("SHARED-VARIANT");
+    expect(store.size).toBe(1);
+  });
+
+  test("a viewer without the capability is not served its shared cdn entry", async () => {
+    const { cdn, store } = memoryCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [briefingsPlugin] },
+    });
+    await seedEntry(h, "briefing", "weekly");
+    const alice = await h.seedUser("subscriber");
+    const author = await h.seedUser("author");
+    await h.dispatch(await authed(h, "/briefing/weekly", alice.id));
+    await h.drainDeferred();
+    expect(store.size).toBe(1);
+
+    const denied = await h.dispatch(
+      await authed(h, "/briefing/weekly", author.id),
+    );
+
+    expect(denied.status).toBe(403);
     expect(store.size).toBe(1);
   });
 
