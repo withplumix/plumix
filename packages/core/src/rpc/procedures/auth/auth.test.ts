@@ -42,11 +42,7 @@ async function apiTokenCaller(scopes: readonly string[]) {
   return h;
 }
 
-/**
- * An editor mints a token from `preset` over their session; the returned
- * harness calls RPC as that token.
- */
-async function presetTokenCaller(preset: "read_only" | "draft_only") {
+async function callerWithPresetToken(preset: "read_only" | "draft_only") {
   const request = new Request("https://cms.example/_plumix/rpc", {
     method: "POST",
   });
@@ -802,17 +798,14 @@ describe("auth.apiTokens", () => {
 });
 
 describe("auth.apiTokens.create — presets", () => {
-  test("a narrowed preset stores its explicit scope list", async () => {
-    const h = await createRpcHarness({ authAs: "editor" });
-    await h.client.auth.apiTokens.create({ name: "r", preset: "read_only" });
-    await h.client.auth.apiTokens.create({ name: "d", preset: "draft_only" });
-
-    const scopesByName = Object.fromEntries(
-      (await h.client.auth.apiTokens.list({})).map((t) => [t.name, t.scopes]),
-    );
-    expect(scopesByName).toEqual({
-      r: ["entry:post:read", "entry:post:read_revisions", "user:list"],
-      d: [
+  test.each([
+    [
+      "read_only",
+      ["entry:post:read", "entry:post:read_revisions", "user:list"],
+    ],
+    [
+      "draft_only",
+      [
         "admin:access",
         "entry:post:create",
         "entry:post:edit_any",
@@ -822,8 +815,18 @@ describe("auth.apiTokens.create — presets", () => {
         "user:edit_own",
         "user:list",
       ],
-    });
-  });
+    ],
+  ] as const)(
+    "the %s preset stores an explicit scope list",
+    async (preset, expected) => {
+      const h = await createRpcHarness({ authAs: "editor" });
+      await h.client.auth.apiTokens.create({ name: "agent", preset });
+
+      const [token] = await h.client.auth.apiTokens.list({});
+
+      expect(token?.scopes).toEqual(expected);
+    },
+  );
 
   test("refuses a preset alongside an explicit scope list", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
@@ -837,16 +840,27 @@ describe("auth.apiTokens.create — presets", () => {
     expect(await h.db.select().from(apiTokens)).toHaveLength(0);
   });
 
-  test("a read-only token is refused any write over RPC", async () => {
-    const { h, editor } = await presetTokenCaller("read_only");
+  test("a read-only token reads a published entry", async () => {
+    const { h, editor } = await callerWithPresetToken("read_only");
     const live = await h.factory.published.create({ authorId: editor.id });
 
     await expect(h.client.entry.get({ id: live.id })).resolves.toMatchObject({
       id: live.id,
     });
+  });
+
+  test("a read-only token is refused creating an entry", async () => {
+    const { h } = await callerWithPresetToken("read_only");
+
     await expect(
       h.client.entry.create({ slug: "agent-draft" }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a read-only token is refused updating an entry", async () => {
+    const { h, editor } = await callerWithPresetToken("read_only");
+    const live = await h.factory.published.create({ authorId: editor.id });
+
     await expect(
       h.client.entry.update({
         id: live.id,
@@ -856,8 +870,8 @@ describe("auth.apiTokens.create — presets", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  test("a draft-only token can update a draft but is refused publishing", async () => {
-    const { h, editor } = await presetTokenCaller("draft_only");
+  test("a draft-only token updates a draft", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
     const draft = await h.factory.draft.create({ authorId: editor.id });
 
     await expect(
@@ -867,6 +881,12 @@ describe("auth.apiTokens.create — presets", () => {
         ifMatch: await currentEtag(h.db, draft.id),
       }),
     ).resolves.toMatchObject({ title: "rewritten", status: "draft" });
+  });
+
+  test("a draft-only token is refused publishing a draft", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
     await expect(
       h.client.entry.update({
         id: draft.id,

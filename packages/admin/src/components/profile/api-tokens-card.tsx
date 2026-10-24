@@ -1,10 +1,11 @@
+import type { TokenPreset } from "@/lib/scopes.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { copyText } from "@/lib/clipboard.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
-import { parseScopesText } from "@/lib/scopes.js";
+import { tokenGrantOf } from "@/lib/scopes.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -128,8 +129,6 @@ const createFormSchema = v.object({
 
 type CreateFormValues = v.InferOutput<typeof createFormSchema>;
 
-type TokenPreset = "read_only" | "draft_only";
-
 const EXPIRY_DESCRIPTOR: Record<
   CreateFormValues["expires"],
   MessageDescriptor
@@ -226,7 +225,6 @@ interface MintInput {
   name: string;
   expiresInDays: number | null;
   scopes: readonly string[] | null;
-  /** Resolved to an explicit scope list by the server at mint. */
   preset?: TokenPreset;
 }
 interface MintResult {
@@ -302,21 +300,12 @@ function ApiTokensCardView({
           <CreateTokenForm
             onSubmit={(values) => {
               setCreateError(null);
-              const scopes =
-                values.scopeMode === "restrict"
-                  ? parseScopesText(values.scopesText)
-                  : null;
-              const preset =
-                values.scopeMode === "read_only" ||
-                values.scopeMode === "draft_only"
-                  ? values.scopeMode
-                  : undefined;
+              const grant = tokenGrantOf(values.scopeMode, values.scopesText);
               onMint(
                 {
                   name: values.name,
                   expiresInDays: EXPIRY_DAYS[values.expires],
-                  scopes,
-                  preset,
+                  ...grant,
                 },
                 {
                   onSuccess: (result) => {

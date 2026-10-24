@@ -9,14 +9,12 @@ import { capabilitiesForRole } from "./rbac.js";
 export const API_TOKEN_PRESETS = ["read_only", "draft_only"] as const;
 export type ApiTokenPreset = (typeof API_TOKEN_PRESETS)[number];
 
-/** Actions that only read, matched on a capability's last segment. */
 const READ_ACTIONS: ReadonlySet<string> = new Set([
   "read",
   "read_revisions",
   "list",
 ]);
 
-/** Publishing, trash and permanent delete, and overwriting from a revision. */
 const NON_DRAFT_ACTIONS: ReadonlySet<string> = new Set([
   "publish",
   "delete",
