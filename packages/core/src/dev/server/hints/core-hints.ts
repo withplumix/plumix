@@ -31,8 +31,8 @@ const CORE_ERROR_HINTS: readonly DevErrorHintRegistration[] = [
       "delimiters — they're embedded into custom-property declarations.",
   },
   // Platform errors (D1/SQLite, the Workers runtime) carry no type, so a
-  // message substring is the only handle. D1/SQLite raises `no such table`
-  // when the local database is missing a table: unapplied migrations.
+  // message substring is the only handle. `no such table` means unapplied
+  // migrations.
   {
     id: "migrations",
     matches: messageMatches(/no such table/i),
