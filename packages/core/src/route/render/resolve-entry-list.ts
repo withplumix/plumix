@@ -73,8 +73,8 @@ export async function resolveAuthorRow(
 
 const authorMemoKey = (id: number): string => `core:author:${String(id)}`;
 /**
- * The author's own tag, on the memo entry and the page alike: a write to that
- * user purges both, and an entry publish touches neither.
+ * The author's own tag rather than a type's: an entry publish must not drop
+ * an author it did not touch.
  */
 const authorTags = (id: number): readonly string[] => [userTag(id)];
 

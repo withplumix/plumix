@@ -293,8 +293,6 @@ describe("registerCorePurgeInvalidator", () => {
     return { loads, read };
   }
 
-  const STORED_TAGS = Object.entries(PAGES);
-
   // The memo drop is read off the purge itself, so the two cannot drift into
   // separate lists, and it applies even with no cdn.
   it.each(PURGING_EVENTS)(
@@ -306,18 +304,18 @@ describe("registerCorePurgeInvalidator", () => {
       await fire(hooks, event, ...payload, purging.ctx);
       await purging.flush();
       const purged: string[] = [];
-      for (const [path, tag] of STORED_TAGS) {
+      for (const [path, tag] of Object.entries(PAGES)) {
         const request = new Request(`https://cms.example${path}`);
         if (!(await purging.cdn.store.match(request))) purged.push(tag);
       }
       const { ctx } = await fakeCtx("absent");
       const { loads, read } = recordingMemo(ctx);
-      for (const [, tag] of STORED_TAGS) await read(tag, [tag]);
+      for (const [, tag] of Object.entries(PAGES)) await read(tag, [tag]);
       await read("untagged");
       loads.length = 0;
 
       await fire(hooks, event, ...payload, ctx);
-      for (const [, tag] of STORED_TAGS) await read(tag, [tag]);
+      for (const [, tag] of Object.entries(PAGES)) await read(tag, [tag]);
       await read("untagged");
 
       expect(purged).not.toHaveLength(0);
@@ -339,8 +337,6 @@ describe("registerCorePurgeInvalidator", () => {
   });
 });
 
-// Each test renders a public page into the cdn, makes the write a real caller
-// makes, and asserts what is still stored.
 describe("a write to a user", () => {
   const blog = definePlugin("test-user-purge", (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
@@ -348,7 +344,6 @@ describe("a write to a user", () => {
       label: "Newsletter",
       fields: [toggle("newsletter")],
     });
-    // A plugin page printing an author it resolved by id, not by slug.
     ctx.registerPublicRoute({
       path: "/byline/:id",
       cacheable: true,
@@ -361,7 +356,6 @@ describe("a write to a user", () => {
         return new Response(page.data.author.name);
       },
     });
-    // An author header resolved on its own, with no slug lookup or listing.
     ctx.registerPublicRoute({
       path: "/header/:id",
       cacheable: true,
