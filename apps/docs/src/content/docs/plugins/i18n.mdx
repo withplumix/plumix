@@ -34,7 +34,7 @@ export const recipes = definePlugin("recipes", {
 });
 ```
 
-At build time the site's manifest is projected from every installed descriptor. A plugin carrying an `i18n` slot gets an entry under `pluginI18n`, mapping each locale to a URL under `/_plumix/admin/plugins/<id>/locales/<locale>.mjs`, and `plumix build` copies the matching `.mjs` out of the installed package to sit behind it. The admin fetches those URLs at boot and merges the messages into its active Lingui instance. A plugin with no `i18n` slot gets no entry, so nothing is copied, nothing is served, and the admin renders every one of its strings in the source locale.
+At build time the site's manifest is projected from every installed descriptor. A plugin carrying an `i18n` slot gets an entry under `pluginI18n`, mapping each locale to a URL under `/_plumix/admin/plugins/<id>/locales/<locale>.mjs` (behind the site's `basePath`, when it has one), and `plumix build` copies the matching `.mjs` out of the installed package to sit behind it. The admin fetches those URLs at boot and merges the messages into its active Lingui instance. A plugin with no `i18n` slot gets no entry, so nothing is copied, nothing is served, and the admin renders every one of its strings in the source locale.
 
 <Aside type="caution" title="Two arrays named `locales`">
   The array in `lingui.config.ts` decides which `.po` files exist and get

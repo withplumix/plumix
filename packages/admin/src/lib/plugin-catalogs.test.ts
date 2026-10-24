@@ -109,4 +109,29 @@ describe("createPluginCatalogLoader", () => {
     expect(importCatalog).toHaveBeenCalledWith("/en.mjs");
     expect(i18n._(id, { label: "Team page" })).toBe("Added Team page");
   });
+
+  test("under a basePath, a listed catalog and the source fallback both import under the mount", async () => {
+    const importCatalog = vi.fn(() => Promise.resolve({ messages: {} }));
+    const load = createPluginCatalogLoader({
+      manifest: {
+        plugin_x: {
+          sourceLocale: "en",
+          catalogs: {
+            de: "/_plumix/admin/plugins/plugin_x/locales/de.mjs",
+            en: "/_plumix/admin/plugins/plugin_x/locales/en.mjs",
+          },
+        },
+      },
+      basePath: "/cms",
+      importCatalog,
+    });
+
+    await load("plugin_x", "de");
+    await load("plugin_x", "fr");
+
+    expect(importCatalog.mock.calls).toEqual([
+      ["/cms/_plumix/admin/plugins/plugin_x/locales/de.mjs"],
+      ["/cms/_plumix/admin/plugins/plugin_x/locales/en.mjs"],
+    ]);
+  });
 });

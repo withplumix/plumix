@@ -204,8 +204,8 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     // output; nothing here runs the plugin.
     const expectedBlock = [
       "<!-- plumix:plugin-chunks -->",
-      '<link rel="stylesheet" data-plumix-plugin="hello-world" href="/_plumix/admin/plugins/hello-world.css">',
-      '<script type="module" data-plumix-plugin="hello-world" src="/_plumix/admin/plugins/hello-world.js"></script>',
+      '<link rel="stylesheet" data-plumix-plugin="hello-world" href="plugins/hello-world.css">',
+      '<script type="module" data-plumix-plugin="hello-world" src="plugins/hello-world.js"></script>',
       "<!-- /plumix:plugin-chunks -->",
     ].join("\n");
     html = html.replace("</body>", `${expectedBlock}\n</body>`);
@@ -215,10 +215,10 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     const roundTrip = await readFile(destHtml, "utf8");
 
     expect(roundTrip).toContain(
-      '<link rel="stylesheet" data-plumix-plugin="hello-world" href="/_plumix/admin/plugins/hello-world.css">',
+      '<link rel="stylesheet" data-plumix-plugin="hello-world" href="plugins/hello-world.css">',
     );
     expect(roundTrip).toContain(
-      '<script type="module" data-plumix-plugin="hello-world" src="/_plumix/admin/plugins/hello-world.js"></script>',
+      '<script type="module" data-plumix-plugin="hello-world" src="plugins/hello-world.js"></script>',
     );
     // Manifest still present alongside the plugin chunk tags.
     expect(roundTrip).toContain('<script id="plumix-manifest"');

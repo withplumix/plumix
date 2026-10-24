@@ -29,15 +29,10 @@ import { VitePluginError } from "./errors.js";
 // `plumix/admin/<lib>` shims that read from `window.plumix.runtime.*`
 // — single React instance across host + plugin.
 
-/**
- * Must be absolute: index.html is served for every deep link, so a relative
- * chunk `src` resolves against the current URL and 404s.
- */
-export const ADMIN_URL_PREFIX = "/_plumix/admin";
-
+/** Files staged under the admin's `plugins/` folder. */
 interface AssembledBundle {
-  readonly chunkUrl: string;
-  readonly cssUrl?: string;
+  readonly chunkFile: string;
+  readonly cssFile?: string;
 }
 
 /**
@@ -153,7 +148,7 @@ export async function assemblePluginAdminBundle({
     ignoreAnnotations: true,
   });
 
-  const cssUrl = await compilePluginCss({
+  const hasCss = await compilePluginCss({
     sourceDirs: resolvedEntries.map((entry) => dirname(entry)),
     outFile: resolve(pluginsOutDir, "site-bundle.css"),
     projectRoot,
@@ -161,8 +156,8 @@ export async function assemblePluginAdminBundle({
   });
 
   return {
-    chunkUrl: `${ADMIN_URL_PREFIX}/plugins/site-bundle.js`,
-    cssUrl: cssUrl ? `${ADMIN_URL_PREFIX}/plugins/site-bundle.css` : undefined,
+    chunkFile: "site-bundle.js",
+    cssFile: hasCss ? "site-bundle.css" : undefined,
   };
 }
 
