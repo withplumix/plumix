@@ -552,21 +552,8 @@ export function createMenuRouter(
           ),
         );
       await context.db.delete(terms).where(eq(terms.id, term.id));
-      // Leaving bindings to a deleted menu is a known WP pain point. The value
-      // is stored as JSON, so compare against the JSON-encoded slug.
-      const bound = await context.db
-        .select({ key: settings.key })
-        .from(settings)
-        .where(
-          and(
-            eq(settings.group, MENU_LOCATIONS_GROUP),
-            eq(settings.value, term.slug),
-          ),
-        );
-      await context.settings.write(
-        MENU_LOCATIONS_GROUP,
-        Object.fromEntries(bound.map((row) => [row.key, null])),
-      );
+      // Leaving bindings to a deleted menu is a known WP pain point.
+      await context.settings.removeValue(MENU_LOCATIONS_GROUP, term.slug);
       await context.hooks.doAction(
         "menu:deleted",
         { termId: term.id, slug: term.slug },

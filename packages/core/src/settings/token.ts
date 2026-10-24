@@ -168,3 +168,16 @@ export async function insertAbsentSettingsKeys(
   }
   return inserted;
 }
+
+/** Deletes every key of the group holding `value`; answers the keys it deleted. */
+export async function deleteSettingsKeysHolding(
+  db: Db,
+  group: string,
+  value: JsonValue,
+): Promise<string[]> {
+  const deleted = await db
+    .delete(settings)
+    .where(and(eq(settings.group, group), eq(settings.value, value)))
+    .returning({ key: settings.key });
+  return deleted.map((row) => row.key);
+}

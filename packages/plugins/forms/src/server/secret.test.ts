@@ -24,6 +24,10 @@ function racedBy(ctx: AppContext, other: () => Promise<unknown>): AppContext {
       await race();
       return ctx.settings.writeIfAbsent(...args);
     },
+    removeValue: async (...args) => {
+      await race();
+      return ctx.settings.removeValue(...args);
+    },
   };
   return { ...ctx, settings };
 }

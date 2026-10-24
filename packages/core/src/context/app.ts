@@ -44,7 +44,7 @@ import { declareMails } from "../mail/declared.js";
 import { createMailSender, mailSite } from "../mail/sender.js";
 import { bindEntryWrites } from "../rpc/procedures/entry/writes.js";
 import { resolveEnvInput } from "../runtime/contract/env-input.js";
-import { writeSettingsGroup } from "../settings/write.js";
+import { settingsWrites } from "../settings/write.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { logErrorSafely } from "./log.js";
@@ -232,7 +232,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       },
     }),
     // Bound to the finished context, its core-schema view declared below.
-    settings: bindSettings(writeSettingsGroup, () => coreSchemaView),
+    settings: bindSettings(settingsWrites, () => coreSchemaView),
     locale,
     authMethods: args.authMethods ?? NO_AUTH_METHODS,
     authenticator: args.authenticator ?? defaultAuthenticator(),

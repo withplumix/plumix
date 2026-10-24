@@ -289,4 +289,37 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
     expect(copy).toEqual({ etag, values: { title: "First" } });
     spy.assertNotCalled();
   });
+
+  // Unbinding everything that names a deleted thing: one statement, so a key
+  // bound meanwhile is not missed and a key bound elsewhere is not touched.
+  test("removeValue removes every key holding the value, and only those", async () => {
+    const { h } = await harness();
+    await h.context.settings.write("places", {
+      header: "main",
+      footer: "main",
+      sidebar: "other",
+    });
+    const spy = h.spyAction("settings:group_changed");
+
+    const copy = await h.context.settings.removeValue("places", "main");
+
+    expect(copy.values).toEqual({ sidebar: "other" });
+    const [changes] = spy.lastArgs ?? [];
+    expect(changes).toEqual({
+      group: "places",
+      set: {},
+      removed: ["header", "footer"],
+    });
+  });
+
+  test("removeValue announces nothing when no key holds the value", async () => {
+    const { h, save } = await harness();
+    const { etag } = await save("places", { sidebar: "other" });
+    const spy = h.spyAction("settings:group_changed");
+
+    const copy = await h.context.settings.removeValue("places", "main");
+
+    expect(copy).toEqual({ etag, values: { sidebar: "other" } });
+    spy.assertNotCalled();
+  });
 });

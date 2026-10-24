@@ -17,6 +17,7 @@ import type { SettingsBag } from "../db/schema/settings.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
+import type { JsonValue } from "../json.js";
 import type { MailSender } from "../mail/contract/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
@@ -139,6 +140,11 @@ export interface SettingsNamespace {
     group: string,
     values: SettingsPatch,
   ): Promise<SettingsGroupCopy>;
+  /**
+   * Removes every key of `group` holding `value`, in one statement, so a key
+   * set to it meanwhile is not missed; answers the group as it stands.
+   */
+  removeValue(group: string, value: JsonValue): Promise<SettingsGroupCopy>;
 }
 
 /**

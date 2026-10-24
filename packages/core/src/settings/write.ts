@@ -3,7 +3,10 @@ import type {
   SettingsGroupCopy,
   SettingsPatch,
 } from "../context/app-context.js";
-import type { SettingsWriteMode } from "../context/settings-namespace.js";
+import type {
+  SettingsWriteMode,
+  SettingsWrites,
+} from "../context/settings-namespace.js";
 import type { JsonValue } from "../json.js";
 import type { MetaFieldError } from "../meta/field-pipeline.js";
 import { settingsTag } from "../cdn/contract/tags.js";
@@ -24,6 +27,7 @@ import { SettingsWriteError } from "./errors.js";
 import {
   bumpSettingsGroup,
   claimSettingsGroup,
+  deleteSettingsKeysHolding,
   insertAbsentSettingsKeys,
   settingsGroupEtag,
   settingsGroupResource,
@@ -39,7 +43,7 @@ const MAX_SETTINGS_VALUE_BYTES = 64 * 1024;
  * Unmentioned keys are left alone — same partial-patch semantic as
  * `entry.meta`.
  */
-export async function writeSettingsGroup(
+async function writeSettingsGroup(
   ctx: AppContext,
   groupName: string,
   input: SettingsPatch,
@@ -128,17 +132,6 @@ export async function writeSettingsGroup(
     }
   }
 
-  let set = upsertRows;
-  let removed = deletes;
-  if (ifAbsent) {
-    // An absent key stays absent, so there is nothing to remove.
-    const inserted = new Set(
-      await insertAbsentSettingsKeys(ctx.db, groupName, upsertRows),
-    );
-    set = upsertRows.filter((row) => inserted.has(row.key));
-    removed = [];
-  }
-  const changed = set.length > 0 || removed.length > 0;
   if (guard) {
     await assertWritable(
       ctx.db,
@@ -149,14 +142,58 @@ export async function writeSettingsGroup(
       },
     );
     await claimSettingsGroup(ctx.db, groupName, guard.ifMatch);
-  } else if (changed) {
-    await bumpSettingsGroup(ctx.db, groupName);
   }
-  if (!ifAbsent) {
-    await writeSettingsKeys(ctx.db, groupName, upsertRows, deletes);
+  if (ifAbsent) {
+    // An absent key stays absent, so there is nothing to remove.
+    const inserted = new Set(
+      await insertAbsentSettingsKeys(ctx.db, groupName, upsertRows),
+    );
+    const set = upsertRows.filter((row) => inserted.has(row.key));
+    return settle(ctx, groupName, { set, removed: [], claimed: false });
   }
+  await writeSettingsKeys(ctx.db, groupName, upsertRows, deletes);
+  return settle(ctx, groupName, {
+    set: upsertRows,
+    removed: deletes,
+    claimed: guard !== undefined,
+  });
+}
 
-  // Re-read the authoritative bag, so the caller gets the final shape.
+async function removeSettingsValue(
+  ctx: AppContext,
+  groupName: string,
+  value: JsonValue,
+): Promise<SettingsGroupCopy> {
+  const removed = await deleteSettingsKeysHolding(ctx.db, groupName, value);
+  return settle(ctx, groupName, { set: [], removed, claimed: false });
+}
+
+/** What every write ran through, for `ctx.settings` to bind. */
+export const settingsWrites: SettingsWrites = {
+  write: writeSettingsGroup,
+  removeValue: removeSettingsValue,
+};
+
+/**
+ * A write not claimed from a copy moves the token itself. Then re-reads the
+ * authoritative bag, so the caller gets the final shape, and announces it.
+ */
+async function settle(
+  ctx: AppContext,
+  groupName: string,
+  written: {
+    readonly set: readonly {
+      readonly key: string;
+      readonly value: JsonValue;
+    }[];
+    readonly removed: readonly string[];
+    readonly claimed: boolean;
+  },
+): Promise<SettingsGroupCopy> {
+  const { set, removed, claimed } = written;
+  const changed = set.length > 0 || removed.length > 0;
+  if (!claimed && changed) await bumpSettingsGroup(ctx.db, groupName);
+
   const fresh = await ctx.db
     .select({ key: settings.key, value: settings.value })
     .from(settings)
@@ -164,7 +201,10 @@ export async function writeSettingsGroup(
   // `null` is a value the column can hold, so it stays in the bag.
   const copy = {
     etag: settingsGroupEtag(fresh),
-    values: settingsGroupBag(fresh, group?.fields ?? []),
+    values: settingsGroupBag(
+      fresh,
+      ctx.plugins.settingsGroups.get(groupName)?.fields ?? [],
+    ),
   };
 
   // Fire only when the call actually changed state — an empty

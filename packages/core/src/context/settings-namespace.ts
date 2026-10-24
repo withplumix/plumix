@@ -1,3 +1,4 @@
+import type { JsonValue } from "../json.js";
 import type {
   AppContext,
   SettingsGroupCopy,
@@ -12,30 +13,40 @@ export interface SettingsWriteMode {
   readonly ifAbsent?: boolean;
 }
 
-type SettingsWrite = (
-  ctx: AppContext,
-  group: string,
-  values: SettingsPatch,
-  mode: SettingsWriteMode,
-) => Promise<SettingsGroupCopy>;
+/** The writes `ctx.settings` runs, each given the context it is bound to. */
+export interface SettingsWrites {
+  write(
+    ctx: AppContext,
+    group: string,
+    values: SettingsPatch,
+    mode: SettingsWriteMode,
+  ): Promise<SettingsGroupCopy>;
+  removeValue(
+    ctx: AppContext,
+    group: string,
+    value: JsonValue,
+  ): Promise<SettingsGroupCopy>;
+}
 
 /**
  * Kept beside the namespace rather than on it, so a context derived from
- * another rebinds the same write without the capability layer's import.
+ * another rebinds the same writes without the capability layer's import.
  */
-const writes = new WeakMap<SettingsNamespace, SettingsWrite>();
+const bound = new WeakMap<SettingsNamespace, SettingsWrites>();
 
 /** `ctx.settings`, writing as the context `ctx` answers. */
 export function bindSettings(
-  write: SettingsWrite,
+  writes: SettingsWrites,
   ctx: () => AppContext,
 ): SettingsNamespace {
   const namespace: SettingsNamespace = {
-    write: (group, values, guard) => write(ctx(), group, values, { guard }),
+    write: (group, values, guard) =>
+      writes.write(ctx(), group, values, { guard }),
     writeIfAbsent: (group, values) =>
-      write(ctx(), group, values, { ifAbsent: true }),
+      writes.write(ctx(), group, values, { ifAbsent: true }),
+    removeValue: (group, value) => writes.removeValue(ctx(), group, value),
   };
-  writes.set(namespace, write);
+  bound.set(namespace, writes);
   return namespace;
 }
 
@@ -47,10 +58,10 @@ export function rebindSettings<TSchema extends Record<string, unknown>>(
   settings: SettingsNamespace,
   ctx: () => AppContext<TSchema>,
 ): SettingsNamespace {
-  const write = writes.get(settings);
-  return write === undefined
+  const writes = bound.get(settings);
+  return writes === undefined
     ? settings
-    : bindSettings(write, () => coreSchemaView(ctx()));
+    : bindSettings(writes, () => coreSchemaView(ctx()));
 }
 
 function coreSchemaView<TSchema extends Record<string, unknown>>(
