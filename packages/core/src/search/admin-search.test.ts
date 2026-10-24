@@ -81,7 +81,12 @@ describe("runAdminSearch", () => {
     expect(error.mock.calls).toEqual([
       [
         "[plumix] search provider failed provider=core plugin=core: boom",
-        { provider: "core", plugin: null, error: new Error("boom") },
+        {
+          provider: "core",
+          plugin: null,
+          error: new Error("boom"),
+          requestId: ctx.requestId,
+        },
       ],
     ]);
   });
@@ -247,6 +252,7 @@ describe("search providers in a booted app", () => {
           provider: "broken",
           plugin: "broken",
           error: new Error("index offline"),
+          requestId: expect.any(String) as unknown,
         },
       ],
     ]);

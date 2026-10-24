@@ -28,6 +28,7 @@ import type {
   Db,
   DeferFn,
   Logger,
+  LogMeta,
 } from "./app-context.js";
 import type { DevRuntime } from "./dev-runtime.js";
 import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
@@ -149,6 +150,30 @@ function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
   };
 }
 
+/**
+ * `telemetry` is read per call because the collector is swapped after the
+ * sampling vote.
+ */
+function wrapLogger(
+  logger: Logger,
+  requestId: string,
+  telemetry: () => TelemetryCollector,
+): Logger {
+  const forLevel =
+    (level: keyof Logger) =>
+    (message: string, meta?: LogMeta): void => {
+      const stamped = { requestId, ...meta };
+      logger[level](message, stamped);
+      telemetry().log(level, message, stamped);
+    };
+  return {
+    debug: forLevel("debug"),
+    info: forLevel("info"),
+    warn: forLevel("warn"),
+    error: forLevel("error"),
+  };
+}
+
 export function createAppContext<TSchema extends Record<string, unknown>>(
   args: CreateAppContextArgs<TSchema>,
 ): AppContext<TSchema> {
@@ -160,7 +185,12 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     i18n: args.config.i18n,
   });
   const configuredMailer = resolveMailer(args.config.mailer, args.env);
-  const logger = args.logger ?? consoleLogger;
+  const requestId = crypto.randomUUID();
+  const logger = wrapLogger(
+    args.logger ?? consoleLogger,
+    requestId,
+    () => base.telemetry,
+  );
   // The request URL is a fallback for contexts built without an app; it is
   // resolved here because an `(env) => …` origin needs the runtime env.
   const origin =
@@ -240,7 +270,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     authMethods: args.authMethods ?? NO_AUTH_METHODS,
     authenticator: args.authenticator ?? defaultAuthenticator(),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
-    requestId: crypto.randomUUID(),
+    requestId,
     resolvedEntity: null,
     resolvedRoute: null,
     resolvedTemplate: null,

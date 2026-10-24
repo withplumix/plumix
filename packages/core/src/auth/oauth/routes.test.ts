@@ -806,7 +806,11 @@ describe("oauth callback route", () => {
     expect(warned).toEqual([
       {
         msg: "sign_in_refused",
-        meta: { method: "oauth", code: "domain_not_allowed" },
+        meta: {
+          method: "oauth",
+          code: "domain_not_allowed",
+          requestId: expect.any(String) as unknown,
+        },
       },
     ]);
   });

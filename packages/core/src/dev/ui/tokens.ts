@@ -33,6 +33,11 @@ export const devTokens = {
     amber: "#d29922",
     red: "#f0a5a5",
     cyan: "#56d4dd",
+    /** Span log levels, from DESIGN.md's `outline`, `secondary`, `primary` and `error`. */
+    logDebug: "#a48a92",
+    logInfo: "#c6c6cf",
+    logWarn: "#ffb0ce",
+    logError: "#ffb4ab",
     scrollbarHover: "#4a535b",
     radiusFrame: "8px",
     radiusControl: "4px",

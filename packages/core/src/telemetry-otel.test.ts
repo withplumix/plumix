@@ -449,7 +449,7 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
       },
       spans: [],
       records: {},
-      dropped: { spans: 0, records: {} },
+      dropped: { spans: 0, records: {}, logs: 0 },
     };
 
     const rejecting = otelConsumer({

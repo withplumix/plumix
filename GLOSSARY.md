@@ -469,6 +469,21 @@ The claim that lets one replica run a scheduled firing when several fire it.
 **Telemetry consumer**:
 What the `telemetry` config slot sends request traces to; core's OTLP consumer exports them to any OpenTelemetry endpoint.
 
+**Telemetry snapshot**:
+Everything recorded about one request or scheduled run (its spans, records and the deferred work it started), handed to every telemetry consumer once that work has settled.
+_Avoid_: trace, snapshot alone.
+
+**Span**:
+One timed, named step inside a telemetry snapshot, with its outcome and the spans and span logs beneath it.
+
+**Span log**:
+A log line written while a span is current, kept on that span.
+_Avoid_: span event.
+
+**Deferred work**:
+Work a request or scheduled run starts but does not wait for before it answers. It still belongs to that request's telemetry snapshot.
+_Avoid_: background job.
+
 **Job queue**:
 The runtime's own queue behind the `queue` config slot, for work that outlives a request, such as webhook deliveries.
 
@@ -607,8 +622,9 @@ them distinct by **always qualifying** them; bare use is a smell.
   scaffolder. Qualify when more than one is in play.
 - **snapshot** — the **revision** sense (capturing an entry into a revision)
   vs a **sync snapshot** (what a push takes of the deployed database before
-  it replaces anything, to restore from). Qualify when more than one is in
-  play.
+  it replaces anything, to restore from) vs a **telemetry snapshot** (what a
+  request or scheduled run recorded, handed to telemetry consumers). Qualify
+  when more than one is in play.
 - **read-through** — the **CDN** sense (a stored response, keyed by the
   request and purged by tag) vs the **rendered asset** sense (bytes behind a
   content-addressed storage key, which nothing purges). Qualify when more

@@ -439,6 +439,7 @@ describe("a failing action handler in a booted app", () => {
           hook: "settings:group_changed",
           plugin: "faulty",
           error: new Error("subscriber blew up"),
+          requestId: expect.any(String) as unknown,
         },
       ],
     ]);
@@ -463,7 +464,12 @@ describe("a failing action handler in a booted app", () => {
     expect(error.mock.calls).toEqual([
       [
         "[plumix] action failed hook=test:throws plugin=core: boom",
-        { hook: "test:throws", plugin: null, error: new Error("boom") },
+        {
+          hook: "test:throws",
+          plugin: null,
+          error: new Error("boom"),
+          requestId: ctx.requestId,
+        },
       ],
     ]);
   });

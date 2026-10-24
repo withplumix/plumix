@@ -74,6 +74,36 @@ function TimelineChart({
   );
 }
 
+function SpanLogs({ timeline }: { readonly timeline: Timeline }): ReactNode {
+  const spans = timeline.rows.filter((row) => row.logs.length > 0);
+  if (spans.length === 0) return null;
+  return (
+    <ul className="plumix-debug-bar__span-logs">
+      {spans.map((row, i) => (
+        <li key={i}>
+          <span className="plumix-debug-bar__span-logs-span">{row.name}</span>
+          <ul className="plumix-debug-bar__span-logs-lines">
+            {row.logs.map((log, j) => (
+              <li
+                key={j}
+                className={`plumix-debug-bar__span-log plumix-debug-bar__span-log--${log.level}`}
+              >
+                <span className="plumix-debug-bar__span-log-at">
+                  +{log.offsetMs}ms
+                </span>
+                <span className="plumix-debug-bar__span-log-level">
+                  {log.level}
+                </span>
+                <span>{log.message}</span>
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export const timelinePanel: DebugPanel = {
   id: TIMELINE_PANEL_ID,
   title: "Timeline",
@@ -86,6 +116,7 @@ export const timelinePanel: DebugPanel = {
     return (
       <DebugSection title={`Total ${timeline.totalMs}ms`}>
         <TimelineChart timeline={timeline} />
+        <SpanLogs timeline={timeline} />
       </DebugSection>
     );
   },

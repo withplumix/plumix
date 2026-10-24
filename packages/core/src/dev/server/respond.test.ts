@@ -102,6 +102,7 @@ describe("devErrorResponse", () => {
       expect(error).toHaveBeenCalledWith("dev_error_page_failed", {
         url: ctx.request.url,
         err: "stack unavailable",
+        requestId: ctx.requestId,
       });
     },
   );

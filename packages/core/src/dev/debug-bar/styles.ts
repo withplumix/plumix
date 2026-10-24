@@ -306,6 +306,48 @@ export const DEBUG_BAR_CSS =
       fill: ${t.muted};
       font-size: 9px;
     }
+    /* Timeline panel — each span's logs under it */
+    .plumix-debug-bar__span-logs,
+    .plumix-debug-bar__span-logs-lines {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .plumix-debug-bar__span-logs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .plumix-debug-bar__span-logs-span {
+      color: ${t.label};
+    }
+    .plumix-debug-bar__span-logs-lines {
+      padding-left: 12px;
+    }
+    .plumix-debug-bar__span-log {
+      display: flex;
+      gap: 8px;
+    }
+    .plumix-debug-bar__span-log-at {
+      color: ${t.muted};
+    }
+    .plumix-debug-bar__span-log-level {
+      min-width: 5ch;
+      text-transform: uppercase;
+    }
+    .plumix-debug-bar__span-log--debug .plumix-debug-bar__span-log-level {
+      color: ${t.logDebug};
+    }
+    .plumix-debug-bar__span-log--info .plumix-debug-bar__span-log-level {
+      color: ${t.logInfo};
+    }
+    .plumix-debug-bar__span-log--warn .plumix-debug-bar__span-log-level {
+      color: ${t.logWarn};
+    }
+    .plumix-debug-bar__span-log--error .plumix-debug-bar__span-log-level {
+      color: ${t.logError};
+    }
     /* Database panel — query list */
     .plumix-debug-bar__queries {
       list-style: none;

@@ -500,7 +500,13 @@ describe("runScheduledTasks — a task's time budget", () => {
     expect(error).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith(
       `[plumix] scheduled task "p:stuck" timed out after 90s`,
-      { taskId: "stuck", plugin: "p", cron: "0 3 * * *", timeoutMs: 90_000 },
+      {
+        taskId: "stuck",
+        plugin: "p",
+        cron: "0 3 * * *",
+        timeoutMs: 90_000,
+        requestId: ctx.requestId,
+      },
     );
     const span = snapshots[0]?.spans.find((s) => s.name === "cron: stuck");
     expect(span).toMatchObject({
@@ -554,7 +560,12 @@ describe("runScheduledTasks — a task's time budget", () => {
     expect(error).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith(
       `[plumix] scheduled task "p:stuck" shut down`,
-      { taskId: "stuck", plugin: "p", cron: "0 3 * * *" },
+      {
+        taskId: "stuck",
+        plugin: "p",
+        cron: "0 3 * * *",
+        requestId: ctx.requestId,
+      },
     );
     const span = snapshots[0]?.spans.find((s) => s.name === "cron: stuck");
     expect(span).toMatchObject({ status: "cancelled", message: "shut down" });

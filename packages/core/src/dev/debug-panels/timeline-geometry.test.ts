@@ -8,7 +8,9 @@ const OPTS = { width: 200, rowHeight: 14, rowGap: 2, minBarWidth: 2 };
 describe("timelineGeometry", () => {
   test("maps a full-window span to a full-width bar on the first row", () => {
     const timeline: Timeline = {
-      rows: [{ name: "render", depth: 0, offsetMs: 0, durationMs: 100 }],
+      rows: [
+        { name: "render", depth: 0, offsetMs: 0, durationMs: 100, logs: [] },
+      ],
       totalMs: 100,
     };
 
@@ -24,8 +26,8 @@ describe("timelineGeometry", () => {
   test("stacks rows with the gap and floors a zero-duration bar to min width", () => {
     const timeline: Timeline = {
       rows: [
-        { name: "render", depth: 0, offsetMs: 0, durationMs: 100 },
-        { name: "db: select", depth: 1, offsetMs: 50, durationMs: 0 },
+        { name: "render", depth: 0, offsetMs: 0, durationMs: 100, logs: [] },
+        { name: "db: select", depth: 1, offsetMs: 50, durationMs: 0, logs: [] },
       ],
       totalMs: 100,
     };
@@ -41,7 +43,9 @@ describe("timelineGeometry", () => {
 
   test("keeps a bar at the window's end inside the width", () => {
     const timeline: Timeline = {
-      rows: [{ name: "flush", depth: 0, offsetMs: 100, durationMs: 0 }],
+      rows: [
+        { name: "flush", depth: 0, offsetMs: 100, durationMs: 0, logs: [] },
+      ],
       totalMs: 100,
     };
 

@@ -232,7 +232,12 @@ describe("registered admin bar nodes", () => {
       expect(html).toContain("plumix-admin-bar-node-shop:cart");
       expect(logger.error).toHaveBeenCalledWith(
         "admin_bar_node_failed: orders offline",
-        { node: "shop:orders", plugin: "shop", error: boom },
+        {
+          node: "shop:orders",
+          plugin: "shop",
+          error: boom,
+          requestId: expect.any(String) as unknown,
+        },
       );
     },
   );

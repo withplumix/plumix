@@ -4,8 +4,9 @@ import type {
   TelemetryDropped,
   TelemetryRecord,
   TelemetrySpan,
+  TelemetrySpanLog,
 } from "../telemetry-snapshot.js";
-import type { AppContext } from "./app-context.js";
+import type { AppContext, LogMeta } from "./app-context.js";
 
 // The collected data's shapes live below the context, so an exporter can name
 // them without reaching it.
@@ -16,6 +17,7 @@ export type {
   TelemetrySnapshot,
   TelemetrySpan,
   TelemetrySpanError,
+  TelemetrySpanLog,
 } from "../telemetry-snapshot.js";
 
 /**
@@ -39,6 +41,11 @@ export interface TelemetryCollector {
   record(namespace: string, entry: JsonValue | (() => JsonValue)): void;
   /** Time `fn`, record a span, and return `fn`'s result unchanged. */
   span<T>(name: string, fn: (s: TelemetrySpanHandle) => T): T;
+  log(
+    level: TelemetrySpanLog["level"],
+    message: string,
+    meta: LogMeta | undefined,
+  ): void;
   /** Timestamped entries recorded under `namespace`, in record order. */
   get(namespace: string): readonly TelemetryRecord[];
   /** Every namespace's entries, keyed by namespace — the snapshot read. */
@@ -69,9 +76,10 @@ export const NOOP_HANDLE: TelemetrySpanHandle = {
  */
 export const NOOP_TELEMETRY: TelemetryCollector = {
   record: () => undefined,
+  log: () => undefined,
   span: (_name, fn) => fn(NOOP_HANDLE),
   get: () => [],
   getRecords: () => ({}),
   getSpans: () => [],
-  getDropped: () => ({ spans: 0, records: {} }),
+  getDropped: () => ({ spans: 0, records: {}, logs: 0 }),
 };

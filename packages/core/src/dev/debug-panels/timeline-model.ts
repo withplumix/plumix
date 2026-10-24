@@ -1,4 +1,14 @@
-import type { TelemetrySpan } from "../../context/telemetry.js";
+import type {
+  TelemetrySpan,
+  TelemetrySpanLog,
+} from "../../context/telemetry.js";
+
+interface TimelineLog {
+  readonly level: TelemetrySpanLog["level"];
+  readonly message: string;
+  /** From the timeline window's start, in ms. */
+  readonly offsetMs: number;
+}
 
 interface TimelineRow {
   readonly name: string;
@@ -7,6 +17,8 @@ interface TimelineRow {
   /** From the timeline window's start, in ms. */
   readonly offsetMs: number;
   readonly durationMs: number;
+  /** The span's own logs, in call order. */
+  readonly logs: readonly TimelineLog[];
 }
 
 export interface Timeline {
@@ -33,6 +45,11 @@ export function buildTimeline(roots: readonly TelemetrySpan[]): Timeline {
       depth,
       offsetMs: span.startedAt - windowStart,
       durationMs: span.durationMs,
+      logs: span.logs.map((log) => ({
+        level: log.level,
+        message: log.message,
+        offsetMs: log.at - windowStart,
+      })),
     });
     for (const child of span.children) flatten(child, depth + 1);
   };

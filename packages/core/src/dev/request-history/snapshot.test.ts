@@ -100,6 +100,7 @@ describe("projectDebugSnapshot", () => {
         durationMs: 1,
         status: "ok",
         attributes: {},
+        logs: [],
         children: [],
       },
     ];
