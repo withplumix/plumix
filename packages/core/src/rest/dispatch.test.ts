@@ -1217,14 +1217,11 @@ describe("REST API — OpenAPI spec", () => {
         isJsonObject(properties) &&
         "publishedAt" in properties,
     );
-    const author = schemaPropertyMaps(doc).find(
-      (props) => "publishedAt" in props,
-    )?.author;
     expect(entry?.required).toContain("author");
-    expect(author).toMatchObject({ type: "object" });
-    expect(author).not.toHaveProperty("anyOf");
-    expect(author).not.toHaveProperty("oneOf");
-    expect(author).not.toHaveProperty("nullable");
+    expect(entry).toHaveProperty("properties.author.type", "object");
+    expect(entry).not.toHaveProperty("properties.author.anyOf");
+    expect(entry).not.toHaveProperty("properties.author.oneOf");
+    expect(entry).not.toHaveProperty("properties.author.nullable");
   });
 
   test("no timestamp field in the spec is an empty schema", async () => {
