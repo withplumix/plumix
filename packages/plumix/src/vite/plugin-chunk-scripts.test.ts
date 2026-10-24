@@ -52,4 +52,53 @@ describe("injectPluginChunkScripts", () => {
 
     expect(restaged).toBe(first);
   });
+
+  test("puts the plugin block just before the closing body tag", () => {
+    const html = injectPluginChunkScripts(SHELL, [
+      { pluginId: "hello", chunkFile: "hello.js", cssFile: "hello.css" },
+      { pluginId: "seo", chunkFile: "seo.js" },
+    ]);
+
+    expect(html).toBe(
+      [
+        "<!doctype html><html><head></head><body><!-- plumix:plugin-chunks -->",
+        '<link rel="stylesheet" data-plumix-plugin="hello" href="plugins/hello.css">',
+        '<script type="module" data-plumix-plugin="hello" src="plugins/hello.js"></script>',
+        '<script type="module" data-plumix-plugin="seo" src="plugins/seo.js"></script>',
+        "<!-- /plumix:plugin-chunks -->",
+        "</body></html>",
+      ].join("\n"),
+    );
+  });
+
+  test("appends the plugin block to a shell with no closing body tag", () => {
+    const html = injectPluginChunkScripts("<div></div>", [
+      { pluginId: "seo", chunkFile: "seo.js" },
+    ]);
+
+    expect(html).toBe(
+      [
+        "<div></div>",
+        "<!-- plumix:plugin-chunks -->",
+        '<script type="module" data-plumix-plugin="seo" src="plugins/seo.js"></script>',
+        "<!-- /plumix:plugin-chunks -->",
+      ].join("\n"),
+    );
+  });
+
+  test("a site with no plugin chunks gets an empty block", () => {
+    const html = injectPluginChunkScripts("<div></div>", []);
+
+    expect(html).toBe(
+      "<div></div>\n<!-- plumix:plugin-chunks -->\n\n<!-- /plumix:plugin-chunks -->",
+    );
+  });
+
+  test("escapes the plugin id so it cannot break out of its attribute", () => {
+    const html = injectPluginChunkScripts("<div></div>", [
+      { pluginId: 'a&b"c<d', chunkFile: "x.js" },
+    ]);
+
+    expect(html).toContain('data-plumix-plugin="a&amp;b&quot;c&lt;d"');
+  });
 });

@@ -110,28 +110,45 @@ describe("createPluginCatalogLoader", () => {
     expect(i18n._(id, { label: "Team page" })).toBe("Added Team page");
   });
 
-  test("under a basePath, a listed catalog and the source fallback both import under the mount", async () => {
-    const importCatalog = vi.fn(() => Promise.resolve({ messages: {} }));
-    const load = createPluginCatalogLoader({
-      manifest: {
-        plugin_x: {
-          sourceLocale: "en",
-          catalogs: {
-            de: "/_plumix/admin/plugins/plugin_x/locales/de.mjs",
-            en: "/_plumix/admin/plugins/plugin_x/locales/en.mjs",
-          },
+  describe("under a basePath", () => {
+    const manifest = {
+      plugin_x: {
+        sourceLocale: "en",
+        catalogs: {
+          de: "/_plumix/admin/plugins/plugin_x/locales/de.mjs",
+          en: "/_plumix/admin/plugins/plugin_x/locales/en.mjs",
         },
       },
-      basePath: "/cms",
-      importCatalog,
+    };
+
+    test("a listed catalog imports under the mount", async () => {
+      const importCatalog = vi.fn(() => Promise.resolve({ messages: {} }));
+      const load = createPluginCatalogLoader({
+        manifest,
+        basePath: "/cms",
+        importCatalog,
+      });
+
+      await load("plugin_x", "de");
+
+      expect(importCatalog).toHaveBeenCalledWith(
+        "/cms/_plumix/admin/plugins/plugin_x/locales/de.mjs",
+      );
     });
 
-    await load("plugin_x", "de");
-    await load("plugin_x", "fr");
+    test("the source-locale fallback imports under the mount", async () => {
+      const importCatalog = vi.fn(() => Promise.resolve({ messages: {} }));
+      const load = createPluginCatalogLoader({
+        manifest,
+        basePath: "/cms",
+        importCatalog,
+      });
 
-    expect(importCatalog.mock.calls).toEqual([
-      ["/cms/_plumix/admin/plugins/plugin_x/locales/de.mjs"],
-      ["/cms/_plumix/admin/plugins/plugin_x/locales/en.mjs"],
-    ]);
+      await load("plugin_x", "fr");
+
+      expect(importCatalog).toHaveBeenCalledWith(
+        "/cms/_plumix/admin/plugins/plugin_x/locales/en.mjs",
+      );
+    });
   });
 });
