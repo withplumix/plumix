@@ -1,6 +1,7 @@
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
 import { makeAuthCan } from "../auth/with-user.js";
+import { rebindSettings } from "../context/settings-namespace.js";
 
 /**
  * Anonymous requests hold the lowest role's capabilities, so the entry
@@ -27,15 +28,14 @@ export async function resolveRestPrincipal(
   ctx: AppContext,
 ): Promise<RestPrincipal> {
   if (!hasBearerToken(ctx.request)) {
-    return {
-      kind: "anonymous",
-      ctx: {
-        ...ctx,
-        user: null,
-        tokenScopes: null,
-        auth: { can: makeAuthCan(ctx.plugins, PUBLIC_PRINCIPAL, null) },
-      },
+    const anonymous: AppContext = {
+      ...ctx,
+      user: null,
+      tokenScopes: null,
+      auth: { can: makeAuthCan(ctx.plugins, PUBLIC_PRINCIPAL, null) },
+      settings: rebindSettings(ctx.settings, () => anonymous),
     };
+    return { kind: "anonymous", ctx: anonymous };
   }
   const authed = await authenticateBearer(ctx);
   return authed ? { kind: "authed", ctx: authed } : { kind: "unauthorized" };

@@ -19,7 +19,7 @@ import {
   listTermMetaFields,
   listUserMetaFields,
 } from "../../../plugin/manifest.js";
-import { bumpSettingsGroup } from "../settings/token.js";
+import { bumpSettingsGroup } from "../../../settings/token.js";
 import { writeSettledUserMeta } from "../user/meta.js";
 
 /** Where a meta value is stored, in the order a sweep walks them. */

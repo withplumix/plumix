@@ -6,12 +6,12 @@ import {
   renewEditLease,
   takeOverEditLease,
 } from "../../../db/edit-lease.js";
+import { settingsGroupResource } from "../../../settings/token.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { rpcSurface } from "../../concurrency.js";
 import { requireCapability } from "../../require-capability.js";
 import { settingsGetInputSchema, settingsLeaseInputSchema } from "./schemas.js";
-import { settingsGroupResource } from "./token.js";
 
 const CAPABILITY = "settings:manage";
 

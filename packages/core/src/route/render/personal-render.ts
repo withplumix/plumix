@@ -35,6 +35,8 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
     verdict.personal = true;
   };
   return {
+    // `settings` stays bound to `ctx`: the same principal and request, but a
+    // write's subscriber reading its actor does not change this response.
     ...ctx,
     get user() {
       mark();

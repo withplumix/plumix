@@ -1,12 +1,12 @@
 import { eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../../../db/settings-groups.js";
+import { settingsGroupEtag } from "../../../settings/token.js";
 import { settingsGroupBag } from "../../../template-deps-core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { settingsGetInputSchema } from "./schemas.js";
-import { settingsGroupEtag } from "./token.js";
 
 const CAPABILITY = "settings:manage";
 /**

@@ -11,10 +11,13 @@ import type {
 } from "../blocks/index.js";
 import type { RendererUser } from "../blocks/renderer/context.js";
 import type { PlumixConfig } from "../config.js";
+import type { EditLeaseSurface } from "../db/schema/edit_leases.js";
 import type * as coreSchema from "../db/schema/index.js";
+import type { SettingsBag } from "../db/schema/settings.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
+import type { JsonValue } from "../json.js";
 import type { MailSender } from "../mail/contract/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
@@ -92,6 +95,57 @@ export type PlumixFetch = (
   input: RequestInfo | URL,
   init?: RequestInit & { readonly timeout?: number | false },
 ) => Promise<Response>;
+
+/** A settings group as a write left it. */
+export interface SettingsGroupCopy {
+  readonly etag: string;
+  readonly values: SettingsBag;
+}
+
+/**
+ * ADR 0048's guard, for a write made from a copy: the group's `etag` that copy
+ * was read at, and who writes it through which surface.
+ */
+export interface SettingsWriteGuard {
+  readonly ifMatch: number;
+  readonly takeOver?: boolean;
+  readonly writer: {
+    readonly userId: number;
+    readonly surface: EditLeaseSurface;
+  };
+}
+
+/**
+ * Not JSON yet: a field's pipeline decodes each value, and `null` or
+ * `undefined` removes its key.
+ */
+export type SettingsPatch = Readonly<Record<string, unknown>>;
+
+export interface SettingsNamespace {
+  /**
+   * Leaves unmentioned keys alone, and fires `settings:group_changed` when
+   * anything changed in a public group. Unguarded, it moves the token of a
+   * group already saved, unchecked.
+   */
+  write(
+    group: string,
+    values: SettingsPatch,
+    guard?: SettingsWriteGuard,
+  ): Promise<SettingsGroupCopy>;
+  /**
+   * Stores only the keys `group` does not hold yet, so racing first writers
+   * converge on the first; answers the group as it stands.
+   */
+  writeIfAbsent(
+    group: string,
+    values: SettingsPatch,
+  ): Promise<SettingsGroupCopy>;
+  /**
+   * Removes every key of `group` holding `value`, in one statement, so a key
+   * set to it meanwhile is not missed; answers the group as it stands.
+   */
+  removeValue(group: string, value: JsonValue): Promise<SettingsGroupCopy>;
+}
 
 /**
  * A plugin's own data, in a namespace core names after the calling plugin. A
@@ -195,6 +249,8 @@ export interface AppContextBase<
    * is no mailer, so a feature whose mail is optional catches that.
    */
   readonly mail: MailSender;
+  /** Bound to this context, so subscribers to the write hear its user. */
+  readonly settings: SettingsNamespace;
   /**
    * Canonical site origin from `auth.passkey.origin`, so composed verification
    * URLs don't depend on which worker served the request.

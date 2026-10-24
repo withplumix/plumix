@@ -44,10 +44,12 @@ import { declareMails } from "../mail/declared.js";
 import { createMailSender, mailSite } from "../mail/sender.js";
 import { bindEntryWrites } from "../rpc/procedures/entry/writes.js";
 import { resolveEnvInput } from "../runtime/contract/env-input.js";
+import { settingsWrites } from "../settings/write.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { logErrorSafely } from "./log.js";
 import { createRequestMemo } from "./memo.js";
+import { bindSettings, rebindSettings } from "./settings-namespace.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
 import { createTracedFetch } from "./traced-fetch.js";
 import {
@@ -229,6 +231,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
         args.onMailSent?.(sent);
       },
     }),
+    // Bound to the finished context, its core-schema view declared below.
+    settings: bindSettings(settingsWrites, () => coreSchemaView),
     locale,
     authMethods: args.authMethods ?? NO_AUTH_METHODS,
     authenticator: args.authenticator ?? defaultAuthenticator(),
@@ -267,8 +271,9 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     }
   }
   const ctx = base as AppContext<TSchema>;
-  // Safety: `TSchema` reaches only `ctx.db`, which the vote never touches, so
-  // the core-schema view drops nothing a consumer reads.
+  // Safety: `TSchema` reaches only `ctx.db`, which neither the vote nor the
+  // settings write touches beyond core's tables, so the core-schema view drops
+  // nothing a consumer reads.
   const coreSchemaView = ctx as unknown as AppContext;
   const sampled = sampleTelemetryConsumers(
     coreSchemaView,
@@ -312,11 +317,13 @@ export function withSignal<TSchema extends Record<string, unknown>>(
   ctx: AppContext<TSchema>,
   signal: AbortSignal,
 ): AppContext<TSchema> {
-  return {
+  const derived: AppContext<TSchema> = {
     ...ctx,
     signal,
     fetch: createTracedFetch(() => ctx.telemetry, signal),
+    settings: rebindSettings(ctx.settings, () => derived),
   };
+  return derived;
 }
 
 export const consoleLogger: Logger = {

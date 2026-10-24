@@ -108,6 +108,14 @@ async function bind(s: Site, location: string, slug: string): Promise<void> {
 }
 
 async function rpc(s: Site, path: string, input: unknown): Promise<void> {
+  expect(await rpcStatus(s, path, input)).toBe(200);
+}
+
+async function rpcStatus(
+  s: Site,
+  path: string,
+  input: unknown,
+): Promise<number> {
   const response = await s.h.dispatch(
     await s.h.authenticateRequest(
       plumixRequest(`/_plumix/rpc/${path}`, {
@@ -118,8 +126,8 @@ async function rpc(s: Site, path: string, input: unknown): Promise<void> {
       s.authorId,
     ),
   );
-  expect(response.status).toBe(200);
   await s.h.drainDeferred();
+  return response.status;
 }
 
 const PAGE = "/post/hello";
@@ -207,6 +215,21 @@ describe("@plumix/plugin-menu — CDN invalidation", () => {
     s.cdn.assertNotStored(PAGE);
   });
 
+  test("assigning a different menu to a location purges a page rendering it", async () => {
+    const s = await site();
+    await seedMenu(s, "main-nav");
+    await seedMenu(s, "other-nav");
+    await bind(s, "primary", "main-nav");
+    await render(s);
+
+    await rpc(s, "menu/assignLocation", {
+      location: "primary",
+      termSlug: "other-nav",
+    });
+
+    s.cdn.assertNotStored(PAGE);
+  });
+
   test("unbinding a location purges a page rendering it", async () => {
     const s = await site();
     await seedMenu(s, "main-nav");
@@ -253,5 +276,51 @@ describe("@plumix/plugin-menu — CDN invalidation", () => {
     await rpc(s, "entry/trash", { id: linked.id });
 
     s.cdn.assertNotStored(PAGE);
+  });
+});
+
+describe("@plumix/plugin-menu — location writes", () => {
+  // A location write is a system write, so an editor's copy of the group read
+  // before it is stale and refused rather than overwriting the assignment.
+  test("an admin's copy of the locations read before an assignment is refused", async () => {
+    const s = await site();
+    await seedMenu(s, "main-nav");
+    await rpc(s, "settings/upsert", {
+      group: "menu_locations",
+      values: {},
+      ifMatch: "0",
+    });
+
+    await rpc(s, "menu/assignLocation", {
+      location: "primary",
+      termSlug: "main-nav",
+    });
+
+    expect(
+      await rpcStatus(s, "settings/upsert", {
+        group: "menu_locations",
+        values: { primary: null },
+        ifMatch: "1",
+      }),
+    ).toBe(409);
+  });
+
+  test("deleting a bound menu announces its unbound locations before the menu's deletion", async () => {
+    const heard: string[] = [];
+    const listener = definePlugin("listener", (ctx) => {
+      ctx.addAction("settings:group_changed", (changes) => {
+        heard.push(`${changes.group}: ${changes.removed.join(",")}`);
+      });
+      ctx.addAction("menu:deleted", ({ slug }) => {
+        heard.push(`menu:deleted ${slug}`);
+      });
+    });
+    const s = await site([listener]);
+    const termId = await seedMenu(s, "main-nav");
+    await bind(s, "footer", "main-nav");
+
+    await rpc(s, "menu/delete", { termId });
+
+    expect(heard).toEqual(["menu_locations: footer", "menu:deleted main-nav"]);
   });
 });

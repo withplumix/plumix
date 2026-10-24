@@ -1,18 +1,18 @@
 import type { BatchItem } from "drizzle-orm/batch";
 
-import type { Db } from "../../../context/app-context.js";
-import type { JsonValue } from "../../../json.js";
-import type { SettingsRow } from "../../../template-deps-core.js";
-import { ConflictError } from "../../../db/concurrency.js";
+import type { Db } from "../context/app-context.js";
+import type { JsonValue } from "../json.js";
+import type { SettingsRow } from "../template-deps-core.js";
+import { ConflictError } from "../db/concurrency.js";
 import {
   and,
   chunkForD1,
   D1_MAX_BOUND_PARAMETERS,
   eq,
   inArray,
-} from "../../../db/index.js";
-import { settings } from "../../../db/schema/settings.js";
-import { SETTINGS_CREATED_KEY } from "../../../template-deps-core.js";
+} from "../db/index.js";
+import { settings } from "../db/schema/settings.js";
+import { SETTINGS_CREATED_KEY } from "../template-deps-core.js";
 
 /**
  * The group's token is the counter its marker row holds. No marker, or one
@@ -149,4 +149,38 @@ export async function writeSettingsKeys(
     return;
   }
   for (const statement of statements) await statement;
+}
+
+/** A row binds its group, key and value, so a statement's rows stay under D1's cap. */
+const ROW_CHUNK = Math.floor(D1_MAX_BOUND_PARAMETERS / 3);
+
+/** Inserts each row whose key the group lacks; answers the keys it inserted. */
+export async function insertAbsentSettingsKeys(
+  db: Db,
+  group: string,
+  rows: readonly { readonly key: string; readonly value: JsonValue }[],
+): Promise<string[]> {
+  const inserted: string[] = [];
+  for (const chunk of chunkForD1(rows, ROW_CHUNK)) {
+    const landed = await db
+      .insert(settings)
+      .values(chunk.map(({ key, value }) => ({ group, key, value })))
+      .onConflictDoNothing()
+      .returning({ key: settings.key });
+    inserted.push(...landed.map((row) => row.key));
+  }
+  return inserted;
+}
+
+/** Deletes every key of the group holding `value`; answers the keys it deleted. */
+export async function deleteSettingsKeysHolding(
+  db: Db,
+  group: string,
+  value: JsonValue,
+): Promise<string[]> {
+  const deleted = await db
+    .delete(settings)
+    .where(and(eq(settings.group, group), eq(settings.value, value)))
+    .returning({ key: settings.key });
+  return deleted.map((row) => row.key);
 }

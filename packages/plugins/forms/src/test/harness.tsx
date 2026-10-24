@@ -1,5 +1,6 @@
 import type { AnyPluginDescriptor, PlumixEnv } from "plumix";
 import type { BlockSpec } from "plumix/blocks";
+import type { CdnFake } from "plumix/test";
 import type { EntryData } from "plumix/theme";
 import type { ReactNode } from "react";
 import { BlockRenderer } from "plumix/blocks/renderer";
@@ -60,6 +61,8 @@ export interface FormsHarnessOptions {
   readonly entryTemplate?: (data: EntryData) => ReactNode;
   /** The subdirectory the site is served under. */
   readonly basePath?: string;
+  /** The CDN that stores the site's cacheable public pages. */
+  readonly cdn?: CdnFake;
 }
 
 export async function createFormsHarness(
@@ -69,6 +72,7 @@ export async function createFormsHarness(
   const harness = await createDispatcherHarness({
     env: options.env,
     clientAddress: options.clientAddress,
+    cdn: options.cdn,
     config: {
       plugins: [blog, ...plugins],
       theme: themeWith(options.themeBlocks ?? [], options.entryTemplate),

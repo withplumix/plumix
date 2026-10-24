@@ -552,33 +552,13 @@ export function createMenuRouter(
           ),
         );
       await context.db.delete(terms).where(eq(terms.id, term.id));
-      // Leaving bindings to a deleted menu is a known WP pain point. The value
-      // is stored as JSON, so compare against the JSON-encoded slug.
-      const unbound = await context.db
-        .delete(settings)
-        .where(
-          and(
-            eq(settings.group, MENU_LOCATIONS_GROUP),
-            eq(settings.value, term.slug),
-          ),
-        )
-        .returning({ key: settings.key });
+      // Leaving bindings to a deleted menu is a known WP pain point.
+      await context.settings.removeValue(MENU_LOCATIONS_GROUP, term.slug);
       await context.hooks.doAction(
         "menu:deleted",
         { termId: term.id, slug: term.slug },
         context,
       );
-      if (unbound.length > 0) {
-        await context.hooks.doAction(
-          "settings:group_changed",
-          {
-            group: MENU_LOCATIONS_GROUP,
-            set: {},
-            removed: unbound.map((row) => row.key),
-          },
-          context,
-        );
-      }
       return { id: input.termId };
     });
 
@@ -682,44 +662,9 @@ export function createMenuRouter(
           });
         }
       }
-      // Upsert: Drizzle's onConflictDoUpdate covers the (group, key)
-      // composite-pk path. Null `termSlug` means "unbind this location"
-      // — translated to a delete row so reads correctly return null.
-      if (input.termSlug === null) {
-        await context.db
-          .delete(settings)
-          .where(
-            and(
-              eq(settings.group, MENU_LOCATIONS_GROUP),
-              eq(settings.key, input.location),
-            ),
-          );
-      } else {
-        await context.db
-          .insert(settings)
-          .values({
-            group: MENU_LOCATIONS_GROUP,
-            key: input.location,
-            value: input.termSlug,
-          })
-          .onConflictDoUpdate({
-            target: [settings.group, settings.key],
-            set: { value: input.termSlug },
-          });
-      }
-      // Pages that rendered this location are stored under the group's tag,
-      // so core's settings listener purges them.
-      await context.hooks.doAction(
-        "settings:group_changed",
-        input.termSlug === null
-          ? { group: MENU_LOCATIONS_GROUP, set: {}, removed: [input.location] }
-          : {
-              group: MENU_LOCATIONS_GROUP,
-              set: { [input.location]: input.termSlug },
-              removed: [],
-            },
-        context,
-      );
+      await context.settings.write(MENU_LOCATIONS_GROUP, {
+        [input.location]: input.termSlug,
+      });
       return { location: input.location, termSlug: input.termSlug };
     });
 
