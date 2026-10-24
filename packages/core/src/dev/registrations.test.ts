@@ -38,7 +38,7 @@ describe("dev registrations", () => {
 
   test.each(REGISTRATIONS)(
     "a %s id two plugins register fails boot",
-    async (_kind, register) => {
+    async (kind, register) => {
       process.env.PLUMIX_DEV = "1";
       const first = definePlugin("first", {
         setup: (ctx) => register(ctx, "shared"),
@@ -51,6 +51,7 @@ describe("dev registrations", () => {
         buildApp(testConfig({ plugins: [first, second] })),
       ).rejects.toMatchObject({
         name: "DuplicateRegistrationError",
+        kind,
         identifier: "shared",
         pluginId: "second",
         previousOwner: "first",
@@ -73,6 +74,24 @@ describe("dev registrations", () => {
     await expect(
       buildApp(testConfig({ plugins: [shadowing] })),
     ).rejects.toBeInstanceOf(DuplicateRegistrationError);
+  });
+
+  test("a runtime adapter's hint reusing a core hint's id fails boot", async () => {
+    process.env.PLUMIX_DEV = "1";
+    const runtime = {
+      name: "edge",
+      handler: {},
+      generateEntry: () => "",
+      errorHints: [{ id: "migrations", title: "Mine", matches: () => true }],
+    };
+
+    await expect(buildApp(testConfig({ runtime }))).rejects.toMatchObject({
+      name: "DuplicateRegistrationError",
+      kind: "error hint",
+      identifier: "migrations",
+      pluginId: "edge",
+      previousOwner: null,
+    });
   });
 
   test.each(REGISTRATIONS)(
