@@ -156,13 +156,17 @@ A page is stored under the tags its route implies plus every tag its render decl
 
 `tm:<id>` — the term tag. Any page that rendered that term carries it: its archive and feed, an entry's term chips, and a page that embedded it through a term field. So renaming a term, or saving only its meta, clears only the pages that showed it.
 
+### tx:\*
+
+`tx:<taxonomy>` — the taxonomy list tag. A response that listed a taxonomy's terms carries it, such as the SEO plugin's sitemap of that taxonomy. A plugin that lists terms builds its query on `taxonomyTermRows(ctx, taxonomy)` from `plumix/db`, which declares the tag. So creating a term, or deleting one, clears every list of its taxonomy's terms, whether or not the taxonomy lists entry types.
+
 ### u:\*
 
 `u:<id>` — the user tag. Any page that resolved that user as an author carries it: a permalink's byline, a listing's entries, and an author archive and its feed. So editing one author's profile or meta clears only the pages that showed them.
 
 ## Purging
 
-Publishing an entry enqueues `t:<type>` and `e:<id>`; any write to a user, a meta-only save, a locale change and a delete included, enqueues their `u:<id>`, and a delete also enqueues the `u:<id>` of the user their entries went to; editing a term, a meta-only save included, enqueues its `tm:<id>`; creating or deleting a term enqueues the `t:<type>` of every entry type its taxonomy lists; saving a settings group enqueues its `s:<group>`. A plugin's own cacheable route is stored under what was declared while its handler ran, so it stays untagged unless the handler calls `tagCdnEntry` or reads something core tags. That call is how a route puts its entry under the same tags the entry's pages carry and clears it on the same publish. When a plugin's own data changes, `ctx.cache.changed(key)` purges every response that read that key or all of the plugin's data, and `ctx.cache.changed()` purges everything the plugin declared. Neither reaches another plugin's responses, even one that reads the same key. Call both from the plugin's own route, template dep, RPC procedure or action handler; core reads which plugin is calling from there, and either call throws anywhere else.
+Publishing an entry enqueues `t:<type>` and `e:<id>`; any write to a user, a meta-only save, a locale change and a delete included, enqueues their `u:<id>`, and a delete also enqueues the `u:<id>` of the user their entries went to; editing a term, a meta-only save included, enqueues its `tm:<id>`; creating or deleting a term enqueues its `tm:<id>` and its taxonomy's `tx:<taxonomy>`; saving a settings group enqueues its `s:<group>`. A plugin's own cacheable route is stored under what was declared while its handler ran, so it stays untagged unless the handler calls `tagCdnEntry` or reads something core tags. That call is how a route puts its entry under the same tags the entry's pages carry and clears it on the same publish. When a plugin's own data changes, `ctx.cache.changed(key)` purges every response that read that key or all of the plugin's data, and `ctx.cache.changed()` purges everything the plugin declared. Neither reaches another plugin's responses, even one that reads the same key. Call both from the plugin's own route, template dep, RPC procedure or action handler; core reads which plugin is calling from there, and either call throws anywhere else.
 
 The purge runs after the response through `ctx.defer`, so a zone that refuses one is logged and the editor's publish still succeeds. Freshness is the backstop: anything a failed purge left behind expires on its own within `ttl`.
 

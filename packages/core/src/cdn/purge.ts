@@ -1,12 +1,11 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
-import { termPageEntryTypeNames } from "../plugin/registry.js";
 import {
   entryPurgeTags,
   normalizeTag,
   settingsTag,
-  termPurgeTags,
+  taxonomyListTag,
   termSlugsTag,
   termTag,
   userSlugsTag,
@@ -94,16 +93,13 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     if (reassignedTo !== null) onUser({ id: reassignedTo }, ctx);
   });
 
-  // A new or deleted term has no `tm:<id>` page yet or any more, so the pages
-  // listing its taxonomy are stored under its entry types' `t:<type>` tags.
+  // A new or deleted term changes every list of its taxonomy's terms, as well
+  // as the pages that rendered it.
   const onTerm = (
-    term: { readonly taxonomy: string },
+    term: { readonly id: number; readonly taxonomy: string },
     ctx: AppContext,
   ): void => {
-    enqueuePurgeTags(
-      ctx,
-      termPurgeTags(termPageEntryTypeNames(ctx.plugins, term.taxonomy)),
-    );
+    enqueuePurgeTags(ctx, [termTag(term.id), taxonomyListTag(term.taxonomy)]);
     ctx.memo.invalidate([termSlugsTag()]);
   };
   hooks.addAction("term:created", onTerm);

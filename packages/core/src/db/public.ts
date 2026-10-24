@@ -69,6 +69,9 @@ export { compileEntryQuery, entryQuery } from "../entries/query.js";
 // archive entries outside core's listing reader. `anonymousContext(ctx)` asks
 // it for every visitor.
 export { publicEntryRows } from "../entries/visibility.js";
+// A taxonomy's terms, for a surface listing them: the response is stored under
+// the taxonomy's list tag, so a term create or delete purges it.
+export { taxonomyTermRows } from "../terms/listing.js";
 // Load an entry by id the way core does: a revision or autosave row answers as
 // missing, so a plugin taking an id from a visitor cannot reach editor history.
 export { loadAuthoredEntry } from "../entries/authored.js";
