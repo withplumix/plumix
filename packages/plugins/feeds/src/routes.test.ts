@@ -1,9 +1,4 @@
-import type {
-  AnyPluginDescriptor,
-  CdnStore,
-  ConnectedCdn,
-  JsonValue,
-} from "plumix";
+import type { AnyPluginDescriptor, JsonValue } from "plumix";
 import type { EntryQuery } from "plumix/db";
 import type { DispatcherHarness } from "plumix/test";
 import {
@@ -14,15 +9,14 @@ import {
   definePolicy,
   grant,
 } from "plumix/auth";
-import { entryQuery, etagOf, sql, typeTag } from "plumix/db";
+import { entryQuery, etagOf, sql } from "plumix/db";
 import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
-import { createDispatcherHarness } from "plumix/test";
+import { createDispatcherHarness, fakeCdn } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
 import { feeds } from "./index.js";
 import { FEED_LIMIT } from "./items.js";
-import { FEED_TAG } from "./respond.js";
 
 /**
  * The plugin claims its routes in `afterSetup`, so what it serves is decided
@@ -1735,35 +1729,6 @@ describe("the site's own settings", () => {
 });
 
 describe("a feed at the edge", () => {
-  function cdnStub() {
-    const stored = new Map<string, Response>();
-    const put = vi.fn<CdnStore["put"]>((request, response) => {
-      stored.set(request.url, response);
-      return Promise.resolve();
-    });
-    const match: CdnStore["match"] = (request) =>
-      Promise.resolve(stored.get(request.url)?.clone());
-    const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
-      Promise.resolve(),
-    );
-    const cdn: ConnectedCdn = {
-      decorate: (response) => response,
-      store: { match, put },
-      purgeTags,
-    };
-    return { cdn, put, purgeTags };
-  }
-
-  function tagsFor(
-    put: ReturnType<typeof cdnStub>["put"],
-    path: string,
-  ): readonly string[] {
-    const call = put.mock.calls.find(
-      ([request]) => new URL(request.url).pathname === path,
-    );
-    return call?.[2] ?? [];
-  }
-
   function seriesArchive(cacheable: boolean): AnyPluginDescriptor {
     return definePlugin("series", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
@@ -1786,8 +1751,8 @@ describe("a feed at the edge", () => {
       json: {
         json: {
           type: "post",
-          title: "Hello",
-          slug: "hello",
+          title: "Fresh",
+          slug: "fresh",
           status: "published",
         },
         meta: [],
@@ -1797,8 +1762,8 @@ describe("a feed at the edge", () => {
     await h.drainDeferred();
   }
 
-  test("declares a shared freshness window and is stored under the type it lists", async () => {
-    const { cdn, put } = cdnStub();
+  test("declares a shared freshness window and is purged by a publish of the type it lists", async () => {
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [blogPlugin, feeds()] },
@@ -1812,11 +1777,15 @@ describe("a feed at the edge", () => {
     expect(res.headers.get("cache-control")).toBe(
       "public, max-age=0, s-maxage=3600",
     );
-    expect(tagsFor(put, "/post/feed")).toContain(typeTag("post"));
+    cdn.assertStored("/post/feed");
+
+    await publishPost(h);
+
+    cdn.assertNotStored("/post/feed");
   });
 
   test("a member's feed lists the members posts and is never stored, nor served the anonymous copy", async () => {
-    const { cdn, put } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [postsWithAccess, feeds()] },
@@ -1825,7 +1794,7 @@ describe("a feed at the edge", () => {
     const member = await h.seedUser("subscriber");
     (await h.fetch("/post/feed")).assertStatus(200);
     await h.drainDeferred();
-    expect(put).toHaveBeenCalledOnce();
+    cdn.assertStored("/post/feed");
 
     const res = await h.fetch("/post/feed", { as: member });
     await h.drainDeferred();
@@ -1833,13 +1802,14 @@ describe("a feed at the edge", () => {
     res.assertStatus(200);
     expect(await res.text()).toContain("Members Post");
     expect(res.headers.get("cache-control")).toBe("private, no-store");
-    expect(put).toHaveBeenCalledOnce();
+    const anonymous = await h.fetch("/post/feed");
+    expect(await anonymous.text()).not.toContain("Members Post");
   });
 
   test.each(["/feed", "/post/feed"])(
     "changing a post's access choice purges the cached %s",
     async (path) => {
-      const { cdn, put, purgeTags } = cdnStub();
+      const cdn = fakeCdn();
       const h = await createDispatcherHarness({
         cdn,
         config: { plugins: [postsWithAccess, feeds()] },
@@ -1855,6 +1825,7 @@ describe("a feed at the edge", () => {
       });
       (await h.fetch(path)).assertStatus(200);
       await h.drainDeferred();
+      cdn.assertStored(path);
 
       const updated = await h.fetch("/_plumix/rpc/entry/update", {
         as: admin,
@@ -1870,42 +1841,31 @@ describe("a feed at the edge", () => {
       updated.assertStatus(200);
       await h.drainDeferred();
 
-      const purged = new Set(
-        purgeTags.mock.calls.flatMap(([tags]) => [...tags]),
-      );
-      expect(tagsFor(put, path).some((tag) => purged.has(tag))).toBe(true);
+      cdn.assertNotStored(path);
     },
   );
 
-  test("publishing a post purges every cached feed it can appear in", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
-    const h = await createDispatcherHarness({
-      cdn,
-      config: { plugins: [blogWithTaxonomyPlugin, feeds()] },
-    });
-    await h.factory.category.create({ slug: "news", name: "News" });
-    const paths = ["/feed", "/post/feed", "/category/news/feed"];
-    for (const path of paths) (await h.fetch(path)).assertStatus(200);
-    await h.drainDeferred();
+  test.each(["/feed", "/post/feed", "/category/news/feed"])(
+    "publishing a post purges the cached feed at %s",
+    async (path) => {
+      const cdn = fakeCdn();
+      const h = await createDispatcherHarness({
+        cdn,
+        config: { plugins: [blogWithTaxonomyPlugin, feeds()] },
+      });
+      await h.factory.category.create({ slug: "news", name: "News" });
+      (await h.fetch(path)).assertStatus(200);
+      await h.drainDeferred();
+      cdn.assertStored(path);
 
-    await publishPost(h);
+      await publishPost(h);
 
-    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
-    const retired = Object.fromEntries(
-      paths.map((path) => [
-        path,
-        tagsFor(put, path).some((tag) => purged.has(tag)),
-      ]),
-    );
-    expect(retired).toEqual({
-      "/feed": true,
-      "/post/feed": true,
-      "/category/news/feed": true,
-    });
-  });
+      cdn.assertNotStored(path);
+    },
+  );
 
   test("publishing an entry of a type that is not public keeps the cached feed", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const cdn = fakeCdn();
     const site = definePlugin("site", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
@@ -1916,6 +1876,7 @@ describe("a feed at the edge", () => {
     });
     (await h.fetch("/feed")).assertStatus(200);
     await h.drainDeferred();
+    cdn.assertStored("/feed");
 
     const published = await h.fetch("/_plumix/rpc/entry/create", {
       as: await h.seedUser("admin"),
@@ -1932,14 +1893,11 @@ describe("a feed at the edge", () => {
     published.assertStatus(200);
     await h.drainDeferred();
 
-    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
-    const stored = tagsFor(put, "/feed");
-    expect(stored).not.toEqual([]);
-    expect(stored.some((tag) => purged.has(tag))).toBe(false);
+    cdn.assertStored("/feed");
   });
 
   test("deleting a term in a taxonomy listing no entry types purges its cached feed", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const cdn = fakeCdn();
     const site = definePlugin("site", (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
       ctx.registerTermTaxonomy("topic", { label: "Topics" });
@@ -1965,6 +1923,7 @@ describe("a feed at the edge", () => {
     await h.factory.entryTerm.create({ entryId: post.id, termId: topic.id });
     (await h.fetch("/topic/news/feed")).assertStatus(200);
     await h.drainDeferred();
+    cdn.assertStored("/topic/news/feed");
 
     const deleted = await h.fetch("/_plumix/rpc/term/delete", {
       as: admin,
@@ -1973,14 +1932,11 @@ describe("a feed at the edge", () => {
     deleted.assertStatus(200);
     await h.drainDeferred();
 
-    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
-    const stored = tagsFor(put, "/topic/news/feed");
-    expect(stored).not.toEqual([]);
-    expect(stored.some((tag) => purged.has(tag))).toBe(true);
+    cdn.assertNotStored("/topic/news/feed");
   });
 
   test("renaming an author purges their cached feed", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [blogPlugin, feeds()] },
@@ -1997,6 +1953,7 @@ describe("a feed at the edge", () => {
     });
     (await h.fetch("/authors/jane/feed")).assertStatus(200);
     await h.drainDeferred();
+    cdn.assertStored("/authors/jane/feed");
 
     const renamed = await h.fetch("/_plumix/rpc/user/update", {
       as: admin,
@@ -2008,16 +1965,13 @@ describe("a feed at the edge", () => {
     renamed.assertStatus(200);
     await h.drainDeferred();
 
-    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
-    const stored = tagsFor(put, "/authors/jane/feed");
-    expect(stored).not.toEqual([]);
-    expect(stored.some((tag) => purged.has(tag))).toBe(true);
+    cdn.assertNotStored("/authors/jane/feed");
   });
 
   // A delete reassigns the author's entries without firing an entry action, so
   // only the user purge can retire the feed that names them.
   test("deleting an author purges their cached feed", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [blogPlugin, feeds()] },
@@ -2034,6 +1988,7 @@ describe("a feed at the edge", () => {
     });
     (await h.fetch("/authors/jane/feed")).assertStatus(200);
     await h.drainDeferred();
+    cdn.assertStored("/authors/jane/feed");
 
     const deleted = await h.fetch("/_plumix/rpc/user/delete", {
       as: admin,
@@ -2042,16 +1997,13 @@ describe("a feed at the edge", () => {
     deleted.assertStatus(200);
     await h.drainDeferred();
 
-    const purged = new Set(purgeTags.mock.calls.flatMap(([tags]) => [...tags]));
-    const stored = tagsFor(put, "/authors/jane/feed");
-    expect(stored).not.toEqual([]);
-    expect(stored.some((tag) => purged.has(tag))).toBe(true);
+    cdn.assertNotStored("/authors/jane/feed");
   });
 
   // Core can't see what an archive type depends on, so it stays live unless
   // the archive opted in; its feed reads the same things.
   test("a plugin archive that never opted into caching serves its feed live", async () => {
-    const { cdn, put } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [seriesArchive(false), feeds()] },
@@ -2062,29 +2014,28 @@ describe("a feed at the edge", () => {
 
     res.assertStatus(200);
     expect(res.headers.get("cache-control")).toBeNull();
-    expect(put).not.toHaveBeenCalled();
+    cdn.assertNotStored("/series/summer/feed");
   });
 
   test("a plugin archive's feed is purged by a publish of any type its scope can read", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [seriesArchive(true), feeds()] },
     });
     (await h.fetch("/series/summer/feed")).assertStatus(200);
     await h.drainDeferred();
+    cdn.assertStored("/series/summer/feed");
 
     await publishPost(h);
 
-    const purged = purgeTags.mock.calls.flatMap(([tags]) => [...tags]);
-    expect(purged).toContain(typeTag("post"));
-    expect(tagsFor(put, "/series/summer/feed")).toContain(typeTag("post"));
+    cdn.assertNotStored("/series/summer/feed");
   });
 
   // The channel's title and description, and whether there is a feed at all,
   // come from the site settings, which no entry purge reaches.
   test("saving the site settings purges every cached feed", async () => {
-    const { cdn, put, purgeTags } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [blogPlugin, feeds()] },
@@ -2092,6 +2043,7 @@ describe("a feed at the edge", () => {
     const admin = await h.seedUser("admin");
     (await h.fetch("/post/feed")).assertStatus(200);
     await h.drainDeferred();
+    cdn.assertStored("/post/feed");
 
     const saved = await h.fetch("/_plumix/rpc/settings/upsert", {
       as: admin,
@@ -2103,15 +2055,11 @@ describe("a feed at the edge", () => {
     saved.assertStatus(200);
     await h.drainDeferred();
 
-    expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual([
-      "s:site",
-      FEED_TAG,
-    ]);
-    expect(tagsFor(put, "/post/feed")).toContain(FEED_TAG);
+    cdn.assertNotStored("/post/feed");
   });
 
   test("a private site's feed 404s and is never stored", async () => {
-    const { cdn, put } = cdnStub();
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [blogPlugin, feeds()] },
@@ -2128,7 +2076,7 @@ describe("a feed at the edge", () => {
 
     res.assertStatus(404);
     expect(res.headers.get("cache-control")).toBeNull();
-    expect(put).not.toHaveBeenCalled();
+    cdn.assertNotStored("/feed");
   });
 });
 

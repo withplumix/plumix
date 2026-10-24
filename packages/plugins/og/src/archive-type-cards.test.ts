@@ -1,15 +1,16 @@
 import type {
+  AnyPluginDescriptor,
   ArchiveTypeData,
-  CdnStore,
-  ConnectedCdn,
   ListingArchiveData,
 } from "plumix";
+import type { DispatcherHarness } from "plumix/test";
 import { anonymousPolicy, authenticatedPolicy } from "plumix/auth";
-import { typeTag } from "plumix/db";
+import { enqueuePurgeTags } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
 import { pageNotFound } from "plumix/support";
-import { describe, expect, test, vi } from "vitest";
+import { fakeCdn } from "plumix/test";
+import { describe, expect, test } from "vitest";
 
 import type { CardRenderer } from "./renderer.js";
 import type { HarnessOptions } from "./test/harness.js";
@@ -67,6 +68,22 @@ const directory = definePlugin("test_directory", (ctx) => {
   });
 });
 
+/** The directory's own data: a place's page is stored under its tag. */
+function placeTag(slug: string): string {
+  return `place:${slug}`;
+}
+
+/** Stands in for the directory's own edit of a place, which purges its tag. */
+const relocate: AnyPluginDescriptor = definePlugin("test_relocate", (ctx) => {
+  ctx.registerPublicRoute({
+    path: "/relocate/london",
+    handler: (_request, appCtx) => {
+      enqueuePurgeTags(appCtx, [placeTag("london")]);
+      return new Response("ok");
+    },
+  });
+});
+
 function resolveLocation(name: "location" | "members" | "open") {
   return (_ctx: unknown, params: Record<string, string>) => {
     if (params.location === "atlantis") throw pageNotFound();
@@ -78,7 +95,7 @@ function resolveLocation(name: "location" | "members" | "open") {
       place,
       catalogue: params.catalogue ?? null,
     };
-    return { data, title: place, tags: [`place:${params.location ?? ""}`] };
+    return { data, title: place, tags: [placeTag(params.location ?? "")] };
   };
 }
 
@@ -116,15 +133,24 @@ function directoryHarness(options: HarnessOptions = {}) {
   });
 }
 
-/** An edge that keeps what it is handed, and the tags each entry went in under. */
-function recordingCdn() {
-  const put = vi.fn<CdnStore["put"]>(() => Promise.resolve());
-  const cdn: ConnectedCdn = {
-    decorate: (response) => response,
-    store: { match: () => Promise.resolve(undefined), put },
-    purgeTags: () => Promise.resolve(),
-  };
-  return { cdn, put };
+async function editLondon(harness: DispatcherHarness): Promise<void> {
+  (await harness.fetch("/relocate/london")).assertStatus(200);
+}
+
+async function publishPost(harness: DispatcherHarness): Promise<void> {
+  const published = await harness.fetch("/_plumix/rpc/entry/create", {
+    as: await harness.seedUser("admin"),
+    json: {
+      json: {
+        type: "post",
+        title: "Fresh",
+        slug: "fresh",
+        status: "published",
+      },
+      meta: [],
+    },
+  });
+  published.assertStatus(200);
 }
 
 /** The path of the card a page's head advertises. */
@@ -284,25 +310,29 @@ describe("a plugin archive's card", () => {
   });
 
   test.each([
-    ["the tags its resolver returns", "/london", "place:london"],
+    ["a write to what its resolver read", "/london", editLondon],
     [
-      "core's tags for what a listing archive lists",
+      "a publish of what a listing archive lists",
       "/series/design",
-      typeTag("post"),
+      publishPost,
     ],
-  ])("is stored at the edge under %s", async (_what, page, tag) => {
-    const { cdn, put } = recordingCdn();
-    const harness = await directoryHarness({ cdn });
+  ])("is retired at the edge by %s", async (_what, page, write) => {
+    const cdn = fakeCdn();
+    const harness = await directoryHarness({
+      cdn,
+      before: [directory, relocate],
+    });
     const entryId = await seedEntry(harness);
     await seedTerm(harness, { slug: "design", entryIds: [entryId] });
-    const path = await advertisedCard(harness, page);
-    put.mockClear();
+    const path = (await advertisedCard(harness, page)) ?? "";
+    await harness.fetch(path);
+    await harness.drainDeferred();
+    cdn.assertStored(path);
 
-    await harness.fetch(path ?? "");
+    await write(harness);
     await harness.drainDeferred();
 
-    expect(put).toHaveBeenCalledOnce();
-    expect(put.mock.calls[0]?.[2]).toContain(tag);
+    cdn.assertNotStored(path);
   });
 
   test.each([

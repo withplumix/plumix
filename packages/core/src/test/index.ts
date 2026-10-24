@@ -70,6 +70,9 @@ export type { DeferQueue } from "./defer.js";
 export { fakeMail } from "./mail-fake.js";
 export type { CapturedMail, MailFake } from "./mail-fake.js";
 
+export { fakeCdn } from "./cdn-fake.js";
+export type { CdnFake } from "./cdn-fake.js";
+
 export { renderMail } from "./render-mail.js";
 export type { RenderMailOptions } from "./render-mail.js";
 

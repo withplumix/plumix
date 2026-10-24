@@ -1,10 +1,11 @@
-import type { CdnStore, ConnectedCdn, Logger, TelemetrySpan } from "plumix";
-import type { TestResponse } from "plumix/test";
+import type { Logger, TelemetrySpan } from "plumix";
+import type { DispatcherHarness, TestResponse } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
-import { entryPurgeTags, entryTag, eq } from "plumix/db";
+import { eq } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { describe, expect, test, vi } from "vitest";
+import { fakeCdn } from "plumix/test";
+import { describe, expect, test } from "vitest";
 
 import type { CardRenderer } from "./renderer.js";
 import type { HarnessOptions, SeedEntryOverrides } from "./test/harness.js";
@@ -489,43 +490,54 @@ describe("the card route", () => {
 });
 
 describe("a card at the edge", () => {
-  function cdnStub(seeded?: [string, Response]) {
-    const entries = new Map<string, Response>(seeded ? [seeded] : []);
-    const put = vi.fn<CdnStore["put"]>((request, response) => {
-      entries.set(request.url, response);
-      return Promise.resolve();
+  // Fires the site group's change, as the settings RPC does on a save.
+  const siteSaver = definePlugin("site-saver", (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/save-site-settings",
+      handler: async (_request, appCtx) => {
+        await appCtx.hooks.doAction(
+          "settings:group_changed",
+          { group: "site", set: { title: "Renamed Site" }, removed: [] },
+          appCtx,
+        );
+        return new Response("ok");
+      },
     });
-    const match = vi.fn<CdnStore["match"]>((request) =>
-      Promise.resolve(entries.get(request.url)?.clone()),
-    );
-    const cdn: ConnectedCdn = {
-      decorate: (response) => response,
-      store: { match, put },
-      purgeTags: () => Promise.resolve(),
-    };
-    return { cdn, match, put };
+  });
+
+  async function trashEntry(harness: DispatcherHarness, id: number) {
+    const trashed = await harness.fetch("/_plumix/rpc/entry/trash", {
+      as: await harness.seedUser("admin"),
+      json: { json: { id } },
+    });
+    trashed.assertStatus(200);
   }
 
-  test("stores the card under the tag the entry's own publish purges", async () => {
-    const { cdn, put } = cdnStub();
-    const harness = await createHarness({ cdn });
-    const id = await seedEntry(harness);
+  async function saveSite(harness: DispatcherHarness) {
+    (await harness.fetch("/save-site-settings")).assertStatus(200);
+  }
 
-    await fetchCard(harness, id);
+  // The `site` write is there because the card prints the site name.
+  test.each([
+    ["its entry is trashed", trashEntry],
+    ["the site settings are saved", saveSite],
+  ])("is retired when %s", async (_what, write) => {
+    const cdn = fakeCdn();
+    const harness = await createHarness({ cdn, before: [siteSaver] });
+    const id = await seedEntry(harness);
+    const path = await cardPath(harness, id);
+    (await harness.fetch(path)).assertStatus(200);
+    await harness.drainDeferred();
+    cdn.assertStored(path);
+
+    await write(harness, id);
     await harness.drainDeferred();
 
-    // Asserted against core's purge vocabulary so `entry:published` and the
-    // card's stored tags can't drift apart; the `site` tag is there because the
-    // card prints the site name.
-    const stored = [...(put.mock.calls[0]?.[2] ?? [])];
-    expect(stored).toEqual(["s:site", entryTag(id)]);
-    expect(entryPurgeTags("post", id)).toEqual(
-      expect.arrayContaining(stored.filter((tag) => !tag.startsWith("s:"))),
-    );
+    cdn.assertNotStored(path);
   });
 
   test("renders once, then answers the next request from the edge", async () => {
-    const { cdn, match, put } = cdnStub();
+    const cdn = fakeCdn();
     const fake = createFakeRenderer();
     const harness = await createHarness({ cdn, renderer: fake.renderer });
     const id = await seedEntry(harness);
@@ -535,59 +547,71 @@ describe("a card at the edge", () => {
     await harness.drainDeferred();
     const second = await harness.fetch(path);
 
+    cdn.assertStored(path);
     expect(await second.text()).toBe(first);
-    expect(put).toHaveBeenCalledOnce();
-    // Two lookups, one store: the second was answered from the edge. `cardPath`
-    // resolves the pointer with a lookup of its own, hence the filter.
-    const lookups = match.mock.calls.filter(
-      ([request]) => new URL(request.url).pathname === path,
-    );
-    expect(lookups).toHaveLength(2);
     expect(fake.inputs).toHaveLength(1);
   });
 
-  test("keeps a crafted query string from minting an entry of its own", async () => {
-    const { cdn, put } = cdnStub();
-    const harness = await createHarness({ cdn });
-    const id = await seedEntry(harness);
-    const path = await cardPath(harness, id);
+  test.each([0, 1, 2])(
+    "keeps a crafted query string (junk=%i) from minting an entry of its own",
+    async (junk) => {
+      const cdn = fakeCdn();
+      const harness = await createHarness({ cdn });
+      const id = await seedEntry(harness);
+      const path = await cardPath(harness, id);
 
-    for (const junk of [0, 1, 2]) {
       await harness.fetch(`${path}?junk=${String(junk)}`);
-    }
-    await harness.drainDeferred();
+      await harness.drainDeferred();
 
-    // The edge keys on the whole URL, so answering these would leave three
-    // entries holding one card's immutable bytes — from an unauthenticated
-    // route at an enumerable id.
-    expect(put).not.toHaveBeenCalled();
-  });
+      // The edge keys on the whole URL, so answering this would leave an
+      // entry holding the card's immutable bytes, from an unauthenticated route.
+      cdn.assertNotStored(`${path}?junk=${String(junk)}`);
+    },
+  );
+
+  const STORED = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
+
+  async function storedCopy() {
+    const cdn = fakeCdn();
+    await cdn.store.put(new Request(STORED), new Response("EDGE COPY"), []);
+    return cdn;
+  }
 
   test("answers from the stored copy without reaching the route", async () => {
-    const path = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
-    const { cdn, match } = cdnStub([path, new Response("EDGE COPY")]);
-    const harness = await createHarness({ cdn });
+    const harness = await createHarness({ cdn: await storedCopy() });
 
-    const response = await harness.fetch(new URL(path).pathname);
+    const response = await harness.fetch(new URL(STORED).pathname);
 
     expect(await response.text()).toBe("EDGE COPY");
-    expect(match).toHaveBeenCalledOnce();
   });
 
   test("hands a signed-in visitor the one entry everybody reads", async () => {
-    const path = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
-    const { cdn, match } = cdnStub([path, new Response("EDGE COPY")]);
-    const harness = await createHarness({ cdn });
+    const cdn = await storedCopy();
+    const looked: Request[] = [];
+    const harness = await createHarness({
+      cdn: {
+        ...cdn,
+        store: {
+          ...cdn.store,
+          match: (request) => {
+            looked.push(request);
+            return cdn.store.match(request);
+          },
+        },
+      },
+    });
     const reader = await harness.seedUser("subscriber");
 
-    const response = await harness.fetch(new URL(path).pathname, {
+    const response = await harness.fetch(new URL(STORED).pathname, {
       as: reader,
     });
 
     // Session and locale cookies are scoped to `/_plumix/` so browsers send
     // them here; a card is the same for everyone, so they aren't a key axis.
     expect(await response.text()).toBe("EDGE COPY");
-    expect(match.mock.calls[0]?.[0].headers.has("cookie")).toBe(false);
+    expect(looked.map((request) => request.headers.has("cookie"))).toEqual([
+      false,
+    ]);
   });
 });
 

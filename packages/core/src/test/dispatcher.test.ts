@@ -1,13 +1,12 @@
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
-import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
-import { entryPurgeTags } from "../cdn/contract/tags.js";
 import { tryGetContext } from "../context/stores.js";
 import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
 import { memoryKv } from "../runtime/memory-kv.js";
+import { fakeCdn } from "./cdn-fake.js";
 import { createDispatcherHarness } from "./dispatcher.js";
 import { createTestDb } from "./harness.js";
 import { buildRequest } from "./request.js";
@@ -201,37 +200,61 @@ describe("createDispatcherHarness slot binding", () => {
     expect(await response.json()).toMatchObject({ kv: true });
   });
 
-  // A stub standing in for a deployed cdn has to get what a deployed one gets,
+  test("a cacheable public GET is stored in the cdn and the next is served from it", async () => {
+    const cdn = fakeCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [blog] },
+    });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Stored title",
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    (await h.fetch("/post/hello")).assertStatus(200);
+    await h.drainDeferred();
+    cdn.assertStored("/post/hello");
+    // A factory write fires no hook, so nothing purges the stored page.
+    await h.db.update(entries).set({ title: "Changed title" });
+
+    const second = await h.fetch("/post/hello");
+    expect(await second.text()).toContain("Stored title");
+  });
+
+  // A fake standing in for a deployed cdn has to get what a deployed one gets,
   // or a plugin test can prove what it stores and never what retires it.
   test("a cdn receives the purge an entry mutation enqueues", async () => {
-    const purgeTags = vi.fn<NonNullable<ConnectedCdn["purgeTags"]>>(() =>
-      Promise.resolve(),
-    );
+    const cdn = fakeCdn();
     const h = await createDispatcherHarness({
-      cdn: { decorate: (response) => response, purgeTags },
+      cdn,
       config: { plugins: [blog] },
     });
     const admin = await h.seedUser("admin");
-
-    const created = await h.fetch("/_plumix/rpc/entry/create", {
-      as: admin,
-      json: {
-        json: {
-          type: "post",
-          title: "Hello",
-          slug: "hello",
-          status: "published",
-        },
-        meta: [],
-      },
+    const post = await h.factory.entry.create({
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+      status: "published",
+      authorId: admin.id,
+      publishedAt: new Date(),
     });
-    created.assertStatus(200);
+    (await h.fetch("/post/hello")).assertStatus(200);
+    await h.drainDeferred();
+    cdn.assertStored("/post/hello");
+
+    const trashed = await h.fetch("/_plumix/rpc/entry/trash", {
+      as: admin,
+      json: { json: { id: post.id } },
+    });
+    trashed.assertStatus(200);
     await h.drainDeferred();
 
-    const [entry] = await h.db.select({ id: entries.id }).from(entries);
-    expect(purgeTags.mock.calls.flatMap(([tags]) => [...tags])).toEqual(
-      entryPurgeTags("post", entry?.id ?? 0),
-    );
+    cdn.assertNotStored("/post/hello");
   });
 });
 
