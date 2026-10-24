@@ -10,6 +10,7 @@ import type {
 import type { UserRole } from "../db/schema/users.js";
 import type { PluginSetup } from "../plugin/define.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { BarCatalogs } from "./i18n.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
 import { HookRegistry } from "../hooks/registry.js";
@@ -18,11 +19,12 @@ import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { createTestContext, silentLogger } from "../test/context.js";
-import { adminBarChrome, PlumixAdminBar } from "./component.js";
+import { createAdminBarChrome, PlumixAdminBar } from "./component.js";
 import {
   registerCoreAdminBarNodes,
   registerNewEntryAdminBarNodes,
 } from "./core-nodes.js";
+import { barCatalogs } from "./i18n.js";
 
 const emptyRegistry = createBlockRegistry([]);
 
@@ -36,14 +38,16 @@ const user: AuthenticatedUser = {
 const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
 const entryTypes = new Map();
+const catalogs = barCatalogs();
 
 /** The registry as boot leaves it with core's nodes and `types`. */
 function withCoreNodes(
   types: PluginRegistry["entryTypes"] = new Map(),
+  bar: BarCatalogs = catalogs,
 ): PluginRegistry {
   const registry = createPluginRegistry();
   for (const [name, type] of types) registry.entryTypes.set(name, type);
-  registerCoreAdminBarNodes(registry);
+  registerCoreAdminBarNodes(registry, bar);
   registerNewEntryAdminBarNodes(registry);
   return registry;
 }
@@ -55,9 +59,10 @@ function withCoreNodes(
 async function renderChrome(
   viewer: AuthenticatedUser | null,
   plugins = withCoreNodes(),
+  bar: BarCatalogs = catalogs,
 ): Promise<string> {
   const ctx = createTestContext({ db: {} as Db, user: viewer, plugins });
-  const chrome = await adminBarChrome(ctx, undefined);
+  const chrome = await createAdminBarChrome(bar)(ctx, undefined);
   return renderToStaticMarkup(
     <PlumixProvider value={{ registry: emptyRegistry }}>
       {chrome}
@@ -65,7 +70,7 @@ async function renderChrome(
   );
 }
 
-describe("adminBarChrome", () => {
+describe("createAdminBarChrome", () => {
   test("renders nothing when there is no principal", async () => {
     expect(await renderChrome(null)).toBe("");
   });
@@ -98,6 +103,25 @@ describe("adminBarChrome", () => {
       );
     },
   );
+
+  test("renders a de-AT user's bar in de-AT with the de catalog's strings", async () => {
+    const bar = barCatalogs(
+      { en: "en", "de-AT": "de" },
+      {
+        de: () =>
+          Promise.resolve({ messages: { "core.adminBar.profile": "Profil" } }),
+      },
+    );
+
+    const html = await renderChrome(
+      { ...user, meta: { locale: "de-AT" } },
+      withCoreNodes(new Map(), bar),
+      bar,
+    );
+
+    expect(html).toContain('lang="de-AT"');
+    expect(html).toContain(">Profil<");
+  });
 });
 
 describe("registered admin bar nodes", () => {
@@ -115,7 +139,7 @@ describe("registered admin bar nodes", () => {
       plugins: registry,
       logger,
     });
-    const chrome = await adminBarChrome(ctx, undefined);
+    const chrome = await createAdminBarChrome(catalogs)(ctx, undefined);
     return renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         {chrome}
@@ -268,6 +292,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -286,6 +311,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -304,6 +330,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -329,6 +356,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -356,6 +384,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -375,6 +404,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -395,6 +425,7 @@ describe("PlumixAdminBar", () => {
           siteName="موقعي"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -418,6 +449,7 @@ describe("PlumixAdminBar", () => {
           siteName="موقعي"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -440,6 +472,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={types}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -463,6 +496,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={types}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -492,6 +526,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={types}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -513,6 +548,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -539,6 +575,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -559,6 +596,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -582,6 +620,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -603,6 +642,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );
@@ -624,6 +664,7 @@ describe("PlumixAdminBar", () => {
           siteName="My Site"
           auth={auth}
           entryTypes={entryTypes}
+          catalogs={catalogs}
         />
       </PlumixProvider>,
     );

@@ -8,19 +8,14 @@ import type {
 } from "../context/app-context.js";
 import type { EntryEditRow } from "../entries/editability.js";
 import type { RegisteredAdminBarNode } from "../plugin/admin-bar-node.js";
-import type { BarStrings } from "./i18n.js";
+import type { BarCatalogs, BarStrings } from "./i18n.js";
 import type { AdminBarTreeNode, BarRenderContext } from "./types.js";
 import { useQueriedEntry } from "../blocks/renderer/index.js";
 import { canEditEntry } from "../entries/editability.js";
 import { adminBarViewer } from "../route/render/personal-render.js";
 import { buildAdminBarTree } from "./build-tree.js";
 import { collectAdminBarNodes } from "./collect.js";
-import {
-  barDirection,
-  barMessages,
-  loadBarCatalog,
-  resolveBarLocale,
-} from "./i18n.js";
+import { barDirection } from "./i18n.js";
 import {
   ADMIN_BAR_BODY_OFFSET_CSS,
   ADMIN_BAR_CSS,
@@ -37,6 +32,7 @@ interface PlumixAdminBarProps {
   readonly entryTypes: BarRenderContext["entryTypes"];
   readonly nodes: Iterable<RegisteredAdminBarNode>;
   readonly logger: Logger;
+  readonly catalogs: BarCatalogs;
 }
 
 export function PlumixAdminBar({
@@ -48,11 +44,12 @@ export function PlumixAdminBar({
   entryTypes,
   nodes,
   logger,
+  catalogs,
 }: PlumixAdminBarProps): ReactNode {
   const queriedEntry = useQueriedEntry();
-  const locale = resolveBarLocale(viewer);
+  const locale = catalogs.resolveLocale(viewer);
   const direction = barDirection(locale);
-  const strings = barMessages(locale);
+  const strings = catalogs.strings(locale);
   const tree = buildAdminBarTree(
     collectAdminBarNodes(
       nodes,
@@ -110,32 +107,37 @@ export function PlumixAdminBar({
  * Whether the bar shows was decided before the render, so nothing here reads
  * the principal for a page without one.
  */
-export async function adminBarChrome(
+export function createAdminBarChrome(
+  catalogs: BarCatalogs,
+): (
   ctx: AppContext,
   queriedEntry: EntryEditRow | undefined,
-): Promise<ReactNode> {
-  const viewer = adminBarViewer(ctx);
-  if (viewer === null) return null;
-  await loadBarCatalog(resolveBarLocale(viewer));
-  return (
-    <PlumixAdminBar
-      viewer={viewer}
-      request={ctx.request}
-      siteName={ctx.config.auth.magicLink?.siteName ?? "Site"}
-      auth={ctx.auth}
-      queriedEntryDetails={
-        queriedEntry === undefined
-          ? undefined
-          : {
-              type: queriedEntry.type,
-              canEdit: canEditEntry(ctx, queriedEntry),
-            }
-      }
-      entryTypes={ctx.plugins.entryTypes}
-      nodes={ctx.plugins.adminBarNodes.values()}
-      logger={ctx.logger}
-    />
-  );
+) => Promise<ReactNode> {
+  return async (ctx, queriedEntry) => {
+    const viewer = adminBarViewer(ctx);
+    if (viewer === null) return null;
+    await catalogs.load(catalogs.resolveLocale(viewer));
+    return (
+      <PlumixAdminBar
+        viewer={viewer}
+        request={ctx.request}
+        siteName={ctx.config.auth.magicLink?.siteName ?? "Site"}
+        auth={ctx.auth}
+        queriedEntryDetails={
+          queriedEntry === undefined
+            ? undefined
+            : {
+                type: queriedEntry.type,
+                canEdit: canEditEntry(ctx, queriedEntry),
+              }
+        }
+        entryTypes={ctx.plugins.entryTypes}
+        nodes={ctx.plugins.adminBarNodes.values()}
+        logger={ctx.logger}
+        catalogs={catalogs}
+      />
+    );
+  };
 }
 
 function BarItem({

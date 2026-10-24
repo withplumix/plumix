@@ -1,0 +1,102 @@
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { createBuilder } from "vite";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+
+import { loadConfigsFromSource } from "@plumix/vitest-config/source-loader";
+import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
+
+import { plumix } from "./index.js";
+import { serverEnvironment } from "./server-environment.js";
+
+const CORE_SURFACES = ["blocks", "mail", "welcome", "admin-bar"] as const;
+
+/** A runtime whose entry is the projection the build generates, and nothing else. */
+const CONFIG = `import { auth } from "plumix/auth";
+import { plumix } from "plumix";
+
+export default plumix({
+  runtime: {
+    name: "fixture",
+    handler: {},
+    generateEntry: () =>
+      'export { default } from "virtual:plumix/catalog-locales";\\n',
+  },
+  database: { kind: "fixture" },
+  auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
+  i18n: { defaultLocale: "en", locales: ["en", "de-AT", "zh-SG", "fr"] },
+});
+`;
+
+describe("virtual:plumix/catalog-locales in a build of a site enabling regional locales", () => {
+  let dir: string;
+  let adminDir: string;
+  let undoSourceConfigs: () => void;
+  let projection: Record<string, Record<string, string>>;
+  let warnings: unknown[];
+
+  beforeAll(async () => {
+    undoSourceConfigs = loadConfigsFromSource();
+    adminDir = mkdtempSync(join(tmpdir(), "plumix-catalog-locales-admin-"));
+    writeFileSync(
+      join(adminDir, "index.html"),
+      '<!doctype html><title>admin</title><body><script id="plumix-manifest" type="application/json">{}</script></body>',
+    );
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "plumix-catalog-locales-")));
+    writeFileSync(join(dir, "plumix.config.ts"), CONFIG);
+
+    warnings = [];
+    vi.spyOn(console, "warn").mockImplementation((...args) => {
+      warnings.push(args);
+    });
+    const builder = await createBuilder({
+      configFile: false,
+      root: dir,
+      logLevel: "warn",
+      plugins: [plumixSourceResolver(), plumix({ adminDir })],
+      environments: {
+        server: serverEnvironment({
+          entry: ".plumix/worker.ts",
+          outDir: "dist/server",
+        }),
+      },
+    });
+    const environment = builder.environments.server;
+    if (environment === undefined) throw new Error("no server environment");
+    await builder.build(environment);
+    vi.restoreAllMocks();
+    const built = (await import(
+      pathToFileURL(join(dir, "dist/server/worker.js")).href
+    )) as { default: Record<string, Record<string, string>> };
+    projection = built.default;
+  }, 120_000);
+
+  afterAll(() => {
+    undoSourceConfigs();
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(adminDir, { recursive: true, force: true });
+  });
+
+  test.each(CORE_SURFACES)(
+    "%s reads de-AT from de and zh-SG from zh-CN",
+    (surface) => {
+      expect(projection[surface]).toMatchObject({
+        "de-AT": "de",
+        "zh-SG": "zh-CN",
+      });
+    },
+  );
+
+  test.each(CORE_SURFACES)(
+    "%s reads fr, which no catalog serves, from the source locale",
+    (surface) => {
+      expect(projection[surface]).toMatchObject({ fr: "en", en: "en" });
+    },
+  );
+
+  test("an enabled locale with no catalog builds without a warning", () => {
+    expect(warnings).toEqual([]);
+  });
+});

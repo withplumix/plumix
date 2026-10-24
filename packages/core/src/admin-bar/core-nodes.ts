@@ -6,12 +6,12 @@ import type {
   MutablePluginRegistry,
   RegisteredEntryType,
 } from "../plugin/manifest.js";
+import type { BarCatalogs } from "./i18n.js";
 import { entryCapabilityByName } from "../access/contract/entry-capabilities.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateRegistrationError } from "../plugin/errors.js";
 import { deriveAdminSlug } from "../plugin/manifest.js";
 import { userDisplayName } from "../users/display-name.js";
-import { barMessages } from "./i18n.js";
 
 const SITE_POSITION = 10;
 const EDIT_THIS_POSITION = 20;
@@ -28,18 +28,19 @@ const ACCOUNT_POSITION = 100;
  */
 export function registerCoreAdminBarNodes(
   registry: MutablePluginRegistry,
+  catalogs: BarCatalogs,
 ): void {
   const nodes: readonly CoreAdminBarNodeOptions[] = [
     {
       id: "site",
-      title: (bar) => bar.siteName || barMessages(bar.locale).siteFallback,
+      title: (bar) => bar.siteName || catalogs.strings(bar.locale).siteFallback,
       href: () => "/_plumix/admin",
       group: "root",
       position: SITE_POSITION,
     },
     {
       id: "edit-this",
-      title: (bar) => barMessages(bar.locale).edit,
+      title: (bar) => catalogs.strings(bar.locale).edit,
       href: editThisHref,
       visible: (bar) => editThisHref(bar) !== undefined,
       group: "primary",
@@ -47,7 +48,7 @@ export function registerCoreAdminBarNodes(
     },
     {
       id: "+new",
-      title: (bar) => barMessages(bar.locale).newGroup,
+      title: (bar) => catalogs.strings(bar.locale).newGroup,
       visible: (bar) =>
         [...bar.entryTypes].some(([name, type]) => mayCreate(bar, name, type)),
       group: "+new",
@@ -62,7 +63,7 @@ export function registerCoreAdminBarNodes(
     },
     {
       id: "account:profile",
-      title: (bar) => barMessages(bar.locale).profile,
+      title: (bar) => catalogs.strings(bar.locale).profile,
       href: () => "/_plumix/admin/profile",
       group: "account",
       parent: "account",
@@ -70,7 +71,7 @@ export function registerCoreAdminBarNodes(
     },
     {
       id: "account:signout",
-      title: (bar) => barMessages(bar.locale).signOut,
+      title: (bar) => catalogs.strings(bar.locale).signOut,
       action: "signout",
       group: "account",
       parent: "account",

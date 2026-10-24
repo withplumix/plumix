@@ -14,6 +14,7 @@ import {
   registerCoreAdminBarNodes,
   registerNewEntryAdminBarNodes,
 } from "./core-nodes.js";
+import { barCatalogs } from "./i18n.js";
 
 const allow = (): boolean => true;
 
@@ -63,7 +64,7 @@ function coreNodes(
   const registry = createPluginRegistry();
   for (const [name, type] of bar.entryTypes)
     registry.entryTypes.set(name, type);
-  registerCoreAdminBarNodes(registry);
+  registerCoreAdminBarNodes(registry, barCatalogs());
   registerNewEntryAdminBarNodes(registry);
   return collectAdminBarNodes(
     registry.adminBarNodes.values(),

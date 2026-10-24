@@ -107,6 +107,13 @@ export interface CreateDispatcherHarnessOptions {
    */
   readonly pluginCatalogs?: PluginCatalogs;
   /**
+   * Core's catalogs projected onto the enabled locales, as
+   * `virtual:plumix/catalog-locales` hands them to the generated entry.
+   */
+  readonly catalogLocales?: NonNullable<
+    Parameters<typeof buildApp>[1]
+  >["catalogLocales"];
+  /**
    * Logger the request context carries. Defaults to the silent one; pass a
    * capturing logger to assert on what a handler reported.
    */
@@ -232,6 +239,7 @@ export async function createDispatcherHarness(
   const built = await buildApp(config, {
     assetManifest: options.assetManifest,
     pluginCatalogs: options.pluginCatalogs,
+    catalogLocales: options.catalogLocales,
   });
   const app: PlumixApp = { ...built, ...options.coldInterfaces };
   const dispatcher = createPlumixDispatcher(app);

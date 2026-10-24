@@ -11,6 +11,7 @@ import { mergeConfig } from "vite";
 import type {
   AnyPluginDescriptor,
   PluginRegistry,
+  PlumixConfig,
   PlumixManifest,
   RuntimeAdapter,
 } from "@plumix/core";
@@ -20,6 +21,7 @@ import {
   generateSchemaSource,
   injectManifestIntoHtml,
   isTrustedDevHost,
+  projectCoreCatalogLocales,
 } from "@plumix/core";
 import {
   DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
@@ -102,6 +104,19 @@ const WORKER_EXPORTS_RESOLVED_ID = "\0" + WORKER_EXPORTS_VIRTUAL_ID;
 const PLUGIN_CATALOGS_VIRTUAL_ID = "virtual:plumix/plugin-catalogs";
 const PLUGIN_CATALOGS_RESOLVED_ID = "\0" + PLUGIN_CATALOGS_VIRTUAL_ID;
 
+const CATALOG_LOCALES_VIRTUAL_ID = "virtual:plumix/catalog-locales";
+const CATALOG_LOCALES_RESOLVED_ID = "\0" + CATALOG_LOCALES_VIRTUAL_ID;
+
+type CoreCatalogLocales = ReturnType<typeof projectCoreCatalogLocales>;
+
+function projectEnabledLocales(i18n: PlumixConfig["i18n"]): CoreCatalogLocales {
+  return projectCoreCatalogLocales(
+    i18n.locales
+      .filter((locale) => locale.enabled)
+      .map((locale) => locale.code),
+  );
+}
+
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let root = process.cwd();
   let publicDir = "";
@@ -114,6 +129,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   // `virtual:plumix/plugin-catalogs` module the generated entry imports.
   let pluginCatalogFiles: ReadonlyMap<string, readonly PluginCatalogFile[]> =
     new Map();
+  let catalogLocales: CoreCatalogLocales | undefined;
   // Discovered at config() time so rollupOptions.input can be extended
   // before Vite resolves entries.
   let islands: readonly DiscoveredIsland[] = [];
@@ -256,6 +272,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       if (id === SERIALIZE_VIRTUAL_ID) return SERIALIZE_RESOLVED_ID;
       if (id === WORKER_EXPORTS_VIRTUAL_ID) return WORKER_EXPORTS_RESOLVED_ID;
       if (id === PLUGIN_CATALOGS_VIRTUAL_ID) return PLUGIN_CATALOGS_RESOLVED_ID;
+      if (id === CATALOG_LOCALES_VIRTUAL_ID) return CATALOG_LOCALES_RESOLVED_ID;
       // `transform` short-circuits on this query so the shim isn't recursively
       // wrapped.
       if (id.endsWith(ORIG_QUERY)) {
@@ -275,6 +292,9 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       }
       if (id === PLUGIN_CATALOGS_RESOLVED_ID) {
         return generatePluginCatalogsSource(pluginCatalogFiles);
+      }
+      if (id === CATALOG_LOCALES_RESOLVED_ID) {
+        return `export default ${JSON.stringify(catalogLocales)};`;
       }
       if (id === SERIALIZE_RESOLVED_ID) {
         // Resolved from the project root, where `plumix` is always a
@@ -311,6 +331,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       configPath = emitted.configPath;
       workerExports = emitted.workerExports;
       pluginCatalogFiles = emitted.pluginCatalogFiles;
+      catalogLocales = projectEnabledLocales(emitted.i18n);
       warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
       // The `_plumix/` filter in `stageUserPublic` keeps a user's files
       // out of the admin's subtree, which `stageAdminAssets` owns.
@@ -443,6 +464,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
           .then(async (emitted) => {
             workerExports = emitted.workerExports;
             pluginCatalogFiles = emitted.pluginCatalogFiles;
+            catalogLocales = projectEnabledLocales(emitted.i18n);
             await stageUserPublic({ workspaceRoot: root, publicDir });
             await stageAdminAssets(
               publicDir,
@@ -498,6 +520,7 @@ async function regenerate(
   plugins: readonly AnyPluginDescriptor[];
   workerExports: readonly string[];
   pluginCatalogFiles: ReadonlyMap<string, readonly PluginCatalogFile[]>;
+  i18n: PlumixConfig["i18n"];
   editorBlockModules: readonly BlockModuleRef[];
 }> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
@@ -568,6 +591,7 @@ async function regenerate(
     plugins: config.plugins,
     workerExports: config.runtime.workerExports ?? [],
     pluginCatalogFiles: await collectPluginCatalogFiles(config.plugins, cwd),
+    i18n: config.i18n,
     editorBlockModules,
   };
 }

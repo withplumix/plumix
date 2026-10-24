@@ -639,6 +639,55 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).toContain('data-testid="plumix-admin-bar"');
   });
 
+  test("the admin bar reads a de-AT user's locale through the build's projection", async () => {
+    const theme = defineTheme({
+      templates: [
+        fallback(() => null),
+        entry(({ data }) => <article>{data.entry.title}</article>),
+      ],
+    });
+    const projected = { en: "en", "de-AT": "de" };
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [blogPlugin],
+        theme,
+        i18n: { defaultLocale: "en", locales: ["en", "de-AT"] },
+      },
+      catalogLocales: {
+        blocks: projected,
+        mail: projected,
+        welcome: projected,
+        "admin-bar": projected,
+      },
+    });
+    const author = await h.seedUser("admin");
+    const { users } = await import("../../db/schema/users.js");
+    const { eq } = await import("drizzle-orm");
+    await h.db
+      .update(users)
+      .set({ meta: { locale: "de-AT" } })
+      .where(eq(users.id, author.id));
+    await h.factory.entry.create({
+      type: "post",
+      slug: "public",
+      title: "Public",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const request = await h.authenticateRequest(
+      new Request("https://cms.example/post/public"),
+      author.id,
+    );
+    const body = await (await h.dispatch(request)).text();
+
+    expect(body).toContain(
+      'data-testid="plumix-admin-bar" dir="ltr" lang="de-AT"',
+    );
+  });
+
   describe("the admin bar's Edit link follows canEditEntry", () => {
     async function renderPostAs(
       viewerRole: "contributor" | "editor",

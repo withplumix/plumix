@@ -4,6 +4,7 @@
 import { catalogs } from "@plumix/core/locales/index/mail";
 
 import type { CompiledCatalog } from "../blocks/index.js";
+import type { CatalogIndex, CatalogLocales } from "../blocks/lazy-catalogs.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
 
@@ -12,8 +13,10 @@ export type MailCatalogs = (locale: string) => Promise<CompiledCatalog>;
 
 export function createMailCatalogs(
   pluginCatalogs: PluginCatalogs = {},
+  catalogLocales?: CatalogLocales,
+  index: CatalogIndex = catalogs,
 ): MailCatalogs {
-  const core = lazyCatalogs(catalogs);
+  const core = lazyCatalogs(index, catalogLocales);
   // Once per locale per isolate: the catalogs are static build output.
   const merged = new Map<string, Promise<CompiledCatalog>>();
   return (locale) => {

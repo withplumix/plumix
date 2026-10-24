@@ -1,9 +1,10 @@
-import type { WelcomeStrings } from "./welcome/i18n.js";
+import type { ThemeDescriptor } from "./theme.js";
+import type { WelcomeCatalogs, WelcomeStrings } from "./welcome/i18n.js";
 import { withBasePath } from "./base-path.js";
 import { fallback } from "./route/render/template-builders.js";
 import { defineTemplate } from "./template.js";
 import { defineTheme } from "./theme.js";
-import { loadWelcomeCatalog, welcomeMessages } from "./welcome/i18n.js";
+import { welcomeCatalogs } from "./welcome/i18n.js";
 
 const BRAND = "#0ea5e9";
 
@@ -182,31 +183,39 @@ function WelcomeScreen({
 }
 
 /**
- * Substituted at config resolution when a site registers no `theme`.
  * `defineTemplate` so the render receives `ctx` for the basePath-aware admin
  * link.
  */
-export const welcomeTheme = defineTheme({
-  templates: [
-    fallback(
-      defineTemplate({
-        // Runs before the render, which reads the strings synchronously.
-        document: async ({ ctx }) => {
-          await loadWelcomeCatalog(ctx.locale.code);
-          return {};
-        },
-        render: ({ ctx }) => (
-          <WelcomeScreen
-            basePath={ctx.config.basePath}
-            strings={welcomeMessages(ctx.locale.code)}
-          />
-        ),
-      }),
-    ),
-  ],
-  // Never index a placeholder — it's a misconfiguration if it reaches prod.
-  document: {
-    title: "plumix",
-    meta: [{ name: "robots", content: "noindex" }],
-  },
-});
+export function createWelcomeTheme(catalogs: WelcomeCatalogs): ThemeDescriptor {
+  return defineTheme({
+    templates: [
+      fallback(
+        defineTemplate({
+          // Runs before the render, which reads the strings synchronously.
+          document: async ({ ctx }) => {
+            await catalogs.load(ctx.locale.code);
+            return {};
+          },
+          render: ({ ctx }) => (
+            <WelcomeScreen
+              basePath={ctx.config.basePath}
+              strings={catalogs.strings(ctx.locale.code)}
+            />
+          ),
+        }),
+      ),
+    ],
+    // Never index a placeholder — it's a misconfiguration if it reaches prod.
+    document: {
+      title: "plumix",
+      meta: [{ name: "robots", content: "noindex" }],
+    },
+  });
+}
+
+/**
+ * Substituted at config resolution when a site registers no `theme`;
+ * `buildApp` serves it with the welcome catalogs the build projected.
+ */
+export const welcomeTheme: ThemeDescriptor =
+  createWelcomeTheme(welcomeCatalogs());
