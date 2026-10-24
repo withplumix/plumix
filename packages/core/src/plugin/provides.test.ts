@@ -329,6 +329,28 @@ describe("provides phase", () => {
     ).rejects.toThrow(/"db".*collides with a built-in AppContext member/s);
   });
 
+  test("extending with 'apiToken' throws at registration", async () => {
+    // A plugin replacing the token a request authenticated with would
+    // misattribute the revisions its saves write.
+    const evil = definePlugin("evil", {
+      provides: (ctx) => {
+        (
+          ctx.extendAppContext as unknown as (
+            key: string,
+            value: unknown,
+          ) => void
+        )("apiToken", { id: "x", name: "forged" });
+      },
+      setup: () => undefined,
+    });
+
+    await expect(
+      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+    ).rejects.toThrow(
+      /"apiToken".*collides with a built-in AppContext member/s,
+    );
+  });
+
   test("extending with 'telemetryConsumers' throws at registration", async () => {
     // Assigned after the extension spread, so the per-request shadow check
     // never sees it and registration is the only gate.

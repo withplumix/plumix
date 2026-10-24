@@ -70,6 +70,7 @@ describe("trackPrincipalReads", () => {
   test.each<[string, (ctx: AppContext) => unknown]>([
     ["reading ctx.user", (ctx) => ctx.user],
     ["reading ctx.tokenScopes", (ctx) => ctx.tokenScopes],
+    ["reading ctx.apiToken", (ctx) => ctx.apiToken],
     ["calling ctx.auth.can()", (ctx) => ctx.auth.can("entry:post:read")],
   ])("%s marks the render personal", (_read, read) => {
     const ctx = contextFor(subscriber);
