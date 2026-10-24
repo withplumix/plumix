@@ -13,7 +13,7 @@ import type {
 } from "../contract/resolved-entry.js";
 import { expandShortcodes, isEntryContent } from "../../blocks/index.js";
 import { declarePageTags } from "../../cdn/contract/page-tags.js";
-import { userTag } from "../../cdn/contract/tags.js";
+import { termTag, userTag } from "../../cdn/contract/tags.js";
 import { memoBatch } from "../../context/memo.js";
 import { entryTerm } from "../../db/schema/entry_term.js";
 import { terms } from "../../db/schema/terms.js";
@@ -94,7 +94,7 @@ function publicAuthor(row: AuthorRow, images: RoleImages): ResolvedAuthor {
 
 /**
  * Every surface that hands a theme a term builds it here, so none grows a field
- * the others lack.
+ * the others lack and each is stored under the term's tag.
  */
 export function resolveTerm(
   ctx: AppContext,
@@ -102,6 +102,7 @@ export function resolveTerm(
   meta: ResolvedMeta,
   url: string | null,
 ): ResolvedTerm {
+  declarePageTags(ctx, [termTag(term.id)]);
   return {
     ...term,
     meta,

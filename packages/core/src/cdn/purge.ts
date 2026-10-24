@@ -7,6 +7,8 @@ import {
   normalizeTag,
   settingsTag,
   termPurgeTags,
+  termSlugsTag,
+  termTag,
   userSlugsTag,
   userTag,
 } from "./contract/tags.js";
@@ -93,6 +95,7 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   });
 
   // A term archive is stored under its taxonomy's entry types' `t:<type>` tags.
+  // The slug lookup has no id to be tagged by, so any term write drops it.
   const onTerm = (
     term: { readonly taxonomy: string },
     ctx: AppContext,
@@ -101,12 +104,21 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
       ctx,
       termPurgeTags(termPageEntryTypeNames(ctx.plugins, term.taxonomy)),
     );
+    ctx.memo.invalidate([termSlugsTag()]);
   };
   hooks.addAction("term:created", onTerm);
   hooks.addAction("term:deleted", onTerm);
-  hooks.addAction("term:updated", (term, _previous, ctx) => onTerm(term, ctx));
+  // An edit, a meta-only save included, reaches only the pages that rendered
+  // the term.
+  const onTermEdit = (term: { readonly id: number }, ctx: AppContext): void => {
+    enqueuePurgeTags(ctx, [termTag(term.id)]);
+    ctx.memo.invalidate([termSlugsTag()]);
+  };
+  hooks.addAction("term:updated", (term, _previous, ctx) =>
+    onTermEdit(term, ctx),
+  );
   hooks.addAction("term:meta_changed", (term, _changes, ctx) =>
-    onTerm(term, ctx),
+    onTermEdit(term, ctx),
   );
 
   // A response that printed a settings group is stored under its tag.

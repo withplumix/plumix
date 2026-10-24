@@ -2043,7 +2043,7 @@ describe("dispatcher — public read-through CDN", () => {
       cdn,
       config: { plugins: [site] },
     });
-    await h.factory.term.create({
+    const news = await h.factory.term.create({
       taxonomy: "tag",
       slug: "news",
       name: "News",
@@ -2057,6 +2057,7 @@ describe("dispatcher — public read-through CDN", () => {
     expect(put).toHaveBeenCalledWith(expect.anything(), expect.anything(), [
       "t:post",
       "t:page",
+      `tm:${String(news.id)}`,
       "s:site",
     ]);
   });
