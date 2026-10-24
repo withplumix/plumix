@@ -47,3 +47,31 @@ export function userTag(userId: number): string {
 export function settingsTag(group: string): string {
   return normalizeTag(`s:${group}`);
 }
+
+/**
+ * A plugin id holds no `:` or `*` (`PLUGIN_ID_RE`), so no key reaches another
+ * plugin's namespace. `p:<id>*` marks a read of the whole namespace, which a
+ * change to any key purges.
+ */
+export function pluginReadTags(
+  pluginId: string,
+  key: string | number | undefined,
+): string[] {
+  const namespace = `p:${pluginId}`;
+  return [
+    namespace,
+    key === undefined ? `${namespace}*` : `${namespace}:${String(key)}`,
+  ].map(normalizeTag);
+}
+
+export function pluginChangedTags(
+  pluginId: string,
+  key: string | number | undefined,
+): string[] {
+  const namespace = `p:${pluginId}`;
+  return (
+    key === undefined
+      ? [namespace]
+      : [`${namespace}:${String(key)}`, `${namespace}*`]
+  ).map(normalizeTag);
+}

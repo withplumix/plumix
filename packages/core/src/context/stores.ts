@@ -16,6 +16,12 @@ export interface HookFrame {
 
 export const hookStore = new AsyncLocalStorage<HookFrame>();
 
+/**
+ * The plugin whose code is running, `null` inside core's; `ctx.cache` reads it
+ * so a plugin can only name its own namespace.
+ */
+export const pluginStore = new AsyncLocalStorage<string | null>();
+
 export const traceStore = new AsyncLocalStorage<TelemetrySpan>();
 
 export const txStore = new AsyncLocalStorage<unknown>();

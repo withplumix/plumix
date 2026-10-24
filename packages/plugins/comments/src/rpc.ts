@@ -1,7 +1,8 @@
+import type { AppContext } from "plumix/plugin";
 import { authenticated, base, requireCapability } from "plumix/plugin";
 import * as v from "valibot";
 
-import type { ModerationComment } from "./server/repository.js";
+import type { ModerationComment, StatusChange } from "./server/repository.js";
 import type { CommentStatus } from "./types.js";
 import {
   countByStatus,
@@ -42,6 +43,19 @@ const TRANSITIONS: Record<
 const idInput = v.object({
   id: v.pipe(v.number(), v.integer(), v.minValue(1)),
 });
+
+/**
+ * Visitors see only approved comments, so only a move into or out of
+ * `approved` changes the entry's rendered thread.
+ */
+function threadChanged(context: AppContext, change: StatusChange): void {
+  if (
+    (change.previous === "approved") ===
+    (change.comment.status === "approved")
+  )
+    return;
+  context.cache.changed(change.comment.entryId);
+}
 
 export function createCommentsRouter() {
   const list = base
@@ -90,14 +104,15 @@ export function createCommentsRouter() {
           context,
           errors,
         }): Promise<{ status: CommentStatus }> => {
-          const row = await setStatus(context, input.id, target);
-          if (!row) {
+          const change = await setStatus(context, input.id, target);
+          if (!change) {
             throw errors.NOT_FOUND({
               data: { kind: "comment", id: input.id },
             });
           }
-          await context.hooks.doAction(action, row, context);
-          return { status: row.status };
+          threadChanged(context, change);
+          await context.hooks.doAction(action, change.comment, context);
+          return { status: change.comment.status };
         },
       );
   }
@@ -113,6 +128,9 @@ export function createCommentsRouter() {
       }): Promise<{ result: "tombstoned" | "deleted" | "missing" }> => {
         const outcome = await purgeComment(context, input.id);
         if (outcome.result !== "missing") {
+          if (outcome.comment.status === "approved") {
+            context.cache.changed(outcome.comment.entryId);
+          }
           await context.hooks.doAction(
             "comment:deleted",
             outcome.comment,
@@ -138,11 +156,12 @@ export function createCommentsRouter() {
     )
     .handler(async ({ input, context }): Promise<{ changed: number }> => {
       const { target, action } = TRANSITIONS[input.action];
-      const rows = await setStatusMany(context, input.ids, target);
-      for (const row of rows) {
-        await context.hooks.doAction(action, row, context);
+      const changes = await setStatusMany(context, input.ids, target);
+      for (const change of changes) {
+        threadChanged(context, change);
+        await context.hooks.doAction(action, change.comment, context);
       }
-      return { changed: rows.length };
+      return { changed: changes.length };
     });
 
   return {

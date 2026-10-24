@@ -25,7 +25,7 @@ const pending = new WeakMap<RequestMemo, Set<string>>();
  * write; the CDN purge waits for the post-request flush.
  */
 export function enqueuePurgeTags(
-  ctx: AppContext,
+  ctx: Pick<AppContext, "cdn" | "memo">,
   tags: readonly string[],
 ): void {
   ctx.memo.invalidate(tags);

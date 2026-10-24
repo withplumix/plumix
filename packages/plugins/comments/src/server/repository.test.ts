@@ -168,7 +168,7 @@ describe("moderation repository ops", () => {
     expect(counts).toEqual({ pending: 2, approved: 1, spam: 1, trash: 0 });
   });
 
-  test("setStatus transitions a comment", async () => {
+  test("setStatus transitions a comment and reports the status it had", async () => {
     const db = await createCommentsTestDb();
     const entry = await seedPublishedPost(db);
     const c = await commentFactory
@@ -176,7 +176,8 @@ describe("moderation repository ops", () => {
       .create({ entryId: entry.id, status: "pending" });
 
     const updated = await setStatus(ctxFor(db), c.id, "approved");
-    expect(updated?.status).toBe("approved");
+    expect(updated?.comment.status).toBe("approved");
+    expect(updated?.previous).toBe("pending");
   });
 
   test("purgeComment deletes a leaf", async () => {

@@ -1,3 +1,4 @@
+import { createRouterClient } from "@orpc/server";
 import { object } from "valibot";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
@@ -730,7 +731,12 @@ describe("registerRpcRouter", () => {
       ctx.registerRpcRouter(sentinel);
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    expect(registry.rpcRouters.get("menus")).toBe(sentinel);
+    const stored = registry.rpcRouters.get("menus");
+    if (stored === undefined) throw new Error("menus router not stored");
+    const client = createRouterClient(stored as typeof sentinel, {
+      context: createTestContext({ db: await createTestDb() }),
+    });
+    expect(await client.list()).toBe("ok");
   });
 
   test("accepts procedures, sub-routers and lazy nodes, nothing else", () => {

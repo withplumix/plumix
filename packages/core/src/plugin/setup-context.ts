@@ -1,4 +1,7 @@
+import { os } from "@orpc/server";
+
 import type { DerivedCapability } from "../access/contract/rbac.js";
+import type { AppContext } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { ActionName, FilterFn, FilterName } from "../hooks/types.js";
@@ -12,6 +15,7 @@ import type {
   ViewOptions,
 } from "./manifest.js";
 import type { PluginContextExtensions } from "./provides-context.js";
+import type { PluginRpcRouter } from "./registry.js";
 import type {
   PluginAfterSetupContext,
   PluginSetupContext,
@@ -22,6 +26,7 @@ import {
   deriveTermTaxonomyCapabilities,
 } from "../access/contract/rbac.js";
 import { isReservedBlockName } from "../blocks/index.js";
+import { pluginStore } from "../context/stores.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
@@ -258,7 +263,7 @@ function createContextBase({
           ? { registeredBy: pluginId }
           : undefined,
       );
-      registry.rpcRouters.set(pluginId, router);
+      registry.rpcRouters.set(pluginId, framedRouter(pluginId, router));
     },
 
     registerMcpTool: (tool) => {
@@ -313,7 +318,8 @@ function createContextBase({
         auth,
         cacheable,
         formPost,
-        handler,
+        handler: (request, appCtx) =>
+          pluginStore.run(pluginId, () => handler(request, appCtx)),
       });
     },
 
@@ -511,15 +517,31 @@ function createContextBase({
       claimKey(registry.templateDeps, "template dep", kind, pluginId, () => {
         const name = `${keyedBy}s`;
         const erased: RegisteredTemplateDep["load"] = (keys, ctx) =>
-          // `keyedBy` is typed to the entry's key field, so this object is
-          // exactly the one named array the loader was typed against.
-          load({ [name]: keys } as TemplateDepKeys<typeof kind>, ctx);
+          pluginStore.run(pluginId, () =>
+            // `keyedBy` is typed to the entry's key field, so this object is
+            // exactly the one named array the loader was typed against.
+            load({ [name]: keys } as TemplateDepKeys<typeof kind>, ctx),
+          );
         return { kind, load: erased, registeredBy: pluginId };
       });
     },
   };
 
   return ctx;
+}
+
+/**
+ * Each procedure runs in the plugin's frame however the router is called, the
+ * merged RPC handler or a client built straight from the registry.
+ */
+function framedRouter(
+  pluginId: string,
+  router: PluginRpcRouter,
+): PluginRpcRouter {
+  return os
+    .$context<AppContext>()
+    .use(({ next }) => pluginStore.run(pluginId, () => next()))
+    .router(router);
 }
 
 interface Owned {

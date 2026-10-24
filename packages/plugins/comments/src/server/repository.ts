@@ -165,19 +165,34 @@ export async function listForModeration(
   return rows.map(toModeration);
 }
 
+/** A comment after a status change, with the status it had before. */
+export interface StatusChange {
+  readonly comment: Comment;
+  readonly previous: CommentStatus;
+}
+
 /** Apply a status to many comments at once (bulk moderation). Returns the
- * updated rows so the caller can fire per-comment lifecycle actions. */
+ * changes so the caller can fire per-comment lifecycle actions. */
 export async function setStatusMany(
   ctx: AppContext,
   ids: readonly number[],
   status: CommentStatus,
-): Promise<Comment[]> {
+): Promise<StatusChange[]> {
   if (ids.length === 0) return [];
-  return ctx.db
+  const before = await ctx.db
+    .select({ id: comments.id, status: comments.status })
+    .from(comments)
+    .where(inArray(comments.id, [...ids]));
+  const previous = new Map(before.map((row) => [row.id, row.status]));
+  const rows = await ctx.db
     .update(comments)
     .set({ status })
     .where(inArray(comments.id, [...ids]))
     .returning();
+  return rows.map((comment) => ({
+    comment,
+    previous: previous.get(comment.id) ?? status,
+  }));
 }
 
 /** Comment counts per status, for the queue's tab badges. */
@@ -200,13 +215,9 @@ export async function setStatus(
   ctx: AppContext,
   id: number,
   status: CommentStatus,
-): Promise<Comment | null> {
-  const [row] = await ctx.db
-    .update(comments)
-    .set({ status })
-    .where(eq(comments.id, id))
-    .returning();
-  return row ?? null;
+): Promise<StatusChange | null> {
+  const [change] = await setStatusMany(ctx, [id], status);
+  return change ?? null;
 }
 
 type RemovalOutcome =

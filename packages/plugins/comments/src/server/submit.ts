@@ -186,6 +186,8 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       userAgent,
     });
 
+    // A held or spam comment changes nothing a visitor sees.
+    if (row.status === "approved") ctx.cache.changed(row.entryId);
     await ctx.hooks.doAction("comment:created", row, ctx);
 
     return accepted(status);

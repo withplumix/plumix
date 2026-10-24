@@ -165,7 +165,7 @@ A theme rendering its own thread gets the same links from the dep's result, `Res
 | `olderHref`  | The next older page's URL, with the site's base path and the rest of the query kept. `null` on the oldest page. |
 | `newestHref` | The entry's URL without `?comments=`, or `null` on the newest page.                                             |
 
-A `?comments=` value that is not a cursor answers a 301 to the entry without it, so a junk value never becomes a stored copy of the newest page. Every page keeps core's canonical, which drops the query string, so it canonicalises to the entry, and the plugin adds no robots tag. The CDN stores each cursor page once under the entry's tag, so the purges below cover it too.
+A `?comments=` value that is not a cursor answers a 301 to the entry without it, so a junk value never becomes a stored copy of the newest page. Every page keeps core's canonical, which drops the query string, so it canonicalises to the entry, and the plugin adds no robots tag. The CDN stores each cursor page once under the entry's thread, so the purges below cover it too.
 
 ## A theme that writes its own controls
 
@@ -225,7 +225,7 @@ A comment from a signed-in author takes a fast path to `approved` whatever the m
 
 The `comment:moderate` filter runs on that baseline and may only push a comment toward the restrictive end, so two detectors compose without caring which ran first. A filter returning anything that is not a known status is ignored rather than persisted.
 
-Approving, restoring, spamming, trashing or deleting a comment purges the cached copy of its entry's page from the CDN, and so does a new comment that arrives approved. A held comment purges nothing, since the page does not show it. Only the entry's own pages are purged, its `?comments=` pages included: the thread renders nowhere else.
+A comment purges the cached copy of its entry's page from the CDN only when visitors would see the change: it is approved or restored to approved, an approved comment is spammed, trashed or deleted, or a new comment arrives approved. A comment moving between held, spam and trash purges nothing, since the page shows none of them. Only the pages that render the entry's thread are purged, its `?comments=` pages included; an archive that shows the entry as a card stays stored.
 
 Two spam defences sit below it. The honeypot is a field a person never sees and a bot fills; a comment that trips it is answered exactly as a real one is — telling a bot it was caught only teaches it to stop filling the trap — and no row is written. The rate limit is a sliding window over a salted hash of the visitor's address. Off Cloudflare that address is client-spoofable, so the limiter is best-effort there and edge or WAF rules are the real flood defence.
 
