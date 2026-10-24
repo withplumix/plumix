@@ -52,28 +52,29 @@ function withCoreNodes(
  * The chrome as a page renders it: the bar for the principal on the context,
  * with core's nodes registered unless a test registers its own.
  */
-function renderChrome(
+async function renderChrome(
   viewer: AuthenticatedUser | null,
   plugins = withCoreNodes(),
-): string {
+): Promise<string> {
   const ctx = createTestContext({ db: {} as Db, user: viewer, plugins });
+  const chrome = await adminBarChrome(ctx, undefined);
   return renderToStaticMarkup(
     <PlumixProvider value={{ registry: emptyRegistry }}>
-      {adminBarChrome(ctx, undefined)}
+      {chrome}
     </PlumixProvider>,
   );
 }
 
 describe("adminBarChrome", () => {
-  test("renders nothing when there is no principal", () => {
-    expect(renderChrome(null)).toBe("");
+  test("renders nothing when there is no principal", async () => {
+    expect(await renderChrome(null)).toBe("");
   });
 
-  test("renders nothing for a subscriber, who may not use the admin", () => {
-    expect(renderChrome({ ...user, role: "subscriber" })).toBe("");
+  test("renders nothing for a subscriber, who may not use the admin", async () => {
+    expect(await renderChrome({ ...user, role: "subscriber" })).toBe("");
   });
 
-  test("does not ask a node whether it is visible for a subscriber", () => {
+  test("does not ask a node whether it is visible for a subscriber", async () => {
     const plugins = createPluginRegistry();
     const visible = vi.fn(() => true);
     plugins.adminBarNodes.set("shop:orders", {
@@ -84,15 +85,15 @@ describe("adminBarChrome", () => {
       registeredBy: "shop",
     });
 
-    renderChrome({ ...user, role: "subscriber" }, plugins);
+    await renderChrome({ ...user, role: "subscriber" }, plugins);
 
     expect(visible).not.toHaveBeenCalled();
   });
 
   test.each<UserRole>(["contributor", "admin"])(
     "renders the bar for a %s",
-    (role) => {
-      expect(renderChrome({ ...user, role })).toContain(
+    async (role) => {
+      expect(await renderChrome({ ...user, role })).toContain(
         'data-testid="plumix-admin-bar"',
       );
     },
@@ -114,9 +115,10 @@ describe("registered admin bar nodes", () => {
       plugins: registry,
       logger,
     });
+    const chrome = await adminBarChrome(ctx, undefined);
     return renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
-        {adminBarChrome(ctx, undefined)}
+        {chrome}
       </PlumixProvider>,
     );
   }

@@ -15,8 +15,6 @@ export const ADMIN_BAR_GROUPS = [
 
 type AdminBarGroup = (typeof ADMIN_BAR_GROUPS)[number];
 
-export type BarLocale = "en" | "de" | "uk" | "ar" | "zh-CN";
-
 export interface BarRenderContext {
   readonly user: AuthenticatedUser;
   readonly queriedEntry: ResolvedEntity | null;
@@ -37,7 +35,7 @@ export interface BarRenderContext {
    * Core's nodes translate through this; a plugin's node passes an
    * already-translated `title`.
    */
-  readonly locale: BarLocale;
+  readonly locale: string;
   /** Text direction for the bar element — `rtl` for `ar`, `ltr` elsewhere. */
   readonly direction: "ltr" | "rtl";
 }

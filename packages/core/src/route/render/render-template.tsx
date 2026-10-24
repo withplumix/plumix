@@ -492,7 +492,7 @@ interface RenderTreeArgs {
  * React 19 reorders `<head>` children, so JSX position can't place theme
  * `script[]`; React renders only the body.
  */
-function renderTree({
+async function renderTree({
   ctx,
   document,
   assetManifest,
@@ -510,13 +510,17 @@ function renderTree({
   themeCss,
   viewTransitions,
   editMode,
-}: RenderTreeArgs): string {
+}: RenderTreeArgs): Promise<string> {
   // A component, not a direct call, so hooks in a template run inside React's
   // render pass. `deps` spread first so a dep named `data` or `ctx` can't
   // clobber them.
   const TemplateAdapter = (): ReactNode =>
     template.render({ ...deps, data, ctx });
   const queriedEntry = "entry" in data ? data.entry : undefined;
+  // In edit mode the bar's `body { padding-top }` and `min-h-screen` loop the
+  // auto-sized canvas iframe's height.
+  const adminBar =
+    editMode.mode === "edit" ? null : await chrome.adminBar(ctx, queriedEntry);
   // Spread, not asserted: an `interface` lacks the implicit index signature a
   // shortcode's by-name read needs.
   const entry = "entry" in data ? { ...data.entry } : null;
@@ -572,9 +576,7 @@ function renderTree({
         renderFilters,
       },
     },
-    // In edit mode the bar's `body { padding-top }` and `min-h-screen` loop the
-    // auto-sized canvas iframe's height.
-    editMode.mode === "edit" ? null : chrome.adminBar(ctx, queriedEntry),
+    adminBar,
     process.env.PLUMIX_DEV &&
       chrome.debugBar !== undefined &&
       editMode.mode !== "edit"

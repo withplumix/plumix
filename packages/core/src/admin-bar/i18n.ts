@@ -1,26 +1,13 @@
 // Catalogs compile to static modules (worker-safe, no fs), looked up per
 // request rather than through a shared `activate()` singleton.
 
-import { messages as arMessages } from "@plumix/core/locales/admin-bar-ar";
-import { messages as deMessages } from "@plumix/core/locales/admin-bar-de";
-import { messages as enMessages } from "@plumix/core/locales/admin-bar-en";
-import { messages as ukMessages } from "@plumix/core/locales/admin-bar-uk";
-import { messages as zhCnMessages } from "@plumix/core/locales/admin-bar-zh-CN";
+import { catalogs } from "@plumix/core/locales/index/admin-bar";
 
-import type { CompiledCatalog } from "../blocks/index.js";
 import type { ResolvedMeta } from "../meta/contract/bags.js";
-import type { BarLocale } from "../plugin/admin-bar-node.js";
 import { resolveMessage } from "../blocks/index.js";
+import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
 
-export type { BarLocale } from "../plugin/admin-bar-node.js";
-
-const CATALOGS: Readonly<Record<BarLocale, CompiledCatalog>> = {
-  en: enMessages,
-  de: deMessages,
-  uk: ukMessages,
-  ar: arMessages,
-  "zh-CN": zhCnMessages,
-};
+const CATALOGS = lazyCatalogs(catalogs);
 
 /**
  * Source descriptors — `plumix i18n verify` matches these against the
@@ -49,7 +36,7 @@ export interface BarStrings {
   readonly navAria: string;
 }
 
-const KNOWN: ReadonlySet<string> = new Set(Object.keys(CATALOGS));
+const KNOWN: ReadonlySet<string> = new Set(CATALOGS.locales);
 
 /**
  * Not `resolveLocale`, which ignores `meta.locale` on public routes for the
@@ -58,16 +45,20 @@ const KNOWN: ReadonlySet<string> = new Set(Object.keys(CATALOGS));
  */
 export function resolveBarLocale(user: {
   readonly meta: ResolvedMeta;
-}): BarLocale {
+}): string {
   const stored = user.meta.locale;
-  if (typeof stored === "string" && KNOWN.has(stored)) {
-    return stored as BarLocale;
-  }
+  if (typeof stored === "string" && KNOWN.has(stored)) return stored;
   return "en";
 }
 
-export function barMessages(locale: BarLocale): BarStrings {
-  const catalog = CATALOGS[locale];
+/** Imports `locale`'s catalog for {@link barMessages} to read. */
+export async function loadBarCatalog(locale: string): Promise<void> {
+  await CATALOGS.load(locale);
+}
+
+/** Read mid-render, which cannot await, so `loadBarCatalog` runs first. */
+export function barMessages(locale: string): BarStrings {
+  const catalog = CATALOGS.loaded(locale);
   return {
     siteFallback: resolveMessage(catalog, M.siteFallback),
     newGroup: resolveMessage(catalog, M.newGroup),
@@ -80,6 +71,6 @@ export function barMessages(locale: BarLocale): BarStrings {
   };
 }
 
-export function barDirection(locale: BarLocale): "ltr" | "rtl" {
+export function barDirection(locale: string): "ltr" | "rtl" {
   return locale === "ar" ? "rtl" : "ltr";
 }

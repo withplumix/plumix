@@ -3,7 +3,7 @@ import { withBasePath } from "./base-path.js";
 import { fallback } from "./route/render/template-builders.js";
 import { defineTemplate } from "./template.js";
 import { defineTheme } from "./theme.js";
-import { welcomeMessages } from "./welcome/i18n.js";
+import { loadWelcomeCatalog, welcomeMessages } from "./welcome/i18n.js";
 
 const BRAND = "#0ea5e9";
 
@@ -190,6 +190,11 @@ export const welcomeTheme = defineTheme({
   templates: [
     fallback(
       defineTemplate({
+        // Runs before the render, which reads the strings synchronously.
+        document: async ({ ctx }) => {
+          await loadWelcomeCatalog(ctx.locale.code);
+          return {};
+        },
         render: ({ ctx }) => (
           <WelcomeScreen
             basePath={ctx.config.basePath}

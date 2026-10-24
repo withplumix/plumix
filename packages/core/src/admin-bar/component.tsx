@@ -15,7 +15,12 @@ import { canEditEntry } from "../entries/editability.js";
 import { adminBarViewer } from "../route/render/personal-render.js";
 import { buildAdminBarTree } from "./build-tree.js";
 import { collectAdminBarNodes } from "./collect.js";
-import { barDirection, barMessages, resolveBarLocale } from "./i18n.js";
+import {
+  barDirection,
+  barMessages,
+  loadBarCatalog,
+  resolveBarLocale,
+} from "./i18n.js";
 import {
   ADMIN_BAR_BODY_OFFSET_CSS,
   ADMIN_BAR_CSS,
@@ -105,12 +110,13 @@ export function PlumixAdminBar({
  * Whether the bar shows was decided before the render, so nothing here reads
  * the principal for a page without one.
  */
-export function adminBarChrome(
+export async function adminBarChrome(
   ctx: AppContext,
   queriedEntry: EntryEditRow | undefined,
-): ReactNode {
+): Promise<ReactNode> {
   const viewer = adminBarViewer(ctx);
   if (viewer === null) return null;
+  await loadBarCatalog(resolveBarLocale(viewer));
   return (
     <PlumixAdminBar
       viewer={viewer}

@@ -10,7 +10,7 @@ import {
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { MockInstance } from "vitest";
 import {
   afterEach,
@@ -388,6 +388,107 @@ describe("i18nCommand", () => {
         i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] })),
       ).rejects.toThrow(/@lingui\/cli not found/);
     });
+
+    // Each surface a `<surface>-{locale}.po` set of its own.
+    function seedSurfaces(
+      surfaces: Readonly<Record<string, readonly string[]>>,
+    ): void {
+      const locales = [...new Set(Object.values(surfaces).flat())];
+      writeFileSync(
+        join(dir, "lingui.config.js"),
+        `module.exports = { sourceLocale: "en", locales: ${JSON.stringify(
+          locales,
+        )}, catalogs: ${JSON.stringify(
+          Object.keys(surfaces).map((surface) => ({
+            path: `<rootDir>/locales/${surface}-{locale}`,
+            include: ["src"],
+          })),
+        )} };\n`,
+      );
+      mkdirSync(join(dir, "locales"), { recursive: true });
+      for (const [surface, files] of Object.entries(surfaces)) {
+        for (const file of files) {
+          writeFileSync(
+            join(dir, "locales", `${surface}-${file}.po`),
+            `msgid ""\nmsgstr ""\n\nmsgid "greeting"\nmsgstr "${surface} ${file}"\n`,
+          );
+        }
+      }
+    }
+
+    interface CatalogIndex {
+      readonly catalogs: Record<
+        string,
+        () => Promise<{ readonly messages: Record<string, unknown> }>
+      >;
+    }
+
+    const importIndex = (surface: string): Promise<CatalogIndex> =>
+      import(
+        pathToFileURL(join(dir, "locales", "index", `${surface}.mjs`)).href
+      ) as Promise<CatalogIndex>;
+
+    test(
+      "indexes each surface's catalogs by the locales its .po files name",
+      async () => {
+        seedSurfaces({ blocks: ["en", "de", "zh-CN"], mail: ["en", "uk"] });
+        await i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] }));
+
+        const blocks = await importIndex("blocks");
+        const mail = await importIndex("mail");
+        expect(Object.keys(blocks.catalogs).sort()).toEqual([
+          "de",
+          "en",
+          "zh-CN",
+        ]);
+        expect(Object.keys(mail.catalogs).sort()).toEqual(["en", "uk"]);
+        const zh = blocks.catalogs["zh-CN"];
+        // Lingui keys a compiled message by a hash of its msgid.
+        expect(Object.values((await zh?.())?.messages ?? {})).toEqual([
+          ["blocks zh-CN"],
+        ]);
+      },
+      COMPILE_TIMEOUT,
+    );
+
+    test(
+      "reads a .po that no surface's {locale} matches as no locale",
+      async () => {
+        seedSurfaces({ blocks: ["en", "de"] });
+        writeFileSync(
+          join(dir, "locales", "blocks-.po"),
+          'msgid ""\nmsgstr ""\n',
+        );
+        writeFileSync(
+          join(dir, "locales", "notes.po"),
+          'msgid ""\nmsgstr ""\n',
+        );
+        await i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] }));
+
+        expect(
+          Object.keys((await importIndex("blocks")).catalogs).sort(),
+        ).toEqual(["de", "en"]);
+      },
+      COMPILE_TIMEOUT,
+    );
+
+    test.each([
+      ["zh_CN", "zh-CN"],
+      ["zh-cn", "zh-CN"],
+    ])(
+      "fails on blocks-%s.po, naming blocks-%s.po, and renames nothing",
+      async (file, canonical) => {
+        seedSurfaces({ blocks: ["en", file] });
+        await expect(
+          i18nCommand.run(ctx({ cwd: dir, argv: ["compile"] })),
+        ).rejects.toThrow(
+          `rename \`blocks-${file}.po\` to \`blocks-${canonical}.po\``,
+        );
+        expect(compiled(".po")).toEqual(["blocks-en.po", `blocks-${file}.po`]);
+        expect(compiled(".mjs")).toEqual([]);
+      },
+      COMPILE_TIMEOUT,
+    );
   });
 
   describe("verify", () => {
