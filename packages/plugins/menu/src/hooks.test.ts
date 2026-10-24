@@ -281,10 +281,12 @@ describe("menu hook surface", () => {
     });
 
     test("subscriber failure does not abort the commit", async () => {
-      const warn = vi
-        .spyOn(console, "warn")
+      // This context runs outside a request, so the failure falls back to
+      // the console rather than a request's logger.
+      const error = vi
+        .spyOn(console, "error")
         .mockImplementation(() => undefined);
-      onTestFinished(() => warn.mockRestore());
+      onTestFinished(() => error.mockRestore());
       const termId = await seedMenuTerm(b, "primary");
 
       b.hooks.addAction("menu:saved", () => {
@@ -297,7 +299,7 @@ describe("menu hook surface", () => {
         items: [],
       });
       expect(result.etag).toBe("1");
-      expect(warn).toHaveBeenCalledWith(
+      expect(error).toHaveBeenCalledWith(
         "[plumix] action failed hook=menu:saved plugin=core",
         expect.objectContaining({ message: "subscriber blew up" }),
       );
