@@ -21,8 +21,10 @@ const stubTheme = defineTheme({ templates: [fallback(() => null)] });
 describe("buildApp — RPC plugin-id collisions", () => {
   // `constructor` is not a core namespace, so registration passes it.
   test("rejects plugin id `constructor`, which would shadow the merged router", async () => {
-    const plugin = definePlugin("constructor", (ctx) => {
-      ctx.registerRpcRouter({});
+    const plugin = definePlugin("constructor", {
+      setup: (ctx) => {
+        ctx.registerRpcRouter({});
+      },
     });
     await expect(
       buildApp(

@@ -12,12 +12,14 @@ import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
 describe("slug lookups after a write in the same request", () => {
   // A miss has no id to be tagged by, so each lookup carries a tag every
   // write of its kind drops; the term lookup's need a public type.
-  const blog = definePlugin("test-blog", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-    ctx.registerTermTaxonomy("category", {
-      label: "Categories",
-      entryTypes: ["post"],
-    });
+  const blog = definePlugin("test-blog", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        entryTypes: ["post"],
+      });
+    },
   });
 
   test("an author slug reads the user who holds it after a re-slug", async () => {

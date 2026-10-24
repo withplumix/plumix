@@ -40,8 +40,10 @@ const policiedPost: EntryTypeOptions = {
   },
 };
 
-const publicPosts = definePlugin("posts", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+const publicPosts = definePlugin("posts", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  },
 });
 
 /** A traced context whose `post` type every visitor may list. */
@@ -397,27 +399,29 @@ describe("createRelatedPostsLoader", () => {
   });
 
   test("lists a soft-challenged sibling to an anonymous reader without its body", async () => {
-    const teaserPosts = definePlugin("teaser-posts", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        access: {
-          default: anonymousPolicy,
-          policies: [
-            {
-              key: "teaser",
-              label: "Teaser",
-              policy: definePolicy({
-                segments: ["members"],
-                resolve: (c) =>
-                  c.user
-                    ? grant("members")
-                    : challenge("paywall", { soft: true }),
-              }),
-            },
-          ],
-        },
-      });
+    const teaserPosts = definePlugin("teaser-posts", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          access: {
+            default: anonymousPolicy,
+            policies: [
+              {
+                key: "teaser",
+                label: "Teaser",
+                policy: definePolicy({
+                  segments: ["members"],
+                  resolve: (c) =>
+                    c.user
+                      ? grant("members")
+                      : challenge("paywall", { soft: true }),
+                }),
+              },
+            ],
+          },
+        });
+      },
     });
     const { harness, ctx, run } = await tracedContext(teaserPosts);
     const f = harness.factory;

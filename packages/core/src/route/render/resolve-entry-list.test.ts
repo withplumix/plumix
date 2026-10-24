@@ -66,21 +66,23 @@ declare module "../../plugin/fields/contributions.js" {
   }
 }
 
-const dossierPlugin = definePlugin("test-dossier", (ctx) => {
-  ctx.registerEntryMetaBox("dossier", {
-    label: "Dossier",
-    entryTypes: ["post"],
-    fields: _dossierFields,
-  });
-  ctx.registerTermTaxonomy("dossierTopic", {
-    label: "Dossier Topics",
-    entryTypes: ["post"],
-  });
-  ctx.registerTermMetaBox("termDossier", {
-    label: "Term Dossier",
-    termTaxonomies: ["dossierTopic"],
-    fields: _termDossierFields,
-  });
+const dossierPlugin = definePlugin("test-dossier", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("dossier", {
+      label: "Dossier",
+      entryTypes: ["post"],
+      fields: _dossierFields,
+    });
+    ctx.registerTermTaxonomy("dossierTopic", {
+      label: "Dossier Topics",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermMetaBox("termDossier", {
+      label: "Term Dossier",
+      termTaxonomies: ["dossierTopic"],
+      fields: _termDossierFields,
+    });
+  },
 });
 
 describe("resolveEntryList author memoization", () => {
@@ -224,24 +226,26 @@ describe("resolveEntryList titles", () => {
 });
 
 describe("resolveEntryList reference meta resolution", () => {
-  const refsPlugin = definePlugin("test-refs", (ctx) => {
-    ctx.registerEntryMetaBox("relations", {
-      label: "Relations",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "related",
-          label: "Related",
-          inputType: "entryList",
-          type: "json",
-          referenceTarget: {
-            kind: "entry",
-            scope: { entryTypes: ["post"] },
-            multiple: true,
+  const refsPlugin = definePlugin("test-refs", {
+    setup: (ctx) => {
+      ctx.registerEntryMetaBox("relations", {
+        label: "Relations",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "related",
+            label: "Related",
+            inputType: "entryList",
+            type: "json",
+            referenceTarget: {
+              kind: "entry",
+              scope: { entryTypes: ["post"] },
+              multiple: true,
+            },
           },
-        },
-      ],
-    });
+        ],
+      });
+    },
   });
 
   test("templates receive hydrated reference meta, batched across the archive", async () => {
@@ -652,30 +656,32 @@ describe("term meta on the render path", () => {
  */
 function photoPlugin(tagged: boolean) {
   const role = tagged ? { role: "featured" as const } : {};
-  return definePlugin("test-photos", (ctx) => {
-    ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
-    ctx.registerTermTaxonomy("album", {
-      label: "Albums",
-      entryTypes: ["post"],
-    });
-    ctx.registerEntryMetaBox("appearance", {
-      label: "Appearance",
-      entryTypes: ["post"],
-      fields: [
-        {
-          key: "layout",
-          label: "Layout",
-          type: "json",
-          inputType: "group",
-          fields: [photoField("cover", role)],
-        },
-      ],
-    });
-    ctx.registerTermMetaBox("albumArt", {
-      label: "Album art",
-      termTaxonomies: ["album"],
-      fields: [photoField("banner", role)],
-    });
+  return definePlugin("test-photos", {
+    setup: (ctx) => {
+      ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
+      ctx.registerTermTaxonomy("album", {
+        label: "Albums",
+        entryTypes: ["post"],
+      });
+      ctx.registerEntryMetaBox("appearance", {
+        label: "Appearance",
+        entryTypes: ["post"],
+        fields: [
+          {
+            key: "layout",
+            label: "Layout",
+            type: "json",
+            inputType: "group",
+            fields: [photoField("cover", role)],
+          },
+        ],
+      });
+      ctx.registerTermMetaBox("albumArt", {
+        label: "Album art",
+        termTaxonomies: ["album"],
+        fields: [photoField("banner", role)],
+      });
+    },
   });
 }
 
@@ -795,33 +801,35 @@ describe("resolveEntryList role images", () => {
 });
 
 describe("resolveEntryList and an entry's access policy", () => {
-  const teaserPages = definePlugin("teaser-pages", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      access: {
-        default: anonymousPolicy,
-        policies: [
-          {
-            key: "teaser",
-            label: "Teaser",
-            policy: definePolicy({
-              resolve: (c) =>
-                c.user
-                  ? grant("authenticated")
-                  : challenge("paywall", { soft: true }),
-            }),
-          },
-          {
-            key: "paywall",
-            label: "Paywall",
-            policy: definePolicy({
-              resolve: () => challenge("paywall", { soft: true }),
-            }),
-          },
-        ],
-      },
-    });
+  const teaserPages = definePlugin("teaser-pages", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            {
+              key: "teaser",
+              label: "Teaser",
+              policy: definePolicy({
+                resolve: (c) =>
+                  c.user
+                    ? grant("authenticated")
+                    : challenge("paywall", { soft: true }),
+              }),
+            },
+            {
+              key: "paywall",
+              label: "Paywall",
+              policy: definePolicy({
+                resolve: () => challenge("paywall", { soft: true }),
+              }),
+            },
+          ],
+        },
+      });
+    },
   });
   const BODY = {
     version: "plumix.v2",

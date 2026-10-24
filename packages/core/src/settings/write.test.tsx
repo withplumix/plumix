@@ -28,23 +28,25 @@ interface Heard {
 }
 
 function writer(heard: Heard[]) {
-  return definePlugin("writer", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-    ctx.addAction("settings:group_changed", (changes, appCtx) => {
-      heard.push({ ...changes, userId: appCtx.user?.id ?? null });
-    });
-    ctx.registerRoute({
-      method: "POST",
-      path: "/write",
-      auth: "authenticated",
-      handler: async (request, appCtx) => {
-        const group = new URL(request.url).searchParams.get("group");
-        const values = (await request.json()) as Record<string, unknown>;
-        return Response.json(
-          await appCtx.settings.write(group ?? "site_info", values),
-        );
-      },
-    });
+  return definePlugin("writer", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.addAction("settings:group_changed", (changes, appCtx) => {
+        heard.push({ ...changes, userId: appCtx.user?.id ?? null });
+      });
+      ctx.registerRoute({
+        method: "POST",
+        path: "/write",
+        auth: "authenticated",
+        handler: async (request, appCtx) => {
+          const group = new URL(request.url).searchParams.get("group");
+          const values = (await request.json()) as Record<string, unknown>;
+          return Response.json(
+            await appCtx.settings.write(group ?? "site_info", values),
+          );
+        },
+      });
+    },
   });
 }
 
@@ -179,21 +181,23 @@ describe("ctx.settings.write", () => {
 describe("ctx.settings.write, called from a plugin's own code", () => {
   async function harness() {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          text("tagline").default("Hello"),
-          number("perPage").default(10),
-        ],
-      });
-      ctx.registerSettingsGroup("profile", {
-        label: "Profile",
-        fields: [
-          text("name").required(),
-          group("address").fields([text("city").maxLength(3)]),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("blog", {
+          label: "Blog",
+          fields: [
+            text("tagline").default("Hello"),
+            number("perPage").default(10),
+          ],
+        });
+        ctx.registerSettingsGroup("profile", {
+          label: "Profile",
+          fields: [
+            text("name").required(),
+            group("address").fields([text("city").maxLength(3)]),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const h = await createRpcHarness({

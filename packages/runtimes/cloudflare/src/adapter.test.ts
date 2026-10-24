@@ -266,12 +266,14 @@ describe("cloudflare adapter — createRuntimeHandler().fetch", () => {
   });
 
   test("supplies cf-connecting-ip as the trusted client address", async () => {
-    const echo = definePlugin("echo", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/whoami",
-        handler: (_request, appCtx) =>
-          new Response(appCtx.clientAddress ?? "none"),
-      });
+    const echo = definePlugin("echo", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/whoami",
+          handler: (_request, appCtx) =>
+            new Response(appCtx.clientAddress ?? "none"),
+        });
+      },
     });
     const app = await buildApp(
       plumix({

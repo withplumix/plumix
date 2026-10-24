@@ -30,14 +30,14 @@ import { plumix } from "plumix";
 import { bun, bunSqlite } from "@plumix/runtime-bun";
 import { greeting } from "./greeting.mjs";
 
-const probes = definePlugin("probes", (ctx) => {
+const probes = definePlugin("probes", { setup: (ctx) => {
   ctx.registerPublicRoute({ path: "/probe/greeting", handler: () => new Response(greeting) });
   ctx.registerPublicRoute({ path: "/probe/tagline", handler: () => new Response(${JSON.stringify(tagline)}) });
   ctx.registerPublicRoute({
     path: "/probe/secret",
     handler: (_request, app) => new Response(String(app.env.PROBE_SECRET ?? "")),
   });
-});
+} });
 
 export default plumix({
   runtime: bun(),

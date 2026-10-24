@@ -26,21 +26,23 @@ const membersOnlyPolicy = definePolicy({
  * One public entry type and one internal one, plus a public taxonomy and a
  * private one — the four cases scope derivation has to separate.
  */
-const contentPlugin = definePlugin("content", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerEntryType("page", { label: "Pages", isPublic: true });
-  ctx.registerEntryType("nav_item", { label: "Menu items", isPublic: false });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isHierarchical: false,
-    entryTypes: ["post"],
-  });
-  ctx.registerTermTaxonomy("nav_group", {
-    label: "Menu groups",
-    isHierarchical: false,
-    isPublic: false,
-    entryTypes: ["nav_item"],
-  });
+const contentPlugin = definePlugin("content", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+    ctx.registerEntryType("nav_item", { label: "Menu items", isPublic: false });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: false,
+      entryTypes: ["post"],
+    });
+    ctx.registerTermTaxonomy("nav_group", {
+      label: "Menu groups",
+      isHierarchical: false,
+      isPublic: false,
+      entryTypes: ["nav_item"],
+    });
+  },
 });
 
 function createHarness(options?: SeoOptions): Promise<DispatcherHarness> {
@@ -63,11 +65,13 @@ function termBoxScope(h: DispatcherHarness): readonly string[] | undefined {
 
 describe("a registry name that cannot be a settings key", () => {
   test("costs that type its per-type fields, not the boot", async () => {
-    const oddly = definePlugin("oddly-named", (ctx) => {
-      // Core validates neither entry-type nor taxonomy names, so this
-      // registers fine and must not take the app down when SEO installs.
-      ctx.registerEntryType("my type", { label: "Odd", isPublic: true });
-      ctx.registerEntryType("fine", { label: "Fine", isPublic: true });
+    const oddly = definePlugin("oddly-named", {
+      setup: (ctx) => {
+        // Core validates neither entry-type nor taxonomy names, so this
+        // registers fine and must not take the app down when SEO installs.
+        ctx.registerEntryType("my type", { label: "Odd", isPublic: true });
+        ctx.registerEntryType("fine", { label: "Fine", isPublic: true });
+      },
     });
 
     const h = await createDispatcherHarness({
@@ -97,13 +101,15 @@ describe("SEO meta box scope", () => {
   test("keeps the box on an access-policied type", async () => {
     // Access stays out of `publicTargets`: editors still write a gated type's
     // title and description, so only the sitemap drops it.
-    const gated = definePlugin("gated", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("lesson", {
-        label: "Lessons",
-        isPublic: true,
-        access: { default: membersOnlyPolicy },
-      });
+    const gated = definePlugin("gated", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("lesson", {
+          label: "Lessons",
+          isPublic: true,
+          access: { default: membersOnlyPolicy },
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [gated, seo()] },

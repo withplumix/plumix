@@ -366,47 +366,49 @@ describe("registerCorePurgeInvalidator", () => {
 });
 
 describe("a write to a user", () => {
-  const blog = definePlugin("test-user-purge", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-    ctx.registerUserMetaBox("newsletter", {
-      label: "Newsletter",
-      fields: [toggle("newsletter")],
-    });
-    ctx.registerPublicRoute({
-      path: "/byline/:id",
-      cacheable: true,
-      handler: async (request, appCtx) => {
-        const id = Number(new URL(request.url).pathname.split("/").pop());
-        const page = await resolveListingPage(appCtx, { kind: "author", id });
-        if (page === null || !("author" in page.data)) {
-          return new Response(null, { status: 404 });
-        }
-        return new Response(page.data.author.name);
-      },
-    });
-    ctx.registerPublicRoute({
-      path: "/header/:id",
-      cacheable: true,
-      handler: async (request, appCtx) => {
-        const id = Number(new URL(request.url).pathname.split("/").pop());
-        const row = await appCtx.db.query.users.findFirst({
-          where: eq(users.id, id),
-        });
-        if (row === undefined) return new Response(null, { status: 404 });
-        const author = await resolveAuthorRow(appCtx, row);
-        return new Response(author.images.featured?.url ?? "");
-      },
-    });
-    // Stands in for `plumix meta settle`, which runs the same sweep.
-    ctx.registerRoute({
-      method: "POST",
-      path: "/settle",
-      auth: "authenticated",
-      handler: async (_request, appCtx) => {
-        await sweepUnsettledMeta(appCtx, { write: true });
-        return new Response(null, { status: 204 });
-      },
-    });
+  const blog = definePlugin("test-user-purge", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerUserMetaBox("newsletter", {
+        label: "Newsletter",
+        fields: [toggle("newsletter")],
+      });
+      ctx.registerPublicRoute({
+        path: "/byline/:id",
+        cacheable: true,
+        handler: async (request, appCtx) => {
+          const id = Number(new URL(request.url).pathname.split("/").pop());
+          const page = await resolveListingPage(appCtx, { kind: "author", id });
+          if (page === null || !("author" in page.data)) {
+            return new Response(null, { status: 404 });
+          }
+          return new Response(page.data.author.name);
+        },
+      });
+      ctx.registerPublicRoute({
+        path: "/header/:id",
+        cacheable: true,
+        handler: async (request, appCtx) => {
+          const id = Number(new URL(request.url).pathname.split("/").pop());
+          const row = await appCtx.db.query.users.findFirst({
+            where: eq(users.id, id),
+          });
+          if (row === undefined) return new Response(null, { status: 404 });
+          const author = await resolveAuthorRow(appCtx, row);
+          return new Response(author.images.featured?.url ?? "");
+        },
+      });
+      // Stands in for `plumix meta settle`, which runs the same sweep.
+      ctx.registerRoute({
+        method: "POST",
+        path: "/settle",
+        auth: "authenticated",
+        handler: async (_request, appCtx) => {
+          await sweepUnsettledMeta(appCtx, { write: true });
+          return new Response(null, { status: 204 });
+        },
+      });
+    },
   });
 
   async function site() {
@@ -565,54 +567,56 @@ describe("a write to a user", () => {
 });
 
 describe("a write to a term", () => {
-  const blog = definePlugin("test-term-purge", (ctx) => {
-    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-    ctx.registerTermTaxonomy("category", {
-      label: "Categories",
-      entryTypes: ["post"],
-    });
-    ctx.registerTermMetaBox("featured", {
-      label: "Featured",
-      termTaxonomies: ["category"],
-      fields: [toggle("featured")],
-    });
-    ctx.registerEntryMetaBox("related", {
-      label: "Related",
-      entryTypes: ["post"],
-      fields: [term("topic", ["category"])],
-    });
-    // Narrows by the term's slug and renders no term of its own.
-    ctx.registerPublicRoute({
-      path: "/count/:slug",
-      cacheable: true,
-      handler: async (request, appCtx) => {
-        const slug = new URL(request.url).pathname.split("/").pop() ?? "";
-        const where = await compileEntryQuery(
-          appCtx,
-          entryQuery().inTerm("category", slug),
-        );
-        if (where === null) return new Response(null, { status: 404 });
-        const rows = await appCtx.db
-          .select({ id: entries.id })
-          .from(entries)
-          .where(where);
-        return new Response(String(rows.length));
-      },
-    });
-    // Lists a taxonomy's terms and renders none of them.
-    ctx.registerPublicRoute({
-      path: "/term-names/:taxonomy",
-      cacheable: true,
-      handler: async (request, appCtx) => {
-        const taxonomy = new URL(request.url).pathname.split("/").pop() ?? "";
-        const rows = await appCtx.db
-          .select({ name: terms.name })
-          .from(terms)
-          .where(taxonomyTermRows(appCtx, taxonomy))
-          .orderBy(terms.name);
-        return new Response(rows.map((row) => row.name).join(","));
-      },
-    });
+  const blog = definePlugin("test-term-purge", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      ctx.registerTermTaxonomy("category", {
+        label: "Categories",
+        entryTypes: ["post"],
+      });
+      ctx.registerTermMetaBox("featured", {
+        label: "Featured",
+        termTaxonomies: ["category"],
+        fields: [toggle("featured")],
+      });
+      ctx.registerEntryMetaBox("related", {
+        label: "Related",
+        entryTypes: ["post"],
+        fields: [term("topic", ["category"])],
+      });
+      // Narrows by the term's slug and renders no term of its own.
+      ctx.registerPublicRoute({
+        path: "/count/:slug",
+        cacheable: true,
+        handler: async (request, appCtx) => {
+          const slug = new URL(request.url).pathname.split("/").pop() ?? "";
+          const where = await compileEntryQuery(
+            appCtx,
+            entryQuery().inTerm("category", slug),
+          );
+          if (where === null) return new Response(null, { status: 404 });
+          const rows = await appCtx.db
+            .select({ id: entries.id })
+            .from(entries)
+            .where(where);
+          return new Response(String(rows.length));
+        },
+      });
+      // Lists a taxonomy's terms and renders none of them.
+      ctx.registerPublicRoute({
+        path: "/term-names/:taxonomy",
+        cacheable: true,
+        handler: async (request, appCtx) => {
+          const taxonomy = new URL(request.url).pathname.split("/").pop() ?? "";
+          const rows = await appCtx.db
+            .select({ name: terms.name })
+            .from(terms)
+            .where(taxonomyTermRows(appCtx, taxonomy))
+            .orderBy(terms.name);
+          return new Response(rows.map((row) => row.name).join(","));
+        },
+      });
+    },
   });
 
   async function site() {

@@ -252,16 +252,18 @@ import { loadOnce } from "plumix/support";
 
 const loadInvoicePdf = loadOnce(() => import("./invoice-pdf.js"));
 
-export const invoices = definePlugin("acme-invoices", (ctx) => {
-  ctx.registerRoute({
-    method: "GET",
-    path: "/invoice.pdf",
-    auth: "authenticated",
-    handler: async (request) => {
-      const { renderInvoicePdf } = await loadInvoicePdf();
-      return renderInvoicePdf(request);
-    },
-  });
+export const invoices = definePlugin("acme-invoices", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/invoice.pdf",
+      auth: "authenticated",
+      handler: async (request) => {
+        const { renderInvoicePdf } = await loadInvoicePdf();
+        return renderInvoicePdf(request);
+      },
+    });
+  },
 });
 ```
 
@@ -287,8 +289,10 @@ declare module "plumix" {
   }
 }
 
-export const heroRole = definePlugin("acme-hero-role", (ctx) => {
-  ctx.registerImageRole("hero", { single: true });
+export const heroRole = definePlugin("acme-hero-role", {
+  setup: (ctx) => {
+    ctx.registerImageRole("hero", { single: true });
+  },
 });
 ```
 

@@ -9,10 +9,12 @@ describe("public redirect dispatch", () => {
     const harness = await createDispatcherHarness({
       config: {
         plugins: [
-          definePlugin("legacy", (ctx) => {
-            ctx.registerRedirects([
-              { from: "/old/guide", to: "/guides/start", status: 308 },
-            ]);
+          definePlugin("legacy", {
+            setup: (ctx) => {
+              ctx.registerRedirects([
+                { from: "/old/guide", to: "/guides/start", status: 308 },
+              ]);
+            },
           }),
         ],
       },
@@ -26,8 +28,10 @@ describe("public redirect dispatch", () => {
     const harness = await createDispatcherHarness({
       config: {
         plugins: [
-          definePlugin("legacy", (ctx) => {
-            ctx.registerRedirects([{ from: "/legacy/*", gone: true }]);
+          definePlugin("legacy", {
+            setup: (ctx) => {
+              ctx.registerRedirects([{ from: "/legacy/*", gone: true }]);
+            },
           }),
         ],
       },
@@ -73,8 +77,10 @@ describe("public redirect dispatch", () => {
   });
 
   test("a redirect shadows a published entry at the same path", async () => {
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
     });
     const harness = await createDispatcherHarness({
       config: {

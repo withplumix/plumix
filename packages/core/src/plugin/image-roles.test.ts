@@ -43,7 +43,7 @@ function repeaterField(
 async function registryFrom(setup: (ctx: PluginSetupContext) => void) {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
-    plugins: [definePlugin("site", setup)],
+    plugins: [definePlugin("site", { setup })],
   });
   return registry;
 }

@@ -246,16 +246,18 @@ import { definePlugin } from "plumix/plugin";
 
 import { index, isSpam } from "./moderation";
 
-export const moderation = definePlugin("moderation", (ctx) => {
-  ctx.registerFormValidator({
-    id: "moderation:spam",
-    validate: (candidate) =>
-      isSpam(candidate.answers) ? [{ field: "", message: "No." }] : [],
-  });
+export const moderation = definePlugin("moderation", {
+  setup: (ctx) => {
+    ctx.registerFormValidator({
+      id: "moderation:spam",
+      validate: (candidate) =>
+        isSpam(candidate.answers) ? [{ field: "", message: "No." }] : [],
+    });
 
-  ctx.addAction("form:submitted", (submission, candidate) => {
-    if (submission) index(submission);
-  });
+    ctx.addAction("form:submitted", (submission, candidate) => {
+      if (submission) index(submission);
+    });
+  },
 });
 ```
 
@@ -369,10 +371,12 @@ import { definePlugin } from "plumix/plugin";
 
 import { defineForm } from "@plumix/plugin-forms";
 
-export const newsletter = definePlugin("newsletter", (ctx) => {
-  ctx.registerForm(
-    defineForm("newsletter", { fields: [email("email").required()] }),
-  );
+export const newsletter = definePlugin("newsletter", {
+  setup: (ctx) => {
+    ctx.registerForm(
+      defineForm("newsletter", { fields: [email("email").required()] }),
+    );
+  },
 });
 ```
 

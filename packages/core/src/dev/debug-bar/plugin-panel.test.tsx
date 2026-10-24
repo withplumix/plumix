@@ -19,34 +19,36 @@ declare module "../../context/dev-runtime.js" {
  * `render:document` fires during a real page render, before the bar, so the
  * recorded entry is present by panel time.
  */
-const demoPlugin = definePlugin("debug-demo", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-    appCtx.telemetry.record("debug-demo", { note: "recorded during render" });
-    return manifest;
-  });
-  ctx.addFilter("debug:panels", (panels) => [
-    ...panels,
-    {
-      id: "debug-demo",
-      title: "Demo",
-      order: 50,
-      render: (snapshot) => (
-        <DebugSection title="Demo">
-          <DebugTable
-            headers={["note"]}
-            rows={(snapshot.records["debug-demo"] ?? []).map((r) => [
-              (r.data as { note: string }).note,
-            ])}
-          />
-        </DebugSection>
-      ),
-    },
-  ]);
+const demoPlugin = definePlugin("debug-demo", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+      appCtx.telemetry.record("debug-demo", { note: "recorded during render" });
+      return manifest;
+    });
+    ctx.addFilter("debug:panels", (panels) => [
+      ...panels,
+      {
+        id: "debug-demo",
+        title: "Demo",
+        order: 50,
+        render: (snapshot) => (
+          <DebugSection title="Demo">
+            <DebugTable
+              headers={["note"]}
+              rows={(snapshot.records["debug-demo"] ?? []).map((r) => [
+                (r.data as { note: string }).note,
+              ])}
+            />
+          </DebugSection>
+        ),
+      },
+    ]);
+  },
 });
 
 const theme = defineTheme({ templates: [fallback(() => null)] });

@@ -26,12 +26,14 @@ import { report } from "../report.js";
 import { metaCommand } from "./meta.js";
 import { syncDeps } from "./sync.js";
 
-const plugin = definePlugin("test-meta", (ctx) => {
-  ctx.registerEntryMetaBox("entry-box", {
-    label: "Entry",
-    entryTypes: ["post"],
-    fields: [toggle("sealed")],
-  });
+const plugin = definePlugin("test-meta", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("entry-box", {
+      label: "Entry",
+      entryTypes: ["post"],
+      fields: [toggle("sealed")],
+    });
+  },
 });
 
 /** A CDN that records each batch of tags it is asked to purge, sorted. */

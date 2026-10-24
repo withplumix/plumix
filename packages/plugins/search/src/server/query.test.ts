@@ -506,15 +506,19 @@ describe("runSearch", () => {
     const membersOnly = definePolicy({
       resolve: () => challenge("subscribe"),
     });
-    const policiedPages = definePlugin("policied-pages", (regCtx) => {
-      regCtx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        access: {
-          default: anonymousPolicy,
-          policies: [{ key: "members", label: "Members", policy: membersOnly }],
-        },
-      });
+    const policiedPages = definePlugin("policied-pages", {
+      setup: (regCtx) => {
+        regCtx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          access: {
+            default: anonymousPolicy,
+            policies: [
+              { key: "members", label: "Members", policy: membersOnly },
+            ],
+          },
+        });
+      },
     });
 
     // Each listed page is followed by `refusedPerListed` members pages, so a
@@ -576,12 +580,14 @@ describe("runSearch", () => {
   });
 
   test("a page of nested results costs the same queries however many it holds", async () => {
-    const pagesPlugin = definePlugin("pages", (regCtx) => {
-      regCtx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-      });
+    const pagesPlugin = definePlugin("pages", {
+      setup: (regCtx) => {
+        regCtx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+        });
+      },
     });
 
     // Each child sits under its own parent, so a per-row ancestor walk

@@ -92,14 +92,16 @@ describe("bun adapter — createRuntimeHandler().fetch", () => {
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const deferring = definePlugin("deferring", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/defer",
-        handler: (_request, appCtx) => {
-          appCtx.defer(gate);
-          return new Response("deferred");
-        },
-      });
+    const deferring = definePlugin("deferring", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/defer",
+          handler: (_request, appCtx) => {
+            appCtx.defer(gate);
+            return new Response("deferred");
+          },
+        });
+      },
     });
     const handler = await handlerFor([deferring]);
     await handler.fetch(new Request("https://cms.example/defer"), {
@@ -118,12 +120,14 @@ describe("bun adapter — createRuntimeHandler().fetch", () => {
   });
 
   test("hands the invocation's client address to the request context", async () => {
-    const echo = definePlugin("echo", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/whoami",
-        handler: (_request, appCtx) =>
-          new Response(appCtx.clientAddress ?? "none"),
-      });
+    const echo = definePlugin("echo", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/whoami",
+          handler: (_request, appCtx) =>
+            new Response(appCtx.clientAddress ?? "none"),
+        });
+      },
     });
     const handler = await handlerFor([echo]);
     const response = await handler.fetch(

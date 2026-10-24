@@ -259,12 +259,14 @@ describe("search()", () => {
   // A default is stored when the entry is created (ADR 0026), so the index
   // reads it like any value an author typed.
   test("a created entry's searchable field default is findable", async () => {
-    const teaser = definePlugin("teaser", (ctx) => {
-      ctx.registerEntryMetaBox("teaser", {
-        label: "Teaser",
-        entryTypes: ["post"],
-        fields: [text("teaser").searchable().default("Aquaponics primer")],
-      });
+    const teaser = definePlugin("teaser", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("teaser", {
+          label: "Teaser",
+          entryTypes: ["post"],
+          fields: [text("teaser").searchable().default("Aquaponics primer")],
+        });
+      },
     });
     const withDefault = await createSearchHarness({
       config: { plugins: [contentPlugin, teaser, search()] },

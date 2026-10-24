@@ -310,12 +310,14 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       config: {
         plugins: [
           media(),
-          definePlugin("media-extras", (ctx) => {
-            ctx.registerEntryMetaBox("media-extras", {
-              label: "Extras",
-              entryTypes: ["media"],
-              fields: [text("credit").default("Staff")],
-            });
+          definePlugin("media-extras", {
+            setup: (ctx) => {
+              ctx.registerEntryMetaBox("media-extras", {
+                label: "Extras",
+                entryTypes: ["media"],
+                fields: [text("credit").default("Staff")],
+              });
+            },
           }),
         ],
       },
@@ -2273,13 +2275,15 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
 });
 
 /** A public post type whose featured image is a media field. */
-const featuredPosts = definePlugin("featured-posts", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerEntryMetaBox("appearance", {
-    label: "Appearance",
-    entryTypes: ["post"],
-    fields: [mediaField("cover").featured()],
-  });
+const featuredPosts = definePlugin("featured-posts", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryMetaBox("appearance", {
+      label: "Appearance",
+      entryTypes: ["post"],
+      fields: [mediaField("cover").featured()],
+    });
+  },
 });
 
 /** A stored post page showing a media item as its featured image. */
@@ -2309,15 +2313,17 @@ async function storedPageShowingMedia() {
 }
 
 /** A public read of the media library, stored under the media list's tag. */
-const publicLibrary = definePlugin("public-library", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/library",
-    cacheable: true,
-    handler: (_request, appCtx) => {
-      tagCdnEntry(appCtx, [typeTag("media")]);
-      return new Response("library", { status: 200 });
-    },
-  });
+const publicLibrary = definePlugin("public-library", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/library",
+      cacheable: true,
+      handler: (_request, appCtx) => {
+        tagCdnEntry(appCtx, [typeTag("media")]);
+        return new Response("library", { status: 200 });
+      },
+    });
+  },
 });
 
 describe("@plumix/plugin-media — purging the pages that show an item", () => {

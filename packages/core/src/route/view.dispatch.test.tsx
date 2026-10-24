@@ -22,18 +22,20 @@ declare module "../template-registry.js" {
 /**
  * `/compare/:id` resolves a share the visitor was sent; `missing` names none.
  */
-const comparePlugin = definePlugin("compare", (ctx) => {
-  ctx.registerView("compareShare", {
-    routes: ["/compare/:id"],
-    resolve: (_appCtx, params) => {
-      if (params.id === "missing") return null;
-      if (params.id === "home") throw redirectTo("/");
-      return {
-        data: { products: ["kettle", "toaster"] },
-        title: `Comparison ${params.id}`,
-      };
-    },
-  });
+const comparePlugin = definePlugin("compare", {
+  setup: (ctx) => {
+    ctx.registerView("compareShare", {
+      routes: ["/compare/:id"],
+      resolve: (_appCtx, params) => {
+        if (params.id === "missing") return null;
+        if (params.id === "home") throw redirectTo("/");
+        return {
+          data: { products: ["kettle", "toaster"] },
+          title: `Comparison ${params.id}`,
+        };
+      },
+    });
+  },
 });
 
 /** A CDN whose store records every write. */
@@ -171,16 +173,18 @@ describe("views (registerView)", () => {
 
   test("a cacheable view is stored under the tags its resolve returned", async () => {
     const { cdn, put } = recordingCdn();
-    const cacheablePlugin = definePlugin("compare", (ctx) => {
-      ctx.registerView("compareShare", {
-        routes: ["/compare/:id"],
-        cacheable: true,
-        resolve: () => ({
-          data: { products: ["kettle"] },
-          title: "Comparison",
-          tags: ["t:product"],
-        }),
-      });
+    const cacheablePlugin = definePlugin("compare", {
+      setup: (ctx) => {
+        ctx.registerView("compareShare", {
+          routes: ["/compare/:id"],
+          cacheable: true,
+          resolve: () => ({
+            data: { products: ["kettle"] },
+            title: "Comparison",
+            tags: ["t:product"],
+          }),
+        });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -196,12 +200,14 @@ describe("views (registerView)", () => {
   });
 
   test("a view with access redirects an anonymous visitor to sign-in", async () => {
-    const accountPlugin = definePlugin("account", (ctx) => {
-      ctx.registerView("account", {
-        routes: ["/account"],
-        access: authenticatedPolicy,
-        resolve: () => ({ data: null, title: "Your account" }),
-      });
+    const accountPlugin = definePlugin("account", {
+      setup: (ctx) => {
+        ctx.registerView("account", {
+          routes: ["/account"],
+          access: authenticatedPolicy,
+          resolve: () => ({ data: null, title: "Your account" }),
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [accountPlugin], theme: compareTheme },
@@ -259,11 +265,13 @@ describe("views (registerView)", () => {
   });
 
   test("two plugins registering the same view name fail boot naming both", async () => {
-    const other = definePlugin("other", (ctx) => {
-      ctx.registerView("compareShare", {
-        routes: ["/elsewhere"],
-        resolve: () => null,
-      });
+    const other = definePlugin("other", {
+      setup: (ctx) => {
+        ctx.registerView("compareShare", {
+          routes: ["/elsewhere"],
+          resolve: () => null,
+        });
+      },
     });
 
     await expect(
@@ -272,11 +280,13 @@ describe("views (registerView)", () => {
   });
 
   test("a view route clashing with an archive type's fails boot naming both", async () => {
-    const archives = definePlugin("archives", (ctx) => {
-      ctx.registerArchiveType("comparisons", {
-        routes: ["/compare/:id"],
-        resolve: () => null,
-      });
+    const archives = definePlugin("archives", {
+      setup: (ctx) => {
+        ctx.registerArchiveType("comparisons", {
+          routes: ["/compare/:id"],
+          resolve: () => null,
+        });
+      },
     });
 
     await expect(
@@ -306,16 +316,18 @@ describe("views — typing", () => {
   });
 
   test("registerView holds a declared view's resolver to its data", () => {
-    definePlugin("typed", (ctx) => {
-      ctx.registerView("compareShare", {
-        routes: ["/c/:id"],
-        // @ts-expect-error - compareShare's data is a CompareShare
-        resolve: () => ({ data: { nope: 1 }, title: "x" }),
-      });
-      ctx.registerView("anything", {
-        routes: ["/a"],
-        resolve: () => ({ data: 42, title: "x" }),
-      });
+    definePlugin("typed", {
+      setup: (ctx) => {
+        ctx.registerView("compareShare", {
+          routes: ["/c/:id"],
+          // @ts-expect-error - compareShare's data is a CompareShare
+          resolve: () => ({ data: { nope: 1 }, title: "x" }),
+        });
+        ctx.registerView("anything", {
+          routes: ["/a"],
+          resolve: () => ({ data: 42, title: "x" }),
+        });
+      },
     });
   });
 });

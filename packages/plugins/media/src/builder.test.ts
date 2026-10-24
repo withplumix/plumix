@@ -120,11 +120,13 @@ describe("media() builder", () => {
 
   test("manifest round-trip preserves the referenceTarget on the wire shape", async () => {
     const hooks = new HookRegistry();
-    const userPlugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("branding", {
-        label: "Branding",
-        fields: [media("hero").label("Hero image").accept("image/")],
-      });
+    const userPlugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("branding", {
+          label: "Branding",
+          fields: [media("hero").label("Hero image").accept("image/")],
+        });
+      },
     });
     const { registry } = await installPlugins({
       hooks,
@@ -250,17 +252,19 @@ describe("media() builder", () => {
 
   test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
     const hooks = new HookRegistry();
-    const userPlugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("branding", {
-        label: "Branding",
-        fields: [
-          media("carousel")
-            .label("Hero carousel")
-            .accept("image/")
-            .multiple()
-            .max(8),
-        ],
-      });
+    const userPlugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("branding", {
+          label: "Branding",
+          fields: [
+            media("carousel")
+              .label("Hero carousel")
+              .accept("image/")
+              .multiple()
+              .max(8),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({
       hooks,

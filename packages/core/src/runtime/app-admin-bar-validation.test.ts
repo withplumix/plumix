@@ -26,7 +26,7 @@ const appWith = (setup: (ctx: PluginSetupContext) => void): Promise<unknown> =>
       database: stubDatabase,
       auth: stubAuth,
       theme: stubTheme,
-      plugins: [definePlugin("shop", setup)],
+      plugins: [definePlugin("shop", { setup })],
     }),
   );
 

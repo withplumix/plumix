@@ -3,12 +3,14 @@ import { describe, expect, test } from "vitest";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+  },
 });
 
 async function harness(): Promise<

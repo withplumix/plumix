@@ -374,22 +374,28 @@ describe("a failing action handler in a booted app", () => {
       },
     });
   };
-  const faulty = definePlugin("faulty", (ctx) => {
-    ctx.addAction("settings:group_changed", () => {
-      throw new Error("subscriber blew up");
-    });
-    note(ctx);
+  const faulty = definePlugin("faulty", {
+    setup: (ctx) => {
+      ctx.addAction("settings:group_changed", () => {
+        throw new Error("subscriber blew up");
+      });
+      note(ctx);
+    },
   });
-  const listener = definePlugin("listener", (ctx) => {
-    ctx.addAction("settings:group_changed", () => undefined);
+  const listener = definePlugin("listener", {
+    setup: (ctx) => {
+      ctx.addAction("settings:group_changed", () => undefined);
+    },
   });
 
   test("stops neither the other handlers nor the write that fired it", async () => {
     const heard: string[] = [];
-    const recorder = definePlugin("recorder", (ctx) => {
-      ctx.addAction("settings:group_changed", (changes) => {
-        heard.push(changes.group);
-      });
+    const recorder = definePlugin("recorder", {
+      setup: (ctx) => {
+        ctx.addAction("settings:group_changed", (changes) => {
+          heard.push(changes.group);
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [faulty, recorder] },

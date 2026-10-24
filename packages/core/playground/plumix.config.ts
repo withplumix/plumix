@@ -16,34 +16,40 @@ import { theme } from "./theme.js";
 
 // Root permalinks, so `/islands` is the `islands` page. Posts take drafts and
 // revisions, for the editor's entry lifecycle.
-const content = definePlugin("core-playground-content", (setup) => {
-  setup.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    rewrite: { slug: "" },
-  });
-  setup.registerEntryType("post", {
-    label: "Posts",
-    supports: ["title", "editor", "revisions", "autosave"],
-    isPublic: true,
-    rewrite: { slug: "posts" },
-  });
-  setup.registerEntryType("article", {
-    label: "Articles",
-    isPublic: true,
-    supports: ["title", "editor", "revisions", "autosave"],
-    termTaxonomies: ["topic"],
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        { key: "members", label: "Members only", policy: authenticatedPolicy },
-      ],
-    },
-  });
-  setup.registerTermTaxonomy("topic", {
-    label: "Topics",
-    entryTypes: ["article"],
-  });
+const content = definePlugin("core-playground-content", {
+  setup: (setup) => {
+    setup.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      rewrite: { slug: "" },
+    });
+    setup.registerEntryType("post", {
+      label: "Posts",
+      supports: ["title", "editor", "revisions", "autosave"],
+      isPublic: true,
+      rewrite: { slug: "posts" },
+    });
+    setup.registerEntryType("article", {
+      label: "Articles",
+      isPublic: true,
+      supports: ["title", "editor", "revisions", "autosave"],
+      termTaxonomies: ["topic"],
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          {
+            key: "members",
+            label: "Members only",
+            policy: authenticatedPolicy,
+          },
+        ],
+      },
+    });
+    setup.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["article"],
+    });
+  },
 });
 
 const deployOrigin = cloudflareDeployOrigin({

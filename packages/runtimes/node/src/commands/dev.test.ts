@@ -55,7 +55,7 @@ const database = {
   },
 };
 
-const probes = definePlugin("probes", (ctx) => {
+const probes = definePlugin("probes", { setup: (ctx) => {
   ctx.registerPublicRoute({ path: "/probe/alive", handler: () => new Response("alive") });
   ctx.registerPublicRoute({ path: "/probe/greeting", handler: () => new Response(greeting) });
   ctx.registerPublicRoute({ path: "/probe/dep", handler: () => new Response(tag) });
@@ -64,7 +64,7 @@ const probes = definePlugin("probes", (ctx) => {
     handler: (request, app) =>
       new Response(String(app.env[new URL(request.url).searchParams.get("key")] ?? "")),
   });
-});
+} });
 
 export default plumix({
   runtime: node(),

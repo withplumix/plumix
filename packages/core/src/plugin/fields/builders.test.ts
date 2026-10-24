@@ -335,21 +335,26 @@ describe("range() builder", () => {
 describe("manifest round-trip across all built-in builders", () => {
   test("each builder produces a field that survives manifest serialization", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("everything", {
-        label: "Everything",
-        fields: [
-          textarea("bio").label("Bio").maxLength(500),
-          number("age").label("Age").min(0).max(120),
-          email("contact").label("Contact"),
-          url("website").label("Website"),
-          select("size")
-            .options([{ value: "m", label: "M" }])
-            .label("Size"),
-          select("yn").options(["y", "n"]).appearance("radio").label("Yes/No"),
-          toggle("agreed").label("Agreed").default(false),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("everything", {
+          label: "Everything",
+          fields: [
+            textarea("bio").label("Bio").maxLength(500),
+            number("age").label("Age").min(0).max(120),
+            email("contact").label("Contact"),
+            url("website").label("Website"),
+            select("size")
+              .options([{ value: "m", label: "M" }])
+              .label("Size"),
+            select("yn")
+              .options(["y", "n"])
+              .appearance("radio")
+              .label("Yes/No"),
+            toggle("agreed").label("Agreed").default(false),
+          ],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -423,11 +428,13 @@ describe("user() builder", () => {
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("identity", {
-        label: "Site identity",
-        fields: [user("owner").label("Owner").roles(["admin"])],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("identity", {
+          label: "Site identity",
+          fields: [user("owner").label("Owner").roles(["admin"])],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -487,11 +494,13 @@ describe("entry() builder", () => {
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [entry("homepage", ["page"]).label("Homepage")],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("blog", {
+          label: "Blog",
+          fields: [entry("homepage", ["page"]).label("Homepage")],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -536,11 +545,13 @@ describe("term() builder", () => {
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("classification", {
-        label: "Classification",
-        fields: [term("section", ["category"]).label("Section")],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("classification", {
+          label: "Classification",
+          fields: [term("section", ["category"]).label("Section")],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -634,18 +645,20 @@ describe("reference builder phantom typing", () => {
 describe("composite defaults reach the admin through the manifest", () => {
   test("the manifest carries a composite default to startingMeta", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          group("seo")
-            .fields([text("title")])
-            .default({ title: "Untitled" }),
-          repeater("faq")
-            .fields([text("q")])
-            .default([{ q: "What is this?" }]),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("blog", {
+          label: "Blog",
+          fields: [
+            group("seo")
+              .fields([text("title")])
+              .default({ title: "Untitled" }),
+            repeater("faq")
+              .fields([text("q")])
+              .default([{ q: "What is this?" }]),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const fields = buildManifest(registry).settingsGroups[0]?.fields ?? [];
@@ -782,16 +795,18 @@ describe("richtext() builder", () => {
 
   test("manifest round-trip preserves all three allowlist arrays on the wire", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          richtext("summary")
-            .marks(["bold", "italic"])
-            .nodes(["heading"])
-            .blocks(["my-block"]),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("blog", {
+          label: "Blog",
+          fields: [
+            richtext("summary")
+              .marks(["bold", "italic"])
+              .nodes(["heading"])
+              .blocks(["my-block"]),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -948,16 +963,18 @@ describe("repeater() builder", () => {
 
   test("manifest round-trip recurses subFields with sanitize stripped + span dropped", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          repeater("links")
-            .fields([text("label").maxLength(80), text("href").label("URL")])
-            .label("Links")
-            .addLabel("Add link"),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("blog", {
+          label: "Blog",
+          fields: [
+            repeater("links")
+              .fields([text("label").maxLength(80), text("href").label("URL")])
+              .label("Links")
+              .addLabel("Add link"),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1067,15 +1084,17 @@ describe("group() builder", () => {
 
   test("manifest round-trip projects members into the wire subFields slot", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          group("seo")
-            .fields([text("title").maxLength(60), textarea("description")])
-            .label("SEO"),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("blog", {
+          label: "Blog",
+          fields: [
+            group("seo")
+              .fields([text("title").maxLength(60), textarea("description")])
+              .label("SEO"),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);

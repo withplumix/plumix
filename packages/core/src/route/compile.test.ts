@@ -65,14 +65,16 @@ describe("compileRouteMap", () => {
     // A multi-segment capture would otherwise swallow `/page/2` as part of the
     // listing's own path, and the page would claim to be a first page.
     const registry = await buildRegistry([
-      definePlugin("docs", (ctx) => {
-        ctx.registerArchiveType("doc-section", {
-          routes: [
-            "/docs/:path+",
-            `/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`,
-          ],
-          resolve: () => null,
-        });
+      definePlugin("docs", {
+        setup: (ctx) => {
+          ctx.registerArchiveType("doc-section", {
+            routes: [
+              "/docs/:path+",
+              `/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`,
+            ],
+            resolve: () => null,
+          });
+        },
       }),
     ]);
     const match = matchRoute(
@@ -85,18 +87,20 @@ describe("compileRouteMap", () => {
 
   test("every paginated rule core compiles ends in the one pagination suffix", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: true,
-          rewrite: { slug: "shop" },
-        });
-        ctx.registerTermTaxonomy("category", { label: "Categories" });
-        ctx.registerTermTaxonomy("region", {
-          label: "Regions",
-          isHierarchical: true,
-        });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: true,
+            rewrite: { slug: "shop" },
+          });
+          ctx.registerTermTaxonomy("category", { label: "Categories" });
+          ctx.registerTermTaxonomy("region", {
+            label: "Regions",
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const paginated = compileRouteMap(registry)
@@ -110,8 +114,10 @@ describe("compileRouteMap", () => {
 
   test("auto-generates /{taxonomy}/:term from a registered term taxonomy", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", { label: "Categories" });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -122,8 +128,10 @@ describe("compileRouteMap", () => {
 
   test("emits /<base>/:term/page/:page paginated rule alongside the bare term archive", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", { label: "Categories" });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -142,11 +150,13 @@ describe("compileRouteMap", () => {
 
   test("hierarchical taxonomy emits /<base>/:path+ and /<base>/:path+/page/:page", async () => {
     const registry = await buildRegistry([
-      definePlugin("geo", (ctx) => {
-        ctx.registerTermTaxonomy("region", {
-          label: "Regions",
-          isHierarchical: true,
-        });
+      definePlugin("geo", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("region", {
+            label: "Regions",
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -159,12 +169,14 @@ describe("compileRouteMap", () => {
 
   test("taxonomy with rewrite.isHierarchical:false keeps flat :term even when isHierarchical:true", async () => {
     const registry = await buildRegistry([
-      definePlugin("geo", (ctx) => {
-        ctx.registerTermTaxonomy("region", {
-          label: "Regions",
-          isHierarchical: true,
-          rewrite: { isHierarchical: false },
-        });
+      definePlugin("geo", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("region", {
+            label: "Regions",
+            isHierarchical: true,
+            rewrite: { isHierarchical: false },
+          });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -176,11 +188,13 @@ describe("compileRouteMap", () => {
 
   test("honors taxonomy rewrite.slug on the term-archive pattern", async () => {
     const registry = await buildRegistry([
-      definePlugin("regions", (ctx) => {
-        ctx.registerTermTaxonomy("region", {
-          label: "Regions",
-          rewrite: { slug: "r" },
-        });
+      definePlugin("regions", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("region", {
+            label: "Regions",
+            rewrite: { slug: "r" },
+          });
+        },
       }),
     ]);
     const map = pluginRoutes(registry);
@@ -194,8 +208,10 @@ describe("compileRouteMap", () => {
 
   test("taxonomy isPublic defaults to true — omitting it still generates a route", async () => {
     const registry = await buildRegistry([
-      definePlugin("default", (ctx) => {
-        ctx.registerTermTaxonomy("topic", { label: "Topics" });
+      definePlugin("default", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("topic", { label: "Topics" });
+        },
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
@@ -206,11 +222,13 @@ describe("compileRouteMap", () => {
 
   test("skips taxonomies with isPublic:false", async () => {
     const registry = await buildRegistry([
-      definePlugin("internal", (ctx) => {
-        ctx.registerTermTaxonomy("workflow_state", {
-          label: "Workflow",
-          isPublic: false,
-        });
+      definePlugin("internal", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("workflow_state", {
+            label: "Workflow",
+            isPublic: false,
+          });
+        },
       }),
     ]);
     expect(pluginRoutes(registry)).toHaveLength(0);
@@ -218,13 +236,15 @@ describe("compileRouteMap", () => {
 
   test("taxonomy rule beats colliding entry-type single on slug match (WP-faithful)", async () => {
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("category-page", {
-          label: "Category Pages",
-          isPublic: true,
-          rewrite: { slug: "category" },
-        });
-        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("category-page", {
+            label: "Category Pages",
+            isPublic: true,
+            rewrite: { slug: "category" },
+          });
+          ctx.registerTermTaxonomy("category", { label: "Categories" });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -238,12 +258,14 @@ describe("compileRouteMap", () => {
 
   test("hierarchical entry type emits /<base>/:path+ instead of /<base>/:slug", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -256,13 +278,15 @@ describe("compileRouteMap", () => {
 
   test("entry type with rewrite.isHierarchical:false keeps flat :slug even when data is hierarchical", async () => {
     const registry = await buildRegistry([
-      definePlugin("docs", (ctx) => {
-        ctx.registerEntryType("doc", {
-          label: "Docs",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { isHierarchical: false },
-        });
+      definePlugin("docs", {
+        setup: (ctx) => {
+          ctx.registerEntryType("doc", {
+            label: "Docs",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { isHierarchical: false },
+          });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -273,8 +297,10 @@ describe("compileRouteMap", () => {
 
   test("auto-generates /{type}/:slug from a registered post type", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
     ]);
     const map = pluginRoutes(registry);
@@ -286,13 +312,15 @@ describe("compileRouteMap", () => {
 
   test("emits /<archive>/page/:page paginated rule alongside the bare archive", async () => {
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: true,
-          rewrite: { slug: "shop" },
-        });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: true,
+            rewrite: { slug: "shop" },
+          });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -311,13 +339,15 @@ describe("compileRouteMap", () => {
 
   test("honors rewrite.slug for both single and archive patterns", async () => {
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: true,
-          rewrite: { slug: "shop" },
-        });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: true,
+            rewrite: { slug: "shop" },
+          });
+        },
       }),
     ]);
     const map = pluginRoutes(registry);
@@ -334,13 +364,15 @@ describe("compileRouteMap", () => {
 
   test("hasArchive: string overrides the auto archive slug", async () => {
     const registry = await buildRegistry([
-      definePlugin("catalog", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: "store",
-          rewrite: { slug: "p" },
-        });
+      definePlugin("catalog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: "store",
+            rewrite: { slug: "p" },
+          });
+        },
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
@@ -352,11 +384,13 @@ describe("compileRouteMap", () => {
 
   test("skips private post types entirely", async () => {
     const registry = await buildRegistry([
-      definePlugin("internal", (ctx) => {
-        ctx.registerEntryType("nav_menu_item", {
-          label: "Menu items",
-          isPublic: false,
-        });
+      definePlugin("internal", {
+        setup: (ctx) => {
+          ctx.registerEntryType("nav_menu_item", {
+            label: "Menu items",
+            isPublic: false,
+          });
+        },
       }),
     ]);
     expect(pluginRoutes(registry)).toHaveLength(0);
@@ -364,16 +398,18 @@ describe("compileRouteMap", () => {
 
   test("registerRewriteRule lands ahead of auto rules via default priority", async () => {
     const registry = await buildRegistry([
-      definePlugin("docs", (ctx) => {
-        ctx.registerEntryType("doc", {
-          label: "Docs",
-          isPublic: true,
-          rewrite: { slug: "docs" },
-        });
-        ctx.registerRewriteRule("/docs/:category/:slug", {
-          kind: "entry",
-          entryType: "doc",
-        });
+      definePlugin("docs", {
+        setup: (ctx) => {
+          ctx.registerEntryType("doc", {
+            label: "Docs",
+            isPublic: true,
+            rewrite: { slug: "docs" },
+          });
+          ctx.registerRewriteRule("/docs/:category/:slug", {
+            kind: "entry",
+            entryType: "doc",
+          });
+        },
       }),
     ]);
     const map = pluginRoutes(registry);
@@ -384,9 +420,11 @@ describe("compileRouteMap", () => {
 
   test("duplicate explicit pattern within one plugin throws at compile", async () => {
     const registry = await buildRegistry([
-      definePlugin("a", (ctx) => {
-        ctx.registerRewriteRule("/cart", { kind: "entry", entryType: "x" });
-        ctx.registerRewriteRule("/cart", { kind: "entry", entryType: "x" });
+      definePlugin("a", {
+        setup: (ctx) => {
+          ctx.registerRewriteRule("/cart", { kind: "entry", entryType: "x" });
+          ctx.registerRewriteRule("/cart", { kind: "entry", entryType: "x" });
+        },
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -396,12 +434,14 @@ describe("compileRouteMap", () => {
 
   test("pattern collision between auto and explicit rules throws at compile, naming both owners", async () => {
     const registry = await buildRegistry([
-      definePlugin("conflict", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.registerRewriteRule("/post/:slug", {
-          kind: "entry",
-          entryType: "post",
-        });
+      definePlugin("conflict", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+          ctx.registerRewriteRule("/post/:slug", {
+            kind: "entry",
+            entryType: "post",
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -411,12 +451,14 @@ describe("compileRouteMap", () => {
 
   test("a plugin claiming a framework pattern below its priority shadows it", async () => {
     const registry = await buildRegistry([
-      definePlugin("search", (ctx) => {
-        ctx.registerArchiveType("search", {
-          routes: [FRAMEWORK_SEARCH_QUERY_PATTERN],
-          priority: 1,
-          resolve: () => null,
-        });
+      definePlugin("search", {
+        setup: (ctx) => {
+          ctx.registerArchiveType("search", {
+            routes: [FRAMEWORK_SEARCH_QUERY_PATTERN],
+            priority: 1,
+            resolve: () => null,
+          });
+        },
       }),
     ]);
     const map = compileRouteMap(registry);
@@ -435,11 +477,13 @@ describe("compileRouteMap", () => {
 
   test("a plugin claiming a framework pattern it cannot win still throws", async () => {
     const registry = await buildRegistry([
-      definePlugin("careless", (ctx) => {
-        ctx.registerRewriteRule(FRAMEWORK_SEARCH_QUERY_PATTERN, {
-          kind: "entry",
-          entryType: "x",
-        });
+      definePlugin("careless", {
+        setup: (ctx) => {
+          ctx.registerRewriteRule(FRAMEWORK_SEARCH_QUERY_PATTERN, {
+            kind: "entry",
+            entryType: "x",
+          });
+        },
       }),
     ]);
     // Default priority 10 loses to the framework's 5, so the rule would never
@@ -451,11 +495,15 @@ describe("compileRouteMap", () => {
 
   test("cross-plugin collisions name both plugin ids", async () => {
     const registry = await buildRegistry([
-      definePlugin("plugin-a", (ctx) => {
-        ctx.registerRewriteRule("/x", { kind: "entry", entryType: "a" });
+      definePlugin("plugin-a", {
+        setup: (ctx) => {
+          ctx.registerRewriteRule("/x", { kind: "entry", entryType: "a" });
+        },
       }),
-      definePlugin("plugin-b", (ctx) => {
-        ctx.registerRewriteRule("/x", { kind: "entry", entryType: "b" });
+      definePlugin("plugin-b", {
+        setup: (ctx) => {
+          ctx.registerRewriteRule("/x", { kind: "entry", entryType: "b" });
+        },
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(/"plugin-a".*"plugin-b"/);
@@ -463,9 +511,11 @@ describe("compileRouteMap", () => {
 
   test("stable sort preserves registration order on equal priorities", async () => {
     const registry = await buildRegistry([
-      definePlugin("a", (ctx) => {
-        ctx.registerRewriteRule("/a", { kind: "entry", entryType: "x" });
-        ctx.registerRewriteRule("/b", { kind: "entry", entryType: "x" });
+      definePlugin("a", {
+        setup: (ctx) => {
+          ctx.registerRewriteRule("/a", { kind: "entry", entryType: "x" });
+          ctx.registerRewriteRule("/b", { kind: "entry", entryType: "x" });
+        },
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
@@ -476,8 +526,10 @@ describe("compileRouteMap", () => {
 
   test("isPublic defaults to true — omitting it still generates routes", async () => {
     const registry = await buildRegistry([
-      definePlugin("default", (ctx) => {
-        ctx.registerEntryType("article", { label: "Articles" });
+      definePlugin("default", {
+        setup: (ctx) => {
+          ctx.registerEntryType("article", { label: "Articles" });
+        },
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
@@ -487,15 +539,19 @@ describe("compileRouteMap", () => {
 
   test("cross-plugin priority: explicit plugin rule beats another plugin's auto rule", async () => {
     const registry = await buildRegistry([
-      definePlugin("core-blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("core-blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
-      definePlugin("overrider", (ctx) => {
-        ctx.registerRewriteRule(
-          "/post/featured",
-          { kind: "entryType", entryType: "post" },
-          { priority: 5 },
-        );
+      definePlugin("overrider", {
+        setup: (ctx) => {
+          ctx.registerRewriteRule(
+            "/post/featured",
+            { kind: "entryType", entryType: "post" },
+            { priority: 5 },
+          );
+        },
       }),
     ]);
     const map = pluginRoutes(registry);
@@ -530,12 +586,14 @@ describe("compileRouteMap", () => {
 
   test("a multi-segment hasArchive mounts the archive and its later pages there", async () => {
     const registry = await buildRegistry([
-      definePlugin("learn", (ctx) => {
-        ctx.registerEntryType("course", {
-          label: "Courses",
-          isPublic: true,
-          hasArchive: "learn/all-courses",
-        });
+      definePlugin("learn", {
+        setup: (ctx) => {
+          ctx.registerEntryType("course", {
+            label: "Courses",
+            isPublic: true,
+            hasArchive: "learn/all-courses",
+          });
+        },
       }),
     ]);
     const resolve = resolverFor(registry);
@@ -551,12 +609,14 @@ describe("compileRouteMap", () => {
 
   test("an empty string hasArchive mounts no archive, as false does", async () => {
     const registry = await buildRegistry([
-      definePlugin("learn", (ctx) => {
-        ctx.registerEntryType("course", {
-          label: "Courses",
-          isPublic: true,
-          hasArchive: "",
-        });
+      definePlugin("learn", {
+        setup: (ctx) => {
+          ctx.registerEntryType("course", {
+            label: "Courses",
+            isPublic: true,
+            hasArchive: "",
+          });
+        },
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
@@ -566,12 +626,14 @@ describe("compileRouteMap", () => {
 
   test("hasArchive: string rejects non-kebab input", async () => {
     const dots = await buildRegistry([
-      definePlugin("y", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: "../admin",
-        });
+      definePlugin("y", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: "../admin",
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(dots)).toThrow(/invalid hasArchive/);
@@ -579,11 +641,13 @@ describe("compileRouteMap", () => {
 
   test("a taxonomy with a multi-segment rewrite.slug serves its terms and their later pages under that base", async () => {
     const registry = await buildRegistry([
-      definePlugin("insights", (ctx) => {
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          rewrite: { slug: "insights/category" },
-        });
+      definePlugin("insights", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            rewrite: { slug: "insights/category" },
+          });
+        },
       }),
     ]);
     const resolve = resolverFor(registry);
@@ -600,12 +664,14 @@ describe("compileRouteMap", () => {
 
   test("a hierarchical taxonomy with a multi-segment rewrite.slug serves nested terms and their later pages under that base", async () => {
     const registry = await buildRegistry([
-      definePlugin("insights", (ctx) => {
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          isHierarchical: true,
-          rewrite: { slug: "insights/category" },
-        });
+      definePlugin("insights", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            isHierarchical: true,
+            rewrite: { slug: "insights/category" },
+          });
+        },
       }),
     ]);
     const resolve = resolverFor(registry);
@@ -622,13 +688,15 @@ describe("compileRouteMap", () => {
 
   test("an entry type with a multi-segment rewrite.slug serves its singles and archive under that base", async () => {
     const registry = await buildRegistry([
-      definePlugin("learn", (ctx) => {
-        ctx.registerEntryType("course", {
-          label: "Courses",
-          isPublic: true,
-          hasArchive: true,
-          rewrite: { slug: "learn/courses" },
-        });
+      definePlugin("learn", {
+        setup: (ctx) => {
+          ctx.registerEntryType("course", {
+            label: "Courses",
+            isPublic: true,
+            hasArchive: true,
+            rewrite: { slug: "learn/courses" },
+          });
+        },
       }),
     ]);
     const resolve = resolverFor(registry);
@@ -648,12 +716,14 @@ describe("compileRouteMap", () => {
 
   test("entry-type rewrite.slug rejects URL-pattern syntax", async () => {
     const greedy = await buildRegistry([
-      definePlugin("greedy", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          rewrite: { slug: "*" },
-        });
+      definePlugin("greedy", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            rewrite: { slug: "*" },
+          });
+        },
       }),
     ]);
     // Precise here, loose below: the message has to name the type and the slug.
@@ -664,7 +734,9 @@ describe("compileRouteMap", () => {
 
   describe("a near-miss base fails at boot with one message saying what to write instead", () => {
     async function bootError(register: PluginSetup<unknown>, message: string) {
-      const registry = await buildRegistry([definePlugin("site", register)]);
+      const registry = await buildRegistry([
+        definePlugin("site", { setup: register }),
+      ]);
       expect(() => compileRouteMap(registry)).toThrow(message);
     }
     const taxonomyAt = (slug: string, message: string) =>
@@ -765,11 +837,13 @@ describe("compileRouteMap", () => {
 
   test("taxonomy rewrite.slug gets the same check, and empty is rejected there too", async () => {
     const greedy = await buildRegistry([
-      definePlugin("greedy", (ctx) => {
-        ctx.registerTermTaxonomy("topic", {
-          label: "Topics",
-          rewrite: { slug: ":evil" },
-        });
+      definePlugin("greedy", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("topic", {
+            label: "Topics",
+            rewrite: { slug: ":evil" },
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(greedy)).toThrow(
@@ -778,11 +852,13 @@ describe("compileRouteMap", () => {
 
     // No root branch for a taxonomy: `""` would compile to `//:term`.
     const rooted = await buildRegistry([
-      definePlugin("rooted", (ctx) => {
-        ctx.registerTermTaxonomy("topic", {
-          label: "Topics",
-          rewrite: { slug: "" },
-        });
+      definePlugin("rooted", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("topic", {
+            label: "Topics",
+            rewrite: { slug: "" },
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(rooted)).toThrow(/invalid rewrite\.slug/);
@@ -792,11 +868,13 @@ describe("compileRouteMap", () => {
     "a taxonomy slugged %s, whose term URLs a framework route would serve, fails to compile",
     async (slug) => {
       const registry = await buildRegistry([
-        definePlugin("blog", (ctx) => {
-          ctx.registerTermTaxonomy("topic", {
-            label: "Topics",
-            rewrite: { slug },
-          });
+        definePlugin("blog", {
+          setup: (ctx) => {
+            ctx.registerTermTaxonomy("topic", {
+              label: "Topics",
+              rewrite: { slug },
+            });
+          },
         }),
       ]);
       expect(() => compileRouteMap(registry)).toThrow(
@@ -809,12 +887,14 @@ describe("compileRouteMap", () => {
 
   test("an entry type slugged search loses its single and archive URLs to search, so it fails to compile", async () => {
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          rewrite: { slug: "search" },
-        });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            rewrite: { slug: "search" },
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -825,13 +905,15 @@ describe("compileRouteMap", () => {
   test("a multi-segment base whose archive a framework route would serve still fails to compile", async () => {
     // `/search/all/page/2` is a search for "all": the archive never gets its URLs.
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: true,
-          rewrite: { slug: "search/all" },
-        });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: true,
+            rewrite: { slug: "search/all" },
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -842,12 +924,14 @@ describe("compileRouteMap", () => {
   test("a multi-segment hasArchive a framework route would serve is reported against hasArchive", async () => {
     // `/authors/team` is the author archive for a user slugged "team".
     const registry = await buildRegistry([
-      definePlugin("people", (ctx) => {
-        ctx.registerEntryType("person", {
-          label: "People",
-          isPublic: true,
-          hasArchive: "authors/team",
-        });
+      definePlugin("people", {
+        setup: (ctx) => {
+          ctx.registerEntryType("person", {
+            label: "People",
+            isPublic: true,
+            hasArchive: "authors/team",
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -857,12 +941,14 @@ describe("compileRouteMap", () => {
 
   test("a hasArchive slugged search is reported against hasArchive", async () => {
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: "search",
-        });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: "search",
+          });
+        },
       }),
     ]);
     expect(() => compileRouteMap(registry)).toThrow(
@@ -872,17 +958,19 @@ describe("compileRouteMap", () => {
 
   test("the framework's documented overlaps still compile: hierarchical /page and the root", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
-        ctx.registerEntryType("landing", {
-          label: "Landings",
-          isPublic: true,
-          rewrite: { slug: "" },
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+          ctx.registerEntryType("landing", {
+            label: "Landings",
+            isPublic: true,
+            rewrite: { slug: "" },
+          });
+        },
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual([
@@ -893,12 +981,14 @@ describe("compileRouteMap", () => {
 
   test("empty entry-type rewrite.slug still claims the site root", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          rewrite: { slug: "" },
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            rewrite: { slug: "" },
+          });
+        },
       }),
     ]);
     expect(pluginRoutes(registry).map((r) => r.rawPattern)).toEqual(["/:slug"]);
@@ -918,27 +1008,29 @@ describe("compileRouteMap — framework routes a site turns off", () => {
 
   test("with no routes key, the whole map keeps every rule, intent and priority in order", async () => {
     const registry = await buildRegistry([
-      definePlugin("site", (ctx) => {
-        ctx.registerEntryType("post", {
-          label: "Posts",
-          isPublic: true,
-          hasArchive: true,
-        });
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          rewrite: { slug: "" },
-        });
-        ctx.registerTermTaxonomy("topic", { label: "Topics" });
-        ctx.registerRewriteRule("/kitchen/:slug", {
-          kind: "entry",
-          entryType: "post",
-        });
-        ctx.registerArchiveType("talks", {
-          routes: ["/talks/:track"],
-          entries: (q) => q,
-          title: "Talks",
-        });
+      definePlugin("site", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", {
+            label: "Posts",
+            isPublic: true,
+            hasArchive: true,
+          });
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            rewrite: { slug: "" },
+          });
+          ctx.registerTermTaxonomy("topic", { label: "Topics" });
+          ctx.registerRewriteRule("/kitchen/:slug", {
+            kind: "entry",
+            entryType: "post",
+          });
+          ctx.registerArchiveType("talks", {
+            routes: ["/talks/:track"],
+            entries: (q) => q,
+            title: "Talks",
+          });
+        },
       }),
     ]);
     expect(
@@ -987,12 +1079,14 @@ describe("compileRouteMap — framework routes a site turns off", () => {
   test("date off compiles none of the six date rules, so a root entry slugged 2026 resolves", async () => {
     const registry = await buildRegistry(
       [
-        definePlugin("pages", (ctx) => {
-          ctx.registerEntryType("page", {
-            label: "Pages",
-            isPublic: true,
-            rewrite: { slug: "" },
-          });
+        definePlugin("pages", {
+          setup: (ctx) => {
+            ctx.registerEntryType("page", {
+              label: "Pages",
+              isPublic: true,
+              rewrite: { slug: "" },
+            });
+          },
         }),
       ],
       { ...ALL_ON, date: false },

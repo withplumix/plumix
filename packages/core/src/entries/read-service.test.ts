@@ -468,12 +468,14 @@ describe("reference meta resolution", () => {
   });
 
   test("listEntries resolves the page with one in-query per (kind, scope) group", async () => {
-    const refsPlugin = definePlugin("test-refs", (ctx) => {
-      ctx.registerEntryMetaBox("relations", {
-        label: "Relations",
-        entryTypes: ["post"],
-        fields: [OWNER_FIELD, REVIEWERS_FIELD],
-      });
+    const refsPlugin = definePlugin("test-refs", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("relations", {
+          label: "Relations",
+          entryTypes: ["post"],
+          fields: [OWNER_FIELD, REVIEWERS_FIELD],
+        });
+      },
     });
     const { harness, ctx, run, dbQueryCount } = await createTracedContext({
       config: { plugins: [refsPlugin] },

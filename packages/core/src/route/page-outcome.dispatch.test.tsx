@@ -52,24 +52,26 @@ function recordingCdn() {
  * `/login` sends a signed-in visitor home, and `?to=` sends anyone elsewhere
  * with the status it names.
  */
-const loginPlugin = definePlugin("login-page", (ctx) => {
-  ctx.registerArchiveType("login-page", {
-    routes: ["/login"],
-    cacheable: true,
-    resolve: (appCtx) => {
-      const url = new URL(appCtx.request.url);
-      const to = url.searchParams.get("to");
-      if (to !== null) {
-        throw redirectTo(to, Number(url.searchParams.get("status")) as 308);
-      }
-      if (url.searchParams.has("gone")) throw pageNotFound();
-      if (appCtx.user !== null) throw redirectTo("/");
-      return {
-        data: { kind: "archiveType", name: "login-page" },
-        title: "Sign in",
-      };
-    },
-  });
+const loginPlugin = definePlugin("login-page", {
+  setup: (ctx) => {
+    ctx.registerArchiveType("login-page", {
+      routes: ["/login"],
+      cacheable: true,
+      resolve: (appCtx) => {
+        const url = new URL(appCtx.request.url);
+        const to = url.searchParams.get("to");
+        if (to !== null) {
+          throw redirectTo(to, Number(url.searchParams.get("status")) as 308);
+        }
+        if (url.searchParams.has("gone")) throw pageNotFound();
+        if (appCtx.user !== null) throw redirectTo("/");
+        return {
+          data: { kind: "archiveType", name: "login-page" },
+          title: "Sign in",
+        };
+      },
+    });
+  },
 });
 
 const loginTheme = defineTheme({
@@ -144,17 +146,19 @@ describe("an archive resolve that throws an outcome", () => {
   });
 
   test("a listed archive's resolve is honoured too", async () => {
-    const membersPlugin = definePlugin("members", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("members", {
-        routes: ["/members"],
-        entries: (q) => q.ofTypes("post"),
-        title: "Members",
-        resolve: (appCtx: AppContext) => {
-          if (appCtx.user === null) throw redirectTo("/login", 307);
-          return {};
-        },
-      });
+    const membersPlugin = definePlugin("members", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("members", {
+          routes: ["/members"],
+          entries: (q) => q.ofTypes("post"),
+          title: "Members",
+          resolve: (appCtx: AppContext) => {
+            if (appCtx.user === null) throw redirectTo("/login", 307);
+            return {};
+          },
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -187,34 +191,36 @@ describe("an archive resolve that throws an outcome", () => {
  * A share page: its block's loader looks the share up by the `share` attr,
  * and what it finds decides the page.
  */
-const sharePlugin = definePlugin("share", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerBlock(
-    defineBlock({
-      name: "acme/share",
-      loaders: {
-        share: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
-          if (attrs.share === "unknown") throw pageNotFound();
-          if (attrs.share === "spent") throw redirectTo("/elsewhere");
-          if (attrs.share === "broken") throw new Error("share store down");
-          if (attrs.share === "mixed") throw new Error("share store down");
-          return Promise.resolve(`share ${String(attrs.share)}`);
+const sharePlugin = definePlugin("share", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerBlock(
+      defineBlock({
+        name: "acme/share",
+        loaders: {
+          share: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
+            if (attrs.share === "unknown") throw pageNotFound();
+            if (attrs.share === "spent") throw redirectTo("/elsewhere");
+            if (attrs.share === "broken") throw new Error("share store down");
+            if (attrs.share === "mixed") throw new Error("share store down");
+            return Promise.resolve(`share ${String(attrs.share)}`);
+          },
+          // Declared after `share`, so a block's first rejection is not its
+          // outcome.
+          audit: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
+            if (attrs.share === "mixed") throw pageNotFound();
+            return Promise.resolve("audited");
+          },
         },
-        // Declared after `share`, so a block's first rejection is not its
-        // outcome.
-        audit: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
-          if (attrs.share === "mixed") throw pageNotFound();
-          return Promise.resolve("audited");
-        },
-      },
-      errorFallback: () => <p>share unavailable</p>,
-      render: ({ loaders }) => <p>{loaders.share}</p>,
-    }),
-  );
+        errorFallback: () => <p>share unavailable</p>,
+        render: ({ loaders }) => <p>{loaders.share}</p>,
+      }),
+    );
+  },
 });
 
 const shareTheme = defineTheme({
@@ -401,11 +407,13 @@ describe("an outcome thrown where it is not honoured", () => {
 describe("the template's own steps", () => {
   test("a template dep throwing redirectTo answers before document() runs", async () => {
     const document = vi.fn(() => ({ title: "Shared" }));
-    const cursorPlugin = definePlugin("cursor", (ctx) => {
-      ctx.registerTemplateDep("share-cursor", {
-        keyedBy: "slug",
-        load: () => Promise.reject(redirectTo("/x", 301)),
-      });
+    const cursorPlugin = definePlugin("cursor", {
+      setup: (ctx) => {
+        ctx.registerTemplateDep("share-cursor", {
+          keyedBy: "slug",
+          load: () => Promise.reject(redirectTo("/x", 301)),
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -476,15 +484,17 @@ describe("the head reads what a loader found through ctx.memo", () => {
       const token = new URL(ctx.request.url).searchParams.get("token") ?? "";
       return ctx.memo(`share:${token}`, () => lookup(token));
     };
-    const tokenPlugin = definePlugin("token", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/share",
-          loaders: { share: () => findShare(getContext()) },
-          render: ({ loaders }) => <p>{loaders.share.title}</p>,
-        }),
-      );
+    const tokenPlugin = definePlugin("token", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/share",
+            loaders: { share: () => findShare(getContext()) },
+            render: ({ loaders }) => <p>{loaders.share.title}</p>,
+          }),
+        );
+      },
     });
     const h = await createDispatcherHarness({
       config: {
@@ -527,13 +537,15 @@ test("an outcome a separately bundled copy of the module made is recognised", as
     location: "/copy",
     status: 307,
   });
-  const copyPlugin = definePlugin("copy", (ctx) => {
-    ctx.registerArchiveType("login-page", {
-      routes: ["/login"],
-      resolve: () => {
-        throw fromCopy;
-      },
-    });
+  const copyPlugin = definePlugin("copy", {
+    setup: (ctx) => {
+      ctx.registerArchiveType("login-page", {
+        routes: ["/login"],
+        resolve: () => {
+          throw fromCopy;
+        },
+      });
+    },
   });
   const h = await createDispatcherHarness({
     config: { plugins: [copyPlugin], theme: loginTheme },

@@ -10,18 +10,20 @@ import type { SchemaPiece } from "./schema.js";
 import { Breadcrumbs, breadcrumbTrail } from "./breadcrumbs.js";
 import { seo } from "./index.js";
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-    supports: ["title", "editor", "excerpt"],
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isHierarchical: false,
-    entryTypes: ["post"],
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+      supports: ["title", "editor", "excerpt"],
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: false,
+      entryTypes: ["post"],
+    });
+  },
 });
 
 const theme = defineTheme({ templates: [fallback(() => null)] });
@@ -389,10 +391,12 @@ describe("serialization", () => {
 
 describe("the three filter tiers", () => {
   test("a plugin can drop a piece", async () => {
-    const dropper = definePlugin("drop-breadcrumb", (ctx) => {
-      ctx.addFilter("seo:schema:needs", (needed, piece) =>
-        piece === "breadcrumb" ? false : needed,
-      );
+    const dropper = definePlugin("drop-breadcrumb", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:schema:needs", (needed, piece) =>
+          piece === "breadcrumb" ? false : needed,
+        );
+      },
     });
     const h = await createHarness([blogPlugin, seo(), dropper]);
     await seedPost(h);
@@ -404,12 +408,14 @@ describe("the three filter tiers", () => {
   });
 
   test("a plugin can reshape one piece", async () => {
-    const reshaper = definePlugin("reshape-publisher", (ctx) => {
-      ctx.addFilter("seo:schema:piece", (piece, name) =>
-        name === "publisher"
-          ? { ...piece, sameAs: ["https://example.social/@demo"] }
-          : piece,
-      );
+    const reshaper = definePlugin("reshape-publisher", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:schema:piece", (piece, name) =>
+          name === "publisher"
+            ? { ...piece, sameAs: ["https://example.social/@demo"] }
+            : piece,
+        );
+      },
     });
     const h = await createHarness([blogPlugin, seo(), reshaper]);
     await seedPost(h);
@@ -426,15 +432,17 @@ describe("the three filter tiers", () => {
   });
 
   test("a plugin can transform the whole graph", async () => {
-    const transformer = definePlugin("add-node", (ctx) => {
-      ctx.addFilter("seo:schema:graph", (graph) => [
-        ...graph,
-        {
-          "@type": "Product",
-          "@id": "https://cms.example/#product",
-          name: "A thing",
-        } satisfies SchemaPiece,
-      ]);
+    const transformer = definePlugin("add-node", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:schema:graph", (graph) => [
+          ...graph,
+          {
+            "@type": "Product",
+            "@id": "https://cms.example/#product",
+            name: "A thing",
+          } satisfies SchemaPiece,
+        ]);
+      },
     });
     const h = await createHarness([blogPlugin, seo(), transformer]);
     await seedPost(h);
@@ -446,8 +454,10 @@ describe("the three filter tiers", () => {
   });
 
   test("an emptied graph emits no script", async () => {
-    const silencer = definePlugin("silence", (ctx) => {
-      ctx.addFilter("seo:schema:graph", () => []);
+    const silencer = definePlugin("silence", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:schema:graph", () => []);
+      },
     });
     const h = await createHarness([blogPlugin, seo(), silencer]);
     await seedPost(h);
@@ -459,10 +469,12 @@ describe("the three filter tiers", () => {
     const needs = vi.fn((needed: boolean) => needed);
     const piece = vi.fn((built: SchemaPiece) => built);
     const graph = vi.fn((pieces: readonly SchemaPiece[]) => pieces);
-    const watcher = definePlugin("watch-graph", (ctx) => {
-      ctx.addFilter("seo:schema:needs", needs);
-      ctx.addFilter("seo:schema:piece", piece);
-      ctx.addFilter("seo:schema:graph", graph);
+    const watcher = definePlugin("watch-graph", {
+      setup: (ctx) => {
+        ctx.addFilter("seo:schema:needs", needs);
+        ctx.addFilter("seo:schema:piece", piece);
+        ctx.addFilter("seo:schema:graph", graph);
+      },
     });
     const h = await createHarness([
       blogPlugin,
@@ -560,13 +572,15 @@ describe("breadcrumbs", () => {
   test("a type with no route of its own contributes no step", async () => {
     // The router skips a non-public type before asking about `hasArchive`, so
     // no archive crumb exists.
-    const hidden = definePlugin("hidden", (ctx) => {
-      ctx.registerEntryType("secret", {
-        label: "Secrets",
-        isPublic: false,
-        hasArchive: true,
-        supports: ["title"],
-      });
+    const hidden = definePlugin("hidden", {
+      setup: (ctx) => {
+        ctx.registerEntryType("secret", {
+          label: "Secrets",
+          isPublic: false,
+          hasArchive: true,
+          supports: ["title"],
+        });
+      },
     });
     const h = await createHarness([blogPlugin, hidden, seo()], trailTheme);
     await seedPost(h);
@@ -584,13 +598,15 @@ describe("breadcrumbs", () => {
   });
 
   test("links an archive exactly when the router serves it", async () => {
-    const hidden = definePlugin("hidden", (ctx) => {
-      ctx.registerEntryType("secret", {
-        label: "Secrets",
-        isPublic: false,
-        hasArchive: true,
-        supports: ["title"],
-      });
+    const hidden = definePlugin("hidden", {
+      setup: (ctx) => {
+        ctx.registerEntryType("secret", {
+          label: "Secrets",
+          isPublic: false,
+          hasArchive: true,
+          supports: ["title"],
+        });
+      },
     });
     const h = await createHarness([blogPlugin, hidden, seo()]);
     await seedPost(h);

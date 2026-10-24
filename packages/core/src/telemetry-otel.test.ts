@@ -206,20 +206,22 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
   });
 
   test("span attributes map to OTLP values; nested objects and mixed arrays are JSON-stringified", async () => {
-    const attributed = definePlugin("attributed", (ctx) => {
-      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-        appCtx.telemetry.span("attributed", (s) => {
-          s.set("str", "hello");
-          s.set("int", 42);
-          s.set("float", 1.5);
-          s.set("bool", true);
-          s.set("unsafe-int", 1e21);
-          s.set("primitive-array", ["a", "b"]);
-          s.set("nested-object", { deep: { deeper: 1 } });
-          s.set("mixed-array", [{ id: 1 }, "x"]);
+    const attributed = definePlugin("attributed", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          appCtx.telemetry.span("attributed", (s) => {
+            s.set("str", "hello");
+            s.set("int", 42);
+            s.set("float", 1.5);
+            s.set("bool", true);
+            s.set("unsafe-int", 1e21);
+            s.set("primitive-array", ["a", "b"]);
+            s.set("nested-object", { deep: { deeper: 1 } });
+            s.set("mixed-array", [{ id: 1 }, "x"]);
+          });
+          return manifest;
         });
-        return manifest;
-      });
+      },
     });
     const { h, calls } = await otelHarness({}, { plugins: [attributed] });
 
@@ -285,12 +287,14 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
   });
 
   test("timestamped records become span events on the root, named by namespace", async () => {
-    const recorder = definePlugin("recorder", (ctx) => {
-      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-        appCtx.telemetry.record("recorder", { note: "during render" });
-        appCtx.telemetry.record("recorder", "plain fact");
-        return manifest;
-      });
+    const recorder = definePlugin("recorder", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          appCtx.telemetry.record("recorder", { note: "during render" });
+          appCtx.telemetry.record("recorder", "plain fact");
+          return manifest;
+        });
+      },
     });
     const { h, calls, snapshots } = await otelHarness(
       {},
@@ -320,16 +324,18 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
   });
 
   test("cap-dropped spans and records surface as OTel dropped counts on the root span", async () => {
-    const noisy = definePlugin("noisy", (ctx) => {
-      ctx.addFilter("render:document", (manifest, _data, appCtx) => {
-        for (let i = 0; i < 1002; i++) {
-          appCtx.telemetry.record("noisy", i);
-        }
-        for (let i = 0; i < 2100; i++) {
-          appCtx.telemetry.span("busy", () => undefined);
-        }
-        return manifest;
-      });
+    const noisy = definePlugin("noisy", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          for (let i = 0; i < 1002; i++) {
+            appCtx.telemetry.record("noisy", i);
+          }
+          for (let i = 0; i < 2100; i++) {
+            appCtx.telemetry.span("busy", () => undefined);
+          }
+          return manifest;
+        });
+      },
     });
     const { h, calls, snapshots } = await otelHarness({}, { plugins: [noisy] });
 

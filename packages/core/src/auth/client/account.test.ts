@@ -76,14 +76,16 @@ function rpcOf(h: DispatcherHarness, token: string): RpcCall {
 }
 
 /** A profile box with a member-editable key and one only promoters may set. */
-const profiles = definePlugin("profiles", (ctx) => {
-  ctx.registerUserMetaBox("profile", {
-    label: "Profile",
-    fields: [
-      text("bio").maxLength(10),
-      text("badge").capability("user:promote"),
-    ],
-  });
+const profiles = definePlugin("profiles", {
+  setup: (ctx) => {
+    ctx.registerUserMetaBox("profile", {
+      label: "Profile",
+      fields: [
+        text("bio").maxLength(10),
+        text("badge").capability("user:promote"),
+      ],
+    });
+  },
 });
 
 describe("authClient.account.update", () => {

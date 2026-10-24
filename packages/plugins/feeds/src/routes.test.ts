@@ -63,47 +63,55 @@ const membersOnlyPolicy = definePolicy({
   resolve: (ctx) => (ctx.user ? grant("members") : challenge("subscribe")),
 });
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+  },
 });
 
-const blogWithTaxonomyPlugin = definePlugin("blog-tax", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    entryTypes: ["post"],
-  });
+const blogWithTaxonomyPlugin = definePlugin("blog-tax", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
+    });
+  },
 });
 
-const postsWithAccess = definePlugin("posts-with-access", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        { key: "members", label: "Members", policy: membersOnlyPolicy },
-        {
-          key: "teaser",
-          label: "Teaser",
-          policy: definePolicy({
-            segments: ["members"],
-            resolve: (c) =>
-              c.user ? grant("members") : challenge("paywall", { soft: true }),
-          }),
-        },
-      ],
-    },
-  });
+const postsWithAccess = definePlugin("posts-with-access", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "members", label: "Members", policy: membersOnlyPolicy },
+          {
+            key: "teaser",
+            label: "Teaser",
+            policy: definePolicy({
+              segments: ["members"],
+              resolve: (c) =>
+                c.user
+                  ? grant("members")
+                  : challenge("paywall", { soft: true }),
+            }),
+          },
+        ],
+      },
+    });
+  },
 });
 
 const POST_BODY = {
@@ -245,17 +253,19 @@ describe("feed routes", () => {
   );
 
   test("a type's feed sits beside its archive page, and a type with no archive page has none", async () => {
-    const news = definePlugin("news", (ctx) => {
-      ctx.registerEntryType("article", {
-        label: "Articles",
-        isPublic: true,
-        hasArchive: "news",
-      });
-      ctx.registerEntryType("note", {
-        label: "Notes",
-        isPublic: true,
-        hasArchive: false,
-      });
+    const news = definePlugin("news", {
+      setup: (ctx) => {
+        ctx.registerEntryType("article", {
+          label: "Articles",
+          isPublic: true,
+          hasArchive: "news",
+        });
+        ctx.registerEntryType("note", {
+          label: "Notes",
+          isPublic: true,
+          hasArchive: false,
+        });
+      },
     });
     const h = await harness(news);
     const author = await h.seedUser("admin");
@@ -305,13 +315,15 @@ describe("feed routes", () => {
   test.each(["/feed", "/feed/atom", "/posts/feed"])(
     "a type whose every post is members-only serves an anonymous reader an empty %s",
     async (path) => {
-      const members = definePlugin("members", (ctx) => {
-        ctx.registerEntryType("post", {
-          label: "Posts",
-          isPublic: true,
-          hasArchive: "posts",
-          access: { default: membersOnlyPolicy },
-        });
+      const members = definePlugin("members", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", {
+            label: "Posts",
+            isPublic: true,
+            hasArchive: "posts",
+            access: { default: membersOnlyPolicy },
+          });
+        },
       });
       const h = await harness(members);
       const author = await h.seedUser("admin");
@@ -362,13 +374,15 @@ describe("feed routes", () => {
   });
 
   test("a feed of nested entries costs the same queries however many it holds", async () => {
-    const pagesPlugin = definePlugin("pages", (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        isHierarchical: true,
-        hasArchive: true,
-      });
+    const pagesPlugin = definePlugin("pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          isHierarchical: true,
+          hasArchive: true,
+        });
+      },
     });
 
     // Each child sits under its own parent, so a per-row ancestor walk would
@@ -431,31 +445,33 @@ describe("feed routes", () => {
 // Each archive below narrows, and each seed is one some archive's query
 // leaves out.
 describe("a feed is its archive's entry query", () => {
-  const site = definePlugin("site", (ctx) => {
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      hasArchive: true,
-    });
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      isHierarchical: true,
-      hasArchive: "all-pages",
-    });
-    ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
-    ctx.registerTermTaxonomy("topic", {
-      label: "Topics",
-      entryTypes: ["post", "secret"],
-    });
-    ctx.registerTermTaxonomy("tag", { label: "Tags" });
-    ctx.registerArchiveType("series", {
-      routes: ["/series/:name"],
-      title: "Series",
-      entries: (q, params) =>
-        q.ofTypes("post", "page").inTerm("tag", params.name ?? ""),
-      feed: true,
-    });
+  const site = definePlugin("site", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+        hasArchive: "all-pages",
+      });
+      ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+      ctx.registerTermTaxonomy("topic", {
+        label: "Topics",
+        entryTypes: ["post", "secret"],
+      });
+      ctx.registerTermTaxonomy("tag", { label: "Tags" });
+      ctx.registerArchiveType("series", {
+        routes: ["/series/:name"],
+        title: "Series",
+        entries: (q, params) =>
+          q.ofTypes("post", "page").inTerm("tag", params.name ?? ""),
+        feed: true,
+      });
+    },
   });
 
   const SLUGS = [
@@ -591,10 +607,12 @@ describe("a feed is its archive's entry query", () => {
   const outsideTagG = sql`${entries.id} not in (select ${entryTerm.entryId} from ${entryTerm} inner join ${terms} on ${terms.id} = ${entryTerm.termId} where ${terms.taxonomy} = 'tag' and ${terms.slug} = 'g')`;
 
   test("a handler excluding a term from the front page narrows its page and its feed", async () => {
-    const narrowing = definePlugin("narrowing", (ctx) => {
-      ctx.addFilter("archive:entries", (query, archive) =>
-        archive.kind === "frontPage" ? query.where(outsideTagG) : query,
-      );
+    const narrowing = definePlugin("narrowing", {
+      setup: (ctx) => {
+        ctx.addFilter("archive:entries", (query, archive) =>
+          archive.kind === "frontPage" ? query.where(outsideTagG) : query,
+        );
+      },
     });
     const h = await seedSite(narrowing);
     expect(await syndicatedOn(h, "/feed")).toEqual(["other-post"]);
@@ -607,12 +625,14 @@ describe("a feed is its archive's entry query", () => {
   });
 
   test("a handler narrowing a plugin archive changes its page and its feed together", async () => {
-    const narrowing = definePlugin("narrowing", (ctx) => {
-      ctx.addFilter("archive:entries", (query, archive, params) =>
-        archive.kind === "archiveType" && archive.name === "series"
-          ? query.ofTypes(params.name === "g" ? "page" : "post")
-          : query,
-      );
+    const narrowing = definePlugin("narrowing", {
+      setup: (ctx) => {
+        ctx.addFilter("archive:entries", (query, archive, params) =>
+          archive.kind === "archiveType" && archive.name === "series"
+            ? query.ofTypes(params.name === "g" ? "page" : "post")
+            : query,
+        );
+      },
     });
     const h = await seedSite(narrowing);
     expect(await syndicatedOn(h, "/series/g/feed")).toEqual(["a-page"]);
@@ -620,8 +640,10 @@ describe("a feed is its archive's entry query", () => {
   });
 
   test("a handler returning a fresh query still lists no draft, trashed or non-public entry", async () => {
-    const widening = definePlugin("widening", (ctx) => {
-      ctx.addFilter("archive:entries", () => entryQuery());
+    const widening = definePlugin("widening", {
+      setup: (ctx) => {
+        ctx.addFilter("archive:entries", () => entryQuery());
+      },
     });
     const h = await seedSite(widening);
     const author = await h.seedUser("admin");
@@ -652,14 +674,16 @@ describe("a feed is its archive's entry query", () => {
   });
 
   test("an archive ordering its page by title still feeds newest first", async () => {
-    const alphabetical = definePlugin("alphabetical", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("a-to-z", {
-        routes: ["/a-to-z"],
-        title: "A to Z",
-        entries: (q) => q.ofTypes("post").orderBy("title", "asc"),
-        feed: true,
-      });
+    const alphabetical = definePlugin("alphabetical", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("a-to-z", {
+          routes: ["/a-to-z"],
+          title: "A to Z",
+          entries: (q) => q.ofTypes("post").orderBy("title", "asc"),
+          feed: true,
+        });
+      },
     });
     const h = await harness(alphabetical);
     const author = await h.seedUser("admin");
@@ -753,17 +777,19 @@ describe("term feed routes", () => {
     res.assertStatus(404);
   });
 
-  const blogWithNestedTaxonomyPlugin = definePlugin("blog-nested", (ctx) => {
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      hasArchive: true,
-    });
-    ctx.registerTermTaxonomy("region", {
-      label: "Regions",
-      entryTypes: ["post"],
-      isHierarchical: true,
-    });
+  const blogWithNestedTaxonomyPlugin = definePlugin("blog-nested", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerTermTaxonomy("region", {
+        label: "Regions",
+        entryTypes: ["post"],
+        isHierarchical: true,
+      });
+    },
   });
 
   test("a nested term's feed is served at its nested path and at its slug alone", async () => {
@@ -804,13 +830,15 @@ describe("term feed routes", () => {
 
   test("a taxonomy based at several segments serves its term feeds under that whole base", async () => {
     const h = await harness(
-      definePlugin("insights", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          entryTypes: ["post"],
-          rewrite: { slug: "insights/category" },
-        });
+      definePlugin("insights", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            entryTypes: ["post"],
+            rewrite: { slug: "insights/category" },
+          });
+        },
       }),
     );
     const author = await h.seedUser("admin");
@@ -1003,13 +1031,15 @@ describe("framework routes a site turns off", () => {
 describe("what the plugin does not claim", () => {
   // The pages plugin's shape: a hierarchical type at the URL root, so an entry
   // slugged "feed" lands at `/<parent>/feed`.
-  const pagesPlugin = definePlugin("pages-like", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      isHierarchical: true,
-      rewrite: { slug: "" },
-    });
+  const pagesPlugin = definePlugin("pages-like", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+        rewrite: { slug: "" },
+      });
+    },
   });
 
   test("an entry slugged 'feed' under a public entry type still renders as content", async () => {
@@ -1073,44 +1103,48 @@ describe("non-canonical feed URLs", () => {
 describe("archive-type feeds", () => {
   // The archive-type `feed` field is this plugin's augmentation, not a core
   // one — a plugin declares it and the feed hangs off the archive's own routes.
-  const eventsPlugin = definePlugin("events", (ctx) => {
-    ctx.registerEntryType("post", {
-      label: "Posts",
-      isPublic: true,
-      hasArchive: true,
-    });
-    ctx.registerArchiveType("event-series", {
-      routes: [
-        "/events/:series",
-        `/events/:series${FRAMEWORK_PAGINATION_SUFFIX}`,
-      ],
-      resolve: (_ctx, params) => ({
-        data: { kind: "archiveType", name: "event-series" },
-        title: `Series: ${params.series ?? ""}`,
-      }),
-      // Nothing is narrowed beyond the public entries the query arrives
-      // holding: the visibility rule is the framework's, not this archive's.
-      entries: (q, params) => (params.series === "missing" ? null : q),
-      perPage: 1,
-      feed: true,
-    });
+  const eventsPlugin = definePlugin("events", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        hasArchive: true,
+      });
+      ctx.registerArchiveType("event-series", {
+        routes: [
+          "/events/:series",
+          `/events/:series${FRAMEWORK_PAGINATION_SUFFIX}`,
+        ],
+        resolve: (_ctx, params) => ({
+          data: { kind: "archiveType", name: "event-series" },
+          title: `Series: ${params.series ?? ""}`,
+        }),
+        // Nothing is narrowed beyond the public entries the query arrives
+        // holding: the visibility rule is the framework's, not this archive's.
+        entries: (q, params) => (params.series === "missing" ? null : q),
+        perPage: 1,
+        feed: true,
+      });
+    },
   });
 
   test("a scope that narrows nothing still yields only published, public-type entries", async () => {
-    const lax = definePlugin("lax", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("secret", { label: "Secret", isPublic: false });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        // The whole point: an archive that declares no narrowing at all cannot
-        // widen what the feed shows.
-        entries: (q) => q,
-        feed: true,
-      });
+    const lax = definePlugin("lax", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("secret", { label: "Secret", isPublic: false });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          // The whole point: an archive that declares no narrowing at all cannot
+          // widen what the feed shows.
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
     const h = await harness(lax);
     const author = await h.seedUser("admin");
@@ -1143,18 +1177,20 @@ describe("archive-type feeds", () => {
     // The permalink step already drops non-public rows; the guard keeps the
     // window, or newer non-public rows fill every slot and the public entry
     // never appears.
-    const crowded = definePlugin("crowded", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("note", { label: "Notes", isPublic: false });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        entries: (q) => q,
-        feed: true,
-      });
+    const crowded = definePlugin("crowded", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
     const h = await harness(crowded);
     const author = await h.seedUser("admin");
@@ -1187,17 +1223,19 @@ describe("archive-type feeds", () => {
   test("a scope that discards the query it was handed is still guarded", async () => {
     // A scope rebuilding its query from scratch still owes a reader nothing
     // but published, public-type entries.
-    const rebuilds = definePlugin("rebuilds", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        entries: () => entryQuery(),
-        feed: true,
-      });
+    const rebuilds = definePlugin("rebuilds", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          entries: () => entryQuery(),
+          feed: true,
+        });
+      },
     });
     const h = await harness(rebuilds);
     await seedPost(h, "live", "Live Post");
@@ -1213,18 +1251,20 @@ describe("archive-type feeds", () => {
   test("a scope reaching for raw SQL still cannot widen the feed", async () => {
     // An escape hatch that can widen voids the guarantee; a top-level `OR`
     // binds looser than the surrounding `AND`s.
-    const sneaky = definePlugin("sneaky", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        entries: (q) =>
-          q.where(sql`${entries.slug} = 'live' OR ${entries.slug} = 'wip'`),
-        feed: true,
-      });
+    const sneaky = definePlugin("sneaky", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          entries: (q) =>
+            q.where(sql`${entries.slug} = 'live' OR ${entries.slug} = 'wip'`),
+          feed: true,
+        });
+      },
     });
     const h = await harness(sneaky);
     await seedPost(h, "live", "Live Post");
@@ -1240,18 +1280,20 @@ describe("archive-type feeds", () => {
   test("an archive behind an access policy has no feed at all", async () => {
     // Core answers a registered public route ahead of the access gate, so a
     // policied archive gets no feed rather than an ungated one.
-    const gated = definePlugin("gated", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        access: authenticatedPolicy,
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        entries: (q) => q,
-        feed: true,
-      });
+    const gated = definePlugin("gated", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          access: authenticatedPolicy,
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
     const h = await harness(gated);
     await seedPost(h, "live", "Live Post");
@@ -1269,21 +1311,23 @@ describe("archive-type feeds", () => {
     // An archive's query records intent instead of resolving it, so asking
     // about the feed must not add a second read of `terms`.
     let statements: readonly string[] = [];
-    const plugin = definePlugin("term-scoped", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        entryTypes: ["post"],
-      });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        entries: (q, params) => q.inTerm("category", params.series ?? ""),
-        feed: true,
-      });
+    const plugin = definePlugin("term-scoped", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          entryTypes: ["post"],
+        });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          entries: (q, params) => q.inTerm("category", params.series ?? ""),
+          feed: true,
+        });
+      },
     });
     const readsTerms = (sql: string): boolean => /\bfrom "terms"/i.test(sql);
     async function termReadsRendering(
@@ -1321,17 +1365,19 @@ describe("archive-type feeds", () => {
   });
 
   test("a feed whose scope selects nothing is empty rather than missing", async () => {
-    const empty = definePlugin("empty", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        entries: (q) => q.none(),
-        feed: true,
-      });
+    const empty = definePlugin("empty", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          entries: (q) => q.none(),
+          feed: true,
+        });
+      },
     });
     const h = await harness(empty);
     await seedPost(h, "live", "Live Post");
@@ -1438,18 +1484,20 @@ describe("archive-type feeds", () => {
   });
 
   test("an alternate another plugin declared first wins over the archive feed", async () => {
-    const declaring = definePlugin("declaring", (ctx) => {
-      ctx.addFilter("render:document", (manifest) => ({
-        ...manifest,
-        link: [
-          ...(manifest.link ?? []),
-          {
-            rel: "alternate",
-            type: "application/rss+xml",
-            href: "https://cms.example/elsewhere",
-          },
-        ],
-      }));
+    const declaring = definePlugin("declaring", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest) => ({
+          ...manifest,
+          link: [
+            ...(manifest.link ?? []),
+            {
+              rel: "alternate",
+              type: "application/rss+xml",
+              href: "https://cms.example/elsewhere",
+            },
+          ],
+        }));
+      },
     });
     const h = await harness(eventsPlugin, declaring);
     expect(await advertised(h, "/events/summer")).toEqual([
@@ -1473,17 +1521,19 @@ describe("archive-type feeds", () => {
   test("a type with no archive page leaves its name to a plugin archive's feed", async () => {
     // The type feed used to sit at `/<type name>/feed` whether or not the type
     // had a page there, and took this path from the archive that does.
-    const colliding = definePlugin("colliding", (ctx) => {
-      ctx.registerEntryType("events", { label: "Events", isPublic: true });
-      ctx.registerArchiveType("event-calendar", {
-        routes: ["/events"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-calendar" },
-          title: "Calendar",
-        }),
-        entries: (q) => q,
-        feed: true,
-      });
+    const colliding = definePlugin("colliding", {
+      setup: (ctx) => {
+        ctx.registerEntryType("events", { label: "Events", isPublic: true });
+        ctx.registerArchiveType("event-calendar", {
+          routes: ["/events"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-calendar" },
+            title: "Calendar",
+          }),
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
     const h = await harness(colliding);
     (await h.fetch("/events/feed")).assertStatus(200);
@@ -1494,18 +1544,23 @@ describe("archive-type feeds", () => {
   });
 
   test("an archive route capturing several segments has no feed on its later pages", async () => {
-    const docs = definePlugin("docs", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("doc-section", {
-        routes: ["/docs/:path+", `/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "doc-section" },
-          title: "Docs",
-        }),
-        entries: (q) => q,
-        perPage: 1,
-        feed: true,
-      });
+    const docs = definePlugin("docs", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("doc-section", {
+          routes: [
+            "/docs/:path+",
+            `/docs/:path+${FRAMEWORK_PAGINATION_SUFFIX}`,
+          ],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "doc-section" },
+            title: "Docs",
+          }),
+          entries: (q) => q,
+          perPage: 1,
+          feed: true,
+        });
+      },
     });
     const h = await harness(docs);
     await seedPost(h, "first", "First");
@@ -1522,14 +1577,16 @@ describe("archive-type feeds", () => {
   test("the same holds where core derived the later-page route", async () => {
     // Core derives an `entries` archive's `/page/:page` form, so reading pages
     // off `routes` would let every page answer as a feed of its own.
-    const docs = definePlugin("docs", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("doc-section", {
-        routes: ["/docs/:path+"],
-        entries: (q) => q.ofTypes("post"),
-        title: "Docs",
-        feed: true,
-      });
+    const docs = definePlugin("docs", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("doc-section", {
+          routes: ["/docs/:path+"],
+          entries: (q) => q.ofTypes("post"),
+          title: "Docs",
+          feed: true,
+        });
+      },
     });
     const h = await harness(docs);
     (await h.fetch("/docs/guides/feed")).assertStatus(200);
@@ -1540,18 +1597,20 @@ describe("archive-type feeds", () => {
     // `/:section` outranks `/news`, but core answers `/news/feed` with the
     // type's literal route, so neither feed can be served there and the page
     // advertises nothing.
-    const sections = definePlugin("sections", (ctx) => {
-      ctx.registerEntryType("news", {
-        label: "News",
-        isPublic: true,
-        hasArchive: true,
-      });
-      ctx.registerArchiveType("section", {
-        routes: ["/:section"],
-        title: "Section",
-        entries: (q) => q,
-        feed: true,
-      });
+    const sections = definePlugin("sections", {
+      setup: (ctx) => {
+        ctx.registerEntryType("news", {
+          label: "News",
+          isPublic: true,
+          hasArchive: true,
+        });
+        ctx.registerArchiveType("section", {
+          routes: ["/:section"],
+          title: "Section",
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
     const h = await harness(sections);
     (await h.fetch("/news/feed")).assertStatus(404);
@@ -1566,20 +1625,24 @@ describe("archive-type feeds", () => {
   test("a feed path another plugin's route answers is not advertised", async () => {
     // Core's dispatcher answers a literal public route ahead of any pattern,
     // so `/about/feed` is the other plugin's response, not the section's feed.
-    const sections = definePlugin("sections", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("section", {
-        routes: ["/:section"],
-        title: "Section",
-        entries: (q) => q,
-        feed: true,
-      });
+    const sections = definePlugin("sections", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("section", {
+          routes: ["/:section"],
+          title: "Section",
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
-    const other = definePlugin("other", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/about/feed",
-        handler: () => new Response("not a feed"),
-      });
+    const other = definePlugin("other", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/about/feed",
+          handler: () => new Response("not a feed"),
+        });
+      },
     });
     const h = await harness(sections, other);
     expect(await (await h.fetch("/about/feed")).text()).toBe("not a feed");
@@ -1591,17 +1654,19 @@ describe("archive-type feeds", () => {
   });
 
   test("an archive whose own routes both answer its feed URL still advertises it", async () => {
-    const docs = definePlugin("docs", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("doc-section", {
-        routes: ["/docs/:slug", "/docs/:path+"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "doc-section" },
-          title: "Docs",
-        }),
-        entries: (q) => q,
-        feed: true,
-      });
+    const docs = definePlugin("docs", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("doc-section", {
+          routes: ["/docs/:slug", "/docs/:path+"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "doc-section" },
+            title: "Docs",
+          }),
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
     const h = await harness(docs);
     expect(await advertised(h, "/docs/guides")).toEqual([
@@ -1613,17 +1678,19 @@ describe("archive-type feeds", () => {
   test("an archive on a site with no public entry type has no feed", async () => {
     // Every built-in scope already 404s a site that routes no public type;
     // an archive's feed is not the one surface that gets to differ.
-    const nothingPublic = definePlugin("private-only", (ctx) => {
-      ctx.registerEntryType("note", { label: "Notes", isPublic: false });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Events",
-        }),
-        entries: (q) => q,
-        feed: true,
-      });
+    const nothingPublic = definePlugin("private-only", {
+      setup: (ctx) => {
+        ctx.registerEntryType("note", { label: "Notes", isPublic: false });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Events",
+          }),
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
     const h = await harness(nothingPublic);
     (await h.fetch("/events/summer/feed")).assertStatus(404);
@@ -1633,14 +1700,16 @@ describe("archive-type feeds", () => {
   });
 
   test("a plugin archive without a feed advertises none", async () => {
-    const feedless = definePlugin("feedless", (ctx) => {
-      ctx.registerArchiveType("event-series", {
-        routes: ["/events/:series"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "event-series" },
-          title: "Series",
-        }),
-      });
+    const feedless = definePlugin("feedless", {
+      setup: (ctx) => {
+        ctx.registerArchiveType("event-series", {
+          routes: ["/events/:series"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "event-series" },
+            title: "Series",
+          }),
+        });
+      },
     });
     const h = await harness(feedless);
     expect(await advertised(h, "/events/summer")).toEqual([]);
@@ -1649,14 +1718,16 @@ describe("archive-type feeds", () => {
 
 describe("the feed option", () => {
   test("takes an empty object in place of true, and nothing but an archive with entries", async () => {
-    const reserved = definePlugin("reserved", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("everything", {
-        routes: ["/everything"],
-        title: "Everything",
-        entries: (q) => q,
-        feed: {},
-      });
+    const reserved = definePlugin("reserved", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("everything", {
+          routes: ["/everything"],
+          title: "Everything",
+          entries: (q) => q,
+          feed: {},
+        });
+      },
     });
     const h = await harness(reserved);
     await seedPost(h, "hello", "Hello World");
@@ -1665,23 +1736,25 @@ describe("the feed option", () => {
     );
 
     // Never installed: what is under test is what compiles.
-    definePlugin("refused", (ctx) => {
-      // @ts-expect-error — no `entries`, so nothing a feed could read.
-      ctx.registerArchiveType("unlisted", {
-        routes: ["/unlisted"],
-        resolve: () => ({
-          data: { kind: "archiveType", name: "unlisted" },
-          title: "Unlisted",
-        }),
-        feed: true,
-      });
-      ctx.registerArchiveType("scoped", {
-        routes: ["/scoped"],
-        title: "Scoped",
-        entries: (q) => q,
-        // @ts-expect-error — `scope` is gone: a feed is the archive's `entries`.
-        feed: { scope: (q: EntryQuery) => q },
-      });
+    definePlugin("refused", {
+      setup: (ctx) => {
+        // @ts-expect-error — no `entries`, so nothing a feed could read.
+        ctx.registerArchiveType("unlisted", {
+          routes: ["/unlisted"],
+          resolve: () => ({
+            data: { kind: "archiveType", name: "unlisted" },
+            title: "Unlisted",
+          }),
+          feed: true,
+        });
+        ctx.registerArchiveType("scoped", {
+          routes: ["/scoped"],
+          title: "Scoped",
+          entries: (q) => q,
+          // @ts-expect-error — `scope` is gone: a feed is the archive's `entries`.
+          feed: { scope: (q: EntryQuery) => q },
+        });
+      },
     });
   });
 });
@@ -1730,18 +1803,20 @@ describe("the site's own settings", () => {
 
 describe("a feed at the edge", () => {
   function seriesArchive(cacheable: boolean): AnyPluginDescriptor {
-    return definePlugin("series", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerArchiveType("series", {
-        routes: ["/series/:name"],
-        cacheable,
-        resolve: () => ({
-          data: { kind: "archiveType", name: "series" },
-          title: "Series",
-        }),
-        entries: (q) => q,
-        feed: true,
-      });
+    return definePlugin("series", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerArchiveType("series", {
+          routes: ["/series/:name"],
+          cacheable,
+          resolve: () => ({
+            data: { kind: "archiveType", name: "series" },
+            title: "Series",
+          }),
+          entries: (q) => q,
+          feed: true,
+        });
+      },
     });
   }
 
@@ -1866,9 +1941,11 @@ describe("a feed at the edge", () => {
 
   test("publishing an entry of a type that is not public keeps the cached feed", async () => {
     const cdn = fakeCdn();
-    const site = definePlugin("site", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+    const site = definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -1898,9 +1975,11 @@ describe("a feed at the edge", () => {
 
   test("deleting a term in a taxonomy listing no entry types purges its cached feed", async () => {
     const cdn = fakeCdn();
-    const site = definePlugin("site", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("topic", { label: "Topics" });
+    const site = definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("topic", { label: "Topics" });
+      },
     });
     const h = await createDispatcherHarness({
       cdn,

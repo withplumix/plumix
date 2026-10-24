@@ -9,8 +9,10 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 // resolveSingle → resolveEditMode → PlumixProvider mode → injectEditorBootstrap.
 // The `data-plumix-editor` marker is the injected runtime script.
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  },
 });
 
 const URL = "https://cms.example/post/hello";

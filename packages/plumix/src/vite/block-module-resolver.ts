@@ -238,8 +238,8 @@ function configProperty(
     .map(({ call }) => call);
 
   // Scan every argument for the config object literal: `defineTheme({…})` puts
-  // it first, `definePlugin(id, {…})` second, `definePlugin(id, setup, {…})`
-  // third. The id string and setup function are skipped as non-objects.
+  // it first, `definePlugin(id, {…})` second. The id string is skipped as a
+  // non-object.
   for (const call of topLevelCalls) {
     for (const arg of call.arguments) {
       if (arg.type !== "ObjectExpression") continue;

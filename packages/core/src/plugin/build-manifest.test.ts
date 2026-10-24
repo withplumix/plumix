@@ -147,7 +147,7 @@ describe("buildManifest", () => {
   });
 
   test("buildManifest omits pluginI18n when no plugin declares an i18n slot", () => {
-    const plugin = definePlugin("untranslated", () => undefined);
+    const plugin = definePlugin("untranslated", { setup: () => undefined });
     const manifest = buildManifest(createPluginRegistry(), {
       plugins: [plugin],
     });
@@ -189,8 +189,10 @@ describe("buildManifest", () => {
 
   test("lists Settings under Management only when a settings page is registered", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("site", (ctx) => {
-      ctx.registerSettingsPage("general", { label: "General", groups: [] });
+    const plugin = definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerSettingsPage("general", { label: "General", groups: [] });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -211,9 +213,11 @@ describe("buildManifest", () => {
 
   test("plugin field types project by name, sorted", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerFieldType({ type: "mediaList", component: "ListPicker" });
-      ctx.registerFieldType({ type: "focalPoint", component: "FocalPoint" });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerFieldType({ type: "mediaList", component: "ListPicker" });
+        ctx.registerFieldType({ type: "focalPoint", component: "FocalPoint" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -225,12 +229,14 @@ describe("buildManifest", () => {
 
   test("entry-type keywords flow onto its admin-nav item", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        showInSidebar: true,
-        keywords: [{ id: "k.articles", message: "articles" }, "blog"],
-      });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          showInSidebar: true,
+          keywords: [{ id: "k.articles", message: "articles" }, "blog"],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -244,17 +250,19 @@ describe("buildManifest", () => {
 
   test("admin-page nav keywords flow onto its admin-nav item", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/media",
-        title: "Media Library",
-        nav: {
-          group: { id: "library", label: "Library" },
-          label: "Media Library",
-          keywords: [{ id: "k.uploads", message: "uploads" }, "images"],
-        },
-        component: "MediaLibrary",
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/media",
+          title: "Media Library",
+          nav: {
+            group: { id: "library", label: "Library" },
+            label: "Media Library",
+            keywords: [{ id: "k.uploads", message: "uploads" }, "images"],
+          },
+          component: "MediaLibrary",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -268,12 +276,14 @@ describe("buildManifest", () => {
 
   test("taxonomy keywords flow onto its admin-nav item", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        showInSidebar: true,
-        keywords: [{ id: "k.taxonomy", message: "taxonomy" }],
-      });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          showInSidebar: true,
+          keywords: [{ id: "k.taxonomy", message: "taxonomy" }],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -288,26 +298,28 @@ describe("buildManifest", () => {
 
   test("projects registered settings groups, fields use the shared MetaBoxField shape", async () => {
     const hooks = new HookRegistry();
-    const corePlugin = definePlugin("core", (ctx) => {
-      ctx.registerSettingsGroup("identity", {
-        label: "Site identity",
-        description: "Public-facing site identity.",
-        fields: [
-          {
-            key: "site_title",
-            label: "Site title",
-            type: "string",
-            inputType: "text",
-            default: "My Site",
-          },
-          {
-            key: "site_description",
-            label: "Tagline",
-            type: "string",
-            inputType: "textarea",
-          },
-        ],
-      });
+    const corePlugin = definePlugin("core", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("identity", {
+          label: "Site identity",
+          description: "Public-facing site identity.",
+          fields: [
+            {
+              key: "site_title",
+              label: "Site title",
+              type: "string",
+              inputType: "text",
+              default: "My Site",
+            },
+            {
+              key: "site_description",
+              label: "Tagline",
+              type: "string",
+              inputType: "textarea",
+            },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({
       hooks,
@@ -345,35 +357,37 @@ describe("buildManifest", () => {
 
   test("settings page composes registered groups by name, sorted by priority", async () => {
     const hooks = new HookRegistry();
-    const corePlugin = definePlugin("core", (ctx) => {
-      ctx.registerSettingsGroup("identity", {
-        label: "Site identity",
-        fields: [
-          {
-            key: "site_title",
-            label: "Site title",
-            type: "string",
-            inputType: "text",
-          },
-        ],
-      });
-      ctx.registerSettingsGroup("reading", {
-        label: "Reading",
-        fields: [
-          {
-            key: "per_page",
-            label: "Posts per page",
-            type: "string",
-            inputType: "text",
-          },
-        ],
-      });
-      ctx.registerSettingsPage("general", {
-        label: "General",
-        description: "Basic site settings.",
-        groups: ["identity", "reading"],
-        priority: 10,
-      });
+    const corePlugin = definePlugin("core", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("identity", {
+          label: "Site identity",
+          fields: [
+            {
+              key: "site_title",
+              label: "Site title",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+        ctx.registerSettingsGroup("reading", {
+          label: "Reading",
+          fields: [
+            {
+              key: "per_page",
+              label: "Posts per page",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+        ctx.registerSettingsPage("general", {
+          label: "General",
+          description: "Basic site settings.",
+          groups: ["identity", "reading"],
+          priority: 10,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [corePlugin] });
     const manifest = buildManifest(registry);
@@ -390,11 +404,13 @@ describe("buildManifest", () => {
 
   test("buildManifest throws when a page references an unregistered group", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("orphan", (ctx) => {
-      ctx.registerSettingsPage("general", {
-        label: "General",
-        groups: ["nonexistent"],
-      });
+    const plugin = definePlugin("orphan", {
+      setup: (ctx) => {
+        ctx.registerSettingsPage("general", {
+          label: "General",
+          groups: ["nonexistent"],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
@@ -404,14 +420,18 @@ describe("buildManifest", () => {
 
   test("rejects duplicate settings group registration", async () => {
     const hooks = new HookRegistry();
-    const pluginA = definePlugin("a", (ctx) => {
-      ctx.registerSettingsGroup("general", { label: "General", fields: [] });
+    const pluginA = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("general", { label: "General", fields: [] });
+      },
     });
-    const pluginB = definePlugin("b", (ctx) => {
-      ctx.registerSettingsGroup("general", {
-        label: "Also General",
-        fields: [],
-      });
+    const pluginB = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("general", {
+          label: "Also General",
+          fields: [],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [pluginA, pluginB] }),
@@ -420,14 +440,18 @@ describe("buildManifest", () => {
 
   test("rejects duplicate settings page registration", async () => {
     const hooks = new HookRegistry();
-    const pluginA = definePlugin("a", (ctx) => {
-      ctx.registerSettingsPage("general", { label: "General", groups: [] });
+    const pluginA = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerSettingsPage("general", { label: "General", groups: [] });
+      },
     });
-    const pluginB = definePlugin("b", (ctx) => {
-      ctx.registerSettingsPage("general", {
-        label: "Also General",
-        groups: [],
-      });
+    const pluginB = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerSettingsPage("general", {
+          label: "Also General",
+          groups: [],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [pluginA, pluginB] }),
@@ -436,12 +460,17 @@ describe("buildManifest", () => {
 
   test("rejects a settings page that lists the same group twice", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe", (ctx) => {
-      ctx.registerSettingsGroup("identity", { label: "Identity", fields: [] });
-      ctx.registerSettingsPage("general", {
-        label: "General",
-        groups: ["identity", "identity"],
-      });
+    const plugin = definePlugin("dupe", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("identity", {
+          label: "Identity",
+          fields: [],
+        });
+        ctx.registerSettingsPage("general", {
+          label: "General",
+          groups: ["identity", "identity"],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /lists a group more than once/,
@@ -450,15 +479,19 @@ describe("buildManifest", () => {
 
   test("rejects invalid group / page names (must be snake_case ASCII)", async () => {
     const hooks = new HookRegistry();
-    const badGroup = definePlugin("a", (ctx) => {
-      ctx.registerSettingsGroup("Foo-Bar", { label: "x", fields: [] });
+    const badGroup = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("Foo-Bar", { label: "x", fields: [] });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [badGroup] }),
     ).rejects.toThrow(/Invalid settings group name "Foo-Bar"/);
 
-    const badPage = definePlugin("c", (ctx) => {
-      ctx.registerSettingsPage("Bad-Page", { label: "x", groups: [] });
+    const badPage = definePlugin("c", {
+      setup: (ctx) => {
+        ctx.registerSettingsPage("Bad-Page", { label: "x", groups: [] });
+      },
     });
     await expect(
       installPlugins({ hooks: new HookRegistry(), plugins: [badPage] }),
@@ -467,13 +500,15 @@ describe("buildManifest", () => {
 
   test("rejects a settings group field with an invalid key (shared meta regex)", async () => {
     const hooks = new HookRegistry();
-    const badField = definePlugin("b", (ctx) => {
-      ctx.registerSettingsGroup("good", {
-        label: "x",
-        fields: [
-          { key: "bad key!", label: "X", type: "string", inputType: "text" },
-        ],
-      });
+    const badField = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("good", {
+          label: "x",
+          fields: [
+            { key: "bad key!", label: "X", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
     await expect(
       installPlugins({ hooks, plugins: [badField] }),
@@ -482,16 +517,18 @@ describe("buildManifest", () => {
 
   test("rejects a group that exceeds the 200-field cap", async () => {
     const hooks = new HookRegistry();
-    const tooMany = definePlugin("big", (ctx) => {
-      ctx.registerSettingsGroup("big", {
-        label: "x",
-        fields: Array.from({ length: 201 }, (_, i) => ({
-          key: `f${i}`,
-          label: `Field ${i}`,
-          type: "string" as const,
-          inputType: "text",
-        })),
-      });
+    const tooMany = definePlugin("big", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("big", {
+          label: "x",
+          fields: Array.from({ length: 201 }, (_, i) => ({
+            key: `f${i}`,
+            label: `Field ${i}`,
+            type: "string" as const,
+            inputType: "text",
+          })),
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [tooMany] })).rejects.toThrow(
       /declares 201 fields; the admin caps a single box at 200/,
@@ -500,24 +537,26 @@ describe("buildManifest", () => {
 
   test("rejects a field key that collides within a group", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe", (ctx) => {
-      ctx.registerSettingsGroup("general", {
-        label: "General",
-        fields: [
-          {
-            key: "site_title",
-            label: "Site title",
-            type: "string",
-            inputType: "text",
-          },
-          {
-            key: "site_title",
-            label: "Dup",
-            type: "string",
-            inputType: "text",
-          },
-        ],
-      });
+    const plugin = definePlugin("dupe", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("general", {
+          label: "General",
+          fields: [
+            {
+              key: "site_title",
+              label: "Site title",
+              type: "string",
+              inputType: "text",
+            },
+            {
+              key: "site_title",
+              label: "Dup",
+              type: "string",
+              inputType: "text",
+            },
+          ],
+        });
+      },
     });
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /declares field "site_title" more than once/,
@@ -526,14 +565,16 @@ describe("buildManifest", () => {
 
   test("projects registered post types, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        labels: { singular: "Entry" },
-        supports: ["title", "editor"],
-        termTaxonomies: ["category"],
-        rewrite: { slug: "posts" },
-      });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          labels: { singular: "Entry" },
+          supports: ["title", "editor"],
+          termTaxonomies: ["category"],
+          rewrite: { slug: "posts" },
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
 
@@ -561,9 +602,11 @@ describe("buildManifest", () => {
 
   test("surfaces per-type named templates from options; omits the field otherwise", async () => {
     const hooks = new HookRegistry();
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryType("page", { label: "Pages" });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryType("page", { label: "Pages" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
 
@@ -586,17 +629,19 @@ describe("buildManifest", () => {
       segments: ["members"],
       resolve: (ctx) => (ctx.user ? grant("members") : redirectToLogin()),
     });
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        access: {
-          default: anonymousPolicy,
-          policies: [
-            { key: "members", label: "Members only", policy: membersOnly },
-          ],
-        },
-      });
-      ctx.registerEntryType("page", { label: "Pages" });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          access: {
+            default: anonymousPolicy,
+            policies: [
+              { key: "members", label: "Members only", policy: membersOnly },
+            ],
+          },
+        });
+        ctx.registerEntryType("page", { label: "Pages" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
 
@@ -617,11 +662,13 @@ describe("buildManifest", () => {
 
   test("uses labels.plural (slugified) for adminSlug when provided", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("shop", (ctx) => {
-      ctx.registerEntryType("product", {
-        label: "Product",
-        labels: { singular: "Product", plural: "Product Catalog" },
-      });
+    const plugin = definePlugin("shop", {
+      setup: (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Product",
+          labels: { singular: "Product", plural: "Product Catalog" },
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(buildManifest(registry).entryTypes[0]?.adminSlug).toBe(
@@ -631,8 +678,10 @@ describe("buildManifest", () => {
 
   test("falls back to `${name}s` when labels.plural is not set", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("shop", (ctx) => {
-      ctx.registerEntryType("product", { label: "Product" });
+    const plugin = definePlugin("shop", {
+      setup: (ctx) => {
+        ctx.registerEntryType("product", { label: "Product" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(buildManifest(registry).entryTypes[0]?.adminSlug).toBe("products");
@@ -640,12 +689,14 @@ describe("buildManifest", () => {
 
   test("throws DuplicateAdminSlugError when two types resolve to the same slug", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("clash", (ctx) => {
-      ctx.registerEntryType("product", {
-        label: "Products",
-        labels: { plural: "Items" },
-      });
-      ctx.registerEntryType("item", { label: "Items" });
+    const plugin = definePlugin("clash", {
+      setup: (ctx) => {
+        ctx.registerEntryType("product", {
+          label: "Products",
+          labels: { plural: "Items" },
+        });
+        ctx.registerEntryType("item", { label: "Items" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(DuplicateAdminSlugError);
@@ -653,10 +704,12 @@ describe("buildManifest", () => {
 
   test("orders post types by priority, unspecified last", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("mixed", (ctx) => {
-      ctx.registerEntryType("late", { label: "Late", priority: 50 });
-      ctx.registerEntryType("unpositioned", { label: "Unpositioned" });
-      ctx.registerEntryType("early", { label: "Early", priority: 5 });
+    const plugin = definePlugin("mixed", {
+      setup: (ctx) => {
+        ctx.registerEntryType("late", { label: "Late", priority: 50 });
+        ctx.registerEntryType("unpositioned", { label: "Unpositioned" });
+        ctx.registerEntryType("early", { label: "Early", priority: 5 });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -666,9 +719,11 @@ describe("buildManifest", () => {
 
   test("entry types with the same priority break ties by name alphabetical", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("mixed", (ctx) => {
-      ctx.registerEntryType("zebra", { label: "Zebra", priority: 0 });
-      ctx.registerEntryType("alpha", { label: "Alpha", priority: 0 });
+    const plugin = definePlugin("mixed", {
+      setup: (ctx) => {
+        ctx.registerEntryType("zebra", { label: "Zebra", priority: 0 });
+        ctx.registerEntryType("alpha", { label: "Alpha", priority: 0 });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const names = buildManifest(registry).entryTypes.map((pt) => pt.name);
@@ -677,17 +732,19 @@ describe("buildManifest", () => {
 
   test("settings pages with the same priority break ties by name alphabetical", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("mixed", (ctx) => {
-      ctx.registerSettingsPage("zebra", {
-        label: "Zebra",
-        groups: [],
-        priority: 0,
-      });
-      ctx.registerSettingsPage("alpha", {
-        label: "Alpha",
-        groups: [],
-        priority: 0,
-      });
+    const plugin = definePlugin("mixed", {
+      setup: (ctx) => {
+        ctx.registerSettingsPage("zebra", {
+          label: "Zebra",
+          groups: [],
+          priority: 0,
+        });
+        ctx.registerSettingsPage("alpha", {
+          label: "Alpha",
+          groups: [],
+          priority: 0,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const names = buildManifest(registry).settingsPages.map((p) => p.name);
@@ -696,31 +753,33 @@ describe("buildManifest", () => {
 
   test("projects registered entry meta boxes, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("seo", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryMetaBox("seo-meta", {
-        label: "SEO",
-        description: "Meta title + description for search snippets.",
-        location: "sidebar",
-        priority: 0,
-        entryTypes: ["post"],
-        capability: "entry:post:edit_any",
-        fields: [
-          {
-            key: "title",
-            label: "Meta title",
-            type: "string",
-            inputType: "text",
-            maxLength: 60,
-          },
-          {
-            key: "desc",
-            label: "Meta description",
-            type: "string",
-            inputType: "textarea",
-          },
-        ],
-      });
+    const plugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryMetaBox("seo-meta", {
+          label: "SEO",
+          description: "Meta title + description for search snippets.",
+          location: "sidebar",
+          priority: 0,
+          entryTypes: ["post"],
+          capability: "entry:post:edit_any",
+          fields: [
+            {
+              key: "title",
+              label: "Meta title",
+              type: "string",
+              inputType: "text",
+              maxLength: 60,
+            },
+            {
+              key: "desc",
+              label: "Meta description",
+              type: "string",
+              inputType: "textarea",
+            },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -783,21 +842,23 @@ describe("buildManifest", () => {
       message: "Under 60 chars",
     };
     const hooks = new HookRegistry();
-    const plugin = definePlugin("seo", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryMetaBox("seo-meta", {
-        label: boxLabel,
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "title",
-            label: fieldLabel,
-            type: "string",
-            inputType: "select",
-            options: [{ value: "lt60", label: optionLabel }],
-          },
-        ],
-      });
+    const plugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryMetaBox("seo-meta", {
+          label: boxLabel,
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "title",
+              label: fieldLabel,
+              type: "string",
+              inputType: "select",
+              options: [{ value: "lt60", label: optionLabel }],
+            },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -809,21 +870,23 @@ describe("buildManifest", () => {
 
   test("projects registered term meta boxes, keyed by taxonomy", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("branding", (ctx) => {
-      ctx.registerTermTaxonomy("category", { label: "Categories" });
-      ctx.registerTermMetaBox("category-branding", {
-        label: "Branding",
-        description: "Optional icon + accent colour.",
-        termTaxonomies: ["category"],
-        fields: [
-          {
-            key: "icon_url",
-            label: "Icon URL",
-            type: "string",
-            inputType: "url",
-          },
-        ],
-      });
+    const plugin = definePlugin("branding", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+        ctx.registerTermMetaBox("category-branding", {
+          label: "Branding",
+          description: "Optional icon + accent colour.",
+          termTaxonomies: ["category"],
+          fields: [
+            {
+              key: "icon_url",
+              label: "Icon URL",
+              type: "string",
+              inputType: "url",
+            },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -838,22 +901,24 @@ describe("buildManifest", () => {
 
   test("rejects two entry boxes declaring the same field key on the same entry type", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryMetaBox("box-a", {
-        label: "A",
-        entryTypes: ["post"],
-        fields: [
-          { key: "title", label: "Title", type: "string", inputType: "text" },
-        ],
-      });
-      ctx.registerEntryMetaBox("box-b", {
-        label: "B",
-        entryTypes: ["post"],
-        fields: [
-          { key: "title", label: "Title", type: "string", inputType: "text" },
-        ],
-      });
+    const plugin = definePlugin("dupe", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryMetaBox("box-a", {
+          label: "A",
+          entryTypes: ["post"],
+          fields: [
+            { key: "title", label: "Title", type: "string", inputType: "text" },
+          ],
+        });
+        ctx.registerEntryMetaBox("box-b", {
+          label: "B",
+          entryTypes: ["post"],
+          fields: [
+            { key: "title", label: "Title", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
@@ -863,22 +928,24 @@ describe("buildManifest", () => {
 
   test("rejects two term boxes declaring the same field key on the same taxonomy", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe-term", (ctx) => {
-      ctx.registerTermTaxonomy("category", { label: "Categories" });
-      ctx.registerTermMetaBox("t-a", {
-        label: "A",
-        termTaxonomies: ["category"],
-        fields: [
-          { key: "icon", label: "Icon", type: "string", inputType: "text" },
-        ],
-      });
-      ctx.registerTermMetaBox("t-b", {
-        label: "B",
-        termTaxonomies: ["category"],
-        fields: [
-          { key: "icon", label: "Icon", type: "string", inputType: "text" },
-        ],
-      });
+    const plugin = definePlugin("dupe-term", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+        ctx.registerTermMetaBox("t-a", {
+          label: "A",
+          termTaxonomies: ["category"],
+          fields: [
+            { key: "icon", label: "Icon", type: "string", inputType: "text" },
+          ],
+        });
+        ctx.registerTermMetaBox("t-b", {
+          label: "B",
+          termTaxonomies: ["category"],
+          fields: [
+            { key: "icon", label: "Icon", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
@@ -888,43 +955,45 @@ describe("buildManifest", () => {
 
   test("keeps image roles off the wire, nested fields included", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("roles", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryMetaBox("box", {
-        label: "Box",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "art",
-            label: "Art",
-            type: "json",
-            inputType: "group",
-            fields: [
-              {
-                key: "hero",
-                label: "Hero",
-                type: "json",
-                inputType: "media",
-                referenceTarget: { kind: "media", scope: {} },
-                role: "featured",
-              },
-            ],
-          },
-        ],
-      });
-      ctx.registerUserMetaBox("profile", {
-        label: "Profile",
-        fields: [
-          {
-            key: "avatar",
-            label: "Avatar",
-            type: "json",
-            inputType: "media",
-            referenceTarget: { kind: "media", scope: {} },
-            role: "ogImage",
-          },
-        ],
-      });
+    const plugin = definePlugin("roles", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryMetaBox("box", {
+          label: "Box",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "art",
+              label: "Art",
+              type: "json",
+              inputType: "group",
+              fields: [
+                {
+                  key: "hero",
+                  label: "Hero",
+                  type: "json",
+                  inputType: "media",
+                  referenceTarget: { kind: "media", scope: {} },
+                  role: "featured",
+                },
+              ],
+            },
+          ],
+        });
+        ctx.registerUserMetaBox("profile", {
+          label: "Profile",
+          fields: [
+            {
+              key: "avatar",
+              label: "Avatar",
+              type: "json",
+              inputType: "media",
+              referenceTarget: { kind: "media", scope: {} },
+              role: "ogImage",
+            },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -937,22 +1006,24 @@ describe("buildManifest", () => {
 
   test("accepts a single featured field on an entry type", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("one-featured", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
-      ctx.registerEntryMetaBox("box", {
-        label: "Box",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "hero",
-            label: "Hero",
-            type: "json",
-            inputType: "media",
-            referenceTarget: { kind: "media", scope: {} },
-            role: "featured",
-          },
-        ],
-      });
+    const plugin = definePlugin("one-featured", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryMetaBox("box", {
+          label: "Box",
+          entryTypes: ["post"],
+          fields: [
+            {
+              key: "hero",
+              label: "Hero",
+              type: "json",
+              inputType: "media",
+              referenceTarget: { kind: "media", scope: {} },
+              role: "featured",
+            },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).not.toThrow();
@@ -960,15 +1031,17 @@ describe("buildManifest", () => {
 
   test("rejects a term meta box scoped to an unregistered taxonomy", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("unknown-scope", (ctx) => {
-      // No `registerTermTaxonomy("catagory")` — the typo below is dead code.
-      ctx.registerTermMetaBox("branding", {
-        label: "Branding",
-        termTaxonomies: ["catagory"],
-        fields: [
-          { key: "icon", label: "Icon", type: "string", inputType: "text" },
-        ],
-      });
+    const plugin = definePlugin("unknown-scope", {
+      setup: (ctx) => {
+        // No `registerTermTaxonomy("catagory")` — the typo below is dead code.
+        ctx.registerTermMetaBox("branding", {
+          label: "Branding",
+          termTaxonomies: ["catagory"],
+          fields: [
+            { key: "icon", label: "Icon", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
@@ -978,12 +1051,16 @@ describe("buildManifest", () => {
 
   test("rejects an entry meta box scoped to an unregistered entry type", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("unknown-scope", (ctx) => {
-      ctx.registerEntryMetaBox("seo", {
-        label: "SEO",
-        entryTypes: ["pots"],
-        fields: [{ key: "og", label: "OG", type: "string", inputType: "text" }],
-      });
+    const plugin = definePlugin("unknown-scope", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("seo", {
+          label: "SEO",
+          entryTypes: ["pots"],
+          fields: [
+            { key: "og", label: "OG", type: "string", inputType: "text" },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
@@ -993,19 +1070,21 @@ describe("buildManifest", () => {
 
   test("rejects two user meta boxes declaring the same field key", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("dupe-user", (ctx) => {
-      ctx.registerUserMetaBox("u-a", {
-        label: "A",
-        fields: [
-          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
-        ],
-      });
-      ctx.registerUserMetaBox("u-b", {
-        label: "B",
-        fields: [
-          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
-        ],
-      });
+    const plugin = definePlugin("dupe-user", {
+      setup: (ctx) => {
+        ctx.registerUserMetaBox("u-a", {
+          label: "A",
+          fields: [
+            { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+          ],
+        });
+        ctx.registerUserMetaBox("u-b", {
+          label: "B",
+          fields: [
+            { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
@@ -1015,14 +1094,16 @@ describe("buildManifest", () => {
 
   test("projects a registered user meta box into the manifest", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("profile", (ctx) => {
-      ctx.registerUserMetaBox("profile", {
-        label: "Profile",
-        description: "Author bio + socials.",
-        fields: [
-          { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
-        ],
-      });
+    const plugin = definePlugin("profile", {
+      setup: (ctx) => {
+        ctx.registerUserMetaBox("profile", {
+          label: "Profile",
+          description: "Author bio + socials.",
+          fields: [
+            { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1037,8 +1118,10 @@ describe("buildManifest", () => {
 
   test("empty meta-box registry yields empty entry + term + user meta box arrays", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1058,15 +1141,17 @@ describe("buildManifest", () => {
       message: "Top-level organisation for blog entries.",
     };
     const hooks = new HookRegistry();
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        description: entryDescription,
-      });
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        description: taxonomyDescription,
-      });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          description: entryDescription,
+        });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          description: taxonomyDescription,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
 
@@ -1079,20 +1164,22 @@ describe("buildManifest", () => {
 
   test("projects registered termTaxonomies, dropping server-only fields", async () => {
     const hooks = new HookRegistry();
-    const blog = definePlugin("blog", (ctx) => {
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        labels: { singular: "Category" },
-        description: "Top-level organisation for blog entries.",
-        isHierarchical: true,
-        entryTypes: ["post"],
-        // Server-only / public-site-only fields that should NOT ship to
-        // the admin manifest — asserted below.
-        isPublic: true,
-        isInQuickEdit: true,
-        hasAdminColumn: true,
-        rewrite: { slug: "category" },
-      });
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          labels: { singular: "Category" },
+          description: "Top-level organisation for blog entries.",
+          isHierarchical: true,
+          entryTypes: ["post"],
+          // Server-only / public-site-only fields that should NOT ship to
+          // the admin manifest — asserted below.
+          isPublic: true,
+          isInQuickEdit: true,
+          hasAdminColumn: true,
+          rewrite: { slug: "category" },
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
 
@@ -1126,8 +1213,10 @@ describe("buildManifest", () => {
 
   test("empty taxonomy registry yields an empty taxonomies array", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1136,16 +1225,18 @@ describe("buildManifest", () => {
 
   test("projects registered plugin blocks into manifest.blocks", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/callout",
-          title: "Callout",
-          category: "interactive",
-          icon: "lightbulb",
-          render: () => null,
-        }),
-      );
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/callout",
+            title: "Callout",
+            category: "interactive",
+            icon: "lightbulb",
+            render: () => null,
+          }),
+        );
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1178,10 +1269,16 @@ describe("buildManifest", () => {
 
   test("carries the allowed blocks resolved from the theme's list", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("forms", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({ name: "forms/form", title: "Form", render: () => null }),
-      );
+    const plugin = definePlugin("forms", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "forms/form",
+            title: "Form",
+            render: () => null,
+          }),
+        );
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1221,14 +1318,16 @@ describe("buildManifest", () => {
 
   test("dedups a plugin/theme block name clash, the theme winning", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "shared/card",
-          title: "Plugin",
-          render: () => null,
-        }),
-      );
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "shared/card",
+            title: "Plugin",
+            render: () => null,
+          }),
+        );
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1248,17 +1347,19 @@ describe("buildManifest", () => {
 
   test("block entries carry inserter metadata (description, keywords, inserter)", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/callout",
-          title: "Callout",
-          description: "Highlight an aside passage.",
-          keywords: ["aside", "note", "tip"],
-          inserter: false,
-          render: () => null,
-        }),
-      );
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/callout",
+            title: "Callout",
+            description: "Highlight an aside passage.",
+            keywords: ["aside", "note", "tip"],
+            inserter: false,
+            render: () => null,
+          }),
+        );
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1271,29 +1372,31 @@ describe("buildManifest", () => {
 
   test("block entries carry variations for inserter items", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/grid",
-          title: "Grid",
-          variations: [
-            {
-              slug: "two-up",
-              title: "Two columns",
-              description: "Equal width pair.",
-              icon: "columns-2",
-              keywords: ["pair"],
-              attrs: { ratio: "50/50" },
-            },
-            {
-              slug: "three-up",
-              title: "Three columns",
-              attrs: { ratio: "33/33/33" },
-            },
-          ],
-          render: () => null,
-        }),
-      );
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/grid",
+            title: "Grid",
+            variations: [
+              {
+                slug: "two-up",
+                title: "Two columns",
+                description: "Equal width pair.",
+                icon: "columns-2",
+                keywords: ["pair"],
+                attrs: { ratio: "50/50" },
+              },
+              {
+                slug: "three-up",
+                title: "Three columns",
+                attrs: { ratio: "33/33/33" },
+              },
+            ],
+            render: () => null,
+          }),
+        );
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1320,23 +1423,25 @@ describe("buildManifest", () => {
     const hooks = new HookRegistry();
     const zoomMark: MarkSpec = { name: "acme/zoom", title: "Zoom" };
     const accentMark: MarkSpec = { name: "acme/accent", title: "Accent" };
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/zebra",
-          title: "Zebra",
-          render: () => null,
-        }),
-      );
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/apple",
-          title: "Apple",
-          render: () => null,
-        }),
-      );
-      ctx.registerMark(zoomMark);
-      ctx.registerMark(accentMark);
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/zebra",
+            title: "Zebra",
+            render: () => null,
+          }),
+        );
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/apple",
+            title: "Apple",
+            render: () => null,
+          }),
+        );
+        ctx.registerMark(zoomMark);
+        ctx.registerMark(accentMark);
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1359,8 +1464,10 @@ describe("buildManifest", () => {
       keyboardShortcut: "Mod-Alt-w",
       bubbleMenuIcon: "alert-triangle",
     };
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerMark(warnMark);
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerMark(warnMark);
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1382,8 +1489,10 @@ describe("buildManifest", () => {
       description: "Inline highlight emphasising a hazard.",
       bubbleMenuLabel: "Warn",
     };
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerMark(warnMark);
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerMark(warnMark);
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1400,8 +1509,10 @@ describe("buildManifest", () => {
       title: "Warning highlight",
       adminSchema: "warningHighlightSchema",
     };
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerMark(mark);
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerMark(mark);
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 
@@ -1430,18 +1541,20 @@ describe("deriveAdminSlug", () => {
 describe("buildManifest adminNav projection", () => {
   test("page with inline group metadata creates the custom group on the fly", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/menus",
-        title: "Menus",
-        nav: {
-          group: { id: "appearance", label: "Appearance", priority: 40 },
-          label: "Menus",
-          order: 10,
-        },
-        capability: "menu:manage",
-        component: "MenusPage",
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/menus",
+          title: "Menus",
+          nav: {
+            group: { id: "appearance", label: "Appearance", priority: 40 },
+            label: "Menus",
+            order: 10,
+          },
+          capability: "menu:manage",
+          component: "MenusPage",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1463,13 +1576,15 @@ describe("buildManifest adminNav projection", () => {
 
   test("page with bare-string custom group humanizes the id and uses default priority", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/menus",
-        title: "Menus",
-        nav: { group: "appearance", label: "Menus" },
-        component: "MenusPage",
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/menus",
+          title: "Menus",
+          nav: { group: "appearance", label: "Menus" },
+          component: "MenusPage",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1479,13 +1594,15 @@ describe("buildManifest adminNav projection", () => {
 
   test("page targeting a core-reserved nav group lands in that group", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/media-library",
-        title: "Media Library",
-        nav: { group: "management", label: "Media Library", order: 50 },
-        component: "MediaLibrary",
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/media-library",
+          title: "Media Library",
+          nav: { group: "management", label: "Media Library", order: 50 },
+          component: "MediaLibrary",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1497,19 +1614,21 @@ describe("buildManifest adminNav projection", () => {
 
   test("items sort by order ascending, then label as tiebreak", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("menus", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/zeta",
-        title: "Zeta",
-        nav: { group: "appearance", label: "Z", order: 5 },
-        component: "A",
-      });
-      ctx.registerAdminPage({
-        path: "/alpha",
-        title: "Alpha",
-        nav: { group: "appearance", label: "A", order: 1 },
-        component: "B",
-      });
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/zeta",
+          title: "Zeta",
+          nav: { group: "appearance", label: "Z", order: 5 },
+          component: "A",
+        });
+        ctx.registerAdminPage({
+          path: "/alpha",
+          title: "Alpha",
+          nav: { group: "appearance", label: "A", order: 1 },
+          component: "B",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1519,25 +1638,27 @@ describe("buildManifest adminNav projection", () => {
 
   test("groups sort by priority ascending, ties broken by id", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("multi", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/z",
-        title: "Z",
-        nav: { group: { id: "zulu", priority: 10 }, label: "z" },
-        component: "Z",
-      });
-      ctx.registerAdminPage({
-        path: "/a",
-        title: "A",
-        nav: { group: { id: "alpha", priority: 10 }, label: "a" },
-        component: "A",
-      });
-      ctx.registerAdminPage({
-        path: "/b",
-        title: "B",
-        nav: { group: { id: "bravo", priority: 5 }, label: "b" },
-        component: "B",
-      });
+    const plugin = definePlugin("multi", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/z",
+          title: "Z",
+          nav: { group: { id: "zulu", priority: 10 }, label: "z" },
+          component: "Z",
+        });
+        ctx.registerAdminPage({
+          path: "/a",
+          title: "A",
+          nav: { group: { id: "alpha", priority: 10 }, label: "a" },
+          component: "A",
+        });
+        ctx.registerAdminPage({
+          path: "/b",
+          title: "B",
+          nav: { group: { id: "bravo", priority: 5 }, label: "b" },
+          component: "B",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1549,8 +1670,10 @@ describe("buildManifest adminNav projection", () => {
 
   test("entry-type sidebar items emit /entries/<adminSlug>", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts" });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const content = buildManifest(registry).adminNav.find(
@@ -1561,8 +1684,10 @@ describe("buildManifest adminNav projection", () => {
 
   test("taxonomy sidebar items emit /terms/<name>", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerTermTaxonomy("category", { label: "Categories" });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const tax = buildManifest(registry).adminNav.find(
@@ -1597,40 +1722,42 @@ describe("buildManifest adminNav projection", () => {
       },
     };
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      // Inline literal so TypeScript's excess-property check also pins the
-      // type contract.
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        labels: {
-          singular: { id: "blog.post.singular", message: "Post" },
-          plural: { id: "blog.post.plural", message: "Posts" },
-          addNewItem: { id: "blog.post.addNewItem", message: "Add Post" },
-          searchItems: {
-            id: "blog.post.searchItems",
-            message: "Search Posts…",
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        // Inline literal so TypeScript's excess-property check also pins the
+        // type contract.
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          labels: {
+            singular: { id: "blog.post.singular", message: "Post" },
+            plural: { id: "blog.post.plural", message: "Posts" },
+            addNewItem: { id: "blog.post.addNewItem", message: "Add Post" },
+            searchItems: {
+              id: "blog.post.searchItems",
+              message: "Search Posts…",
+            },
+            notFound: { id: "blog.post.notFound", message: "No posts yet" },
+            loadingItems: {
+              id: "blog.post.loadingItems",
+              message: "Loading posts",
+            },
+            loadErrorItems: {
+              id: "blog.post.loadErrorItems",
+              message: "Couldn’t load posts. Try again.",
+            },
+            allItems: { id: "blog.post.allItems", message: "All posts" },
+            noMatch: { id: "blog.post.noMatch", message: "No posts match" },
+            untitledItem: {
+              id: "blog.post.untitledItem",
+              message: "Untitled Post",
+            },
+            moveToTrash: {
+              id: "blog.post.moveToTrash",
+              message: "Move post to trash?",
+            },
           },
-          notFound: { id: "blog.post.notFound", message: "No posts yet" },
-          loadingItems: {
-            id: "blog.post.loadingItems",
-            message: "Loading posts",
-          },
-          loadErrorItems: {
-            id: "blog.post.loadErrorItems",
-            message: "Couldn’t load posts. Try again.",
-          },
-          allItems: { id: "blog.post.allItems", message: "All posts" },
-          noMatch: { id: "blog.post.noMatch", message: "No posts match" },
-          untitledItem: {
-            id: "blog.post.untitledItem",
-            message: "Untitled Post",
-          },
-          moveToTrash: {
-            id: "blog.post.moveToTrash",
-            message: "Move post to trash?",
-          },
-        },
-      });
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const entry = buildManifest(registry).entryTypes.find(
@@ -1660,40 +1787,42 @@ describe("buildManifest adminNav projection", () => {
       noMatch: { id: "blog.cat.noMatch", message: "No categories match" },
     };
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        // Inline literal — same excess-property-check rationale as the
-        // entry-type test above.
-        labels: {
-          singular: { id: "blog.cat.singular", message: "Category" },
-          addNewItem: {
-            id: "blog.cat.addNewItem",
-            message: "Add Category",
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          // Inline literal — same excess-property-check rationale as the
+          // entry-type test above.
+          labels: {
+            singular: { id: "blog.cat.singular", message: "Category" },
+            addNewItem: {
+              id: "blog.cat.addNewItem",
+              message: "Add Category",
+            },
+            searchItems: {
+              id: "blog.cat.searchItems",
+              message: "Search Categories…",
+            },
+            notFound: {
+              id: "blog.cat.notFound",
+              message: "No categories yet",
+            },
+            loadingItems: {
+              id: "blog.cat.loadingItems",
+              message: "Loading categories",
+            },
+            loadErrorItems: {
+              id: "blog.cat.loadErrorItems",
+              message: "Couldn’t load categories. Try again.",
+            },
+            allItems: { id: "blog.cat.allItems", message: "All categories" },
+            noMatch: {
+              id: "blog.cat.noMatch",
+              message: "No categories match",
+            },
           },
-          searchItems: {
-            id: "blog.cat.searchItems",
-            message: "Search Categories…",
-          },
-          notFound: {
-            id: "blog.cat.notFound",
-            message: "No categories yet",
-          },
-          loadingItems: {
-            id: "blog.cat.loadingItems",
-            message: "Loading categories",
-          },
-          loadErrorItems: {
-            id: "blog.cat.loadErrorItems",
-            message: "Couldn’t load categories. Try again.",
-          },
-          allItems: { id: "blog.cat.allItems", message: "All categories" },
-          noMatch: {
-            id: "blog.cat.noMatch",
-            message: "No categories match",
-          },
-        },
-      });
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const taxonomy = buildManifest(registry).termTaxonomies.find(
@@ -1704,13 +1833,18 @@ describe("buildManifest adminNav projection", () => {
 
   test("plugin menuIcon plumbs through to the sidebar item's coreIcon", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", menuIcon: "file-text" });
-      ctx.registerTermTaxonomy("category", {
-        label: "Categories",
-        isHierarchical: true,
-      });
-      ctx.registerTermTaxonomy("tag", { label: "Tags" });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          menuIcon: "file-text",
+        });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          isHierarchical: true,
+        });
+        ctx.registerTermTaxonomy("tag", { label: "Tags" });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1729,14 +1863,16 @@ describe("buildManifest adminNav projection", () => {
 
   test("unknown menuIcon falls back to the generic content icon", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("blog", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        // Safety: simulates a value outside the closed `EntryMenuIcon` union
-        // reaching the registry at runtime (a stale-compiled plugin) — the
-        // fallback below is what protects core from it, not the type.
-        menuIcon: "frobnicate" as unknown as EntryMenuIcon,
-      });
+    const plugin = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          // Safety: simulates a value outside the closed `EntryMenuIcon` union
+          // reaching the registry at runtime (a stale-compiled plugin) — the
+          // fallback below is what protects core from it, not the type.
+          menuIcon: "frobnicate" as unknown as EntryMenuIcon,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const item = buildManifest(registry).adminNav.find(
@@ -1753,13 +1889,15 @@ describe("buildManifest adminNav projection", () => {
       message: "Menus",
     };
     const hooks = new HookRegistry();
-    const plugin = definePlugin("x", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/menus",
-        title: "Menus",
-        nav: { group: "appearance", label: navLabel },
-        component: "MenusPage",
-      });
+    const plugin = definePlugin("x", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/menus",
+          title: "Menus",
+          nav: { group: "appearance", label: navLabel },
+          component: "MenusPage",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -1789,16 +1927,18 @@ describe("buildManifest adminNav projection", () => {
       message: "Appearance",
     };
     const hooks = new HookRegistry();
-    const plugin = definePlugin("x", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/menus",
-        title: "Menus",
-        nav: {
-          group: { id: "appearance", label: groupLabel, priority: 40 },
-          label: "Menus",
-        },
-        component: "MenusPage",
-      });
+    const plugin = definePlugin("x", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/menus",
+          title: "Menus",
+          nav: {
+            group: { id: "appearance", label: groupLabel, priority: 40 },
+            label: "Menus",
+          },
+          component: "MenusPage",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const appearance = buildManifest(registry).adminNav.find(
@@ -1812,11 +1952,13 @@ describe("buildManifest adminNav projection", () => {
 describe("buildManifest visibility projection", () => {
   test("emits resolved visibility for a hidden (menu-like) entry type", async () => {
     const hooks = new HookRegistry();
-    const menus = definePlugin("menus", (ctx) => {
-      ctx.registerEntryType("nav_menu_item", {
-        label: "Nav menu items",
-        isPublic: false,
-      });
+    const menus = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerEntryType("nav_menu_item", {
+          label: "Nav menu items",
+          isPublic: false,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [menus] });
     const entry = buildManifest(registry).entryTypes[0];
@@ -1827,11 +1969,13 @@ describe("buildManifest visibility projection", () => {
 
   test("emits resolved visibility for a sidebar-hidden but UI-present entry type", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("media", (ctx) => {
-      ctx.registerEntryType("attachment", {
-        label: "Attachments",
-        showInSidebar: false,
-      });
+    const plugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerEntryType("attachment", {
+          label: "Attachments",
+          showInSidebar: false,
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const entry = buildManifest(registry).entryTypes[0];
@@ -1842,16 +1986,18 @@ describe("buildManifest visibility projection", () => {
 
   test("taxonomies get the same resolved-visibility projection", async () => {
     const hooks = new HookRegistry();
-    const menus = definePlugin("menus", (ctx) => {
-      ctx.registerEntryType("nav_menu_item", {
-        label: "Items",
-        isPublic: false,
-      });
-      ctx.registerTermTaxonomy("nav_menu", {
-        label: "Nav menus",
-        isPublic: false,
-        entryTypes: ["nav_menu_item"],
-      });
+    const menus = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerEntryType("nav_menu_item", {
+          label: "Items",
+          isPublic: false,
+        });
+        ctx.registerTermTaxonomy("nav_menu", {
+          label: "Nav menus",
+          isPublic: false,
+          entryTypes: ["nav_menu_item"],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [menus] });
     const tax = buildManifest(registry).termTaxonomies[0];
@@ -1861,19 +2007,21 @@ describe("buildManifest visibility projection", () => {
 
   test("projects registered patterns into manifest.patterns sorted by name", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerPattern({
-        name: "acme/zeta",
-        title: "Zeta",
-        category: "hero",
-        content: [],
-      });
-      ctx.registerPattern({
-        name: "acme/alpha",
-        title: "Alpha",
-        category: "cta",
-        content: [],
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerPattern({
+          name: "acme/zeta",
+          title: "Zeta",
+          category: "hero",
+          content: [],
+        });
+        ctx.registerPattern({
+          name: "acme/alpha",
+          title: "Alpha",
+          category: "cta",
+          content: [],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1894,24 +2042,28 @@ describe("buildManifest visibility projection", () => {
 
   test("numbers a pattern's blank ids through the slots its blocks declare", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerBlock(defineBlock({ name: "acme/team", render: () => null }));
-      ctx.registerPattern({
-        name: "acme/team-intro",
-        title: "Team intro",
-        content: [
-          {
-            id: "",
-            name: "core/group",
-            attrs: { content: [{ id: "", name: "core/rich-text" }] },
-          },
-          {
-            id: "",
-            name: "acme/team",
-            attrs: { people: [{ id: "1", name: "Alice" }] },
-          },
-        ],
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({ name: "acme/team", render: () => null }),
+        );
+        ctx.registerPattern({
+          name: "acme/team-intro",
+          title: "Team intro",
+          content: [
+            {
+              id: "",
+              name: "core/group",
+              attrs: { content: [{ id: "", name: "core/rich-text" }] },
+            },
+            {
+              id: "",
+              name: "acme/team",
+              attrs: { people: [{ id: "1", name: "Alice" }] },
+            },
+          ],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1930,15 +2082,17 @@ describe("buildManifest visibility projection", () => {
 
   test("projects the starter-modal fields — target, entryTypes, priority — through the manifest", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerPattern({
-        name: "acme/page-blank",
-        title: "Blank page",
-        content: [],
-        target: "post-content",
-        entryTypes: ["page"],
-        priority: 5,
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerPattern({
+          name: "acme/page-blank",
+          title: "Blank page",
+          content: [],
+          target: "post-content",
+          entryTypes: ["page"],
+          priority: 5,
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1952,23 +2106,25 @@ describe("buildManifest visibility projection", () => {
 
   test("projects the preview override through the manifest when set, omits it otherwise", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("acme", (ctx) => {
-      ctx.registerPattern({
-        name: "acme/hero",
-        title: "Hero",
-        content: [],
-        preview: {
-          src: "./hero.png",
-          width: 1400,
-          height: 900,
-          alt: "Hero preview",
-        },
-      });
-      ctx.registerPattern({
-        name: "acme/plain",
-        title: "Plain",
-        content: [],
-      });
+    const plugin = definePlugin("acme", {
+      setup: (ctx) => {
+        ctx.registerPattern({
+          name: "acme/hero",
+          title: "Hero",
+          content: [],
+          preview: {
+            src: "./hero.png",
+            width: 1400,
+            height: 900,
+            alt: "Hero preview",
+          },
+        });
+        ctx.registerPattern({
+          name: "acme/plain",
+          title: "Plain",
+          content: [],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -1989,26 +2145,28 @@ describe("buildManifest visibility projection", () => {
 });
 
 describe("buildManifest capability references", () => {
-  const newsDesk = definePlugin("news-desk", (ctx) => {
-    ctx.registerAdminPage({
-      path: "/desk",
-      title: "Desk",
-      nav: { group: "content", label: "Desk" },
-      capability: entryCapability("news", "edit_any"),
-      component: "DeskPage",
-    });
-    ctx.registerDashboardWidget({
-      id: "news-desk:queue",
-      title: "Queue",
-      capability: entryCapability("news", "publish"),
-      component: "QueueWidget",
-    });
-    ctx.registerEntryMetaBox("desk", {
-      label: "Desk",
-      entryTypes: ["news"],
-      capability: entryCapability("news", "edit_own"),
-      fields: [text("desk").capability(entryCapability("news", "delete"))],
-    });
+  const newsDesk = definePlugin("news-desk", {
+    setup: (ctx) => {
+      ctx.registerAdminPage({
+        path: "/desk",
+        title: "Desk",
+        nav: { group: "content", label: "Desk" },
+        capability: entryCapability("news", "edit_any"),
+        component: "DeskPage",
+      });
+      ctx.registerDashboardWidget({
+        id: "news-desk:queue",
+        title: "Queue",
+        capability: entryCapability("news", "publish"),
+        component: "QueueWidget",
+      });
+      ctx.registerEntryMetaBox("desk", {
+        label: "Desk",
+        entryTypes: ["news"],
+        capability: entryCapability("news", "edit_own"),
+        fields: [text("desk").capability(entryCapability("news", "delete"))],
+      });
+    },
   });
 
   test("ships each reference as the string of the namespace its type pools into", async () => {
@@ -2026,20 +2184,24 @@ describe("buildManifest capability references", () => {
   });
 
   test("resolves a reference to a type a later-installed plugin registers", async () => {
-    const early = definePlugin("early", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/gazette",
-        title: "Gazette",
-        nav: { group: "content", label: "Gazette" },
-        capability: entryCapability("gazette", "read"),
-        component: "GazettePage",
-      });
+    const early = definePlugin("early", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/gazette",
+          title: "Gazette",
+          nav: { group: "content", label: "Gazette" },
+          capability: entryCapability("gazette", "read"),
+          component: "GazettePage",
+        });
+      },
     });
-    const late = definePlugin("late", (ctx) => {
-      ctx.registerEntryType("gazette", {
-        label: "Gazette",
-        capabilityType: "post",
-      });
+    const late = definePlugin("late", {
+      setup: (ctx) => {
+        ctx.registerEntryType("gazette", {
+          label: "Gazette",
+          capabilityType: "post",
+        });
+      },
     });
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
@@ -2056,20 +2218,22 @@ describe("buildManifest capability references", () => {
 describe("buildManifest adminPages projection", () => {
   test("lists every admin page, with or without nav, while adminNav keeps only nav pages", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("audit", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/audit-log",
-        title: "Audit Log",
-        nav: { group: "management", label: "Audit" },
-        capability: "audit:read",
-        component: "AuditLog",
-      });
-      ctx.registerAdminPage({
-        path: "/audit-detail",
-        title: "Audit Detail",
-        capability: "audit:read",
-        component: "AuditDetail",
-      });
+    const plugin = definePlugin("audit", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/audit-log",
+          title: "Audit Log",
+          nav: { group: "management", label: "Audit" },
+          capability: "audit:read",
+          component: "AuditLog",
+        });
+        ctx.registerAdminPage({
+          path: "/audit-detail",
+          title: "Audit Detail",
+          capability: "audit:read",
+          component: "AuditDetail",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);
@@ -2096,20 +2260,22 @@ describe("buildManifest adminPages projection", () => {
 
   test("ships a capability reference as its spelled string, with or without nav", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("audit", (ctx) => {
-      ctx.registerAdminPage({
-        path: "/audit-log",
-        title: "Audit Log",
-        nav: { group: "management", label: "Audit" },
-        capability: termCapability("topic", "edit"),
-        component: "AuditLog",
-      });
-      ctx.registerAdminPage({
-        path: "/audit-detail",
-        title: "Audit Detail",
-        capability: termCapability("topic", "edit"),
-        component: "AuditDetail",
-      });
+    const plugin = definePlugin("audit", {
+      setup: (ctx) => {
+        ctx.registerAdminPage({
+          path: "/audit-log",
+          title: "Audit Log",
+          nav: { group: "management", label: "Audit" },
+          capability: termCapability("topic", "edit"),
+          component: "AuditLog",
+        });
+        ctx.registerAdminPage({
+          path: "/audit-detail",
+          title: "Audit Detail",
+          capability: termCapability("topic", "edit"),
+          component: "AuditDetail",
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const manifest = buildManifest(registry);

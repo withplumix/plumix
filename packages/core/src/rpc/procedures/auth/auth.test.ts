@@ -69,17 +69,22 @@ describe("auth.session", () => {
 
   test("plugin-registered post type surfaces derived capabilities without duplicating the core set", async () => {
     const hooks = new HookRegistry();
-    const shop = definePlugin("shop", (ctx) => {
-      // Plugin-registered post type with its own capability namespace —
-      // surfaces on the session…
-      ctx.registerEntryType("product", {
-        label: "Product",
-        capabilityType: "product",
-      });
-      // …AND register a post type that shares the core `post` capability
-      // namespace, which used to produce duplicate `post:*` entries in the
-      // session's capability list.
-      ctx.registerEntryType("news", { label: "News", capabilityType: "post" });
+    const shop = definePlugin("shop", {
+      setup: (ctx) => {
+        // Plugin-registered post type with its own capability namespace —
+        // surfaces on the session…
+        ctx.registerEntryType("product", {
+          label: "Product",
+          capabilityType: "product",
+        });
+        // …AND register a post type that shares the core `post` capability
+        // namespace, which used to produce duplicate `post:*` entries in the
+        // session's capability list.
+        ctx.registerEntryType("news", {
+          label: "News",
+          capabilityType: "post",
+        });
+      },
     });
     const { registry: plugins } = await installPlugins({
       hooks,
@@ -166,12 +171,14 @@ describe("auth.loginLinks", () => {
   });
 
   test("surfaces plugin-registered links with namespaced ids", async () => {
-    const plugin = definePlugin("saml-microsoft", (ctx) => {
-      ctx.registerLoginLink({
-        key: "default",
-        label: "Sign in with Microsoft",
-        href: "/_plumix/saml-microsoft/start",
-      });
+    const plugin = definePlugin("saml-microsoft", {
+      setup: (ctx) => {
+        ctx.registerLoginLink({
+          key: "default",
+          label: "Sign in with Microsoft",
+          href: "/_plumix/saml-microsoft/start",
+        });
+      },
     });
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),

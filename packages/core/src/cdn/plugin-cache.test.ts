@@ -19,65 +19,69 @@ import { defineTheme } from "../theme.js";
  * (or the whole namespace at `/all`), and a POST that reports a change.
  */
 function keyedPlugin(id: string, listensForFired = false) {
-  return definePlugin(id, (ctx) => {
-    ctx.registerRoute({
-      method: "GET",
-      path: "/page/*",
-      auth: "public",
-      cacheable: true,
-      handler: (request, appCtx) => {
-        const key = new URL(request.url).pathname.split("/").at(-1) ?? "";
-        appCtx.cache.reads(key);
-        return new Response(key);
-      },
-    });
-    ctx.registerRoute({
-      method: "GET",
-      path: "/all",
-      auth: "public",
-      cacheable: true,
-      handler: (_request, appCtx) => {
-        appCtx.cache.reads();
-        return new Response("all");
-      },
-    });
-    ctx.registerRoute({
-      method: "POST",
-      path: "/change",
-      auth: "public",
-      handler: (request, appCtx) => {
-        const key = new URL(request.url).searchParams.get("key") ?? undefined;
-        appCtx.cache.changed(key);
-        return new Response(null, { status: 204 });
-      },
-    });
-    if (listensForFired) {
-      ctx.addAction("cache-probe:fired", (_value, appCtx) => {
-        appCtx.cache.changed("x");
+  return definePlugin(id, {
+    setup: (ctx) => {
+      ctx.registerRoute({
+        method: "GET",
+        path: "/page/*",
+        auth: "public",
+        cacheable: true,
+        handler: (request, appCtx) => {
+          const key = new URL(request.url).pathname.split("/").at(-1) ?? "";
+          appCtx.cache.reads(key);
+          return new Response(key);
+        },
       });
-    }
-    ctx.registerRoute({
-      method: "POST",
-      path: "/fire",
-      auth: "public",
-      handler: async (_request, appCtx) => {
-        await appCtx.hooks.doAction("cache-probe:fired", 1, appCtx);
-        return new Response(null, { status: 204 });
-      },
-    });
-    ctx.registerRoute({
-      method: "GET",
-      path: "/memo",
-      auth: "public",
-      handler: async (_request, appCtx) => {
-        let loads = 0;
-        const read = () =>
-          appCtx.memo("alpha:x", () => Promise.resolve(++loads), ["p:alpha:x"]);
-        await read();
-        appCtx.cache.changed("x");
-        return new Response(String(await read()));
-      },
-    });
+      ctx.registerRoute({
+        method: "GET",
+        path: "/all",
+        auth: "public",
+        cacheable: true,
+        handler: (_request, appCtx) => {
+          appCtx.cache.reads();
+          return new Response("all");
+        },
+      });
+      ctx.registerRoute({
+        method: "POST",
+        path: "/change",
+        auth: "public",
+        handler: (request, appCtx) => {
+          const key = new URL(request.url).searchParams.get("key") ?? undefined;
+          appCtx.cache.changed(key);
+          return new Response(null, { status: 204 });
+        },
+      });
+      if (listensForFired) {
+        ctx.addAction("cache-probe:fired", (_value, appCtx) => {
+          appCtx.cache.changed("x");
+        });
+      }
+      ctx.registerRoute({
+        method: "POST",
+        path: "/fire",
+        auth: "public",
+        handler: async (_request, appCtx) => {
+          await appCtx.hooks.doAction("cache-probe:fired", 1, appCtx);
+          return new Response(null, { status: 204 });
+        },
+      });
+      ctx.registerRoute({
+        method: "GET",
+        path: "/memo",
+        auth: "public",
+        handler: async (_request, appCtx) => {
+          let loads = 0;
+          const read = () =>
+            appCtx.memo("alpha:x", () => Promise.resolve(++loads), [
+              "p:alpha:x",
+            ]);
+          await read();
+          appCtx.cache.changed("x");
+          return new Response(String(await read()));
+        },
+      });
+    },
   });
 }
 
@@ -94,34 +98,36 @@ declare module "../blocks/deps.js" {
 }
 
 /** Reads its data under the slug from a template dep, and changes it over RPC. */
-const probe = definePlugin("probe", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerTemplateDep("cache-probe", {
-    keyedBy: "slug",
-    load: ({ slugs }, appCtx) => {
-      slugs.forEach((slug) => {
-        appCtx.cache.reads(slug);
-      });
-      return Promise.resolve({});
-    },
-  });
-  ctx.registerRoute({
-    method: "POST",
-    path: "/change",
-    auth: "public",
-    handler: (_request, appCtx) => {
-      appCtx.cache.changed("x");
-      return new Response(null, { status: 204 });
-    },
-  });
-  ctx.registerRpcRouter({
-    change: base
-      .input(v.object({ key: v.string() }))
-      .handler(({ input, context }) => {
-        context.cache.changed(input.key);
-        return null;
-      }),
-  });
+const probe = definePlugin("probe", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerTemplateDep("cache-probe", {
+      keyedBy: "slug",
+      load: ({ slugs }, appCtx) => {
+        slugs.forEach((slug) => {
+          appCtx.cache.reads(slug);
+        });
+        return Promise.resolve({});
+      },
+    });
+    ctx.registerRoute({
+      method: "POST",
+      path: "/change",
+      auth: "public",
+      handler: (_request, appCtx) => {
+        appCtx.cache.changed("x");
+        return new Response(null, { status: 204 });
+      },
+    });
+    ctx.registerRpcRouter({
+      change: base
+        .input(v.object({ key: v.string() }))
+        .handler(({ input, context }) => {
+          context.cache.changed(input.key);
+          return null;
+        }),
+    });
+  },
 });
 
 const probeTheme = defineTheme({

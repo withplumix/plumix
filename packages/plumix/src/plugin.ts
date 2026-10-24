@@ -180,7 +180,6 @@ export type {
   DebugPanel,
   DeferFn,
   DefinePluginInput,
-  DefinePluginOptions,
   EmailChangeMailProps,
   DevErrorFact,
   DevErrorHint,

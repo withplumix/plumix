@@ -33,42 +33,46 @@ declare module "../../plugin/fields/contributions.js" {
   }
 }
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    labels: { plural: "Posts", singular: "Post" },
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerEntryType("note", { label: "Notes", isPublic: true });
-  ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    entryTypes: ["post"],
-  });
-  ctx.registerTermMetaBox("categoryDates", {
-    label: "Dates",
-    termTaxonomies: ["category"],
-    fields: _categoryDateFields,
-  });
-  ctx.registerTermTaxonomy("mood", {
-    label: "Moods",
-    entryTypes: ["post"],
-    isPublic: false,
-  });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      labels: { plural: "Posts", singular: "Post" },
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerEntryType("note", { label: "Notes", isPublic: true });
+    ctx.registerEntryType("secret", { label: "Secrets", isPublic: false });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermMetaBox("categoryDates", {
+      label: "Dates",
+      termTaxonomies: ["category"],
+      fields: _categoryDateFields,
+    });
+    ctx.registerTermTaxonomy("mood", {
+      label: "Moods",
+      entryTypes: ["post"],
+      isPublic: false,
+    });
+  },
 });
 
 /**
  * Gives a category term a `featured` role field, so the term archive has an
  * image to project.
  */
-const termArt = definePlugin("term-art", (ctx) => {
-  ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
-  ctx.registerTermMetaBox("categoryArt", {
-    label: "Art",
-    termTaxonomies: ["category"],
-    fields: [photoField("banner", { role: "featured" })],
-  });
+const termArt = definePlugin("term-art", {
+  setup: (ctx) => {
+    ctx.registerLookupAdapter({ kind: "photo", adapter: photoLookupAdapter });
+    ctx.registerTermMetaBox("categoryArt", {
+      label: "Art",
+      termTaxonomies: ["category"],
+      fields: [photoField("banner", { role: "featured" })],
+    });
+  },
 });
 
 async function harness(): Promise<DispatcherHarness> {
@@ -114,11 +118,13 @@ describe("resolveListingPage", () => {
 
   test("hands archive:entries the params the page's URL would capture", async () => {
     const seen: Record<string, string>[] = [];
-    const recording = definePlugin("recording", (ctx) => {
-      ctx.addFilter("archive:entries", (query, archive, params) => {
-        seen.push(params);
-        return archive.kind === "date" ? query.none() : query;
-      });
+    const recording = definePlugin("recording", {
+      setup: (ctx) => {
+        ctx.addFilter("archive:entries", (query, archive, params) => {
+          seen.push(params);
+          return archive.kind === "date" ? query.none() : query;
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [blog, recording] },
@@ -318,13 +324,15 @@ describe("resolveListingPage", () => {
   );
 
   test("a nested term's page by id loads the term once", async () => {
-    const regions = definePlugin("regions", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerTermTaxonomy("region", {
-        label: "Regions",
-        entryTypes: ["post"],
-        isHierarchical: true,
-      });
+    const regions = definePlugin("regions", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          entryTypes: ["post"],
+          isHierarchical: true,
+        });
+      },
     });
     const traced = await createTracedContext({
       config: { plugins: [regions] },

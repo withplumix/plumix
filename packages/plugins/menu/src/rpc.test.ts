@@ -155,12 +155,14 @@ async function seedMenu(
  */
 const contentHost: ReturnType<typeof definePlugin> = definePlugin(
   "content-host",
-  (setup) => {
-    setup.registerEntryType("post", { label: "Posts", isPublic: true });
-    setup.registerTermTaxonomy("category", {
-      label: "Categories",
-      isPublic: true,
-    });
+  {
+    setup: (setup) => {
+      setup.registerEntryType("post", { label: "Posts", isPublic: true });
+      setup.registerTermTaxonomy("category", {
+        label: "Categories",
+        isPublic: true,
+      });
+    },
   },
 );
 
@@ -269,8 +271,10 @@ describe("menu RPC", () => {
     test("lists only the entry type's matching, non-trashed entries, drafts included", async () => {
       const h = await buildHarness("editor", {}, [
         contentHost,
-        definePlugin("pages-host", (setup) => {
-          setup.registerEntryType("page", { label: "Pages", isPublic: true });
+        definePlugin("pages-host", {
+          setup: (setup) => {
+            setup.registerEntryType("page", { label: "Pages", isPublic: true });
+          },
         }),
       ]);
       const author = await adminUser
@@ -348,25 +352,27 @@ describe("menu RPC", () => {
       "rejects $kind target $target, which isn't menu-eligible, as NOT_FOUND",
       async ({ kind, target }) => {
         const h = await buildHarness("editor", {}, [
-          definePlugin("ineligible-host", (setup) => {
-            setup.registerEntryType("memo", {
-              label: "Memos",
-              isPublic: false,
-            });
-            setup.registerEntryType("aside", {
-              label: "Asides",
-              isPublic: true,
-              isShownInMenus: false,
-            });
-            setup.registerTermTaxonomy("internal", {
-              label: "Internal",
-              isPublic: false,
-            });
-            setup.registerTermTaxonomy("hidden", {
-              label: "Hidden",
-              isPublic: true,
-              isShownInMenus: false,
-            });
+          definePlugin("ineligible-host", {
+            setup: (setup) => {
+              setup.registerEntryType("memo", {
+                label: "Memos",
+                isPublic: false,
+              });
+              setup.registerEntryType("aside", {
+                label: "Asides",
+                isPublic: true,
+                isShownInMenus: false,
+              });
+              setup.registerTermTaxonomy("internal", {
+                label: "Internal",
+                isPublic: false,
+              });
+              setup.registerTermTaxonomy("hidden", {
+                label: "Hidden",
+                isPublic: true,
+                isShownInMenus: false,
+              });
+            },
           }),
         ]);
 
@@ -672,13 +678,15 @@ describe("menu RPC", () => {
       // `page` keeps the lookup scope non-empty, so `memo` is excluded by
       // the type filter, not by an empty scope skipping the lookup.
       const h = await buildHarness("editor", {}, [
-        definePlugin("internal", (setup) => {
-          setup.registerEntryType("page", { label: "Pages", isPublic: true });
-          setup.registerEntryType("memo", {
-            label: "Memos",
-            isPublic: false,
-            isShownInMenus: true,
-          });
+        definePlugin("internal", {
+          setup: (setup) => {
+            setup.registerEntryType("page", { label: "Pages", isPublic: true });
+            setup.registerEntryType("memo", {
+              label: "Memos",
+              isPublic: false,
+              isShownInMenus: true,
+            });
+          },
         }),
       ]);
       const m = await seedMenu(h.db, h.factories, "primary", "Primary");
@@ -789,12 +797,14 @@ describe("menu RPC", () => {
     // registered on `menu_item` (ADR 0026); the item's own meta lands on top.
     test("a new item stores the menu-item fields' defaults under its own meta", async () => {
       const h = await buildHarness("editor", {}, [
-        definePlugin("menu-extras", (ctx) => {
-          ctx.registerEntryMetaBox("menu-extras", {
-            label: "Extras",
-            entryTypes: ["menu_item"],
-            fields: [text("cssClass").default("nav"), text("url")],
-          });
+        definePlugin("menu-extras", {
+          setup: (ctx) => {
+            ctx.registerEntryMetaBox("menu-extras", {
+              label: "Extras",
+              entryTypes: ["menu_item"],
+              fields: [text("cssClass").default("nav"), text("url")],
+            });
+          },
         }),
       ]);
       const m = await seedMenu(h.db, h.factories, "main");
@@ -1895,12 +1905,14 @@ describe("menu RPC", () => {
     // registered on the `menu` taxonomy (ADR 0026).
     test("a new menu stores the menu taxonomy fields' defaults", async () => {
       const h = await buildHarness("editor", {}, [
-        definePlugin("menu-term-extras", (ctx) => {
-          ctx.registerTermMetaBox("menu-term-extras", {
-            label: "Extras",
-            termTaxonomies: ["menu"],
-            fields: [text("ariaLabel").default("Site navigation")],
-          });
+        definePlugin("menu-term-extras", {
+          setup: (ctx) => {
+            ctx.registerTermMetaBox("menu-term-extras", {
+              label: "Extras",
+              termTaxonomies: ["menu"],
+              fields: [text("ariaLabel").default("Site navigation")],
+            });
+          },
         }),
       ]);
 

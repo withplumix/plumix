@@ -27,20 +27,25 @@ import { writeDump } from "../sync/dump.js";
 import { importCommand } from "./import.js";
 import { syncDeps } from "./sync.js";
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["post"] });
-  ctx.registerEntryType("page", { label: "Pages", isPublic: true });
-  ctx.registerEntryMetaBox("review", {
-    label: "Review",
-    entryTypes: ["post"],
-    fields: [number("rating")],
-  });
-  ctx.registerEntryMetaBox("summary", {
-    label: "Summary",
-    entryTypes: ["page"],
-    fields: [text("summary").required()],
-  });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["post"],
+    });
+    ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+    ctx.registerEntryMetaBox("review", {
+      label: "Review",
+      entryTypes: ["post"],
+      fields: [number("rating")],
+    });
+    ctx.registerEntryMetaBox("summary", {
+      label: "Summary",
+      entryTypes: ["page"],
+      fields: [text("summary").required()],
+    });
+  },
 });
 
 /** Renders an entry's title and the names of its terms. */

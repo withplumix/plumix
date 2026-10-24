@@ -55,8 +55,10 @@ describe("getEligibleMenuKinds", () => {
     },
   ])("entry type eligibility — $name", async ({ register, eligible }) => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", ...register });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", ...register });
+        },
       }),
     ]);
     const tabs = getEligibleMenuKinds(registry);
@@ -89,11 +91,13 @@ describe("getEligibleMenuKinds", () => {
     },
   ])("term taxonomy eligibility — $name", async ({ register, eligible }) => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          ...register,
-        });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            ...register,
+          });
+        },
       }),
     ]);
     const tabs = getEligibleMenuKinds(registry);
@@ -105,13 +109,15 @@ describe("getEligibleMenuKinds", () => {
 
   test("menuPickerLabel overrides the default tab label for entry types", async () => {
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          labels: { plural: "Products" },
-          isPublic: true,
-          menuPickerLabel: "Catalog",
-        });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            labels: { plural: "Products" },
+            isPublic: true,
+            menuPickerLabel: "Catalog",
+          });
+        },
       }),
     ]);
     const tabs = getEligibleMenuKinds(registry);
@@ -120,16 +126,18 @@ describe("getEligibleMenuKinds", () => {
 
   test("falls back to labels.plural, then label, when menuPickerLabel is unset", async () => {
     const registry = await buildRegistry([
-      definePlugin("a", (ctx) => {
-        ctx.registerEntryType("a-type", {
-          label: "A label",
-          labels: { plural: "A plurals" },
-          isPublic: true,
-        });
-        ctx.registerEntryType("b-type", {
-          label: "B label",
-          isPublic: true,
-        });
+      definePlugin("a", {
+        setup: (ctx) => {
+          ctx.registerEntryType("a-type", {
+            label: "A label",
+            labels: { plural: "A plurals" },
+            isPublic: true,
+          });
+          ctx.registerEntryType("b-type", {
+            label: "B label",
+            isPublic: true,
+          });
+        },
       }),
     ]);
     const tabs = getEligibleMenuKinds(registry);
@@ -155,12 +163,14 @@ describe("getEligibleMenuKinds", () => {
       resolve: () => Promise.resolve(null),
     };
     const offRegistry = await buildRegistry([
-      definePlugin("media-off", (ctx) => {
-        ctx.registerLookupAdapter({
-          kind: "media-off",
-          adapter: stubAdapter,
-          capability: null,
-        });
+      definePlugin("media-off", {
+        setup: (ctx) => {
+          ctx.registerLookupAdapter({
+            kind: "media-off",
+            adapter: stubAdapter,
+            capability: null,
+          });
+        },
       }),
     ]);
     expect(
@@ -168,13 +178,15 @@ describe("getEligibleMenuKinds", () => {
     ).toBeUndefined();
 
     const onRegistry = await buildRegistry([
-      definePlugin("media-on", (ctx) => {
-        ctx.registerLookupAdapter({
-          kind: "media-on",
-          adapter: stubAdapter,
-          capability: null,
-          menuPicker: { tabLabel: "Media files" },
-        });
+      definePlugin("media-on", {
+        setup: (ctx) => {
+          ctx.registerLookupAdapter({
+            kind: "media-on",
+            adapter: stubAdapter,
+            capability: null,
+            menuPicker: { tabLabel: "Media files" },
+          });
+        },
       }),
     ]);
     const onTabs = getEligibleMenuKinds(onRegistry);
@@ -185,9 +197,11 @@ describe("getEligibleMenuKinds", () => {
 
   test("Custom URL is always the last tab", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.registerTermTaxonomy("tag", { label: "Tags", isPublic: true });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+          ctx.registerTermTaxonomy("tag", { label: "Tags", isPublic: true });
+        },
       }),
     ]);
     const tabs = getEligibleMenuKinds(registry);

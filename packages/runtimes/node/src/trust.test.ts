@@ -32,26 +32,28 @@ const FORWARDED = {
   "x-forwarded-for": "203.0.113.9, 198.51.100.2",
 };
 
-const probe = definePlugin("probe", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/whoami",
-    handler: (request, appCtx) =>
-      Response.json({ url: request.url, address: appCtx.clientAddress }),
-  });
-  ctx.registerRoute({
-    path: "/swallow",
-    method: "POST",
-    auth: "public",
-    handler: async (request) => {
-      try {
-        return new Response(String((await request.text()).length));
-      } catch (error) {
-        return new Response(error instanceof BridgeError ? error.code : "?", {
-          status: 413,
-        });
-      }
-    },
-  });
+const probe = definePlugin("probe", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/whoami",
+      handler: (request, appCtx) =>
+        Response.json({ url: request.url, address: appCtx.clientAddress }),
+    });
+    ctx.registerRoute({
+      path: "/swallow",
+      method: "POST",
+      auth: "public",
+      handler: async (request) => {
+        try {
+          return new Response(String((await request.text()).length));
+        } catch (error) {
+          return new Response(error instanceof BridgeError ? error.code : "?", {
+            status: 413,
+          });
+        }
+      },
+    });
+  },
 });
 
 let dir: string;

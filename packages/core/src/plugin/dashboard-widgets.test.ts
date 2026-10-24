@@ -10,13 +10,15 @@ describe("registerDashboardWidget", () => {
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
       plugins: [
-        definePlugin("widget-plugin", (ctx) => {
-          ctx.registerDashboardWidget({
-            id: "widget-plugin:hello",
-            title: { id: "x", message: "Hello" },
-            component: "HelloWidget",
-            priority: 20,
-          });
+        definePlugin("widget-plugin", {
+          setup: (ctx) => {
+            ctx.registerDashboardWidget({
+              id: "widget-plugin:hello",
+              title: { id: "x", message: "Hello" },
+              component: "HelloWidget",
+              priority: 20,
+            });
+          },
         }),
       ],
     });
@@ -32,19 +34,21 @@ describe("registerDashboardWidget", () => {
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
       plugins: [
-        definePlugin("widget-plugin", (ctx) => {
-          ctx.registerDashboardWidget({
-            id: "widget-plugin:b",
-            title: { id: "b", message: "B" },
-            component: "B",
-            priority: 30,
-          });
-          ctx.registerDashboardWidget({
-            id: "widget-plugin:a",
-            title: { id: "a", message: "A" },
-            component: "A",
-            priority: 10,
-          });
+        definePlugin("widget-plugin", {
+          setup: (ctx) => {
+            ctx.registerDashboardWidget({
+              id: "widget-plugin:b",
+              title: { id: "b", message: "B" },
+              component: "B",
+              priority: 30,
+            });
+            ctx.registerDashboardWidget({
+              id: "widget-plugin:a",
+              title: { id: "a", message: "A" },
+              component: "A",
+              priority: 10,
+            });
+          },
         }),
       ],
     });
@@ -60,12 +64,14 @@ describe("registerDashboardWidget", () => {
       installPlugins({
         hooks: new HookRegistry(),
         plugins: [
-          definePlugin("widget-plugin", (ctx) => {
-            ctx.registerDashboardWidget({
-              id: "nocolon",
-              title: { id: "n", message: "N" },
-              component: "N",
-            });
+          definePlugin("widget-plugin", {
+            setup: (ctx) => {
+              ctx.registerDashboardWidget({
+                id: "nocolon",
+                title: { id: "n", message: "N" },
+                component: "N",
+              });
+            },
           }),
         ],
       }),
@@ -77,12 +83,14 @@ describe("registerDashboardWidget", () => {
       installPlugins({
         hooks: new HookRegistry(),
         plugins: [
-          definePlugin("widget-plugin", (ctx) => {
-            ctx.registerDashboardWidget({
-              id: "other-plugin:thing",
-              title: { id: "o", message: "O" },
-              component: "O",
-            });
+          definePlugin("widget-plugin", {
+            setup: (ctx) => {
+              ctx.registerDashboardWidget({
+                id: "other-plugin:thing",
+                title: { id: "o", message: "O" },
+                component: "O",
+              });
+            },
           }),
         ],
       }),

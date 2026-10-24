@@ -171,14 +171,16 @@ describe("select().multiple() — cardinality axis", () => {
 
   test("appearance, multiple, and max survive the manifest wire projection", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("choices", {
-        label: "Choices",
-        fields: [
-          select("tone").options(["a", "b"]).appearance("buttons"),
-          select("tags").options(["a", "b", "c"]).multiple().max(2),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("choices", {
+          label: "Choices",
+          fields: [
+            select("tone").options(["a", "b"]).appearance("buttons"),
+            select("tags").options(["a", "b", "c"]).multiple().max(2),
+          ],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });

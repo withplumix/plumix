@@ -44,8 +44,10 @@ describe("buildApp — block aggregation", () => {
       name: "shared/card",
       render: () => null,
     });
-    const plugin = definePlugin("provider", (ctx) => {
-      ctx.registerBlock(pluginVersion);
+    const plugin = definePlugin("provider", {
+      setup: (ctx) => {
+        ctx.registerBlock(pluginVersion);
+      },
     });
     const app = await buildApp(
       plumix({
@@ -106,10 +108,12 @@ describe("buildApp — block aggregation", () => {
   });
 
   test("rejects a plugin block in the reserved `core/` namespace", async () => {
-    const plugin = definePlugin("squatter", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({ name: "core/button", render: () => null }),
-      );
+    const plugin = definePlugin("squatter", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({ name: "core/button", render: () => null }),
+        );
+      },
     });
     await expect(
       buildApp(
@@ -125,11 +129,15 @@ describe("buildApp — block aggregation", () => {
   });
 
   test("rejects two plugins registering the same block name", async () => {
-    const a = definePlugin("a", (ctx) => {
-      ctx.registerBlock(defineBlock({ name: "dup/x", render: () => null }));
+    const a = definePlugin("a", {
+      setup: (ctx) => {
+        ctx.registerBlock(defineBlock({ name: "dup/x", render: () => null }));
+      },
     });
-    const b = definePlugin("b", (ctx) => {
-      ctx.registerBlock(defineBlock({ name: "dup/x", render: () => null }));
+    const b = definePlugin("b", {
+      setup: (ctx) => {
+        ctx.registerBlock(defineBlock({ name: "dup/x", render: () => null }));
+      },
     });
     await expect(
       buildApp(

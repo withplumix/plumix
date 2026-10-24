@@ -148,12 +148,14 @@ describe("entry.update", () => {
   });
 
   test("meta: a field gated by a reference is gated under the namespace its type pools into", async () => {
-    const desk = definePlugin("desk", (ctx) => {
-      ctx.registerEntryMetaBox("desk", {
-        label: "Desk",
-        entryTypes: ["news"],
-        fields: [text("desk").capability(entryCapability("news", "publish"))],
-      });
+    const desk = definePlugin("desk", {
+      setup: (ctx) => {
+        ctx.registerEntryMetaBox("desk", {
+          label: "Desk",
+          entryTypes: ["news"],
+          fields: [text("desk").capability(entryCapability("news", "publish"))],
+        });
+      },
     });
     const plugins = await pooledEntryTypeRegistry(desk);
     const editDesk = async (authAs: "contributor" | "author") => {

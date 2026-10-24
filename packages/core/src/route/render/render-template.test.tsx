@@ -27,12 +27,14 @@ import {
   term,
 } from "./template-builders.js";
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+  },
 });
 
 function headOf(body: string): string {
@@ -85,14 +87,16 @@ describe("SEO — canonical + render:document seam", () => {
   });
 
   test("a render:document subscriber can override the canonical (gap-filler skips)", async () => {
-    const seoPlugin = definePlugin("seo-test", (ctx) => {
-      ctx.addFilter("render:document", (manifest) => ({
-        ...manifest,
-        link: [
-          ...(manifest.link ?? []),
-          { rel: "canonical", href: "https://cms.example/override" },
-        ],
-      }));
+    const seoPlugin = definePlugin("seo-test", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest) => ({
+          ...manifest,
+          link: [
+            ...(manifest.link ?? []),
+            { rel: "canonical", href: "https://cms.example/override" },
+          ],
+        }));
+      },
     });
     const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({
@@ -1281,19 +1285,21 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 
   test("`theme:document` filter contributions surface in SSR'd <head>", async () => {
-    const seoPlugin = definePlugin("seo", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-      });
-      ctx.addFilter("theme:document", (manifest) => ({
-        ...manifest,
-        meta: [
-          ...(manifest.meta ?? []),
-          { property: "og:site_name", content: "Demo" },
-        ],
-      }));
+    const seoPlugin = definePlugin("seo", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+        ctx.addFilter("theme:document", (manifest) => ({
+          ...manifest,
+          meta: [
+            ...(manifest.meta ?? []),
+            { property: "og:site_name", content: "Demo" },
+          ],
+        }));
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -2088,14 +2094,16 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 
   test("a rich-text body shortcode reads the configured site settings", async () => {
-    const siteTitle = definePlugin("site-title", (ctx) => {
-      ctx.registerShortcode({
-        name: "site-title",
-        render: ({ context }) => {
-          const title = context.siteSettings.title;
-          return typeof title === "string" ? title : "";
-        },
-      });
+    const siteTitle = definePlugin("site-title", {
+      setup: (ctx) => {
+        ctx.registerShortcode({
+          name: "site-title",
+          render: ({ context }) => {
+            const title = context.siteSettings.title;
+            return typeof title === "string" ? title : "";
+          },
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -2144,15 +2152,17 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   test("block:before_render / block:after_render decorate a real block render", async () => {
     const seen: string[] = [];
-    const decorator = definePlugin("acme-decorator", (ctx) => {
-      ctx.addFilter("block:before_render", (element, hookCtx) => {
-        seen.push(`before:${hookCtx.node.name}`);
-        return createElement("mark", { "data-testid": "before" }, element);
-      });
-      ctx.addFilter("block:after_render", (element, hookCtx) => {
-        seen.push(`after:${hookCtx.node.name}`);
-        return element;
-      });
+    const decorator = definePlugin("acme-decorator", {
+      setup: (ctx) => {
+        ctx.addFilter("block:before_render", (element, hookCtx) => {
+          seen.push(`before:${hookCtx.node.name}`);
+          return createElement("mark", { "data-testid": "before" }, element);
+        });
+        ctx.addFilter("block:after_render", (element, hookCtx) => {
+          seen.push(`after:${hookCtx.node.name}`);
+          return element;
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -2280,16 +2290,18 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 
   test("dispatcher pre-resolves block loaders before render — render() sees the resolved data", async () => {
-    const probePlugin = definePlugin("acme-probe", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/probe",
-          loaders: {
-            marker: () => Promise.resolve("loaded-on-server"),
-          },
-          render: ({ loaders }) => <div data-loaded>{loaders.marker}</div>,
-        }),
-      );
+    const probePlugin = definePlugin("acme-probe", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/probe",
+            loaders: {
+              marker: () => Promise.resolve("loaded-on-server"),
+            },
+            render: ({ loaders }) => <div data-loaded>{loaders.marker}</div>,
+          }),
+        );
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -2328,17 +2340,19 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 
   test("a block's render resolves its strings from the request locale's catalogs", async () => {
-    const greetingPlugin = definePlugin("acme-greeting", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/greeting",
-          render: ({ context }) => (
-            <p data-testid="greeting">
-              {context.t({ id: "acme.greeting", message: "Hello" })}
-            </p>
-          ),
-        }),
-      );
+    const greetingPlugin = definePlugin("acme-greeting", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/greeting",
+            render: ({ context }) => (
+              <p data-testid="greeting">
+                {context.t({ id: "acme.greeting", message: "Hello" })}
+              </p>
+            ),
+          }),
+        );
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -2386,41 +2400,45 @@ describe("resolvePublicRoute — single entry through theme", () => {
   });
 });
 
-const throwingLoaderPlugin = definePlugin("acme-throwing-loader", (ctx) => {
-  ctx.registerBlock(
-    defineBlock({
-      name: "acme/throwing-loader",
-      loaders: {
-        marker: () => Promise.reject(new Error("loader kaboom")),
-      },
-      // In prod the rejected loader routes here (per-block isolation); in dev
-      // the failure escalates before render, so this never runs.
-      errorFallback: () => <div data-testid="probe">degraded</div>,
-      render: ({ loaders }) => (
-        <div data-testid="probe">{String(loaders.marker)}</div>
-      ),
-    }),
-  );
+const throwingLoaderPlugin = definePlugin("acme-throwing-loader", {
+  setup: (ctx) => {
+    ctx.registerBlock(
+      defineBlock({
+        name: "acme/throwing-loader",
+        loaders: {
+          marker: () => Promise.reject(new Error("loader kaboom")),
+        },
+        // In prod the rejected loader routes here (per-block isolation); in dev
+        // the failure escalates before render, so this never runs.
+        errorFallback: () => <div data-testid="probe">degraded</div>,
+        render: ({ loaders }) => (
+          <div data-testid="probe">{String(loaders.marker)}</div>
+        ),
+      }),
+    );
+  },
 });
 
 /**
  * The failing query span is recorded before the rejection escalates, so the
  * dev error page's database section can flag it.
  */
-const failingQueryPlugin = definePlugin("acme-failing-query", (ctx) => {
-  ctx.registerBlock(
-    defineBlock({
-      name: "acme/failing-query",
-      loaders: {
-        rows: () =>
-          getContext().telemetry.span("db: query", (s) => {
-            s.set("db.sql", "select * from broken");
-            return Promise.reject(new Error("no such table: broken"));
-          }),
-      },
-      render: () => null,
-    }),
-  );
+const failingQueryPlugin = definePlugin("acme-failing-query", {
+  setup: (ctx) => {
+    ctx.registerBlock(
+      defineBlock({
+        name: "acme/failing-query",
+        loaders: {
+          rows: () =>
+            getContext().telemetry.span("db: query", (s) => {
+              s.set("db.sql", "select * from broken");
+              return Promise.reject(new Error("no such table: broken"));
+            }),
+        },
+        render: () => null,
+      }),
+    );
+  },
 });
 
 const throwingLoaderTheme = defineTheme({
@@ -2611,20 +2629,22 @@ describe("resolvePublicRoute — archive through theme", () => {
   });
 
   test("archive with `prefetchArchiveLoaders` resolves block loaders for every entry", async () => {
-    const probePlugin = definePlugin("acme-listing-probe", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/listing-probe",
-          loaders: {
-            marker: (args: { readonly attrs: Record<string, unknown> }) => {
-              const tag =
-                typeof args.attrs.tag === "string" ? args.attrs.tag : "?";
-              return Promise.resolve(`loaded-${tag}`);
+    const probePlugin = definePlugin("acme-listing-probe", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/listing-probe",
+            loaders: {
+              marker: (args: { readonly attrs: Record<string, unknown> }) => {
+                const tag =
+                  typeof args.attrs.tag === "string" ? args.attrs.tag : "?";
+                return Promise.resolve(`loaded-${tag}`);
+              },
             },
-          },
-          render: ({ loaders }) => <span>{loaders.marker}</span>,
-        }),
-      );
+            render: ({ loaders }) => <span>{loaders.marker}</span>,
+          }),
+        );
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -2687,16 +2707,18 @@ describe("resolvePublicRoute — archive through theme", () => {
   });
 
   test("archive without `prefetchArchiveLoaders` leaves listing block loaders unresolved", async () => {
-    const probePlugin = definePlugin("acme-listing-probe-off", (ctx) => {
-      ctx.registerBlock(
-        defineBlock({
-          name: "acme/listing-probe-off",
-          loaders: { marker: () => Promise.resolve("loader-fired") },
-          render: ({ loaders }) => (
-            <span data-testid="probe">{loaders.marker}</span>
-          ),
-        }),
-      );
+    const probePlugin = definePlugin("acme-listing-probe-off", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "acme/listing-probe-off",
+            loaders: { marker: () => Promise.resolve("loader-fired") },
+            render: ({ loaders }) => (
+              <span data-testid="probe">{loaders.marker}</span>
+            ),
+          }),
+        );
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -2860,13 +2882,15 @@ describe("resolvePublicRoute — archive through theme", () => {
   });
 
   test("entry type's `archivePerPage` overrides the default page size on the archive", async () => {
-    const smallPagePlugin = definePlugin("small-page", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-        archivePerPage: 5,
-      });
+    const smallPagePlugin = definePlugin("small-page", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+          archivePerPage: 5,
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -3045,38 +3069,42 @@ describe("resolvePublicRoute — archive through theme", () => {
   });
 });
 
-const topicPlugin = definePlugin("blog-topic", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerTermTaxonomy("topic", {
-    label: "Topics",
-    labels: { singular: "Topic" },
-    entryTypes: ["post"],
-    isHierarchical: false,
-  });
+const topicPlugin = definePlugin("blog-topic", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      labels: { singular: "Topic" },
+      entryTypes: ["post"],
+      isHierarchical: false,
+    });
+  },
 });
 
-const categoryPlugin = definePlugin("blog-category", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    labels: { singular: "Category" },
-    entryTypes: ["post"],
-    isHierarchical: false,
-  });
-  ctx.registerTermTaxonomy("tag", {
-    label: "Tags",
-    labels: { singular: "Tag" },
-    entryTypes: ["post"],
-    isHierarchical: false,
-  });
+const categoryPlugin = definePlugin("blog-category", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      labels: { singular: "Category" },
+      entryTypes: ["post"],
+      isHierarchical: false,
+    });
+    ctx.registerTermTaxonomy("tag", {
+      label: "Tags",
+      labels: { singular: "Tag" },
+      entryTypes: ["post"],
+      isHierarchical: false,
+    });
+  },
 });
 
 describe("resolvePublicRoute — taxonomy through theme", () => {
@@ -3133,19 +3161,21 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
   });
 
   test("taxonomy's `archivePerPage` overrides the default page size on term archives", async () => {
-    const smallPageTaxonomy = definePlugin("small-page-tax", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-      });
-      ctx.registerTermTaxonomy("topic", {
-        label: "Topics",
-        labels: { singular: "Topic" },
-        entryTypes: ["post"],
-        isHierarchical: false,
-        archivePerPage: 3,
-      });
+    const smallPageTaxonomy = definePlugin("small-page-tax", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+        });
+        ctx.registerTermTaxonomy("topic", {
+          label: "Topics",
+          labels: { singular: "Topic" },
+          entryTypes: ["post"],
+          isHierarchical: false,
+          archivePerPage: 3,
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -3554,9 +3584,14 @@ describe("resolvePublicRoute — front-page through theme", () => {
   });
 
   test("excludes entries from `isPublic: false` types", async () => {
-    const mixedPlugin = definePlugin("mixed", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("internal", { label: "Internal", isPublic: false });
+    const mixedPlugin = definePlugin("mixed", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("internal", {
+          label: "Internal",
+          isPublic: false,
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -3703,8 +3738,10 @@ describe("resolvePublicRoute — front-page through theme", () => {
     // otherwise swallow `/page/1`. The canonical 301 fires ahead of routing,
     // so `/page/1` redirects to the front page rather than resolving the
     // page-entry single "1".
-    const pagesPlugin = definePlugin("pages", (ctx) => {
-      ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+    const pagesPlugin = definePlugin("pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -3742,20 +3779,24 @@ describe("resolvePublicRoute — front-page through theme", () => {
   test("blog archive at /posts resolves even when a pages plugin's empty-slug catch-all registers first", async () => {
     // Sharing a priority with blog's `/posts` archive made resolution depend
     // on plugin order, so pages' catch-all could shadow it.
-    const pagesPlugin = definePlugin("pages", (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        rewrite: { slug: "" },
-      });
+    const pagesPlugin = definePlugin("pages", {
+      setup: (ctx) => {
+        ctx.registerEntryType("page", {
+          label: "Pages",
+          isPublic: true,
+          rewrite: { slug: "" },
+        });
+      },
     });
-    const blogPostsPlugin = definePlugin("blog-posts", (ctx) => {
-      ctx.registerEntryType("post", {
-        label: "Posts",
-        isPublic: true,
-        hasArchive: true,
-        rewrite: { slug: "posts" },
-      });
+    const blogPostsPlugin = definePlugin("blog-posts", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          hasArchive: true,
+          rewrite: { slug: "posts" },
+        });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -3786,9 +3827,11 @@ describe("resolvePublicRoute — front-page through theme", () => {
   });
 
   test("plugin-registered `/` rewrite rule wins over front-page synthesis", async () => {
-    const homepagePlugin = definePlugin("homepage", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
+    const homepagePlugin = definePlugin("homepage", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
+      },
     });
     const theme = defineTheme({
       templates: [
@@ -4091,13 +4134,15 @@ describe("resolvePublicRoute — search through theme", () => {
   });
 
   test("entry types flagged excludeFromSearch don't appear in search hits", async () => {
-    const mediaPlugin = definePlugin("media", (ctx) => {
-      ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.registerEntryType("attachment", {
-        label: "Media",
-        isPublic: true,
-        excludeFromSearch: true,
-      });
+    const mediaPlugin = definePlugin("media", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerEntryType("attachment", {
+          label: "Media",
+          isPublic: true,
+          excludeFromSearch: true,
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [mediaPlugin], theme: searchHitListTheme },
@@ -4287,17 +4332,19 @@ describe("resolvePublicRoute — error pages through theme", () => {
       templates: [fallback(() => null), notFound(() => <main />)],
     });
     const seen: TemplateData["kind"][] = [];
-    const headWriter = definePlugin("head-writer", (ctx) => {
-      ctx.addFilter("render:document", (manifest, data) => {
-        seen.push(data.kind);
-        return {
-          ...manifest,
-          meta: [
-            ...(manifest.meta ?? []),
-            { name: "robots", content: "noindex,follow" },
-          ],
-        };
-      });
+    const headWriter = definePlugin("head-writer", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, data) => {
+          seen.push(data.kind);
+          return {
+            ...manifest,
+            meta: [
+              ...(manifest.meta ?? []),
+              { name: "robots", content: "noindex,follow" },
+            ],
+          };
+        });
+      },
     });
 
     const h = await createDispatcherHarness({
@@ -4318,10 +4365,12 @@ describe("resolvePublicRoute — error pages through theme", () => {
     const theme = defineTheme({
       templates: [fallback(() => null), notFound(() => <main />)],
     });
-    const brokenPlugin = definePlugin("broken-head", (ctx) => {
-      ctx.addFilter("render:document", () => {
-        throw new Error("subscriber blew up");
-      });
+    const brokenPlugin = definePlugin("broken-head", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", () => {
+          throw new Error("subscriber blew up");
+        });
+      },
     });
 
     const h = await createDispatcherHarness({

@@ -13,11 +13,15 @@ describe("registerAdminBarNode", () => {
       installPlugins({
         hooks: new HookRegistry(),
         plugins: [
-          definePlugin("shop", (ctx) => {
-            ctx.registerAdminBarNode(node);
+          definePlugin("shop", {
+            setup: (ctx) => {
+              ctx.registerAdminBarNode(node);
+            },
           }),
-          definePlugin("cart", (ctx) => {
-            ctx.registerAdminBarNode(node);
+          definePlugin("cart", {
+            setup: (ctx) => {
+              ctx.registerAdminBarNode(node);
+            },
           }),
         ],
       }),

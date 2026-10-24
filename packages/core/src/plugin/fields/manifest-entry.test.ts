@@ -97,8 +97,10 @@ describe("toMetaBoxFieldEntry()", () => {
       group("address").fields([text("city"), text("zip")]),
     ];
     const hooks = new HookRegistry();
-    const plugin = definePlugin("forms", (ctx) => {
-      ctx.registerUserMetaBox("profile", { label: "Profile", fields });
+    const plugin = definePlugin("forms", {
+      setup: (ctx) => {
+        ctx.registerUserMetaBox("profile", { label: "Profile", fields });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
 

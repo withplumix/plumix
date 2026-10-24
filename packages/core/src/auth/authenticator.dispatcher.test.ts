@@ -77,13 +77,15 @@ describe("RequestAuthenticator — dispatcher integration", () => {
 
   test("API-token scoping gates plugin routes via auth.can()", async () => {
     // The user's role would grant the cap; the token scope still wins.
-    const tokenProbePlugin = definePlugin("token-probe", (ctx) => {
-      ctx.registerRoute({
-        method: "GET",
-        path: "/probe",
-        auth: { capability: "entry:post:edit_any" },
-        handler: () => new Response("ok", { status: 200 }),
-      });
+    const tokenProbePlugin = definePlugin("token-probe", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/probe",
+          auth: { capability: "entry:post:edit_any" },
+          handler: () => new Response("ok", { status: 200 }),
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [tokenProbePlugin] },

@@ -56,23 +56,25 @@ declare module "../template-registry.js" {
   }
 }
 
-const gatedPlugin = definePlugin("gated", (ctx) => {
-  ctx.registerArchiveType("members", {
-    routes: ["/members"],
-    access: authenticatedPolicy,
-    resolve: () => ({
-      data: { kind: "archiveType", name: "members", label: "members-area" },
-      title: "Members",
-    }),
-  });
-  ctx.registerArchiveType("staff", {
-    routes: ["/staff"],
-    access: rolePolicy("editor"),
-    resolve: () => ({
-      data: { kind: "archiveType", name: "staff", label: "staff-area" },
-      title: "Staff",
-    }),
-  });
+const gatedPlugin = definePlugin("gated", {
+  setup: (ctx) => {
+    ctx.registerArchiveType("members", {
+      routes: ["/members"],
+      access: authenticatedPolicy,
+      resolve: () => ({
+        data: { kind: "archiveType", name: "members", label: "members-area" },
+        title: "Members",
+      }),
+    });
+    ctx.registerArchiveType("staff", {
+      routes: ["/staff"],
+      access: rolePolicy("editor"),
+      resolve: () => ({
+        data: { kind: "archiveType", name: "staff", label: "staff-area" },
+        title: "Staff",
+      }),
+    });
+  },
 });
 
 const gatedTheme = defineTheme({
@@ -151,12 +153,14 @@ describe("access gate — hard gate through the dispatcher", () => {
  * Exercises the single/archive branch of `policyForMatch` through the real
  * dispatcher, not a stubbed registry.
  */
-const articlesPlugin = definePlugin("articles", (ctx) => {
-  ctx.registerEntryType("article", {
-    label: "Articles",
-    isPublic: true,
-    access: { default: authenticatedPolicy },
-  });
+const articlesPlugin = definePlugin("articles", {
+  setup: (ctx) => {
+    ctx.registerEntryType("article", {
+      label: "Articles",
+      isPublic: true,
+      access: { default: authenticatedPolicy },
+    });
+  },
 });
 
 describe("access gate — entry-type-level policy", () => {
@@ -250,28 +254,32 @@ function memoryCdn() {
  * An entry type whose single/archive routes require login and are cached
  * under the shared `authenticated` segment (the "explicit opt-in" of #1740) …
  */
-const membersPlugin = definePlugin("member-articles", (ctx) => {
-  ctx.registerEntryType("article", {
-    label: "Articles",
-    isPublic: true,
-    access: { default: authenticatedPolicy },
-  });
+const membersPlugin = definePlugin("member-articles", {
+  setup: (ctx) => {
+    ctx.registerEntryType("article", {
+      label: "Articles",
+      isPublic: true,
+      access: { default: authenticatedPolicy },
+    });
+  },
 });
 
 /**
  * … versus one whose policy grants the reserved `private` segment: gated, yet
  * never shared-cached.
  */
-const privatePlugin = definePlugin("private-memos", (ctx) => {
-  ctx.registerEntryType("memo", {
-    label: "Memos",
-    isPublic: true,
-    access: {
-      default: definePolicy({
-        resolve: (c) => (c.user ? grant("private") : redirectToLogin()),
-      }),
-    },
-  });
+const privatePlugin = definePlugin("private-memos", {
+  setup: (ctx) => {
+    ctx.registerEntryType("memo", {
+      label: "Memos",
+      isPublic: true,
+      access: {
+        default: definePolicy({
+          resolve: (c) => (c.user ? grant("private") : redirectToLogin()),
+        }),
+      },
+    });
+  },
 });
 
 async function seedEntry(
@@ -466,12 +474,14 @@ const signedInEcho = defineTheme({
  * included.
  */
 function anonymousGrantPlugin(policy: AccessPolicy) {
-  return definePlugin("open-notes", (ctx) => {
-    ctx.registerEntryType("note", {
-      label: "Notes",
-      isPublic: true,
-      access: { default: policy },
-    });
+  return definePlugin("open-notes", {
+    setup: (ctx) => {
+      ctx.registerEntryType("note", {
+        label: "Notes",
+        isPublic: true,
+        access: { default: policy },
+      });
+    },
   });
 }
 
@@ -598,30 +608,32 @@ declare module "../template-registry.js" {
 
 function paywallSetup() {
   const entitled = new Set<number>();
-  const plugin = definePlugin("paywall", (ctx) => {
-    ctx.registerArchiveType("premium", {
-      routes: ["/premium"],
-      access: definePolicy({
-        segments: [entitlementSegment("premium")],
-        // Runs on every request, before the cdn lookup — its result is never
-        // cached, so a lapsed entitlement is denied on the next request.
-        resolve: (c) =>
-          c.user && entitled.has(c.user.id)
-            ? entitlement("premium")
-            : challenge("subscribe", { soft: true }),
-      }),
-      // An archive type opts into caching so the teaser/full variants persist.
-      cacheable: true,
-      resolve: () => ({
-        data: {
-          kind: "archiveType",
-          name: "premium",
-          summary: "PUBLIC-SUMMARY",
-          body: "FULL-ARTICLE-BODY",
-        },
-        title: "Premium",
-      }),
-    });
+  const plugin = definePlugin("paywall", {
+    setup: (ctx) => {
+      ctx.registerArchiveType("premium", {
+        routes: ["/premium"],
+        access: definePolicy({
+          segments: [entitlementSegment("premium")],
+          // Runs on every request, before the cdn lookup — its result is never
+          // cached, so a lapsed entitlement is denied on the next request.
+          resolve: (c) =>
+            c.user && entitled.has(c.user.id)
+              ? entitlement("premium")
+              : challenge("subscribe", { soft: true }),
+        }),
+        // An archive type opts into caching so the teaser/full variants persist.
+        cacheable: true,
+        resolve: () => ({
+          data: {
+            kind: "archiveType",
+            name: "premium",
+            summary: "PUBLIC-SUMMARY",
+            body: "FULL-ARTICLE-BODY",
+          },
+          title: "Premium",
+        }),
+      });
+    },
   });
   const theme = defineTheme({
     templates: [
@@ -778,17 +790,23 @@ describe("access gate — soft gate / paywall (#1741)", () => {
  * Single routes are public by default but offer a selectable `members`
  * policy per entry. Precedence: per-entry › entry-type › global.
  */
-const perEntryPlugin = definePlugin("per-entry", (ctx) => {
-  ctx.registerEntryType("column", {
-    label: "Columns",
-    isPublic: true,
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        { key: "members", label: "Members only", policy: authenticatedPolicy },
-      ],
-    },
-  });
+const perEntryPlugin = definePlugin("per-entry", {
+  setup: (ctx) => {
+    ctx.registerEntryType("column", {
+      label: "Columns",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          {
+            key: "members",
+            label: "Members only",
+            policy: authenticatedPolicy,
+          },
+        ],
+      },
+    });
+  },
 });
 
 async function seedColumn(
@@ -856,12 +874,14 @@ describe("access gate — per-entry visibility (#1742)", () => {
   });
 
   test("a rule naming a fixed entry gates its path by that entry's choice", async () => {
-    const featured = definePlugin("featured", (ctx) => {
-      ctx.registerRewriteRule("/featured/:id", {
-        kind: "entry",
-        entryType: "column",
-        slug: "locked",
-      });
+    const featured = definePlugin("featured", {
+      setup: (ctx) => {
+        ctx.registerRewriteRule("/featured/:id", {
+          kind: "entry",
+          entryType: "column",
+          slug: "locked",
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [perEntryPlugin, featured] },
@@ -885,17 +905,19 @@ describe("access gate — per-entry visibility (#1742)", () => {
   });
 
   test("a rule naming a fixed entry gates by that entry, not the one its captured slug names", async () => {
-    const pinned = definePlugin("pinned", (ctx) => {
-      ctx.registerRewriteRule("/pinned-locked/:slug", {
-        kind: "entry",
-        entryType: "column",
-        slug: "locked",
-      });
-      ctx.registerRewriteRule("/pinned-open/:slug", {
-        kind: "entry",
-        entryType: "column",
-        slug: "open",
-      });
+    const pinned = definePlugin("pinned", {
+      setup: (ctx) => {
+        ctx.registerRewriteRule("/pinned-locked/:slug", {
+          kind: "entry",
+          entryType: "column",
+          slug: "locked",
+        });
+        ctx.registerRewriteRule("/pinned-open/:slug", {
+          kind: "entry",
+          entryType: "column",
+          slug: "open",
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [perEntryPlugin, pinned] },
@@ -959,13 +981,15 @@ describe("access gate — per-entry visibility (#1742)", () => {
  * principal must never fill it.
  */
 function memberArticles(blocks: readonly BlockSpec[]) {
-  return definePlugin("member-articles", (ctx) => {
-    ctx.registerEntryType("article", {
-      label: "Articles",
-      isPublic: true,
-      access: { default: authenticatedPolicy },
-    });
-    for (const block of blocks) ctx.registerBlock(block);
+  return definePlugin("member-articles", {
+    setup: (ctx) => {
+      ctx.registerEntryType("article", {
+        label: "Articles",
+        isPublic: true,
+        access: { default: authenticatedPolicy },
+      });
+      for (const block of blocks) ctx.registerBlock(block);
+    },
   });
 }
 
@@ -1119,11 +1143,13 @@ describe("access gate — a render that reads the principal is personal (#2915)"
   test("a render:document filter calling ctx.auth.can() keeps the render out of the shared entry", async () => {
     const { cdn, store, put } = memoryCdn();
     const can = vi.fn((ctx: AppContext) => ctx.auth.can("entry:article:read"));
-    const headWriter = definePlugin("head-writer", (ctx) => {
-      ctx.addFilter("render:document", (manifest, _data, requestCtx) => ({
-        ...manifest,
-        meta: [{ name: "can-read", content: String(can(requestCtx)) }],
-      }));
+    const headWriter = definePlugin("head-writer", {
+      setup: (ctx) => {
+        ctx.addFilter("render:document", (manifest, _data, requestCtx) => ({
+          ...manifest,
+          meta: [{ name: "can-read", content: String(can(requestCtx)) }],
+        }));
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -1222,23 +1248,25 @@ describe("access gate — a render that reads the principal is personal (#2915)"
 
   test("a policy resolver reading the principal to choose the segment does not make the render personal", async () => {
     const { cdn, store } = memoryCdn();
-    const readers = definePlugin("readers", (ctx) => {
-      ctx.registerEntryType("article", {
-        label: "Articles",
-        isPublic: true,
-        access: {
-          default: definePolicy({
-            segments: ["readers"],
-            resolve: (c) => {
-              if (!c.user) return redirectToLogin();
-              return c.auth.can("entry:article:read")
-                ? grant("readers")
-                : challenge("forbidden");
-            },
-          }),
-        },
-      });
-      ctx.registerBlock(plainBlock);
+    const readers = definePlugin("readers", {
+      setup: (ctx) => {
+        ctx.registerEntryType("article", {
+          label: "Articles",
+          isPublic: true,
+          access: {
+            default: definePolicy({
+              segments: ["readers"],
+              resolve: (c) => {
+                if (!c.user) return redirectToLogin();
+                return c.auth.can("entry:article:read")
+                  ? grant("readers")
+                  : challenge("forbidden");
+              },
+            }),
+          },
+        });
+        ctx.registerBlock(plainBlock);
+      },
     });
     const h = await createDispatcherHarness({
       cdn,
@@ -1393,41 +1421,46 @@ const membersResolver = vi.fn(authenticatedPolicy.resolve);
  * A `page` type public by default, with a members policy and a soft teaser an
  * editor may pick per entry.
  */
-const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
-  ctx.registerEntryType("page", {
-    label: "Pages",
-    isPublic: true,
-    hasArchive: true,
-    termTaxonomies: ["topic"],
-    access: {
-      default: anonymousPolicy,
-      policies: [
-        {
-          key: "members",
-          label: "Members",
-          policy: definePolicy({ resolve: membersResolver }),
-        },
-        {
-          key: "teaser",
-          label: "Teaser",
-          policy: definePolicy({
-            resolve: (c) =>
-              c.user
-                ? grant("authenticated")
-                : challenge("paywall", { soft: true }),
-          }),
-        },
-      ],
-    },
-  });
-  ctx.registerTermTaxonomy("topic", { label: "Topics", entryTypes: ["page"] });
-  ctx.registerArchiveType("library", {
-    routes: ["/library"],
-    access: authenticatedPolicy,
-    cacheable: true,
-    entries: (query) => query.ofTypes("page"),
-    title: "Library",
-  });
+const pagesWithAccess = definePlugin("pages-with-access", {
+  setup: (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      hasArchive: true,
+      termTaxonomies: ["topic"],
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          {
+            key: "members",
+            label: "Members",
+            policy: definePolicy({ resolve: membersResolver }),
+          },
+          {
+            key: "teaser",
+            label: "Teaser",
+            policy: definePolicy({
+              resolve: (c) =>
+                c.user
+                  ? grant("authenticated")
+                  : challenge("paywall", { soft: true }),
+            }),
+          },
+        ],
+      },
+    });
+    ctx.registerTermTaxonomy("topic", {
+      label: "Topics",
+      entryTypes: ["page"],
+    });
+    ctx.registerArchiveType("library", {
+      routes: ["/library"],
+      access: authenticatedPolicy,
+      cacheable: true,
+      entries: (query) => query.ofTypes("page"),
+      title: "Library",
+    });
+  },
 });
 
 /** Every listing, as the slugs it carries and whether each kept its body. */

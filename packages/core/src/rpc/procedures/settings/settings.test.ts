@@ -259,12 +259,14 @@ describe("settings.upsert (condition-hidden fields)", () => {
     Awaited<ReturnType<typeof createRpcHarness>>
   > {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      const layout = select("layout").options(["standard", "video"]);
-      ctx.registerSettingsGroup("video", {
-        label: "Video",
-        fields: [layout, url("videoUrl").visibleWhen(layout.is("video"))],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        const layout = select("layout").options(["standard", "video"]);
+        ctx.registerSettingsGroup("video", {
+          label: "Video",
+          fields: [layout, url("videoUrl").visibleWhen(layout.is("video"))],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     return createRpcHarness({ authAs: "admin", plugins: registry, hooks });
@@ -308,15 +310,17 @@ describe("settings.upsert (field pipeline)", () => {
     Awaited<ReturnType<typeof createRpcHarness>>
   > {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("reading", {
-        label: "Reading",
-        fields: [
-          number("per_page").min(1).max(50),
-          text("blurb").maxLength(5),
-          text("motto").required(),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("reading", {
+          label: "Reading",
+          fields: [
+            number("per_page").min(1).max(50),
+            text("blurb").maxLength(5),
+            text("motto").required(),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     return createRpcHarness({ authAs: "admin", plugins: registry, hooks });
@@ -450,15 +454,17 @@ describe("settings groups: created on first save", () => {
     Awaited<ReturnType<typeof createRpcHarness>>
   > {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("blog", {
-        label: "Blog",
-        fields: [
-          text("tagline").default("Hello"),
-          number("perPage").default(10),
-          text("footer"),
-        ],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("blog", {
+          label: "Blog",
+          fields: [
+            text("tagline").default("Hello"),
+            number("perPage").default(10),
+            text("footer"),
+          ],
+        });
+      },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     return createRpcHarness({ authAs: "admin", plugins: registry, hooks });

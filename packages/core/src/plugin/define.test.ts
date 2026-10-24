@@ -29,7 +29,8 @@ describe("definePlugin — schemaModule warning", () => {
   });
 
   test("warns when schema is set but schemaModule is missing", () => {
-    definePlugin("test_plugin_schema_only", noop, {
+    definePlugin("test_plugin_schema_only", {
+      setup: noop,
       schema: { someTable: {} },
     });
     expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -39,7 +40,8 @@ describe("definePlugin — schemaModule warning", () => {
   });
 
   test("stays silent when both schema and schemaModule are set", () => {
-    definePlugin("test_plugin_with_both", noop, {
+    definePlugin("test_plugin_with_both", {
+      setup: noop,
       schema: { someTable: {} },
       schemaModule: "@example/plugin/schema",
     });
@@ -47,25 +49,23 @@ describe("definePlugin — schemaModule warning", () => {
   });
 
   test("stays silent when neither schema nor schemaModule is set", () => {
-    definePlugin("test_plugin_neither", noop);
+    definePlugin("test_plugin_neither", { setup: noop });
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  test("warns via the input-object form too", () => {
-    definePlugin("test_plugin_input_form", {
+  test("warns only once when the same plugin id is defined repeatedly", () => {
+    definePlugin("test_plugin_repeat", {
       setup: noop,
       schema: { someTable: {} },
     });
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(String(warnSpy.mock.calls[0]?.[0])).toContain(
-      "test_plugin_input_form",
-    );
-  });
-
-  test("warns only once when the same plugin id is defined repeatedly", () => {
-    definePlugin("test_plugin_repeat", noop, { schema: { someTable: {} } });
-    definePlugin("test_plugin_repeat", noop, { schema: { someTable: {} } });
-    definePlugin("test_plugin_repeat", noop, { schema: { someTable: {} } });
+    definePlugin("test_plugin_repeat", {
+      setup: noop,
+      schema: { someTable: {} },
+    });
+    definePlugin("test_plugin_repeat", {
+      setup: noop,
+      schema: { someTable: {} },
+    });
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 });
@@ -104,9 +104,11 @@ describe("definePlugin — state", () => {
         expectTypeOf(state).toEqualTypeOf<undefined>();
       },
     });
-    definePlugin("shorthand", (_ctx, state) => {
-      expectTypeOf(state).toEqualTypeOf<undefined>();
-    });
+  });
+
+  test("rejects a bare setup function in place of the descriptor", () => {
+    // @ts-expect-error -- the descriptor is the only form
+    expectTypeOf(definePlugin).toBeCallableWith("function_form", noop);
   });
 });
 
@@ -135,14 +137,6 @@ describe("definePlugin — dataMigrations", () => {
 
     expect(plugin.dataMigrations).toBe("@acme/plugin-flags/data-migrations");
     expect(plugin.schemaModule).toBeUndefined();
-  });
-
-  test("passes it through from the setup-first form's options", () => {
-    const plugin = definePlugin("flags", noop, {
-      dataMigrations: "@acme/plugin-flags/data-migrations",
-    });
-
-    expect(plugin.dataMigrations).toBe("@acme/plugin-flags/data-migrations");
   });
 });
 

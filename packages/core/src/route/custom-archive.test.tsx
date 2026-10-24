@@ -34,23 +34,25 @@ declare module "../template-registry.js" {
  * A test plugin registering a whole archive type end-to-end — pattern and
  * resolver — with no core changes.
  */
-const eventsPlugin = definePlugin("events", (ctx) => {
-  ctx.registerArchiveType("event-series", {
-    routes: ["/events/:series", "/events/:series/page/:page(\\d+)"],
-    resolve: (_ctx, params) => {
-      // Unknown series → 404 (the resolver owns its own not-found).
-      if (params.series === "missing") return null;
-      return {
-        data: {
-          kind: "archiveType",
-          name: "event-series",
-          series: params.series,
-          year: 2026,
-        },
-        title: `Series: ${params.series}`,
-      };
-    },
-  });
+const eventsPlugin = definePlugin("events", {
+  setup: (ctx) => {
+    ctx.registerArchiveType("event-series", {
+      routes: ["/events/:series", "/events/:series/page/:page(\\d+)"],
+      resolve: (_ctx, params) => {
+        // Unknown series → 404 (the resolver owns its own not-found).
+        if (params.series === "missing") return null;
+        return {
+          data: {
+            kind: "archiveType",
+            name: "event-series",
+            series: params.series,
+            year: 2026,
+          },
+          title: `Series: ${params.series}`,
+        };
+      },
+    });
+  },
 });
 
 /** A theme templating the archive type via the targeted builder. */
@@ -117,15 +119,17 @@ describe("archive types (registerArchiveType)", () => {
   });
 
   test("registering the same archive-type name twice throws", async () => {
-    const dupePlugin = definePlugin("dupe", (ctx) => {
-      ctx.registerArchiveType("event-series", {
-        routes: ["/x/:y"],
-        resolve: () => null,
-      });
-      ctx.registerArchiveType("event-series", {
-        routes: ["/z/:w"],
-        resolve: () => null,
-      });
+    const dupePlugin = definePlugin("dupe", {
+      setup: (ctx) => {
+        ctx.registerArchiveType("event-series", {
+          routes: ["/x/:y"],
+          resolve: () => null,
+        });
+        ctx.registerArchiveType("event-series", {
+          routes: ["/z/:w"],
+          resolve: () => null,
+        });
+      },
     });
     await expect(
       createDispatcherHarness({ config: { plugins: [dupePlugin] } }),
@@ -147,14 +151,16 @@ declare module "../template-registry.js" {
   }
 }
 
-const talksPlugin = definePlugin("talks", (ctx) => {
-  ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
-  ctx.registerArchiveType("talks", {
-    routes: ["/talks"],
-    entries: (q) => q.ofTypes("talk").orderBy("title"),
-    perPage: 2,
-    title: "Talks",
-  });
+const talksPlugin = definePlugin("talks", {
+  setup: (ctx) => {
+    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+    ctx.registerArchiveType("talks", {
+      routes: ["/talks"],
+      entries: (q) => q.ofTypes("talk").orderBy("title"),
+      perPage: 2,
+      title: "Talks",
+    });
+  },
 });
 
 const talksTheme = defineTheme({
@@ -240,25 +246,27 @@ declare module "../template-registry.js" {
   }
 }
 
-const roomsPlugin = definePlugin("rooms", (ctx) => {
-  ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
-  ctx.registerArchiveType("rooms", {
-    routes: ["/rooms/:room"],
-    entries: (q, params) =>
-      params.room === "nowhere" ? null : q.ofTypes("talk"),
-    resolve: (_ctx, params, listing) => {
-      if (params.room === "closed") return null;
-      return {
-        data: {
-          kind: "archiveType",
-          name: "rooms",
-          room: params.room ?? "",
-          showing: listing.entries.length,
-        },
-        title: `Room ${params.room ?? ""}`,
-      };
-    },
-  });
+const roomsPlugin = definePlugin("rooms", {
+  setup: (ctx) => {
+    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+    ctx.registerArchiveType("rooms", {
+      routes: ["/rooms/:room"],
+      entries: (q, params) =>
+        params.room === "nowhere" ? null : q.ofTypes("talk"),
+      resolve: (_ctx, params, listing) => {
+        if (params.room === "closed") return null;
+        return {
+          data: {
+            kind: "archiveType",
+            name: "rooms",
+            room: params.room ?? "",
+            showing: listing.entries.length,
+          },
+          title: `Room ${params.room ?? ""}`,
+        };
+      },
+    });
+  },
 });
 
 const roomsTheme = defineTheme({
@@ -318,14 +326,16 @@ describe("a listed archive's resolver", () => {
   test("a query nothing answers to 404s the page", async () => {
     // Distinct from `entries` declining the params: this one named a term,
     // and the term is what does not exist. Both are a 404 to a visitor.
-    const lost = definePlugin("lost", (ctx) => {
-      ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
-      ctx.registerTermTaxonomy("track", { label: "Tracks" });
-      ctx.registerArchiveType("lost-track", {
-        routes: ["/tracks/:track"],
-        entries: (q, params) => q.inTerm("track", params.track ?? ""),
-        title: "Tracks",
-      });
+    const lost = definePlugin("lost", {
+      setup: (ctx) => {
+        ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+        ctx.registerTermTaxonomy("track", { label: "Tracks" });
+        ctx.registerArchiveType("lost-track", {
+          routes: ["/tracks/:track"],
+          entries: (q, params) => q.inTerm("track", params.track ?? ""),
+          title: "Tracks",
+        });
+      },
     });
     const h = await createDispatcherHarness({
       config: { plugins: [lost], theme: roomsTheme },

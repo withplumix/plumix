@@ -65,23 +65,25 @@ interface SeedItemInput {
  * The public `post` type and `category` taxonomy keep the entry and term
  * lookup adapters' results within scope.
  */
-const menuTestHost = definePlugin("menu-test-host", (ctx) => {
-  ctx.registerEntryType("menu_item", {
-    label: "Menu items",
-    isHierarchical: true,
-    isPublic: false,
-    termTaxonomies: ["menu"],
-  });
-  ctx.registerTermTaxonomy("menu", {
-    label: "Menus",
-    isPublic: false,
-    entryTypes: ["menu_item"],
-  });
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isPublic: true,
-  });
+const menuTestHost = definePlugin("menu-test-host", {
+  setup: (ctx) => {
+    ctx.registerEntryType("menu_item", {
+      label: "Menu items",
+      isHierarchical: true,
+      isPublic: false,
+      termTaxonomies: ["menu"],
+    });
+    ctx.registerTermTaxonomy("menu", {
+      label: "Menus",
+      isPublic: false,
+      entryTypes: ["menu_item"],
+    });
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isPublic: true,
+    });
+  },
 });
 
 async function defaultRegistry(): Promise<TestBundle> {
@@ -560,18 +562,20 @@ describe("getMenuByName", () => {
     // Register a private type via a one-off registry; menu_item itself is
     // private so we link to one of those by id.
     const privateRegistry = await buildRegistry([
-      definePlugin("private-host", (ctx) => {
-        ctx.registerEntryType("menu_item", {
-          label: "Menu items",
-          isHierarchical: true,
-          isPublic: false,
-          termTaxonomies: ["menu"],
-        });
-        ctx.registerTermTaxonomy("menu", {
-          label: "Menus",
-          isPublic: false,
-          entryTypes: ["menu_item"],
-        });
+      definePlugin("private-host", {
+        setup: (ctx) => {
+          ctx.registerEntryType("menu_item", {
+            label: "Menu items",
+            isHierarchical: true,
+            isPublic: false,
+            termTaxonomies: ["menu"],
+          });
+          ctx.registerTermTaxonomy("menu", {
+            label: "Menus",
+            isPublic: false,
+            entryTypes: ["menu_item"],
+          });
+        },
       }),
     ]);
     const localCtx = ctxFor(db, privateRegistry);
@@ -601,25 +605,30 @@ describe("getMenuByName", () => {
       return ctxFor(
         db,
         await buildRegistry([
-          definePlugin("menu-test-host", (setup) => {
-            setup.registerEntryType("menu_item", {
-              label: "Menu items",
-              isHierarchical: true,
-              isPublic: false,
-              termTaxonomies: ["menu"],
-            });
-            setup.registerTermTaxonomy("menu", {
-              label: "Menus",
-              isPublic: false,
-              entryTypes: ["menu_item"],
-            });
-            // Keeps the render on the adapter path, so a hidden type is
-            // excluded by the lookup scope, not an empty eligible list.
-            setup.registerEntryType("post", { label: "Posts", isPublic: true });
-            setup.registerTermTaxonomy("category", {
-              label: "Categories",
-              isPublic: true,
-            });
+          definePlugin("menu-test-host", {
+            setup: (setup) => {
+              setup.registerEntryType("menu_item", {
+                label: "Menu items",
+                isHierarchical: true,
+                isPublic: false,
+                termTaxonomies: ["menu"],
+              });
+              setup.registerTermTaxonomy("menu", {
+                label: "Menus",
+                isPublic: false,
+                entryTypes: ["menu_item"],
+              });
+              // Keeps the render on the adapter path, so a hidden type is
+              // excluded by the lookup scope, not an empty eligible list.
+              setup.registerEntryType("post", {
+                label: "Posts",
+                isPublic: true,
+              });
+              setup.registerTermTaxonomy("category", {
+                label: "Categories",
+                isPublic: true,
+              });
+            },
           }),
           thirdParty,
         ]),
@@ -628,8 +637,10 @@ describe("getMenuByName", () => {
 
     test("renders entry items of a type that leaves isPublic unset", async () => {
       const localCtx = await ctxWith(
-        definePlugin("shop", (setup) => {
-          setup.registerEntryType("product", { label: "Products" });
+        definePlugin("shop", {
+          setup: (setup) => {
+            setup.registerEntryType("product", { label: "Products" });
+          },
         }),
       );
       const product = await factories.entry.create({
@@ -653,8 +664,10 @@ describe("getMenuByName", () => {
 
     test("renders term items of a taxonomy that leaves isPublic unset", async () => {
       const localCtx = await ctxWith(
-        definePlugin("music", (setup) => {
-          setup.registerTermTaxonomy("genre", { label: "Genres" });
+        definePlugin("music", {
+          setup: (setup) => {
+            setup.registerTermTaxonomy("genre", { label: "Genres" });
+          },
         }),
       );
       const genre = await factories.term.create({
@@ -676,12 +689,14 @@ describe("getMenuByName", () => {
 
     test("drops entry items of a non-public type even with isShownInMenus: true", async () => {
       const localCtx = await ctxWith(
-        definePlugin("internal", (setup) => {
-          setup.registerEntryType("memo", {
-            label: "Memos",
-            isPublic: false,
-            isShownInMenus: true,
-          });
+        definePlugin("internal", {
+          setup: (setup) => {
+            setup.registerEntryType("memo", {
+              label: "Memos",
+              isPublic: false,
+              isShownInMenus: true,
+            });
+          },
         }),
       );
       const memo = await factories.entry.create({
@@ -703,12 +718,14 @@ describe("getMenuByName", () => {
 
     test("drops term items of a non-public taxonomy even with isShownInMenus: true", async () => {
       const localCtx = await ctxWith(
-        definePlugin("internal", (setup) => {
-          setup.registerTermTaxonomy("team", {
-            label: "Teams",
-            isPublic: false,
-            isShownInMenus: true,
-          });
+        definePlugin("internal", {
+          setup: (setup) => {
+            setup.registerTermTaxonomy("team", {
+              label: "Teams",
+              isPublic: false,
+              isShownInMenus: true,
+            });
+          },
         }),
       );
       const team = await factories.term.create({
@@ -728,12 +745,14 @@ describe("getMenuByName", () => {
 
     test("drops entry items of a public type hidden with isShownInMenus: false", async () => {
       const localCtx = await ctxWith(
-        definePlugin("shop", (setup) => {
-          setup.registerEntryType("product", {
-            label: "Products",
-            isPublic: true,
-            isShownInMenus: false,
-          });
+        definePlugin("shop", {
+          setup: (setup) => {
+            setup.registerEntryType("product", {
+              label: "Products",
+              isPublic: true,
+              isShownInMenus: false,
+            });
+          },
         }),
       );
       const product = await factories.entry.create({
@@ -755,12 +774,14 @@ describe("getMenuByName", () => {
 
     test("drops term items of a public taxonomy hidden with isShownInMenus: false", async () => {
       const localCtx = await ctxWith(
-        definePlugin("music", (setup) => {
-          setup.registerTermTaxonomy("genre", {
-            label: "Genres",
-            isPublic: true,
-            isShownInMenus: false,
-          });
+        definePlugin("music", {
+          setup: (setup) => {
+            setup.registerTermTaxonomy("genre", {
+              label: "Genres",
+              isPublic: true,
+              isShownInMenus: false,
+            });
+          },
         }),
       );
       const genre = await factories.term.create({

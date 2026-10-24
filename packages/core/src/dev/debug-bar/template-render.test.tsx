@@ -8,12 +8,14 @@ import {
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
 import { defineTheme } from "../../theme.js";
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+  },
 });
 
 /**

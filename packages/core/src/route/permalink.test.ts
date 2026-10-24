@@ -41,8 +41,10 @@ function ctxFor(
 describe("buildEntryPermalink", () => {
   test("non-hierarchical type: pure substitution, no DB hit", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -57,8 +59,10 @@ describe("buildEntryPermalink", () => {
 
   test("prepends the configured basePath so links resolve under the subdirectory", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -71,12 +75,14 @@ describe("buildEntryPermalink", () => {
 
   test("honors rewrite.slug as the base segment", async () => {
     const registry = await buildRegistry([
-      definePlugin("shop", (ctx) => {
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          rewrite: { slug: "store" },
-        });
+      definePlugin("shop", {
+        setup: (ctx) => {
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            rewrite: { slug: "store" },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -89,8 +95,10 @@ describe("buildEntryPermalink", () => {
 
   test("returns null for isPublic: false types", async () => {
     const registry = await buildRegistry([
-      definePlugin("internal", (ctx) => {
-        ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+      definePlugin("internal", {
+        setup: (ctx) => {
+          ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -113,8 +121,10 @@ describe("buildEntryPermalink", () => {
 
   test("non-hierarchical type ignores parentId for URL shape", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -131,12 +141,14 @@ describe("buildEntryPermalink", () => {
 
   test("hierarchical type with no parentId: just baseSlug + slug", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -153,12 +165,14 @@ describe("buildEntryPermalink", () => {
 
   test("hierarchical type with parents: walks ancestor chain via CTE", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -204,12 +218,14 @@ describe("buildEntryPermalink", () => {
 
   test("ancestorSlugs option skips DB lookup", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -227,13 +243,15 @@ describe("buildEntryPermalink", () => {
 
   test("rewrite.isHierarchical: false flattens the URL even for hierarchical types", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "page", isHierarchical: false },
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "page", isHierarchical: false },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -250,12 +268,14 @@ describe("buildEntryPermalink", () => {
 
   test("strips leading and trailing slashes from supplied segments", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", {
-          label: "Posts",
-          isPublic: true,
-          rewrite: { slug: "/blog/" },
-        });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", {
+            label: "Posts",
+            isPublic: true,
+            rewrite: { slug: "/blog/" },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -268,8 +288,10 @@ describe("buildEntryPermalink", () => {
 
   test("splits internal slashes in segments rather than embedding them", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -289,8 +311,10 @@ describe("buildEntryPermalink", () => {
 describe("buildEntryPermalinkSync", () => {
   test("non-hierarchical type returns the substituted URL", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -303,12 +327,14 @@ describe("buildEntryPermalinkSync", () => {
 
   test("hierarchical type with parentId=null returns the top-level URL", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -325,13 +351,15 @@ describe("buildEntryPermalinkSync", () => {
 
   test("hierarchical with rewrite.isHierarchical:false flattens regardless of parentId", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "page", isHierarchical: false },
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "page", isHierarchical: false },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -348,12 +376,14 @@ describe("buildEntryPermalinkSync", () => {
 
   test("hierarchical with a non-null parentId returns null (defers to async ancestor walk)", async () => {
     const registry = await buildRegistry([
-      definePlugin("pages", (ctx) => {
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
+      definePlugin("pages", {
+        setup: (ctx) => {
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -370,8 +400,10 @@ describe("buildEntryPermalinkSync", () => {
 
   test("returns null for isPublic:false types", async () => {
     const registry = await buildRegistry([
-      definePlugin("internal", (ctx) => {
-        ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+      definePlugin("internal", {
+        setup: (ctx) => {
+          ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -396,11 +428,13 @@ describe("buildEntryPermalinkSync", () => {
 describe("buildTermArchiveUrl", () => {
   test("flat taxonomy: pure substitution", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("tag", {
-          label: "Tags",
-          isPublic: true,
-        });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("tag", {
+            label: "Tags",
+            isPublic: true,
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -413,8 +447,10 @@ describe("buildTermArchiveUrl", () => {
 
   test("returns null for isPublic: false taxonomies", async () => {
     const registry = await buildRegistry([
-      definePlugin("menu", (ctx) => {
-        ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+      definePlugin("menu", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -437,13 +473,15 @@ describe("buildTermArchiveUrl", () => {
 
   test("hierarchical taxonomy with parents: walks term chain", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "category", isHierarchical: true },
-        });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "category", isHierarchical: true },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -473,13 +511,15 @@ describe("buildTermArchiveUrl", () => {
 
   test("hierarchical taxonomy under a multi-segment base nests the chain after the whole base", async () => {
     const registry = await buildRegistry([
-      definePlugin("insights", (ctx) => {
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "insights/category" },
-        });
+      definePlugin("insights", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "insights/category" },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -512,12 +552,14 @@ describe("buildTermArchiveUrl", () => {
 
   test("honors taxonomy rewrite.slug override", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          isPublic: true,
-          rewrite: { slug: "topic" },
-        });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            isPublic: true,
+            rewrite: { slug: "topic" },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -532,20 +574,22 @@ describe("buildTermArchiveUrl", () => {
 describe("buildEntryPermalinks", () => {
   const typesRegistry = () =>
     buildRegistry([
-      definePlugin("types", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-        });
-        ctx.registerEntryType("doc", {
-          label: "Docs",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "docs", isHierarchical: false },
-        });
-        ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+      definePlugin("types", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+          });
+          ctx.registerEntryType("doc", {
+            label: "Docs",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "docs", isHierarchical: false },
+          });
+          ctx.registerEntryType("hidden", { label: "Hidden", isPublic: false });
+        },
       }),
     ]);
 
@@ -669,14 +713,16 @@ describe("buildEntryPermalinks", () => {
 describe("buildTermArchiveUrls", () => {
   test("builds each row's URL at its own index, whatever its shape", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("tag", { label: "Tags", isPublic: true });
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          isPublic: true,
-          isHierarchical: true,
-        });
-        ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("tag", { label: "Tags", isPublic: true });
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            isPublic: true,
+            isHierarchical: true,
+          });
+          ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -721,8 +767,10 @@ describe("buildTermArchiveUrls", () => {
 describe("buildTermArchiveUrlSync", () => {
   test("flat taxonomy: basePath-correct url without a DB hit", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("category", { label: "Categories" });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", { label: "Categories" });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -738,11 +786,13 @@ describe("buildTermArchiveUrlSync", () => {
 
   test("returns null for a nested term that needs an ancestor walk", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          isHierarchical: true,
-        });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            isHierarchical: true,
+          });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -758,8 +808,10 @@ describe("buildTermArchiveUrlSync", () => {
 
   test("returns null for a private or unknown taxonomy", async () => {
     const registry = await buildRegistry([
-      definePlugin("blog", (ctx) => {
-        ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+      definePlugin("blog", {
+        setup: (ctx) => {
+          ctx.registerTermTaxonomy("menu", { label: "Menus", isPublic: false });
+        },
       }),
     ]);
     const db = await createTestDb();
@@ -793,64 +845,66 @@ describe("every built permalink routes back to its own intent", () => {
 
   test("for flat and hierarchical, prefixed, multi-segment and root-mounted registrations", async () => {
     const registry = await buildRegistry([
-      definePlugin("site", (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.registerEntryType("product", {
-          label: "Products",
-          isPublic: true,
-          hasArchive: true,
-          rewrite: { slug: "shop" },
-        });
-        ctx.registerEntryType("doc", {
-          label: "Docs",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "page" },
-        });
-        ctx.registerEntryType("guide", {
-          label: "Guides",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { isHierarchical: false },
-        });
-        ctx.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "" },
-        });
-        ctx.registerTermTaxonomy("tag", { label: "Tags" });
-        ctx.registerTermTaxonomy("region", {
-          label: "Regions",
-          isHierarchical: true,
-          rewrite: { slug: "where" },
-        });
-        ctx.registerTermTaxonomy("topic", {
-          label: "Topics",
-          isHierarchical: true,
-          rewrite: { isHierarchical: false },
-        });
-        ctx.registerEntryType("course", {
-          label: "Courses",
-          isPublic: true,
-          hasArchive: true,
-          rewrite: { slug: "learn/courses" },
-        });
-        ctx.registerEntryType("lesson", {
-          label: "Lessons",
-          isPublic: true,
-          isHierarchical: true,
-          rewrite: { slug: "learn/lessons" },
-        });
-        ctx.registerTermTaxonomy("category", {
-          label: "Categories",
-          rewrite: { slug: "insights/category" },
-        });
-        ctx.registerTermTaxonomy("section", {
-          label: "Sections",
-          isHierarchical: true,
-          rewrite: { slug: "insights/section" },
-        });
+      definePlugin("site", {
+        setup: (ctx) => {
+          ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+          ctx.registerEntryType("product", {
+            label: "Products",
+            isPublic: true,
+            hasArchive: true,
+            rewrite: { slug: "shop" },
+          });
+          ctx.registerEntryType("doc", {
+            label: "Docs",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "page" },
+          });
+          ctx.registerEntryType("guide", {
+            label: "Guides",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { isHierarchical: false },
+          });
+          ctx.registerEntryType("page", {
+            label: "Pages",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "" },
+          });
+          ctx.registerTermTaxonomy("tag", { label: "Tags" });
+          ctx.registerTermTaxonomy("region", {
+            label: "Regions",
+            isHierarchical: true,
+            rewrite: { slug: "where" },
+          });
+          ctx.registerTermTaxonomy("topic", {
+            label: "Topics",
+            isHierarchical: true,
+            rewrite: { isHierarchical: false },
+          });
+          ctx.registerEntryType("course", {
+            label: "Courses",
+            isPublic: true,
+            hasArchive: true,
+            rewrite: { slug: "learn/courses" },
+          });
+          ctx.registerEntryType("lesson", {
+            label: "Lessons",
+            isPublic: true,
+            isHierarchical: true,
+            rewrite: { slug: "learn/lessons" },
+          });
+          ctx.registerTermTaxonomy("category", {
+            label: "Categories",
+            rewrite: { slug: "insights/category" },
+          });
+          ctx.registerTermTaxonomy("section", {
+            label: "Sections",
+            isHierarchical: true,
+            rewrite: { slug: "insights/section" },
+          });
+        },
       }),
     ]);
     const db = await createTestDb();

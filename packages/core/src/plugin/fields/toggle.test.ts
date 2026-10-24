@@ -86,11 +86,13 @@ describe("toggle() fluent builder", () => {
 
   test("on/off text survives the manifest wire projection", async () => {
     const hooks = new HookRegistry();
-    const plugin = definePlugin("test", (ctx) => {
-      ctx.registerSettingsGroup("flags", {
-        label: "Flags",
-        fields: [toggle("published").onText("Live").offText("Draft")],
-      });
+    const plugin = definePlugin("test", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("flags", {
+          label: "Flags",
+          fields: [toggle("published").onText("Live").offText("Draft")],
+        });
+      },
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });

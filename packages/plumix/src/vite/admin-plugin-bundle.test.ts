@@ -40,7 +40,7 @@ beforeEach(async () => {
 });
 
 const plugin = (entry: string) =>
-  definePlugin("test", () => undefined, { adminEntry: entry });
+  definePlugin("test", { setup: () => undefined, adminEntry: entry });
 
 describe("resolveAndValidateEntry", () => {
   test("resolves a relative path against the project root", async () => {
@@ -227,9 +227,8 @@ describe("assemblePluginAdminBundle", () => {
       `,
     );
 
-    const descriptor = definePlugin(
-      "auto",
-      (ctx) => {
+    const descriptor = definePlugin("auto", {
+      setup: (ctx) => {
         ctx.registerAdminPage({
           path: "/auto",
           title: "Auto",
@@ -240,8 +239,8 @@ describe("assemblePluginAdminBundle", () => {
           component: "MediaPicker",
         });
       },
-      { adminEntry: "./node_modules/@fixture/plugin-auto/entry.js" },
-    );
+      adminEntry: "./node_modules/@fixture/plugin-auto/entry.js",
+    });
 
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
@@ -292,17 +291,16 @@ describe("assemblePluginAdminBundle", () => {
       `,
     );
 
-    const descriptor = definePlugin(
-      "acme",
-      (ctx) => {
+    const descriptor = definePlugin("acme", {
+      setup: (ctx) => {
         ctx.registerMark({
           name: "acme/highlight-warning",
           title: "Warning highlight",
           adminSchema: "warningHighlightSchema",
         });
       },
-      { adminEntry: "./node_modules/@fixture/plugin-blocks/entry.js" },
-    );
+      adminEntry: "./node_modules/@fixture/plugin-blocks/entry.js",
+    });
 
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
@@ -333,17 +331,16 @@ describe("assemblePluginAdminBundle", () => {
       resolve(workspace, "src/admin.ts"),
       "export const Widget = () => null;",
     );
-    const descriptor = definePlugin(
-      "acme",
-      (ctx) => {
+    const descriptor = definePlugin("acme", {
+      setup: (ctx) => {
         ctx.registerDashboardWidget({
           id: "acme:stats",
           title: "Stats",
           component: "Widget",
         });
       },
-      { adminEntry: "./src/admin.ts" },
-    );
+      adminEntry: "./src/admin.ts",
+    });
 
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),
@@ -381,28 +378,26 @@ describe("assemblePluginAdminBundle", () => {
       resolve(workspace, "src/other-admin.ts"),
       "export const OtherWidget = () => 0;",
     );
-    const acme = definePlugin(
-      "acme",
-      (ctx) => {
+    const acme = definePlugin("acme", {
+      setup: (ctx) => {
         ctx.registerDashboardWidget({
           id: "acme:stats",
           title: "Stats",
           component: "Widget",
         });
       },
-      { adminEntry: "./src/admin.ts" },
-    );
-    const other = definePlugin(
-      "other",
-      (ctx) => {
+      adminEntry: "./src/admin.ts",
+    });
+    const other = definePlugin("other", {
+      setup: (ctx) => {
         ctx.registerDashboardWidget({
           id: "other:stats",
           title: "Other stats",
           component: "OtherWidget",
         });
       },
-      { adminEntry: "./src/other-admin.ts" },
-    );
+      adminEntry: "./src/other-admin.ts",
+    });
 
     const { registry } = await installPlugins({
       hooks: new HookRegistry(),

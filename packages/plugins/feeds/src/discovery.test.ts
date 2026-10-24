@@ -9,25 +9,27 @@ import { feeds } from "./index.js";
  * Discovery reads the archive that owns the page from core's archive lookup,
  * so each page here is rendered for real rather than handed in as a payload.
  */
-const host = definePlugin("feeds-discovery-host", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: "news",
-  });
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    entryTypes: ["post"],
-  });
-  ctx.registerTermTaxonomy("region", {
-    label: "Regions",
-    entryTypes: ["post"],
-    isHierarchical: true,
-  });
-  ctx.registerView("compare", {
-    routes: ["/compare/:id"],
-    resolve: () => ({ data: null, title: "Compare" }),
-  });
+const host = definePlugin("feeds-discovery-host", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: "news",
+    });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermTaxonomy("region", {
+      label: "Regions",
+      entryTypes: ["post"],
+      isHierarchical: true,
+    });
+    ctx.registerView("compare", {
+      routes: ["/compare/:id"],
+      resolve: () => ({ data: null, title: "Compare" }),
+    });
+  },
 });
 
 async function seeded(

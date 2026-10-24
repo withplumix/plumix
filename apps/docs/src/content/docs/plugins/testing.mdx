@@ -87,12 +87,14 @@ import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { expect, test } from "vitest";
 
-const recipes = definePlugin("recipes", (ctx) => {
-  ctx.registerEntryType("recipe", {
-    label: "Recipes",
-    isPublic: true,
-    hasArchive: "recipes",
-  });
+const recipes = definePlugin("recipes", {
+  setup: (ctx) => {
+    ctx.registerEntryType("recipe", {
+      label: "Recipes",
+      isPublic: true,
+      hasArchive: "recipes",
+    });
+  },
 });
 
 test("a published recipe is listed on its archive", async () => {

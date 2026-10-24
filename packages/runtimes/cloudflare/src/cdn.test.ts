@@ -16,8 +16,10 @@ const CONFIG: CloudflareCdnConfig = {
   purgeToken: "token-1",
 };
 
-const blog = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+const blog = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  },
 });
 
 /**

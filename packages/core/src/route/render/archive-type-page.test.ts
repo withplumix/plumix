@@ -9,26 +9,28 @@ import { createTestDb } from "../../test/harness.js";
 import { pageNotFound } from "../contract/page-outcome.js";
 import { resolveArchiveTypePage } from "./archive-type-page.js";
 
-const archives = definePlugin("archives", (ctx) => {
-  ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
-  ctx.registerArchiveType("closed-rooms", {
-    routes: ["/closed-rooms/:room"],
-    entries: (q) => q.ofTypes("talk"),
-    title: "Rooms",
-    resolve: () => null,
-  });
-  ctx.registerArchiveType("lost-series", {
-    routes: ["/lost-series/:series"],
-    resolve: () => {
-      throw pageNotFound();
-    },
-  });
-  ctx.registerArchiveType("broken-series", {
-    routes: ["/broken-series/:series"],
-    resolve: () => {
-      throw new Error("resolver broke");
-    },
-  });
+const archives = definePlugin("archives", {
+  setup: (ctx) => {
+    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+    ctx.registerArchiveType("closed-rooms", {
+      routes: ["/closed-rooms/:room"],
+      entries: (q) => q.ofTypes("talk"),
+      title: "Rooms",
+      resolve: () => null,
+    });
+    ctx.registerArchiveType("lost-series", {
+      routes: ["/lost-series/:series"],
+      resolve: () => {
+        throw pageNotFound();
+      },
+    });
+    ctx.registerArchiveType("broken-series", {
+      routes: ["/broken-series/:series"],
+      resolve: () => {
+        throw new Error("resolver broke");
+      },
+    });
+  },
 });
 
 async function archiveContext(): Promise<AppContext> {

@@ -413,16 +413,6 @@ describe("PluginDefinitionError", () => {
     expect(err.message).toContain("^[a-z][a-z0-9_-]*$");
   });
 
-  test("definePluginLegacyThirdArg", () => {
-    const err = PluginDefinitionError.definePluginLegacyThirdArg({
-      pluginId: "blog",
-    });
-    expect(err.code).toBe("define_plugin_legacy_third_arg");
-    expect(err.pluginId).toBe("blog");
-    expect(err.message).toContain('definePlugin("blog", input)');
-    expect(err.message).toContain("legacy third argument");
-  });
-
   test("duplicatePluginIdInConfig", () => {
     const err = PluginDefinitionError.duplicatePluginIdInConfig({
       pluginId: "blog",

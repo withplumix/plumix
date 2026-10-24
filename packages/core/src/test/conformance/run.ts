@@ -40,12 +40,14 @@ type Case = ContractCase<RunContractOptions>;
  */
 const ROWS = 60;
 
-const plugin = definePlugin("run-contract", (ctx) => {
-  ctx.registerEntryMetaBox("run-contract-box", {
-    label: "Run contract",
-    entryTypes: ["post"],
-    fields: [toggle("sealed")],
-  });
+const plugin = definePlugin("run-contract", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("run-contract-box", {
+      label: "Run contract",
+      entryTypes: ["post"],
+      fields: [toggle("sealed")],
+    });
+  },
 });
 
 interface Site {

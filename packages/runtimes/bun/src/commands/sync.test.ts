@@ -278,7 +278,8 @@ const notes = sqliteTable("notes", {
   authorId: integer("author_id"),
 });
 
-const notesPlugin = definePlugin("notes", () => undefined, {
+const notesPlugin = definePlugin("notes", {
+  setup: () => undefined,
   schema: { notes },
   schemaModule: "notes/schema",
 });

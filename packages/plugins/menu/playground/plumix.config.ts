@@ -22,13 +22,15 @@ import {
 
 // A public entry type and taxonomy, so the e2e suite has something an
 // entry-kind and a term-kind menu item can link to.
-const content = definePlugin("menu-playground-content", (setup) => {
-  setup.registerEntryType("post", { label: "Posts", isPublic: true });
-  setup.registerTermTaxonomy("category", {
-    label: "Categories",
-    isPublic: true,
-    entryTypes: ["post"],
-  });
+const content = definePlugin("menu-playground-content", {
+  setup: (setup) => {
+    setup.registerEntryType("post", { label: "Posts", isPublic: true });
+    setup.registerTermTaxonomy("category", {
+      label: "Categories",
+      isPublic: true,
+      entryTypes: ["post"],
+    });
+  },
 });
 
 // `createElement`, not JSX, so the config loads through jiti untransformed.

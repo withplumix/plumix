@@ -36,8 +36,10 @@ const derived = definePlugin("derived", {
 /**
  * Registered after the consumer above, so `setup` order alone cannot see it.
  */
-const content = definePlugin("content", (ctx) => {
-  ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+const content = definePlugin("content", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+  },
 });
 
 describe("computeManifestAndRegistry", () => {
@@ -77,10 +79,12 @@ describe("computeManifestAndRegistry", () => {
       templates: () => null,
       allowCustomStyles: false,
     });
-    const themedBox = definePlugin("themed-box", (ctx) => {
-      if (ctx.theme.allowCustomStyles === false) {
-        ctx.registerEntryMetaBox("handover", metaBox("handover", ["post"]));
-      }
+    const themedBox = definePlugin("themed-box", {
+      setup: (ctx) => {
+        if (ctx.theme.allowCustomStyles === false) {
+          ctx.registerEntryMetaBox("handover", metaBox("handover", ["post"]));
+        }
+      },
     });
 
     const { manifest } = await computeManifestAndRegistry(

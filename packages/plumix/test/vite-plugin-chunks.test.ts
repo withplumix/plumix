@@ -51,9 +51,8 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     // A synthetic plugin exercising every primitive the menus + media
     // spikes would use. Runs plugin `setup()` into a throwaway registry
     // the same way the plumix Vite plugin's `computeManifest` does.
-    const hello = definePlugin(
-      "hello-world",
-      (ctx) => {
+    const hello = definePlugin("hello-world", {
+      setup: (ctx) => {
         // 1. Hidden CPT with cap override (menu-shape isolation).
         ctx.registerEntryType("hello_item", {
           label: "Hello items",
@@ -134,8 +133,9 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
           groups: ["hello"],
         });
       },
-      { adminChunk: "./dist/admin.js", adminCss: "./dist/admin.css" },
-    );
+      adminChunk: "./dist/admin.js",
+      adminCss: "./dist/admin.css",
+    });
 
     const { registry } = await installPlugins({
       hooks,

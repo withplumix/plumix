@@ -661,17 +661,19 @@ describe("entry.get", () => {
 });
 
 describe("an entry type with an access policy", () => {
-  const pagesWithAccess = definePlugin("pages-with-access", (ctx) => {
-    ctx.registerEntryType("page", {
-      label: "Pages",
-      isPublic: true,
-      access: {
-        default: anonymousPolicy,
-        policies: [
-          { key: "staff", label: "Staff", policy: rolePolicy("editor") },
-        ],
-      },
-    });
+  const pagesWithAccess = definePlugin("pages-with-access", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        access: {
+          default: anonymousPolicy,
+          policies: [
+            { key: "staff", label: "Staff", policy: rolePolicy("editor") },
+          ],
+        },
+      });
+    },
   });
 
   async function harnessAs(role: "subscriber" | "editor") {

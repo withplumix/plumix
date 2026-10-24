@@ -38,48 +38,52 @@ const auth = authConfig({
 });
 const theme = defineTheme({ templates: [fallback(() => null)] });
 
-const echo = definePlugin("echo", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/whoami",
-    handler: (request, app) =>
-      Response.json({ url: request.url, address: app.clientAddress ?? null }),
-  });
+const echo = definePlugin("echo", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/whoami",
+      handler: (request, app) =>
+        Response.json({ url: request.url, address: app.clientAddress ?? null }),
+    });
+  },
 });
 
 /** The signal of each `/stream` request, in arrival order. */
 const streamSignals: AbortSignal[] = [];
 
-const wire = definePlugin("wire", (ctx) => {
-  ctx.registerPublicRoute({
-    path: "/cookies",
-    handler: () => {
-      const headers = new Headers();
-      headers.append("set-cookie", "first=1; Path=/; HttpOnly");
-      headers.append("set-cookie", "second=2; Path=/; HttpOnly");
-      return new Response("cookies", { headers });
-    },
-  });
-  ctx.registerPublicRoute({
-    path: "/events",
-    handler: () =>
-      new Response("data: first\n\n", {
-        headers: { "content-type": "text/event-stream" },
-      }),
-  });
-  // One chunk, then held open until the client goes.
-  ctx.registerPublicRoute({
-    path: "/stream",
-    handler: (request) => {
-      streamSignals.push(request.signal);
-      return new Response(
-        new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode("first chunk"));
-          },
+const wire = definePlugin("wire", {
+  setup: (ctx) => {
+    ctx.registerPublicRoute({
+      path: "/cookies",
+      handler: () => {
+        const headers = new Headers();
+        headers.append("set-cookie", "first=1; Path=/; HttpOnly");
+        headers.append("set-cookie", "second=2; Path=/; HttpOnly");
+        return new Response("cookies", { headers });
+      },
+    });
+    ctx.registerPublicRoute({
+      path: "/events",
+      handler: () =>
+        new Response("data: first\n\n", {
+          headers: { "content-type": "text/event-stream" },
         }),
-      );
-    },
-  });
+    });
+    // One chunk, then held open until the client goes.
+    ctx.registerPublicRoute({
+      path: "/stream",
+      handler: (request) => {
+        streamSignals.push(request.signal);
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("first chunk"));
+            },
+          }),
+        );
+      },
+    });
+  },
 });
 
 let dir: string;
@@ -476,29 +480,31 @@ describe("serveProcess", () => {
     const release = gate();
     const deferred = gate();
     let drained = false;
-    const plugin = definePlugin("probes", (ctx) => {
-      ctx.registerPublicRoute({
-        path: "/slow",
-        handler: async () => {
-          arrived.open();
-          await release.opened;
-          return new Response("slow response");
-        },
-      });
-      ctx.registerPublicRoute({
-        path: "/defer",
-        handler: (_request, app) => {
-          app.defer(deferred.opened.then(() => void (drained = true)));
-          return new Response("deferred");
-        },
-      });
-      ctx.registerPublicRoute({
-        path: "/defer-stuck",
-        handler: (_request, app) => {
-          app.defer(new Promise(() => undefined));
-          return new Response("stuck");
-        },
-      });
+    const plugin = definePlugin("probes", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/slow",
+          handler: async () => {
+            arrived.open();
+            await release.opened;
+            return new Response("slow response");
+          },
+        });
+        ctx.registerPublicRoute({
+          path: "/defer",
+          handler: (_request, app) => {
+            app.defer(deferred.opened.then(() => void (drained = true)));
+            return new Response("deferred");
+          },
+        });
+        ctx.registerPublicRoute({
+          path: "/defer-stuck",
+          handler: (_request, app) => {
+            app.defer(new Promise(() => undefined));
+            return new Response("stuck");
+          },
+        });
+      },
     });
     return {
       plugin,
@@ -671,12 +677,14 @@ describe("the site's cron", () => {
   // A task declared on `* * * * *`, with the cron started at half past the
   // minute on a clock the test moves.
   async function tickingEveryMinute() {
-    const ticking = definePlugin("ticking", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "tick",
-        cron: "* * * * *",
-        handler: () => void fired.push("tick"),
-      });
+    const ticking = definePlugin("ticking", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "tick",
+          cron: "* * * * *",
+          handler: () => void fired.push("tick"),
+        });
+      },
     });
     const site = siteFor({}, [ticking]);
     const clock = virtualClock("2026-10-13T10:00:30Z");
@@ -708,16 +716,18 @@ describe("the site's cron", () => {
     vi.spyOn(process.stdout, "write").mockReturnValue(true);
     const { promise: started, resolve: start } =
       Promise.withResolvers<AbortSignal>();
-    const hung = definePlugin("hung", (ctx) => {
-      ctx.registerScheduledTask({
-        id: "waits",
-        cron: "* * * * *",
-        handler: (taskCtx) =>
-          new Promise<void>((resolve) => {
-            taskCtx.signal.addEventListener("abort", () => resolve());
-            start(taskCtx.signal);
-          }),
-      });
+    const hung = definePlugin("hung", {
+      setup: (ctx) => {
+        ctx.registerScheduledTask({
+          id: "waits",
+          cron: "* * * * *",
+          handler: (taskCtx) =>
+            new Promise<void>((resolve) => {
+              taskCtx.signal.addEventListener("abort", () => resolve());
+              start(taskCtx.signal);
+            }),
+        });
+      },
     });
     const site = siteFor({}, [hung]);
     // A minute of its own: the run guard records each minute it ran in the
@@ -783,12 +793,14 @@ describe("loadEnvFileWhenMain", () => {
 
 const CRON = "*/5 * * * *";
 
-const failing = definePlugin("failing", (ctx) => {
-  ctx.registerScheduledTask({
-    id: "always-fails",
-    cron: CRON,
-    handler: () => Promise.reject(new Error("boom")),
-  });
+const failing = definePlugin("failing", {
+  setup: (ctx) => {
+    ctx.registerScheduledTask({
+      id: "always-fails",
+      cron: CRON,
+      handler: () => Promise.reject(new Error("boom")),
+    });
+  },
 });
 
 describe("the site's logs", () => {

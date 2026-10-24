@@ -16,11 +16,13 @@ import { createRpcHarness } from "../test/rpc.js";
 import { TermReadError } from "./errors.js";
 import { getTerm, listTerms } from "./read-service.js";
 
-const taxonomies = definePlugin("test-tax", (ctx) => {
-  ctx.registerTermTaxonomy("category", {
-    label: "Categories",
-    isHierarchical: true,
-  });
+const taxonomies = definePlugin("test-tax", {
+  setup: (ctx) => {
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      isHierarchical: true,
+    });
+  },
 });
 
 async function harness(role: UserRole): Promise<AuthenticatedRpcHarness> {

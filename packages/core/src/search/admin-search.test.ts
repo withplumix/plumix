@@ -152,10 +152,12 @@ describe("runAdminSearch", () => {
 });
 
 describe("search providers in a booted app", () => {
-  const posts = definePlugin("posts", (ctx) => {
-    ctx.registerEntryType("post", {
-      label: { id: "et.post", message: "Posts" },
-    });
+  const posts = definePlugin("posts", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", {
+        label: { id: "et.post", message: "Posts" },
+      });
+    },
   });
 
   // One `post` matching "hello", and what the palette shows the admin.
@@ -182,19 +184,21 @@ describe("search providers in a booted app", () => {
   }
 
   const ranked = (id: string, order?: "early" | "late") =>
-    definePlugin(id, (ctx) => {
-      ctx.registerSearchProvider({
-        id,
-        order,
-        search: () => [
-          {
-            key: "entry:post",
-            label: "Posts",
-            priority: 10,
-            items: [{ id: id, title: id }],
-          },
-        ],
-      });
+    definePlugin(id, {
+      setup: (ctx) => {
+        ctx.registerSearchProvider({
+          id,
+          order,
+          search: () => [
+            {
+              key: "entry:post",
+              label: "Posts",
+              priority: 10,
+              items: [{ id: id, title: id }],
+            },
+          ],
+        });
+      },
     });
 
   test("an early provider's entries lead core's in the same group", async () => {
@@ -217,13 +221,15 @@ describe("search providers in a booted app", () => {
 
   test("a provider that throws is logged and the others still answer", async () => {
     const error = vi.fn();
-    const broken = definePlugin("broken", (ctx) => {
-      ctx.registerSearchProvider({
-        id: "broken",
-        search: () => {
-          throw new Error("index offline");
-        },
-      });
+    const broken = definePlugin("broken", {
+      setup: (ctx) => {
+        ctx.registerSearchProvider({
+          id: "broken",
+          search: () => {
+            throw new Error("index offline");
+          },
+        });
+      },
     });
 
     const groups = await palette({
@@ -247,8 +253,10 @@ describe("search providers in a booted app", () => {
   });
 
   test("a provider id already registered fails boot", async () => {
-    const twin = definePlugin("twin", (ctx) => {
-      ctx.registerSearchProvider({ id: "ranked", search: () => [] });
+    const twin = definePlugin("twin", {
+      setup: (ctx) => {
+        ctx.registerSearchProvider({ id: "ranked", search: () => [] });
+      },
     });
 
     await expect(

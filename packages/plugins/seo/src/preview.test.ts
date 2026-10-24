@@ -12,15 +12,17 @@ import type { SerpPreview } from "./serp.js";
 import { seo } from "./index.js";
 import { SEO_META_KEYS } from "./meta-keys.js";
 
-const blogPlugin = definePlugin("blog", (ctx) => {
-  ctx.registerEntryType("post", {
-    label: "Posts",
-    isPublic: true,
-    hasArchive: true,
-    // As `@plumix/plugin-blog` declares it, so an edit to a published post
-    // lands on the editor's autosave.
-    supports: ["title", "editor", "excerpt", "autosave"],
-  });
+const blogPlugin = definePlugin("blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+      // As `@plumix/plugin-blog` declares it, so an edit to a published post
+      // lands on the editor's autosave.
+      supports: ["title", "editor", "excerpt", "autosave"],
+    });
+  },
 });
 
 const theme = defineTheme({ templates: [fallback(() => null)] });

@@ -872,7 +872,7 @@ describe("a form that opts out of storage", () => {
 
 describe("the cross-cutting hooks", () => {
   const listener = (setup: (ctx: PluginSetupContext) => void) =>
-    definePlugin("forms_listener", setup);
+    definePlugin("forms_listener", { setup });
 
   const withListener = (
     form: FormDefinition,

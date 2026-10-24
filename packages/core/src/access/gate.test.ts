@@ -81,21 +81,25 @@ async function ctx(args: {
     hooks: new HookRegistry(),
     registry: plugins,
     plugins: [
-      definePlugin("gate-test", (setup) => {
-        for (const [name, access] of Object.entries(args.entryTypes ?? {})) {
-          setup.registerEntryType(name, {
-            label: name,
-            isPublic: true,
-            access,
-          });
-        }
-        for (const [name, access] of Object.entries(args.archiveTypes ?? {})) {
-          setup.registerArchiveType(name, {
-            routes: [`/${name}`],
-            resolve: () => null,
-            access,
-          });
-        }
+      definePlugin("gate-test", {
+        setup: (setup) => {
+          for (const [name, access] of Object.entries(args.entryTypes ?? {})) {
+            setup.registerEntryType(name, {
+              label: name,
+              isPublic: true,
+              access,
+            });
+          }
+          for (const [name, access] of Object.entries(
+            args.archiveTypes ?? {},
+          )) {
+            setup.registerArchiveType(name, {
+              routes: [`/${name}`],
+              resolve: () => null,
+              access,
+            });
+          }
+        },
       }),
     ],
   });
