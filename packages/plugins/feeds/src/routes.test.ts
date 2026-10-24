@@ -2033,8 +2033,7 @@ describe("a feed at the edge", () => {
   });
 
   // The channel's title and description, and whether there is a feed at all,
-  // come from the site settings, so the feed is stored under that group's tag
-  // and a save there retires it.
+  // come from the site settings, so a save there retires the feed.
   test("saving the site settings purges every cached feed", async () => {
     const cdn = fakeCdn();
     const h = await createDispatcherHarness({
