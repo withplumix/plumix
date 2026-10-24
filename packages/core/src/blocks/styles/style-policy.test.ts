@@ -68,6 +68,7 @@ describe("refusesStyleValue", () => {
     tokens: {
       color: { primary: { value: "#06f" }, plumix: { value: "#111" } },
       spacing: { md: { value: "1rem" } },
+      fontFamily: { sans: { value: "Inter" } },
     },
   } as const;
 
@@ -79,6 +80,8 @@ describe("refusesStyleValue", () => {
     ["color", "var(--plumix-spacing-md, 1rem)"],
     ["color", "var(--plumix-color-primary) #e11"],
     ["color", "var(--plumix-color-primary, x) url(evil.png)"],
+    ["fontFamily", 'var(--plumix-font-family-sans, x "(" ), Comic Sans, ")'],
+    ["color", "var(--plumix-color-primary, x '(') url(evil.png) ')"],
     ["__proto__", "var(--plumix-__proto__-toString)"],
     ["fontWeight", "900"],
     ["--brand", "red"],
@@ -91,6 +94,7 @@ describe("refusesStyleValue", () => {
     ["color", "var(--plumix-color-primary)"],
     ["color", "var(--plumix-color-plumix)"],
     ["color", "var(--plumix-color-primary, rgb(0 102 255))"],
+    ["fontFamily", 'var(--plumix-font-family-sans, "Fira (Code)", serif)'],
     ["marginTop", "var(--plumix-spacing-md, 1rem)"],
     ["borderStyle", "dashed"],
     ["display", "flex"],

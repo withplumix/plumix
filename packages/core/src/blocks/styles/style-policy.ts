@@ -130,15 +130,26 @@ function isDeclaredToken(
   );
 }
 
-/** So a fallback can't close the `var()` and append a value of its own. */
+/**
+ * So a fallback can't close the `var()` and append a value of its own. A
+ * bracket inside a quoted string doesn't count, and an unclosed string fails.
+ */
 function balanced(text: string): boolean {
   let depth = 0;
+  let quote: string | null = null;
   for (const char of text) {
-    if (char === "(") depth += 1;
-    if (char === ")") depth -= 1;
-    if (depth < 0) return false;
+    if (quote !== null) {
+      if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === "(") {
+      depth += 1;
+    } else if (char === ")") {
+      depth -= 1;
+      if (depth < 0) return false;
+    }
   }
-  return depth === 0;
+  return depth === 0 && quote === null;
 }
 
 export type StyleBucketName = keyof ResponsiveStyleSlot;

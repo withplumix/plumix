@@ -174,11 +174,7 @@ const BORDER_SECTION: SectionDef = {
   ],
 };
 
-/**
- * The properties whose control shows a refused value as a read-only chip.
- * Keyword controls show none, so their refused values join the Custom CSS
- * fallback.
- */
+/** Keyword controls show no chip, so their refused values need another place. */
 const CHIP_PROPERTIES: ReadonlySet<string> = new Set([
   ...[SIZE_SECTION, BACKGROUND_SECTION, TYPOGRAPHY_SECTION, BORDER_SECTION]
     .flatMap((section) => section.controls)
@@ -989,10 +985,6 @@ function ShadowsEffectsControls({
   );
 }
 
-/**
- * A custom-value control renders as-is where the policy allows custom values,
- * and as a tokens-only {@link StyleControl} where it doesn't.
- */
 function CustomOrTokens({
   label,
   property,
