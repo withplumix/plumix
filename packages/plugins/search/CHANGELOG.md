@@ -1,5 +1,13 @@
 # @plumix/plugin-search
 
+## 0.2.1
+
+### Patch Changes
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3420](https://github.com/withplumix/plumix/pull/3420) [`98be657`](https://github.com/withplumix/plumix/commit/98be657d1b51a566f513f46465bcf1471e8cc4b2) Thanks [@nasyrov](https://github.com/nasyrov)! - Ranks the admin command palette through a search provider rather than the removed `admin:search:results` filter, so the plugin needs `plumix` 0.27.0 or later. The ranked entries still lead core's in each group.
+
 ## 0.2.0
 
 ### Minor Changes
