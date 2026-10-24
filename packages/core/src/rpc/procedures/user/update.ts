@@ -16,7 +16,11 @@ import { base } from "../../base.js";
 import { assertLeaseAllows } from "../../concurrency.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { userRows } from "./concurrency.js";
-import { assertCanEditUser, otherActiveAdminExists } from "./helpers.js";
+import {
+  assertCanEditUser,
+  assertDeclaredRole,
+  otherActiveAdminExists,
+} from "./helpers.js";
 import {
   announceUserMetaChange,
   assertUserMetaCapabilities,
@@ -115,6 +119,7 @@ export const update = base
       filtered.role !== undefined && filtered.role !== existing.role;
     if (wantsRoleChange) {
       assertCanChangeRole(context, accessGuards);
+      assertDeclaredRole(context, filtered.role, errors);
     }
     const demotingAdmin =
       wantsRoleChange && existing.role === "admin" && filtered.role !== "admin";

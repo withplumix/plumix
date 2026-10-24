@@ -5,6 +5,7 @@ import type {
   AuthenticatedUser,
   Db,
 } from "../../context/app-context.js";
+import type { UserRole } from "../../db/schema/users.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -32,8 +33,8 @@ function contextFor(
 
 /** Moves `admin:access` off its default rung, so the bar can't follow rank. */
 async function registryGrantingAdminAccess(grant: {
-  readonly minRole: AuthenticatedUser["role"];
-  readonly defaultGrants?: readonly AuthenticatedUser["role"][];
+  readonly minRole: UserRole;
+  readonly defaultGrants?: readonly UserRole[];
 }): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),

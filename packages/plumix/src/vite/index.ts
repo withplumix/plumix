@@ -20,6 +20,7 @@ import {
   generateSchemaSource,
   injectManifestIntoHtml,
   isTrustedDevHost,
+  unknownRoleGrants,
 } from "@plumix/core";
 import {
   DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
@@ -48,6 +49,7 @@ import {
   collectEditorShortcodeModules,
 } from "./editor-block-modules.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
+import { VitePluginError } from "./errors.js";
 import {
   loadAssetManifest,
   resolveIslandChunkUrl,
@@ -557,8 +559,14 @@ async function regenerate(
       refusedAdminAreas: config.runtime.refusedAdminAreas,
       theme: config.theme,
       routes: config.routes,
+      roles: config.roles,
     },
   );
+  // Here, not in `buildApp`, so a running site ignores the unknown names.
+  const unknownRoleNames = unknownRoleGrants(registry);
+  if (unknownRoleNames.length > 0) {
+    throw VitePluginError.unknownRoleGrants({ messages: unknownRoleNames });
+  }
 
   return {
     configPath,

@@ -11,6 +11,7 @@ import type {
   TermTaxonomyCapabilityOverrides,
 } from "../access/contract/capability.js";
 import type { AccessPolicyFor } from "../access/contract/policy.js";
+import type { SiteRoles } from "../access/contract/roles.js";
 import type {
   BlockPattern,
   BlockSpec,
@@ -901,6 +902,8 @@ export interface PluginRegistry {
    * same answer.
    */
   readonly frameworkRoutes: FrameworkRoutes;
+  /** The config's role declarations, read when the role table resolves. */
+  readonly roles: SiteRoles;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -940,6 +943,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
 
 export function createPluginRegistry(
   frameworkRoutes: FrameworkRoutes = resolveFrameworkRoutes(),
+  roles: SiteRoles = {},
 ): MutablePluginRegistry {
   return {
     pluginIds: [],
@@ -979,6 +983,7 @@ export function createPluginRegistry(
     ]),
     searchProviders: new Map(),
     frameworkRoutes,
+    roles,
   };
 }
 

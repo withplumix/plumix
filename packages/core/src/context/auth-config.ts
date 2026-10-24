@@ -1,7 +1,6 @@
 import type { OAuthProviderClient } from "../auth/contract/oauth.js";
 import type { PasskeyConfig } from "../auth/contract/passkey.js";
 import type { SessionPolicy } from "../auth/contract/sessions.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { RequestAuthenticator } from "./authenticator.js";
 
 /**
@@ -31,15 +30,16 @@ export interface PlumixOAuthConfig {
 
 export type BootstrapVia = "passkey" | "first-method-wins";
 
-export interface PlumixSelfSignupConfig {
+export interface PlumixSelfSignupConfig<TRole extends string = string> {
   /**
    * Never defaulted: it decides what "anyone with an email" gets, so prefer
    * `"subscriber"`. A domain in `allowedDomains` still gets its own role.
    */
-  readonly defaultRole: UserRole;
+  readonly defaultRole: TRole;
 }
 
-export interface PlumixAuthInput {
+/** `TRole` is the role names the site's config declares. */
+export interface PlumixAuthInput<TRole extends string = string> {
   readonly passkey: PasskeyConfig;
   readonly sessions?: SessionPolicy;
   readonly oauth?: PlumixOAuthConfig;
@@ -60,9 +60,9 @@ export interface PlumixAuthInput {
    * Lowercase email domain → the role a new user on it signs up at, matched
    * case-insensitively and exactly (no subdomains). Delete a line to close it.
    */
-  readonly allowedDomains?: Readonly<Record<string, UserRole>>;
+  readonly allowedDomains?: Readonly<Record<string, TRole>>;
   /** Omit to keep signup to the domains in `allowedDomains`. */
-  readonly selfSignup?: PlumixSelfSignupConfig;
+  readonly selfSignup?: PlumixSelfSignupConfig<TRole>;
   /**
    * Root-relative; gets `?redirectTo=`, plus `magic_link_error`, `oauth_error`,
    * `email_change_error` or `email_change_success` from sign-in flows. Must be
@@ -71,6 +71,8 @@ export interface PlumixAuthInput {
   readonly loginPath?: string;
 }
 
-export interface PlumixAuthConfig extends PlumixAuthInput {
+export interface PlumixAuthConfig<
+  TRole extends string = string,
+> extends PlumixAuthInput<TRole> {
   readonly kind: "plumix";
 }

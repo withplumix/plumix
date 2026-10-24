@@ -43,6 +43,8 @@ export interface ManifestBuildOptions {
    * `buildApp` seeds its own. Required for the same reason as `theme`.
    */
   readonly routes: PlumixConfig["routes"];
+  /** The config's roles, seeded the way `buildApp` seeds them. */
+  readonly roles?: PlumixConfig["roles"];
 }
 
 /**
@@ -58,7 +60,7 @@ export async function computeManifestAndRegistry(
   const { registry } = await installPlugins({
     hooks,
     plugins,
-    registry: createPluginRegistry(options.routes),
+    registry: createPluginRegistry(options.routes, options.roles),
     theme: options.theme,
   });
   // Forward plugin descriptors so `buildManifest` can emit

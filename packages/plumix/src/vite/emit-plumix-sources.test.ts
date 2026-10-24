@@ -124,3 +124,52 @@ describe("emitPlumixSources — what a runtime command reads back", () => {
     ).toBe("second");
   });
 });
+
+describe("emitPlumixSources — the config's roles", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "plumix-emit-roles-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function writeConfig(roles: string): string {
+    const configPath = join(dir, "plumix.config.mjs");
+    writeFileSync(
+      configPath,
+      `export default {
+        runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+        database: { kind: 'x' },
+        auth: { passkey: {} },
+        theme: { templates: () => null },
+        plugins: [],
+        roles: ${roles},
+      };`,
+      "utf8",
+    );
+    return configPath;
+  }
+
+  test("fails, naming the grant, when a role grants a capability nobody registered", async () => {
+    const configPath = writeConfig(
+      `{ designer: { can: { admin: ['access'], seo: ['manage'] } } }`,
+    );
+
+    await expect(emitPlumixSources(dir, configPath)).rejects.toThrow(
+      'Role "designer" grants "seo:manage", which no plugin registers.',
+    );
+  });
+
+  test("emits when every name a role uses is registered", async () => {
+    const configPath = writeConfig(
+      `{ designer: { extends: 'author', can: { admin: ['access'] } } }`,
+    );
+
+    await expect(emitPlumixSources(dir, configPath)).resolves.toMatchObject({
+      configPath,
+    });
+  });
+});

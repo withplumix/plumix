@@ -93,7 +93,7 @@ Error codes (`packages/core/src/rpc-errors.ts`): `UNAUTHORIZED`, `BAD_REQUEST {r
 
 **Webhooks.** A core module subscribes to the entry actions `lifecycle.ts` fires, as the purge invalidator in `packages/core/src/cdn/purge.ts` does, and enqueues each delivery through the `queue` slot; a scheduled task sends it when the job queue hands it back. Webhooks are declared in code per entry type. Publishing an entry sends a POST, with its headers and payload, to each webhook its entry type declares for publish; unpublish, trash, delete and scheduled publish do the same for theirs.
 
-**Roles.** Procedures ask by capability (`requireCapability`, `context.auth.can`), never by role. The `role` that `user.list`, `user.invite`, `user.update` and the `auth.session` output carry is any default role (member, author, editor, admin) or a role the site defines in the admin or in config, and the admin adds and edits stored roles through procedures ([auth and access](auth-and-access.md)).
+**Roles.** Procedures ask by capability (`requireCapability`, `context.auth.can`), never by role. The `role` that `user.list`, `user.invite`, `user.update` and the `auth.session` output carry is any default role (member, author, editor, admin) or a role the site declares in config ([auth and access](auth-and-access.md)).
 
 **Plugin routers.** `registerRpcRouter` throws if the plugin id is a core namespace (`CORE_RPC_NAMESPACES` in `packages/core/src/rpc/namespaces.ts`, a value copy of the router's keys typed against `AppRouter`). `buildApp` checks the same thing again at boot. The client is `createPluginRpcClient`, which sends `x-plumix-request: 1` to `<basePath>/_plumix/rpc/<pluginId>`.
 

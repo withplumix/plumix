@@ -25,8 +25,9 @@ export const ROLE_LEVEL: Readonly<Record<UserRole, number>> = Object.freeze(
   ),
 );
 
-export function roleLevel(role: UserRole): number {
-  return ROLE_LEVEL[role];
+/** A site role sits on no rung, so it ranks below every one. */
+export function roleLevel(role: string): number {
+  return Object.hasOwn(ROLE_LEVEL, role) ? ROLE_LEVEL[role as UserRole] : -1;
 }
 
 /**
@@ -36,7 +37,7 @@ export function roleLevel(role: UserRole): number {
 export const STAFF_MIN_ROLE: UserRole = "contributor";
 
 /** True for any staff role, false for a theme-only `subscriber`. */
-export function canAccessAdmin(role: UserRole): boolean {
+export function canAccessAdmin(role: string): boolean {
   return roleLevel(role) >= roleLevel(STAFF_MIN_ROLE);
 }
 

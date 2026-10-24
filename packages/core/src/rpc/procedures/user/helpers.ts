@@ -2,6 +2,8 @@ import type {
   AuthenticatedAppContext,
   Db,
 } from "../../../context/app-context.js";
+import type { BadRequestErrors } from "../../../rpc-errors.js";
+import { getCapabilityResolver } from "../../../auth/rbac.js";
 import { and, eq, exists, isNull, ne } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 
@@ -22,6 +24,17 @@ export function otherActiveAdminExists(db: Db, excludeUserId: number) {
         ),
       ),
   );
+}
+
+/** Refuses a role that is neither a default nor declared in the config. */
+export function assertDeclaredRole(
+  context: AuthenticatedAppContext,
+  role: string | undefined,
+  errors: BadRequestErrors,
+): void {
+  if (role === undefined) return;
+  if (getCapabilityResolver(context.plugins).hasRole(role)) return;
+  throw errors.BAD_REQUEST({ data: { reason: "unknown_role" } });
 }
 
 const EDIT_OWN_CAPABILITY = "user:edit_own";

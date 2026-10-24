@@ -3,7 +3,7 @@ import { index, sqliteTable } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import type { JsonObject } from "../../json.js";
-import { USER_ROLES, users } from "./users.js";
+import { users } from "./users.js";
 
 export const AUTH_TOKEN_TYPES = [
   "webauthn_challenge",
@@ -24,7 +24,7 @@ export const authTokens = sqliteTable(
     userId: t.integer().references(() => users.id, { onDelete: "cascade" }),
     email: t.text(),
     type: t.text({ enum: AUTH_TOKEN_TYPES }).notNull(),
-    role: t.text({ enum: USER_ROLES }),
+    role: t.text(),
     invitedBy: t.integer().references(() => users.id, { onDelete: "set null" }),
     // Free-form per-type payload, read only after filtering by `type`
     // (`oauth_state`, `preview_link`, `webauthn_challenge`); kept nullable so

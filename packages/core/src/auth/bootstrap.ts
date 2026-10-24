@@ -1,5 +1,5 @@
 import type { Db } from "../context/app-context.js";
-import type { User, UserRole } from "../db/schema/users.js";
+import type { User } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
 import { isUniqueConstraintErrorOn, sql } from "../db/index.js";
 import { users } from "../db/schema/users.js";
@@ -16,7 +16,7 @@ export async function provisionUser(
     readonly email: string;
     readonly name?: string | null;
     readonly avatarUrl?: string | null;
-    readonly defaultRole?: UserRole;
+    readonly defaultRole?: string;
     readonly emailVerified?: boolean;
     /**
      * The meta the new user starts with — `startingMeta` of the user fields.
@@ -24,7 +24,7 @@ export async function provisionUser(
     readonly meta: JsonObject;
   },
 ): Promise<BootstrappedUser> {
-  const defaultRole: UserRole = input.defaultRole ?? "subscriber";
+  const defaultRole = input.defaultRole ?? "subscriber";
 
   for (let attempt = 1; ; attempt++) {
     const slug = await deriveUserSlug(db, input.name);
@@ -40,7 +40,7 @@ export async function provisionUser(
           slug,
           name: input.name ?? null,
           avatarUrl: input.avatarUrl ?? null,
-          role: sql<UserRole>`CASE WHEN (SELECT COUNT(*) FROM ${users}) = 0 THEN 'admin' ELSE ${defaultRole} END`,
+          role: sql<string>`CASE WHEN (SELECT COUNT(*) FROM ${users}) = 0 THEN 'admin' ELSE ${defaultRole} END`,
           emailVerifiedAt: input.emailVerified ? new Date() : null,
           meta: input.meta,
         })

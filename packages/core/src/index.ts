@@ -19,6 +19,12 @@ export { checkImportedMeta } from "./cli/import-meta.js";
 export type { ImportedMeta, ImportedMetaOwner } from "./cli/import-meta.js";
 export * from "./config.js";
 export { defineConfig, plumix } from "./runtime/define-config.js";
+export type {
+  RoleDeclaration,
+  RoleGrants,
+  RoleNameOf,
+  SiteRoles,
+} from "./access/contract/roles.js";
 export * from "./context/index.js";
 export { consoleLogger, createAppContext } from "./context/app.js";
 export { createJsonLogger } from "./context/json-logger.js";

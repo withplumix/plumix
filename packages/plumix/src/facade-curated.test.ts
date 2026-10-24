@@ -74,6 +74,18 @@ const CORE_WITHHELD: readonly Withholding[] = [
     names: ["resolveScopes"],
   },
   {
+    reason:
+      "the build check on the config's roles, which only this package's " +
+      "Vite plugin runs",
+    names: ["unknownRoleGrants"],
+  },
+  {
+    reason:
+      "how a capability's grant becomes the default roles that hold it, " +
+      "which only core's registry reads",
+    names: ["grantedRoles", "rolesFromRank"],
+  },
+  {
     reason: "the check an import runs on each record's meta, a CLI-only need",
     names: ["checkImportedMeta"],
   },

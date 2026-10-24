@@ -1,3 +1,4 @@
+import type { SiteRoles } from "./access/contract/roles.js";
 import type { MailerInput } from "./auth/contract/mailer.js";
 import type { HtmlAllowlistOverride } from "./blocks/index.js";
 import type { RemotePattern } from "./blocks/renderer/index.js";
@@ -130,6 +131,20 @@ export interface PlumixConfigInput {
    */
   readonly theme?: ThemeDescriptor;
   readonly plugins?: readonly AnyPluginDescriptor[];
+  /**
+   * Keyed by role name, each a set of capabilities. A default's name replaces
+   * its grants; `admin` always holds every capability and can't be declared.
+   *
+   * @example
+   * roles: {
+   *   designer: {
+   *     label: "Designer",
+   *     extends: "author",
+   *     can: { admin: ["access"], entry: { page: ["read", "edit_any"] } },
+   *   },
+   * }
+   */
+  readonly roles?: SiteRoles;
   /**
    * The site's own data migrations: a module, relative to this config file,
    * whose default export is their ordered list. They run after the plugins'.

@@ -40,6 +40,8 @@ import {
 } from "@plumix/admin-ui/select";
 import { USER_ROLES } from "@plumix/core/manifest";
 
+import { isUserRole } from "./-constants.js";
+
 const PAGE_SIZE = 20;
 
 const ROLE_FILTER_VALUES = ["all", ...USER_ROLES] as const;
@@ -313,11 +315,14 @@ function buildColumns({
     {
       accessorKey: "role",
       header: label(M.columnRole),
-      cell: ({ row }) => (
-        <Badge variant={ROLE_VARIANT[row.original.role]}>
-          {label(ROLE_LABEL[row.original.role])}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const { role } = row.original;
+        // A site role has no catalog label, so it shows its name.
+        if (!isUserRole(role)) return <Badge variant="outline">{role}</Badge>;
+        return (
+          <Badge variant={ROLE_VARIANT[role]}>{label(ROLE_LABEL[role])}</Badge>
+        );
+      },
     },
     {
       accessorKey: "disabledAt",

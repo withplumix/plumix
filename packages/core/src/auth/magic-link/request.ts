@@ -1,5 +1,5 @@
 import type { Db, Logger } from "../../context/app-context.js";
-import type { User, UserRole } from "../../db/schema/users.js";
+import type { User } from "../../db/schema/users.js";
 import type { MailSender } from "../../mail/contract/registry.js";
 import { withBasePath } from "../../base-path.js";
 import { and, eq, gte } from "../../db/index.js";
@@ -42,9 +42,9 @@ interface RequestMagicLinkInput {
   readonly redirectTo?: string;
   readonly bootstrapAllowed?: boolean;
   /** `auth.allowedDomains`: who may sign up, and at which role. */
-  readonly allowedDomains?: Readonly<Record<string, UserRole>>;
+  readonly allowedDomains?: Readonly<Record<string, string>>;
   /** `auth.selfSignup.defaultRole`: opens signup to every other domain. */
-  readonly defaultRole?: UserRole;
+  readonly defaultRole?: string;
 }
 
 /**

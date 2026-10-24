@@ -49,7 +49,7 @@ import * as v from "valibot";
 import type { ResolvedMeta, WithResolvedMeta } from "@plumix/core";
 import type { EditingCopy } from "@plumix/core/admin";
 import type { UserMetaBoxManifestEntry } from "@plumix/core/manifest";
-import type { User as StoredUser, UserRole } from "@plumix/core/schema";
+import type { User as StoredUser } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
@@ -169,14 +169,14 @@ async function invalidateUserCaches(
 const profileFormSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),
   slug: slugField,
-  role: v.picklist(USER_ROLES),
+  role: v.pipe(v.string(), v.nonEmpty()),
   meta: v.record(v.string(), v.unknown()),
 });
 
 interface ProfileValues {
   readonly name: string;
   readonly slug: string;
-  readonly role: UserRole;
+  readonly role: string;
   readonly meta: ResolvedMeta;
 }
 
@@ -544,7 +544,9 @@ function UserEditForm({
                       <Trans id="userEdit.role.label" message="Role" />
                     </UILabel>
                     <Badge variant="secondary" className="w-fit">
-                      {label(ROLE_LABEL[target.role])}
+                      {isUserRole(target.role)
+                        ? label(ROLE_LABEL[target.role])
+                        : target.role}
                     </Badge>
                     {isSelf ? (
                       <p className="text-muted-foreground text-xs">

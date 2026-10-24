@@ -4,6 +4,7 @@ import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { users } from "../../../db/schema/users.js";
+import { createPluginRegistry } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { currentUserEtag } from "../../../test/user-etag.js";
 
@@ -138,6 +139,41 @@ describe("user.invite", () => {
     expect(ctxArg?.inviteToken).toBe(inviteToken);
     expect(ctxArg?.invitedBy).toBe(h.user.id);
     expect(ctxArg?.expiresAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("a role the site declares in config", () => {
+  const plugins = () =>
+    createPluginRegistry(undefined, {
+      designer: { can: { admin: ["access"], user: ["list"] } },
+    });
+
+  test("an invite can hold it", async () => {
+    const h = await createRpcHarness({ authAs: "admin", plugins: plugins() });
+    const { user } = await h.client.user.invite({
+      email: "designer@example.test",
+      role: "designer",
+    });
+    expect(user.role).toBe("designer");
+  });
+
+  test("a user can be given it, and then holds its capabilities", async () => {
+    const h = await createRpcHarness({ authAs: "admin", plugins: plugins() });
+    const target = await h.factory.subscriber.create();
+    await h.client.user.update({
+      id: target.id,
+      ifMatch: await currentUserEtag(h.db, target.id),
+      role: "designer",
+    });
+    const designer = await h.actingAs({ ...target, role: "designer" });
+    expect(await designer.client.user.list({})).not.toHaveLength(0);
+  });
+
+  test("a role the config doesn't declare is refused", async () => {
+    const h = await createRpcHarness({ authAs: "admin", plugins: plugins() });
+    await expect(
+      h.client.user.invite({ email: "ghost@example.test", role: "ghost" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 });
 

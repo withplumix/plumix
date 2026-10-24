@@ -65,7 +65,7 @@ Admin routes (`packages/admin/src/routes/`):
 
 **In-editor agent.** An editor asks the visual editor for a page draft. The shell calls an RPC procedure that drafts through the same procedures as an editor and reaches a model through the `llm` config slot (`runtime/contract/slots.ts`), so model keys stay on the server. The draft is built only from the site's blocks and design tokens and saved under the editor's own lease, capabilities and revisions.
 
-**Roles screen.** A `roles` route under `_authenticated`, behind a capability, lets a site admin add a role and pick its capabilities, on RPC procedures that read and write the stored roles. The defaults are `member`, `author`, `editor` and `admin`. The user screens (`users/-constants.ts`, `lib/user-role-labels.ts`) list roles from the server.
+**Roles.** Roles are declared in the site's config ([ADR 0055](../adr/0055-a-role-is-a-set-of-capabilities-declared-in-code.md)); the admin assigns them to users but never edits what they grant, and has no roles screen. The user screens (`users/-constants.ts`, `lib/user-role-labels.ts`) label the default roles and show any other role by its name.
 
 **Tests.** Unit tests sit beside the code (`packages/admin/src/lib/*.test.ts`, `packages/admin-editor/src`). The admin e2e specs (`packages/admin/e2e/*.spec.ts`) run against `vite preview` of the built admin with RPC mocked (`e2e/support/rpc-mock.ts`), so they check the built `dist/`, not a live server; the visual editor's run against `playground/`. The real-server path is covered by the scaffold smoke.
 

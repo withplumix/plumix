@@ -308,8 +308,7 @@ flowchart LR
   theme -- "Declares allowedBlocks<br/>and style policy" --> policy
   policy -- "Reaches the editor in the plugin manifest,<br/>built by the Vite plugin" --> adminapp
   surfaces -- "Hold agents' writes to the same<br/>policy, leases and capabilities" --> policy
-  authc -- "Resolves roles from the database and config" --> roles
-  roles -- "Stored through [SQL via drizzle]" --> slots
+  authc -- "Resolves roles from the config" --> roles
   surfaces -- "Hand page-draft requests to" --> assistant
   assistant -- "Draft through the same<br/>procedures as an editor" --> surfaces
 

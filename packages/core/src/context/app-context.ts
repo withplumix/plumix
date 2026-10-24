@@ -15,7 +15,6 @@ import type { PlumixConfig } from "../config.js";
 import type { EditLeaseSurface } from "../db/schema/edit_leases.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { SettingsBag } from "../db/schema/settings.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonValue } from "../json.js";
@@ -58,7 +57,8 @@ type AnySchema = Record<string, unknown>;
 export type DataMigrationDb = Db<AnySchema>;
 
 export interface AuthenticatedUser extends RendererUser {
-  readonly role: UserRole;
+  /** Names a role; one the config doesn't declare holds no capabilities. */
+  readonly role: string;
 }
 
 /**
