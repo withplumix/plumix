@@ -19,16 +19,13 @@ import { GATES, runGates } from "./gates.js";
 import {
   assignToSelf,
   openPullRequest,
-  parkTicket,
   pushBranch,
   queueForMerge,
   resetBranchToMain,
-  subIssuesOf,
   syncRepoToMain,
 } from "./github.js";
 import { say } from "./log.js";
 import { surveyMutants } from "./mutation.js";
-import { nextSubIssue, prdPullRequestCopy } from "./prd.js";
 import { MERGE_BASE } from "./repo.js";
 import {
   AN_HOUR_IN_SECONDS,
@@ -80,8 +77,7 @@ export type ShipOutcome =
       readonly reason: string;
       readonly pullRequestUrl?: string;
       readonly briefFails?: boolean;
-    }
-  | { readonly status: "skipped"; readonly reason: string };
+    };
 
 export const readFindingsTag = (stdout: string): Findings => {
   const block = taggedBlock(stdout, "findings");
@@ -415,270 +411,16 @@ export const asWaivedGatesNote = (waived: readonly WaivedGate[]): string =>
           "\n\n",
         )}\n\nCI runs them again; a real failure there goes through repair.`;
 
-const branchFor = (ticket: Ticket): string =>
-  `feat/${ticket.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48)}-${ticket.number}`;
-
-type ImplementedOne =
-  | {
-      readonly status: "implemented";
-      readonly copy: PullRequestCopy;
-      readonly sessionId: string | undefined;
-    }
-  | {
-      readonly status: "blocked";
-      readonly reason: string;
-      readonly briefFails?: boolean;
-    };
-
-const implementOne = async (
-  sandbox: Executor,
-  runAgentPhase: RunAgentPhase,
-  ticket: Ticket,
-  nextAdr: string,
-  {
-    phaseSuffix,
-    prdNote,
-    briefBase,
-  }: { phaseSuffix: string; prdNote: string; briefBase: string },
-): Promise<ImplementedOne> => {
-  say(`\n--- check brief${phaseSuffix} ---`);
-  const brief = await checkBrief(runAgentPhase, ticket, say, {
-    phase: `check-brief${phaseSuffix}`,
-    base: briefBase,
-  });
-  if (brief.next === "park")
-    return { status: "blocked", reason: brief.reason, briefFails: true };
-
-  const carriedBefore = await commitsTheBranchCarries(sandbox);
-  const phase = `implement${phaseSuffix}`;
-  say(`\n--- ${phase} ---`);
-  const implemented = await runAgentPhase(phase, IMPLEMENTER, {
-    promptFile: join(PROMPT_DIR, "implement.md"),
-    promptArgs: {
-      TICKET: String(ticket.number),
-      NEXT_ADR: nextAdr,
-      PRD_NOTE: prdNote,
-    },
-    maxIterations: 40,
-    idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
-  });
-  if (
-    !implemented.commits.length &&
-    (await commitsTheBranchCarries(sandbox)) === carriedBefore
-  ) {
-    return {
-      status: "blocked",
-      reason:
-        readDeclinedTag(implemented.stdout) ??
-        "the implementer produced no commits and gave no reason",
-    };
-  }
-
-  const copy =
-    (await readOrAskAgain(
-      runAgentPhase,
-      phase,
-      IMPLEMENTER,
-      implemented,
-      readTemplatedPullRequest,
-      EMIT_THE_PULL_REQUEST,
-    )) ??
-    readPullRequestTag(implemented.stdout) ??
-    fallbackPullRequestCopy(ticket);
-  return {
-    status: "implemented",
-    copy,
-    sessionId: implemented.iterations.at(-1)?.sessionId,
-  };
-};
-
-const reviewGateAndLand = async (
-  sandbox: Awaited<ReturnType<typeof createPlumixSandbox>>,
-  runAgentPhase: RunAgentPhase,
-  journal: Journal,
-  ticket: Ticket,
-  branch: string,
-  implementedCopy: PullRequestCopy,
-  implementerSessionId: string | undefined,
-): Promise<ShipOutcome> => {
-  let pullRequestCopy = implementedCopy;
-  const fixer = fixerFor(runAgentPhase, implementerSessionId);
-  const summaries: string[] = [];
-  let notes: readonly ReviewItem[] = [];
-
-  for (let pass = 1; ; pass += 1) {
-    say(`--- review (pass ${pass}) ---`);
-    const review = await reviewBranch(
-      runAgentPhase,
-      journal,
-      ticket,
-      pass,
-      pullRequestCopy.body,
-      await surveyMutants(sandbox),
-    );
-    if (!review) {
-      return {
-        status: "blocked",
-        reason: `review pass ${pass} ended without a readable <review> block, so the branch is unreviewed`,
-      };
-    }
-    summaries.push(review.summary);
-    notes = review.notes;
-    const next = afterReview(review, pass);
-    if (next.next === "gates") break;
-    if (next.next === "park") return { status: "blocked", reason: next.reason };
-
-    say(
-      `--- fix ${next.gaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
-    );
-    const fixed = await fixer.apply(
-      `fix#review${pass}`,
-      asFixBrief(next.gaps, pullRequestCopy),
-    );
-    pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
-    const { declined } = fixed;
-    if (declined) {
-      return {
-        status: "blocked",
-        reason: `${next.gaps.length} spec gap(s) stand and the fixer changed nothing:\n\n${declined.reason}\n\n${asGapList(next.gaps)}`,
-      };
-    }
-  }
-
-  const gates = await gatesUntilGreen(sandbox, GATES, journal, fixer, "final");
-  if (gates.blocked) return { status: "blocked", reason: gates.blocked };
-
-  say("\n--- land ---");
-  const onMain = await rebaseOntoLatestMain(
-    sandbox,
-    syncRepoToMain,
-    async () =>
-      !(
-        await resolveTheRebase(
-          sandbox,
-          runAgentPhase,
-          IMPLEMENTER,
-          ticket.number,
-        )
-      ).unfinished,
-  );
-  if (onMain === "resolved") {
-    const regated = await gatesUntilGreen(
-      sandbox,
-      GATES,
-      journal,
-      fixer,
-      "resolved",
-    );
-    if (regated.blocked) return { status: "blocked", reason: regated.blocked };
-  }
-  if (onMain === "kept") {
-    say("  the latest main conflicts, so the branch is pushed as it was gated");
-  }
-  await pushBranch(branch, sandbox.worktreePath);
-  const pullRequest = openPullRequest(
-    branch,
-    pullRequestCopy.title,
-    pullRequestCopy.body +
-      asReviewNote(summaries, notes) +
-      asWaivedGatesNote(gates.waived),
-  );
-
-  queueForMerge(pullRequest.number);
-  return { status: "queued", pullRequest };
-};
-
-/** More makes a pull request too large to review; the rest ship as the next batch once it merges. */
-const SUB_ISSUES_A_PRD_PULL_REQUEST_CARRIES = 5;
-
-const PRD_NOTE_FOR = (prd: Ticket, earlier: readonly Ticket[]): string =>
-  [
-    `This ticket is one sub-issue of PRD #${prd.number} (\`gh issue view ${prd.number}\`). The harness implements the PRD's sub-issues one after another on this one branch and opens one pull request for them all.`,
-    earlier.length
-      ? `This branch already carries ${earlier.map(({ number }) => `#${number}`).join(", ")}: build on that work, do not redo or rewrite it, and do not start any other sub-issue.`
-      : "Implement only this sub-issue; the harness hands you the next one after it.",
-  ].join(" ");
-
-const shipPrd = async (
-  prd: Ticket,
-  journal: Journal,
-  nextAdr: string,
-): Promise<ShipOutcome> => {
-  const branch = branchFor(prd);
-  journal.setTicket(prd, branch);
-  say(
-    `\n=== PRD #${prd.number} ${prd.title}\n=== branch ${branch}\n=== run ${journal.runId}\n`,
-  );
-
-  assignToSelf(prd.number);
-  resetBranchToMain(branch);
-  const sandbox = await createPlumixSandbox(branch);
-  const runAgentPhase = agentPhaseRunner(sandbox, journal);
-  const done: { ticket: Ticket; copy: PullRequestCopy }[] = [];
-  let lastSessionId: string | undefined;
-  let stoppedBecause: string | undefined;
-
-  try {
-    while (done.length < SUB_ISSUES_A_PRD_PULL_REQUEST_CARRIES) {
-      const next = nextSubIssue(
-        subIssuesOf(prd.number),
-        new Set(done.map(({ ticket }) => ticket.number)),
-      );
-      if (!next) break;
-      const sub: Ticket = { number: next.number, title: next.title };
-      assignToSelf(sub.number);
-      say(`\n=== sub-issue #${sub.number} ${sub.title}`);
-      const one = await implementOne(sandbox, runAgentPhase, sub, nextAdr, {
-        phaseSuffix: `#${sub.number}`,
-        prdNote: PRD_NOTE_FOR(
-          prd,
-          done.map(({ ticket }) => ticket),
-        ),
-        briefBase: done.length ? "HEAD" : MERGE_BASE,
-      });
-      if (one.status === "blocked") {
-        parkTicket(sub.number, one.reason, undefined, one.briefFails);
-        stoppedBecause = `#${sub.number} was parked: ${one.reason}`;
-        say(`  ${stoppedBecause}`);
-        break;
-      }
-      done.push({ ticket: sub, copy: one.copy });
-      lastSessionId = one.sessionId;
-    }
-
-    if (done.length === 0) {
-      return {
-        status: "skipped",
-        reason: stoppedBecause ?? "no sub-issue of the PRD was ready",
-      };
-    }
-    return await reviewGateAndLand(
-      sandbox,
-      runAgentPhase,
-      journal,
-      prd,
-      branch,
-      prdPullRequestCopy(prd, done),
-      lastSessionId,
-    );
-  } finally {
-    const { preservedWorktreePath } = await closePlumixSandbox(sandbox);
-    if (preservedWorktreePath)
-      say(`Worktree preserved at ${preservedWorktreePath}`);
-  }
-};
-
 export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
   nextAdr: string,
 ): Promise<ShipOutcome> => {
-  if (ticket.prd) return shipPrd(ticket, journal, nextAdr);
-  const branch = branchFor(ticket);
+  const branch = `feat/${ticket.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48)}-${ticket.number}`;
   journal.setTicket(ticket, branch);
   say(
     `\n=== #${ticket.number} ${ticket.title}\n=== branch ${branch}\n=== run ${journal.runId}\n`,
@@ -690,21 +432,138 @@ export const shipTicket = async (
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
 
   try {
-    const one = await implementOne(sandbox, runAgentPhase, ticket, nextAdr, {
-      phaseSuffix: "",
-      prdNote: "",
-      briefBase: MERGE_BASE,
+    say("\n--- check brief ---");
+    const brief = await checkBrief(runAgentPhase, ticket);
+    if (brief.next === "park")
+      return { status: "blocked", reason: brief.reason, briefFails: true };
+
+    say("\n--- implement ---");
+    const implemented = await runAgentPhase("implement", IMPLEMENTER, {
+      promptFile: join(PROMPT_DIR, "implement.md"),
+      promptArgs: { TICKET: String(ticket.number), NEXT_ADR: nextAdr },
+      maxIterations: 40,
+      idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
     });
-    if (one.status === "blocked") return one;
-    return await reviewGateAndLand(
-      sandbox,
+    if (
+      !implemented.commits.length &&
+      (await commitsTheBranchCarries(sandbox)) === 0
+    ) {
+      return {
+        status: "blocked",
+        reason:
+          readDeclinedTag(implemented.stdout) ??
+          "the implementer produced no commits and gave no reason",
+      };
+    }
+
+    let pullRequestCopy =
+      (await readOrAskAgain(
+        runAgentPhase,
+        "implement",
+        IMPLEMENTER,
+        implemented,
+        readTemplatedPullRequest,
+        EMIT_THE_PULL_REQUEST,
+      )) ??
+      readPullRequestTag(implemented.stdout) ??
+      fallbackPullRequestCopy(ticket);
+    const fixer = fixerFor(
       runAgentPhase,
-      journal,
-      ticket,
-      branch,
-      one.copy,
-      one.sessionId,
+      implemented.iterations.at(-1)?.sessionId,
     );
+    const summaries: string[] = [];
+    let notes: readonly ReviewItem[] = [];
+
+    for (let pass = 1; ; pass += 1) {
+      say(`--- review (pass ${pass}) ---`);
+      const review = await reviewBranch(
+        runAgentPhase,
+        journal,
+        ticket,
+        pass,
+        pullRequestCopy.body,
+        await surveyMutants(sandbox),
+      );
+      if (!review) {
+        return {
+          status: "blocked",
+          reason: `review pass ${pass} ended without a readable <review> block, so the branch is unreviewed`,
+        };
+      }
+      summaries.push(review.summary);
+      notes = review.notes;
+      const next = afterReview(review, pass);
+      if (next.next === "gates") break;
+      if (next.next === "park")
+        return { status: "blocked", reason: next.reason };
+
+      say(
+        `--- fix ${next.gaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
+      );
+      const fixed = await fixer.apply(
+        `fix#review${pass}`,
+        asFixBrief(next.gaps, pullRequestCopy),
+      );
+      pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
+      const { declined } = fixed;
+      if (declined) {
+        return {
+          status: "blocked",
+          reason: `${next.gaps.length} spec gap(s) stand and the fixer changed nothing:\n\n${declined.reason}\n\n${asGapList(next.gaps)}`,
+        };
+      }
+    }
+
+    const gates = await gatesUntilGreen(
+      sandbox,
+      GATES,
+      journal,
+      fixer,
+      "final",
+    );
+    if (gates.blocked) return { status: "blocked", reason: gates.blocked };
+
+    say("\n--- land ---");
+    const onMain = await rebaseOntoLatestMain(
+      sandbox,
+      syncRepoToMain,
+      async () =>
+        !(
+          await resolveTheRebase(
+            sandbox,
+            runAgentPhase,
+            IMPLEMENTER,
+            ticket.number,
+          )
+        ).unfinished,
+    );
+    if (onMain === "resolved") {
+      const regated = await gatesUntilGreen(
+        sandbox,
+        GATES,
+        journal,
+        fixer,
+        "resolved",
+      );
+      if (regated.blocked)
+        return { status: "blocked", reason: regated.blocked };
+    }
+    if (onMain === "kept") {
+      say(
+        "  the latest main conflicts, so the branch is pushed as it was gated",
+      );
+    }
+    await pushBranch(branch, sandbox.worktreePath);
+    const pullRequest = openPullRequest(
+      branch,
+      pullRequestCopy.title,
+      pullRequestCopy.body +
+        asReviewNote(summaries, notes) +
+        asWaivedGatesNote(gates.waived),
+    );
+
+    queueForMerge(pullRequest.number);
+    return { status: "queued", pullRequest };
   } finally {
     const { preservedWorktreePath } = await closePlumixSandbox(sandbox);
     if (preservedWorktreePath)
