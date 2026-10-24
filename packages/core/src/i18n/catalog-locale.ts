@@ -1,7 +1,6 @@
 import { CLDR_PARENT_LOCALES } from "./cldr-parent-locales.js";
 
-/** CLDR's root, the parent that ends a chain. */
-const ROOT = "und";
+const CLDR_ROOT = "und";
 
 function canonical(tag: string): string {
   return new Intl.Locale(tag).baseName;
@@ -18,7 +17,7 @@ function dropLastSubtag(tag: string): string | undefined {
 
 function parentOf(tag: string): string | undefined {
   const parent = CLDR_PARENT_LOCALES[tag] ?? dropLastSubtag(tag);
-  return parent === ROOT ? undefined : parent;
+  return parent === CLDR_ROOT ? undefined : parent;
 }
 
 function* fallbackChain(locale: string): Generator<string> {

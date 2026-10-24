@@ -10,7 +10,6 @@ interface ParentLocalesJson {
   };
 }
 
-/** The committed module the rule reads; `pnpm cldr:generate` writes it. */
 export const CLDR_PARENT_LOCALES_FILE = fileURLToPath(
   new URL("../src/i18n/cldr-parent-locales.ts", import.meta.url),
 );
@@ -27,10 +26,9 @@ function propertyKey(locale: string): string {
   return /^[a-z]+$/.test(locale) ? locale : JSON.stringify(locale);
 }
 
-/** The module's source as `pnpm cldr:generate` writes it from the installed `cldr-core`. */
 export function renderCldrParentLocales(): string {
   const entries = Object.entries(installedParentLocales()).sort(([a], [b]) =>
-    a.localeCompare(b),
+    a < b ? -1 : a > b ? 1 : 0,
   );
   const lines = entries.map(
     ([locale, parent]) =>
