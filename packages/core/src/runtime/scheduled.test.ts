@@ -4,7 +4,7 @@ import type { Db } from "../context/app-context.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
 import type { RegisteredScheduledTask } from "../plugin/manifest.js";
 import type { PlumixApp } from "./app.js";
-import { createAppContext } from "../context/app.js";
+import { createAppContext, withSignal } from "../context/app.js";
 import { testConfig } from "../test/config.js";
 import { createTestContext, silentLogger } from "../test/context.js";
 import { createDeferQueue } from "../test/defer.js";
@@ -507,5 +507,82 @@ describe("runScheduledTasks — a task's time budget", () => {
       message: "timed out after 90s",
     });
     expect(span?.error).toBeUndefined();
+  });
+
+  test("a shutdown aborts the task's ctx.signal with its reason, and its span and log say it was shut down", async () => {
+    const snapshots: TelemetrySnapshot[] = [];
+    const warn = vi.fn();
+    const error = vi.fn();
+    const shutdown = new AbortController();
+    const ctx = createTestContext({
+      db,
+      logger: { ...silentLogger, warn, error },
+      config: {
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
+      },
+    });
+    let signal: AbortSignal | undefined;
+    const app = fakeApp([
+      {
+        id: "stuck",
+        registeredBy: "p",
+        cron: "0 3 * * *",
+        handler: (taskCtx) => {
+          signal = taskCtx.signal;
+          return hang();
+        },
+      },
+    ]);
+    const reason = Object.assign(new DOMException("shut down", "AbortError"), {
+      cause: "shutdown",
+    });
+
+    const run = runScheduledTasks(app, withSignal(ctx, shutdown.signal));
+    shutdown.abort(reason);
+
+    await expect(run).resolves.toStrictEqual({
+      ran: 0,
+      failed: [],
+      timedOut: ["p:stuck"],
+    });
+    expect(signal?.reason).toBe(reason);
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      `[plumix] scheduled task "p:stuck" shut down`,
+      { taskId: "stuck", plugin: "p", cron: "0 3 * * *" },
+    );
+    const span = snapshots[0]?.spans.find((s) => s.name === "cron: stuck");
+    expect(span).toMatchObject({ status: "cancelled", message: "shut down" });
+  });
+
+  test("a task that rejects with its signal's reason on shutdown was shut down, it did not fail", async () => {
+    const shutdown = new AbortController();
+    const app = fakeApp([
+      {
+        id: "stops",
+        registeredBy: "p",
+        handler: (taskCtx) =>
+          new Promise<void>((_resolve, reject) => {
+            taskCtx.signal.addEventListener("abort", () => {
+              reject(taskCtx.signal.reason as Error);
+            });
+          }),
+      },
+    ]);
+    const { ctx, error } = fakeCtx();
+
+    const run = runScheduledTasks(app, withSignal(ctx, shutdown.signal));
+    shutdown.abort(new DOMException("shut down", "AbortError"));
+
+    await expect(run).resolves.toStrictEqual({
+      ran: 0,
+      failed: [],
+      timedOut: ["p:stops"],
+    });
+    expect(error).not.toHaveBeenCalled();
   });
 });

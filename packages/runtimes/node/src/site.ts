@@ -194,8 +194,11 @@ export function createNodeSite({
     return startScheduledRunner({
       app,
       env,
-      fire: (firedCron, scheduledTime) =>
-        handler.scheduled({ scheduledTime, cron: firedCron }),
+      fire: (firedCron, scheduledTime, signal) =>
+        handler.scheduled(
+          { scheduledTime, cron: firedCron },
+          { env, ...(signal === undefined ? {} : { signal }) },
+        ),
       logger,
       ...overrides,
     });

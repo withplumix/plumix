@@ -14,6 +14,7 @@ import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
 const COMPLETED = Symbol("completed");
 const TIMED_OUT = Symbol("timed out");
+const SHUT_DOWN = Symbol("shut down");
 
 /**
  * Never returns the `aborted` arm. Omitting `firedCron` runs every task. Must
@@ -34,8 +35,23 @@ export async function runScheduledTasks(
     const timeoutMs = scheduledTaskTimeoutMs(task);
     const timedOutAfter = `timed out after ${formatTimeout(timeoutMs)}`;
     const controller = new AbortController();
-    const taskCtx = withSignal(ctx, controller.signal);
+    const taskCtx = withSignal(
+      ctx,
+      AbortSignal.any([ctx.signal, controller.signal]),
+    );
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // The scheduler's signal outlives the firing; a listener per task would
+    // pile up on it.
+    const unlisten = new AbortController();
+    // Listens on `ctx.signal` itself, whose listeners run before the combined
+    // signal's: a task that rejects with the shutdown's reason still loses.
+    const shutDown = new Promise<typeof SHUT_DOWN>((resolve) => {
+      if (ctx.signal.aborted) resolve(SHUT_DOWN);
+      ctx.signal.addEventListener("abort", () => resolve(SHUT_DOWN), {
+        once: true,
+        signal: unlisten.signal,
+      });
+    });
     // Never rejects: losing the race leaves a task that ignores its signal
     // running in the background, which core cannot stop and does not wait on.
     const budget = new Promise<typeof TIMED_OUT>((resolve) => {
@@ -65,23 +81,32 @@ export async function runScheduledTasks(
               .run(taskCtx, () => Promise.resolve(task.handler(taskCtx)))
               .then(() => COMPLETED),
             budget,
+            shutDown,
           ]);
           if (settled === TIMED_OUT) s.cancel(timedOutAfter);
+          if (settled === SHUT_DOWN) s.cancel("shut down");
           return settled;
         },
       );
-      if (outcome === TIMED_OUT) {
+      if (outcome === TIMED_OUT || outcome === SHUT_DOWN) {
         timedOut.push(label);
+        const meta = {
+          taskId: task.id,
+          plugin: task.registeredBy,
+          cron: task.cron,
+        };
         try {
-          ctx.logger.warn(
-            `[plumix] scheduled task "${label}" ${timedOutAfter}`,
-            {
-              taskId: task.id,
-              plugin: task.registeredBy,
-              cron: task.cron,
-              timeoutMs,
-            },
-          );
+          if (outcome === TIMED_OUT) {
+            ctx.logger.warn(
+              `[plumix] scheduled task "${label}" ${timedOutAfter}`,
+              { ...meta, timeoutMs },
+            );
+          } else {
+            ctx.logger.warn(
+              `[plumix] scheduled task "${label}" shut down`,
+              meta,
+            );
+          }
         } catch {
           // A logger that throws must not also count the task as failed.
         }
@@ -98,6 +123,7 @@ export async function runScheduledTasks(
       );
     } finally {
       clearTimeout(timer);
+      unlisten.abort();
     }
   }
   try {

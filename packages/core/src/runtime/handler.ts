@@ -22,7 +22,7 @@ import type {
 import { requestHasSession } from "../auth/authenticator.js";
 import { isSafeMethod } from "../auth/csrf.js";
 import { flushPurgeTags } from "../cdn/purge.js";
-import { createAppContext } from "../context/app.js";
+import { createAppContext, withSignal } from "../context/app.js";
 import { logErrorSafely } from "../context/log.js";
 import { requestStore } from "../context/stores.js";
 import { resolveEnvInput } from "./contract/env-input.js";
@@ -264,8 +264,12 @@ export function createPlumixHandler(
           aborted: error instanceof Error ? error.message : String(error),
         };
       }
-      const report = await requestStore.run(ctx, () =>
-        runScheduledTasks(app, ctx, event.cron),
+      const runCtx =
+        invocation.signal === undefined
+          ? ctx
+          : withSignal(ctx, invocation.signal);
+      const report = await requestStore.run(runCtx, () =>
+        runScheduledTasks(app, runCtx, event.cron),
       );
       try {
         // The response `commit` decorates has no reader on the cron path.

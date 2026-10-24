@@ -112,7 +112,7 @@ Run directly, the entry serves `dist/client` from disk ahead of the site, then h
 
 The two exports do not serve the same paths. `listener` runs the whole stack the process runs: the built assets, then image transforms, then the site. The default export runs only the site. Nothing then serves `/assets/*`, `/_plumix/image` or the admin's own `/_plumix/admin/assets/*`, so an admin deep link returns the shell while its chunks 404. Embed `listener` unless your host serves those paths itself. The entry also exports `dispose()`, which drains the site's deferred work and releases its database connection. A host embedding `listener` must call it when the host shuts down.
 
-A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that can finish in that window: the process stops accepting, stops the scheduler, lets in-flight responses finish and drains deferred work such as telemetry delivery, all within one ten-second budget, then exits `0`. Whatever is still running at the deadline — a scheduled run, a response or deferred work — is cut, and the process exits `1` saying which. A second signal exits at once.
+A rolling deploy that sends `SIGTERM` and waits ten seconds loses nothing that can finish in that window: the process stops accepting, stops the scheduler (aborting a running task's `ctx.signal`, so a task that checks it stops between batches), lets in-flight responses finish and drains deferred work such as telemetry delivery, all within one ten-second budget, then exits `0`. Whatever is still running at the deadline — a scheduled run, a response or deferred work — is cut, and the process exits `1` saying which. A second signal exits at once.
 
 ## Logs
 

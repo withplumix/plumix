@@ -414,6 +414,28 @@ describe("createPlumixHandler — scheduled", () => {
     );
     expect(committed).toBe(1);
   });
+
+  test("a task's ctx.signal follows the invocation's signal", async () => {
+    const shutdown = new AbortController();
+    let signal: AbortSignal | undefined;
+    const plugin = definePlugin("cron", (ctx) => {
+      ctx.registerScheduledTask({
+        id: "watches",
+        handler: (taskCtx) => {
+          signal = taskCtx.signal;
+        },
+      });
+    });
+    const handler = await handlerFor({ plugins: [plugin] });
+
+    await handler.scheduled?.(
+      { scheduledTime: 0, cron: "* * * * *" },
+      { env: {}, signal: shutdown.signal },
+    );
+    shutdown.abort("shutdown");
+
+    expect(signal?.reason).toBe("shutdown");
+  });
 });
 
 describe("createPlumixHandler — run", () => {

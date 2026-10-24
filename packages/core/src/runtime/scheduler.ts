@@ -26,10 +26,12 @@ export interface SchedulerOptions {
   /**
    * Fires one schedule — the entry hands this `handler.scheduled`, whose report
    * says which tasks failed. A caught task failure is otherwise invisible here.
+   * `signal` aborts when `stop` is called.
    */
   readonly fire: (
     cron: string,
     scheduledTime: number,
+    signal?: AbortSignal,
   ) => Promise<void | ScheduledRunReport>;
   readonly clock?: SchedulerClock;
   readonly logger?: SchedulerLogger;
@@ -44,7 +46,7 @@ export interface Scheduler {
   /** Resolves when the loop stops; call without awaiting. */
   start(): Promise<void>;
   /**
-   * Stops scheduling and waits for the firing in flight, for at most
+   * Aborts the in-flight firing's signal, then waits for it for at most
    * `timeoutMs`. Unbounded when omitted. Resolves false when the budget ran out
    * with a firing still running.
    */
@@ -78,6 +80,7 @@ export function createScheduler({
   // A call, because TypeScript keeps `stopped` narrowed to false across awaits.
   const isStopped = (): boolean => stopped;
   let inFlight: Promise<void> | undefined;
+  const shutdown = new AbortController();
 
   async function fireDue(minuteStart: number): Promise<void> {
     const at = new Date(minuteStart);
@@ -86,7 +89,11 @@ export function createScheduler({
       if (!schedule.matches(at)) continue;
       try {
         const run = async (): Promise<void> => {
-          const report = await fire(schedule.expression, minuteStart);
+          const report = await fire(
+            schedule.expression,
+            minuteStart,
+            shutdown.signal,
+          );
           if (report) logFiring(logger, schedule.expression, report);
         };
         if (!guard) {
@@ -154,6 +161,13 @@ export function createScheduler({
 
     async stop(options) {
       stopped = true;
+      // Assigned, not passed: the options-bag constructor that takes a `cause`
+      // is missing from the DOM types core compiles against.
+      shutdown.abort(
+        Object.assign(new DOMException("shut down", "AbortError"), {
+          cause: "shutdown",
+        }),
+      );
       const timeoutMs = options?.timeoutMs;
       if (inFlight === undefined || timeoutMs === undefined) {
         await inFlight;

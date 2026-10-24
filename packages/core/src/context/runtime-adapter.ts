@@ -18,6 +18,12 @@ export interface Invocation {
    * header.
    */
   readonly clientAddress?: string;
+  /**
+   * Aborts when the process shuts down. Only `scheduled` reads it, as each
+   * task's `ctx.signal` alongside its budget; a runtime with no shutdown a cron
+   * handler can observe omits it.
+   */
+  readonly signal?: AbortSignal;
 }
 
 export interface DisposeOptions {
