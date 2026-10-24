@@ -48,11 +48,11 @@ describe("a site that configures no outbound slot", () => {
     vi.unstubAllGlobals();
   });
 
-  test("sends nothing anywhere while serving its public pages", async () => {
+  test.each(PUBLIC_PAGES)("%s sends nothing anywhere", async (_name, path) => {
     const fetchSpy = vi.fn(() => Promise.resolve(new Response(null)));
     vi.stubGlobal("fetch", fetchSpy);
 
-    for (const [, path] of PUBLIC_PAGES) await h.fetch(path);
+    await h.fetch(path);
     await h.drainDeferred();
 
     expect(fetchSpy).not.toHaveBeenCalled();
