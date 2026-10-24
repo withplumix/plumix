@@ -68,7 +68,7 @@ a context of its own whose `ctx.signal`, and the `ctx.fetch` that follows it, ab
 `TimeoutError` (cause `"timeout"`) when the budget runs out. Core then stops waiting, reports the
 task in `timedOut`, logs a warning, ends its span `cancelled`, and runs the next task; a task that
 ignores its signal keeps running in the background
-([ADR 0066](../adr/0066-a-scheduled-task-runs-within-a-budget-and-a-timeout-is-not-a-failure.md)).
+([ADR 0059](../adr/0059-a-scheduled-task-runs-within-a-budget-and-a-timeout-is-not-a-failure.md)).
 
 The in-process scheduler wakes each minute, serialises firings, and runs each through the run
 guard. The claim (`scheduled_task_claims`) lets one replica run a schedule-minute. The lease
