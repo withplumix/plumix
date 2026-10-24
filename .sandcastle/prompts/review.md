@@ -39,9 +39,9 @@ as the ticket pins it, and put your disagreement in `notes`.
 - **Spec findings:** do not fix them. A missing criterion, one met in form but
   not in effect, or scope the ticket did not ask for goes in `specGaps`; the
   implementer closes it and you review again. A criterion that a suite, a
-  typecheck, a lint or a build passes is met by the harness's gates, which run
-  after this phase; it is never a spec gap, and neither you nor the implementer
-  runs those suites to prove it.
+  typecheck, a lint or a build passes is met by the harness's checks and CI; it
+  is never a spec gap, and neither you nor the implementer runs the full suites
+  to prove it.
 - **A gap no change to the branch can close** gets `"needsADecision": true`:
   the brief contradicts itself, the code or `main`, or a pinned criterion
   cannot be met as written. Anything a change to the branch can close is not a
@@ -55,8 +55,9 @@ as the ticket pins it, and put your disagreement in `notes`.
 decision. A rule about how the work was done, such as test-first order, leaves
 nothing in a diff, so it is never a finding.
 
-Run the test files you touched and a targeted typecheck of their packages. The
-harness runs every gate after this phase. Commit your changes as one commit, by
+Run the test files you touched, lint the files you changed and a targeted
+typecheck of their packages. The harness runs its fast checks after this phase,
+and CI runs the full suites. Commit your changes as one commit, by
 the rules in AGENTS.md's "Commits, branches, PRs". Commit nothing if the code is
 already right.
 

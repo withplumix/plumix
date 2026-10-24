@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { RunAgentPhase } from "./agent.js";
-import { GATES, underAnOrphanReaper } from "./gates.js";
+import { GATES, GATES_LEFT_TO_CI, underAnOrphanReaper } from "./gates.js";
 import {
   SETUP_STEPS,
   TASKS_A_LANE_RUNS_AT_ONCE,
@@ -113,7 +113,7 @@ describe("readTemplatedPullRequest", () => {
 });
 
 describe("gate applicability", () => {
-  const e2e = GATES.find(({ name }) => name === "e2e");
+  const e2e = GATES_LEFT_TO_CI.find(({ name }) => name === "e2e");
 
   test("e2e applies to a render change", () => {
     expect(
@@ -133,16 +133,14 @@ describe("gate applicability", () => {
     );
 
     expect(unconditional).toContain("format");
-    expect(unconditional).toContain("test");
     expect(unconditional).toContain("knip");
   });
 
-  test("lint and typecheck run before the pull request, so CI does not find what they would", () => {
+  test("typecheck runs before the pull request, so CI does not find what it would", () => {
     const unconditional = GATES.filter(({ appliesWhen }) => !appliesWhen).map(
       ({ name }) => name,
     );
 
-    expect(unconditional).toContain("lint");
     expect(unconditional).toContain("typecheck");
   });
 });

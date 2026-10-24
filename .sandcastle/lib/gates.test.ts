@@ -180,15 +180,45 @@ describe("package-scoped gates", () => {
 
 describe("the test gate", () => {
   test("runs every package's tests after one fails, so a waived failure hides nothing", () => {
-    const gate = GATES.find((candidate) => candidate.name === "test");
+    const gate = GATES_LEFT_TO_CI.find(
+      (candidate) => candidate.name === "test",
+    );
 
     expect(gate?.command).toContain("--continue");
   });
 
   test("runs only the unit tier, the one test tier turbo runs", () => {
-    const gate = GATES.find((candidate) => candidate.name === "test");
+    const gate = GATES_LEFT_TO_CI.find(
+      (candidate) => candidate.name === "test",
+    );
 
     expect(gate?.command).toMatch(/turbo run test:unit --/);
+  });
+});
+
+describe("the gates a branch passes before its push", () => {
+  test("leave lint, test and e2e to CI, which took 18 of the 27 local gate minutes per ticket on 2026-10-23", () => {
+    const local = GATES.map(({ name }) => name);
+    const inCi = GATES_LEFT_TO_CI.map(({ name }) => name);
+
+    expect(local).not.toContain("lint");
+    expect(local).not.toContain("test");
+    expect(local).not.toContain("e2e");
+    expect(inCi).toEqual(expect.arrayContaining(["lint", "test", "e2e"]));
+  });
+
+  test("keep the checks that take seconds or catch most CI failures cheaply", () => {
+    expect(GATES.map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        "check-no-major",
+        "commitlint",
+        "format",
+        "i18n",
+        "knip",
+        "publint",
+        "typecheck",
+      ]),
+    );
   });
 });
 

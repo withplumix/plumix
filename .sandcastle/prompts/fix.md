@@ -41,7 +41,8 @@ shared with every other checkout on that machine, and your own worktree's path d
 from in here, so prune reads every one of them as gone. Compare against `origin/main` with
 `git diff` and `git log` instead.
 
-The harness re-runs the full gate suite after this phase, so do not run it yourself.
+Run the tests and lint of the files this fix touched. The harness then re-runs its fast
+checks, and CI runs the full suites.
 
 # Done
 

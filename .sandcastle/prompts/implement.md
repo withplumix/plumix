@@ -25,10 +25,18 @@ that from what you write below.
 4. **Commit** by the rules in AGENTS.md's "Commits, branches, PRs". Use
    `Fixes #{{TICKET}}` when every criterion is met, otherwise `Refs #{{TICKET}}`.
 
-Do not run the full gate suite yourself. The harness runs check-no-major, commitlint,
-format, i18n, knip, publint, lint, typecheck, test and e2e after this phase and hands you
-any failure. Only attw runs in CI alone, after the pull request opens. As you work, run
-single test files and a targeted typecheck and lint of the packages you touch.
+You prove your own change; there is no slower suite after you to catch it before CI. Before
+your last commit, for every package you changed:
+
+- run its unit tests: `pnpm exec vitest run` inside the package, or the test files you touched
+  when the package's suite is large;
+- lint the files you changed: `pnpm exec eslint <files>` inside the package;
+- run the e2e specs that cover a render or admin change you made: `pnpm test:e2e <spec>`
+  inside the package, which passes the spec to Playwright with the package's own config.
+
+After this phase the harness runs only the fast repo-wide checks (check-no-major, commitlint,
+format, i18n, knip, publint, typecheck) and hands you any failure. Lint, the full unit suite,
+e2e and attw run in CI, and a CI failure comes back to you as a repair.
 
 Commit on the branch you are on. Never create, switch or rename a branch, even when the
 ticket names one: the harness owns this branch, and a commit anywhere else never reaches the
