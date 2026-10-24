@@ -1,4 +1,5 @@
 import { createApiToken } from "../../../../auth/api-tokens.js";
+import { resolveApiTokenPreset } from "../../../../auth/token-presets.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensCreateInputSchema } from "./schemas.js";
@@ -23,7 +24,14 @@ export const create = base
       userId: context.user.id,
       name: input.name,
       expiresAt,
-      scopes: input.scopes,
+      scopes:
+        input.preset === undefined
+          ? input.scopes
+          : resolveApiTokenPreset(
+              input.preset,
+              context.user.role,
+              context.plugins,
+            ),
     });
 
     await context.hooks.doAction(

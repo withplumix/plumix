@@ -17,6 +17,7 @@ import { sessions } from "../../../db/schema/sessions.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { installPlugins } from "../../../runtime/install-plugins.js";
+import { currentEtag } from "../../../test/entry-etag.js";
 import { userFactory } from "../../../test/factories.js";
 import { createTestDb } from "../../../test/harness.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -39,6 +40,24 @@ async function apiTokenCaller(scopes: readonly string[]) {
   });
   request.headers.set("authorization", `Bearer ${secret}`);
   return h;
+}
+
+/**
+ * An editor mints a token from `preset` over their session; the returned
+ * harness calls RPC as that token.
+ */
+async function presetTokenCaller(preset: "read_only" | "draft_only") {
+  const request = new Request("https://cms.example/_plumix/rpc", {
+    method: "POST",
+  });
+  const h = await createRpcHarness({ request });
+  const minter = await h.actingAs("editor");
+  const minted = await minter.client.auth.apiTokens.create({
+    name: "agent",
+    preset,
+  });
+  request.headers.set("authorization", `Bearer ${minted.secret}`);
+  return { h, editor: minter.user };
 }
 
 describe("auth.session", () => {
@@ -779,6 +798,85 @@ describe("auth.apiTokens", () => {
       scopes: null,
     });
     expect(created.token.scopes).toBeNull();
+  });
+});
+
+describe("auth.apiTokens.create — presets", () => {
+  test("a narrowed preset stores its explicit scope list", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await h.client.auth.apiTokens.create({ name: "r", preset: "read_only" });
+    await h.client.auth.apiTokens.create({ name: "d", preset: "draft_only" });
+
+    const scopesByName = Object.fromEntries(
+      (await h.client.auth.apiTokens.list({})).map((t) => [t.name, t.scopes]),
+    );
+    expect(scopesByName).toEqual({
+      r: ["entry:post:read", "entry:post:read_revisions", "user:list"],
+      d: [
+        "admin:access",
+        "entry:post:create",
+        "entry:post:edit_any",
+        "entry:post:edit_own",
+        "entry:post:read",
+        "entry:post:read_revisions",
+        "user:edit_own",
+        "user:list",
+      ],
+    });
+  });
+
+  test("refuses a preset alongside an explicit scope list", async () => {
+    const h = await createRpcHarness({ authAs: "editor" });
+    await expect(
+      h.client.auth.apiTokens.create({
+        name: "both",
+        preset: "read_only",
+        scopes: ["settings:manage"],
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await h.db.select().from(apiTokens)).toHaveLength(0);
+  });
+
+  test("a read-only token is refused any write over RPC", async () => {
+    const { h, editor } = await presetTokenCaller("read_only");
+    const live = await h.factory.published.create({ authorId: editor.id });
+
+    await expect(h.client.entry.get({ id: live.id })).resolves.toMatchObject({
+      id: live.id,
+    });
+    await expect(
+      h.client.entry.create({ slug: "agent-draft" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      h.client.entry.update({
+        id: live.id,
+        title: "rewritten",
+        ifMatch: await currentEtag(h.db, live.id),
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a draft-only token can update a draft but is refused publishing", async () => {
+    const { h, editor } = await presetTokenCaller("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        title: "rewritten",
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).resolves.toMatchObject({ title: "rewritten", status: "draft" });
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        status: "published",
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:publish" },
+    });
   });
 });
 

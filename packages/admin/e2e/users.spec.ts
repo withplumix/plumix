@@ -773,6 +773,41 @@ test.describe("/users/$id/edit — API tokens (self)", () => {
     });
   });
 
+  test("offers the agent presets, defaulting to Same as me, and posts the picked one", async ({
+    page,
+  }) => {
+    const inputs = await mockRpcWithCapture(page, {
+      captureSuffix: "/auth/apiTokens/create",
+      captureResponse: {
+        secret: "pl_pat_abcdSECRET",
+        token: token({ id: "tok-r", name: "agent" }),
+      },
+      handlers: {
+        "/auth/session": AUTHED_ADMIN,
+        "/user/get": self,
+        ...SELF_EDIT_LISTS,
+      },
+    });
+
+    await page.goto("users/1/edit");
+    await expect(
+      page.getByTestId("api-tokens-create-scope-inherit-radio"),
+    ).toBeChecked();
+    await expect(
+      page.getByTestId("api-tokens-create-scope-read-only-radio"),
+    ).toBeVisible();
+    await page.getByTestId("api-tokens-create-name-input").fill("agent");
+    await page.getByTestId("api-tokens-create-scope-draft-only-radio").click();
+    await page.getByTestId("api-tokens-create-submit").click();
+
+    await expect(page.getByTestId("api-tokens-secret-dialog")).toBeVisible();
+    expect(inputs[0]).toMatchObject({
+      name: "agent",
+      preset: "draft_only",
+      scopes: null,
+    });
+  });
+
   test("restrict scope mode posts the textarea-parsed array", async ({
     page,
   }) => {

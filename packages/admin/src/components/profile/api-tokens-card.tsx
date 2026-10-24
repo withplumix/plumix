@@ -122,11 +122,13 @@ const createFormSchema = v.object({
     v.maxLength(64, vMessage(M.nameTooLong)),
   ),
   expires: v.picklist(["7", "30", "90", "never"]),
-  scopeMode: v.picklist(["inherit", "restrict"]),
+  scopeMode: v.picklist(["inherit", "read_only", "draft_only", "restrict"]),
   scopesText: v.pipe(v.string(), v.maxLength(4096)),
 });
 
 type CreateFormValues = v.InferOutput<typeof createFormSchema>;
+
+type TokenPreset = "read_only" | "draft_only";
 
 const EXPIRY_DESCRIPTOR: Record<
   CreateFormValues["expires"],
@@ -160,15 +162,12 @@ export function SelfApiTokensCard(): ReactNode {
   const list = useQuery(orpc.auth.apiTokens.list.queryOptions({ input: {} }));
 
   const create = useMutation({
-    mutationFn: (input: {
-      name: string;
-      expiresInDays: number | null;
-      scopes: readonly string[] | null;
-    }) =>
+    mutationFn: (input: MintInput) =>
       orpc.auth.apiTokens.create.call({
         name: input.name,
         expiresInDays: input.expiresInDays,
         scopes: input.scopes === null ? null : [...input.scopes],
+        preset: input.preset,
       }),
     onSuccess: () =>
       queryClient.invalidateQueries({
@@ -227,6 +226,8 @@ interface MintInput {
   name: string;
   expiresInDays: number | null;
   scopes: readonly string[] | null;
+  /** Resolved to an explicit scope list by the server at mint. */
+  preset?: TokenPreset;
 }
 interface MintResult {
   secret: string;
@@ -302,14 +303,20 @@ function ApiTokensCardView({
             onSubmit={(values) => {
               setCreateError(null);
               const scopes =
-                values.scopeMode === "inherit"
-                  ? null
-                  : parseScopesText(values.scopesText);
+                values.scopeMode === "restrict"
+                  ? parseScopesText(values.scopesText)
+                  : null;
+              const preset =
+                values.scopeMode === "read_only" ||
+                values.scopeMode === "draft_only"
+                  ? values.scopeMode
+                  : undefined;
               onMint(
                 {
                   name: values.name,
                   expiresInDays: EXPIRY_DAYS[values.expires],
                   scopes,
+                  preset,
                 },
                 {
                   onSuccess: (result) => {
@@ -611,8 +618,42 @@ function CreateTokenForm({
                     />
                     <UILabel htmlFor="api-token-scope-inherit" variant="choice">
                       <Trans
-                        id="apiTokens.create.scope.inherit"
-                        message="Inherit all your permissions"
+                        id="apiTokens.create.scope.sameAsMe"
+                        message="Same as me"
+                      />
+                    </UILabel>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem
+                      value="read_only"
+                      id="api-token-scope-read-only"
+                      disabled={pending}
+                      data-testid="api-tokens-create-scope-read-only-radio"
+                    />
+                    <UILabel
+                      htmlFor="api-token-scope-read-only"
+                      variant="choice"
+                    >
+                      <Trans
+                        id="apiTokens.create.scope.readOnly"
+                        message="Read only"
+                      />
+                    </UILabel>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem
+                      value="draft_only"
+                      id="api-token-scope-draft-only"
+                      disabled={pending}
+                      data-testid="api-tokens-create-scope-draft-only-radio"
+                    />
+                    <UILabel
+                      htmlFor="api-token-scope-draft-only"
+                      variant="choice"
+                    >
+                      <Trans
+                        id="apiTokens.create.scope.draftOnly"
+                        message="Draft, can't publish"
                       />
                     </UILabel>
                   </div>

@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { API_TOKEN_PRESETS } from "../../../../auth/token-presets.js";
+
 const tokenNameSchema = v.pipe(
   v.string(),
   v.trim(),
@@ -47,11 +49,22 @@ export const tokenScopesSchema = v.optional(
 
 export const apiTokensListInputSchema = v.optional(v.object({}), {});
 
-export const apiTokensCreateInputSchema = v.object({
-  name: tokenNameSchema,
-  expiresInDays: v.optional(expiresInDaysSchema, 90),
-  scopes: tokenScopesSchema,
-});
+/**
+ * A preset resolves to an explicit scope list at mint, so it and `scopes` are
+ * exclusive.
+ */
+export const apiTokensCreateInputSchema = v.pipe(
+  v.object({
+    name: tokenNameSchema,
+    expiresInDays: v.optional(expiresInDaysSchema, 90),
+    scopes: tokenScopesSchema,
+    preset: v.optional(v.picklist(API_TOKEN_PRESETS)),
+  }),
+  v.check(
+    (input) => input.preset === undefined || input.scopes === null,
+    "pass a preset or scopes, not both",
+  ),
+);
 
 export const apiTokensRevokeInputSchema = v.object({
   id: tokenIdSchema,
