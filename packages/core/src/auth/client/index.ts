@@ -42,4 +42,4 @@ export type {
 } from "./registry.js";
 export type { AuthMethods, EmbeddedAuthContext } from "./render-context.js";
 export type { Session, SessionUser } from "./session.js";
-export type { Invitee, SignedIn } from "./core-methods.js";
+export type { Invitee, Passkey, SignedIn } from "./core-methods.js";

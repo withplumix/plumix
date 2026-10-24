@@ -56,6 +56,8 @@ function routeRefusal(payload: JsonValue): string {
   return refusal.success ? refusal.output.error : "unknown";
 }
 
+const rpcEnvelopeSchema = v.object({ json: v.custom<JsonValue>(() => true) });
+
 const rpcErrorSchema = v.object({
   json: v.object({
     code: v.string(),
@@ -67,19 +69,22 @@ const RPC_REFUSALS: Readonly<Record<string, string>> = {
   UNAUTHORIZED: "unauthorized",
   FORBIDDEN: "forbidden",
   BAD_REQUEST: "invalid_input",
+  NOT_FOUND: "not_found",
 };
 
 /** An RPC refusal as the auth client's own code. */
-function rpcRefusal(payload: JsonValue): string {
+function rpcRefusal(payload: JsonValue, status: number): string {
   const refusal = v.safeParse(rpcErrorSchema, payload);
-  if (!refusal.success) return "unknown";
+  // A runtime that refuses the area (ADR 0014) answers before oRPC does.
+  if (!refusal.success) return status === 403 ? "forbidden" : "unknown";
   const { code, data } = refusal.output.json;
   if (code === "CONFLICT") {
     const reason = data?.reason ?? "";
     if (
       reason === "etag_mismatch" ||
       reason === "locale_not_supported" ||
-      reason === "current_session"
+      reason === "current_session" ||
+      reason === "last_credential"
     ) {
       return reason;
     }
@@ -138,7 +143,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
   async function send(
     url: string,
     body: unknown,
-    refusal: (payload: JsonValue) => string = routeRefusal,
+    refusal: (payload: JsonValue, status: number) => string = routeRefusal,
   ): Promise<AuthResult<JsonValue>> {
     let response: Response;
     try {
@@ -160,7 +165,7 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
     } catch {
       return failure("unknown");
     }
-    if (!response.ok) return failure(refusal(payload));
+    if (!response.ok) return failure(refusal(payload, response.status));
     return success(payload);
   }
 
@@ -203,6 +208,18 @@ export function createAuthClient(env: AuthClientEnv): CreatedAuthClient {
   const kernelFor = (name: string): AuthMethodClientKernel => ({
     url: (route = "", options) => authUrl(`${name}/${route}`, options),
     post: (route, body, options) => post(`${name}/${route}`, body, options),
+    rpc: async <T>(
+      procedure: string,
+      input: unknown = {},
+    ): Promise<AuthResult<T>> => {
+      const result = await rpc(procedure, input);
+      if (result.error) return result;
+      const envelope = v.safeParse(rpcEnvelopeSchema, result.data);
+      // Safety: the half names the answer its procedure gives.
+      return envelope.success
+        ? success(envelope.output.json as T)
+        : failure("unknown");
+    },
     navigate,
     fail: failure,
   });

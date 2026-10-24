@@ -40,6 +40,10 @@ const MESSAGES: Readonly<Record<string, MessageDescriptor>> = {
     id: "authClient.error.forbidden",
     message: "You can't change that.",
   },
+  not_found: {
+    id: "authClient.error.notFound",
+    message: "That's no longer here. Refresh and try again.",
+  },
   etag_mismatch: {
     id: "authClient.error.etagMismatch",
     message: "Your account changed elsewhere. Check it and save again.",
@@ -51,6 +55,10 @@ const MESSAGES: Readonly<Record<string, MessageDescriptor>> = {
   current_session: {
     id: "authClient.error.currentSession",
     message: "This is the session you're using. Sign out to end it.",
+  },
+  last_credential: {
+    id: "authClient.error.lastCredential",
+    message: "You can't remove your only passkey. Add another first.",
   },
   method_not_registered: {
     id: "authClient.error.methodNotRegistered",
