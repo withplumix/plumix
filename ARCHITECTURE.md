@@ -981,7 +981,8 @@ Each is stated as something that never happens, with what guards it.
 - Core never takes on what would merely be absent without it; that belongs to a plugin
   ([ADR 0002](docs/adr/0002-core-owns-what-would-be-wrong.md)).
 - Plumix never sends anything to a destination the site did not configure, and core never sets a
-  cookie for an anonymous public visitor ([`VISION.md`](VISION.md#the-floor)).
+  cookie for an anonymous public visitor ([`VISION.md`](VISION.md#the-floor);
+  `packages/core/src/runtime/floor.dispatch.test.ts`).
 - A render that reads the principal never reaches a shared cache
   ([ADR 0030](docs/adr/0030-a-render-that-reads-the-principal-is-never-shared.md)).
 - No write lands from a stale copy or over someone else's live lease
