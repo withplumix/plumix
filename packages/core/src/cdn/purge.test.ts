@@ -2,12 +2,18 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, Db } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
+import type { JsonObject } from "../json.js";
 import type { CdnFake } from "../test/cdn-fake.js";
 import { withUser } from "../auth/with-user.js";
+import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
+import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import { compileEntryQuery, entryQuery } from "../entries/query.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
+import { term } from "../plugin/fields/term.js";
 import { toggle } from "../plugin/fields/toggle.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import {
@@ -27,6 +33,7 @@ import {
   entryPurgeTags,
   entryTag,
   settingsTag,
+  termTag,
   typeTag,
   userTag,
 } from "./contract/tags.js";
@@ -54,6 +61,7 @@ const PAGES: Readonly<Record<string, string>> = {
   "/settings/site": settingsTag("site"),
   "/settings/seo": settingsTag("seo"),
   "/author/4": userTag(4),
+  "/term/3": termTag(3),
 };
 
 async function storePages(cdn: CdnFake): Promise<void> {
@@ -215,14 +223,30 @@ describe("registerCorePurgeInvalidator", () => {
   );
 
   const term = { id: 3, taxonomy: "category" };
-  const TERM_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
+  const TERM_LIST_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
     ["term:created", [term]],
-    ["term:updated", [term, term]],
-    ["term:meta_changed", [term, changes]],
     ["term:deleted", [term]],
   ];
+  const TERM_EDIT_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
+    ["term:updated", [term, term]],
+    ["term:meta_changed", [term, changes]],
+  ];
 
-  it.each(TERM_EVENTS)(
+  it.each(TERM_EDIT_EVENTS)(
+    "%s purges only the pages that rendered the term",
+    async (event, payload) => {
+      const hooks = new HookRegistry();
+      registerCorePurgeInvalidator(hooks);
+      const { ctx, cdn, flush } = await fakeCtx();
+
+      await fire(hooks, event, ...payload, ctx);
+      await flush();
+
+      assertOnlyPurged(cdn, ["/term/3"]);
+    },
+  );
+
+  it.each(TERM_LIST_EVENTS)(
     "%s purges the pages of the taxonomy's entry types",
     async (event, payload) => {
       const hooks = new HookRegistry();
@@ -238,7 +262,7 @@ describe("registerCorePurgeInvalidator", () => {
 
   // A taxonomy that lists no entry types still has term feeds, which list every
   // public type attached to the term — so its term changes purge those types.
-  it.each(TERM_EVENTS)(
+  it.each(TERM_LIST_EVENTS)(
     "%s in a taxonomy without entryTypes purges the public types' pages",
     async (event, payload) => {
       const hooks = new HookRegistry();
@@ -271,7 +295,8 @@ describe("registerCorePurgeInvalidator", () => {
   const jane = { id: 4, name: "Jane", slug: "jane" };
   const PURGING_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
     ...ENTRY_EVENTS,
-    ...TERM_EVENTS,
+    ...TERM_LIST_EVENTS,
+    ...TERM_EDIT_EVENTS,
     ["user:updated", [jane, jane]],
     ["user:meta_changed", [jane, changes]],
     ["user:deleted", [jane, { reassignedTo: 1 }]],
@@ -533,5 +558,161 @@ describe("a write to a user", () => {
     });
 
     cdn.assertNotStored(`/header/${String(jane.id)}`);
+  });
+});
+
+describe("a write to a term", () => {
+  const blog = definePlugin("test-term-purge", (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerTermTaxonomy("category", {
+      label: "Categories",
+      entryTypes: ["post"],
+    });
+    ctx.registerTermMetaBox("featured", {
+      label: "Featured",
+      termTaxonomies: ["category"],
+      fields: [toggle("featured")],
+    });
+    ctx.registerEntryMetaBox("related", {
+      label: "Related",
+      entryTypes: ["post"],
+      fields: [term("topic", ["category"])],
+    });
+    // Narrows by the term's slug and renders no term of its own.
+    ctx.registerPublicRoute({
+      path: "/count/:slug",
+      cacheable: true,
+      handler: async (request, appCtx) => {
+        const slug = new URL(request.url).pathname.split("/").pop() ?? "";
+        const where = await compileEntryQuery(
+          appCtx,
+          entryQuery().inTerm("category", slug),
+        );
+        if (where === null) return new Response(null, { status: 404 });
+        const rows = await appCtx.db
+          .select({ id: entries.id })
+          .from(entries)
+          .where(where);
+        return new Response(String(rows.length));
+      },
+    });
+  });
+
+  async function site() {
+    const cdn = fakeCdn();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [blog] },
+    });
+    const admin = await h.seedUser("admin");
+    const news = await h.factory.category.create({
+      name: "News",
+      slug: "news",
+    });
+    const post = async (
+      slug: string,
+      termIds: readonly number[] = [],
+      meta: JsonObject = {},
+    ) => {
+      const row = await h.factory.entry.create({
+        type: "post",
+        slug,
+        title: slug,
+        status: "published",
+        authorId: admin.id,
+        publishedAt: new Date(),
+        meta,
+      });
+      for (const termId of termIds) {
+        await h.factory.entryTerm.create({ entryId: row.id, termId });
+      }
+      return row;
+    };
+    const render = async (path: string) => {
+      (await h.fetch(path)).assertStatus(200);
+      await h.drainDeferred();
+      cdn.assertStored(path);
+    };
+    const update = async (changes: Record<string, unknown>) => {
+      const row = await h.db.query.terms.findFirst({
+        where: eq(terms.id, news.id),
+      });
+      const response = await h.fetch("/_plumix/rpc/term/update", {
+        as: admin,
+        json: {
+          json: { id: news.id, ifMatch: etagOf(row?.version ?? 0), ...changes },
+          meta: [],
+        },
+      });
+      response.assertStatus(200);
+      await h.drainDeferred();
+    };
+    return { h, cdn, news, post, render, update };
+  }
+
+  it("a rename purges an entry page that shows the term's chip", async () => {
+    const { cdn, news, post, render, update } = await site();
+    await post("filed", [news.id]);
+    await render("/post/filed");
+
+    await update({ name: "Headlines" });
+
+    cdn.assertNotStored("/post/filed");
+  });
+
+  it("a rename purges the term's archive", async () => {
+    const { cdn, news, post, render, update } = await site();
+    await post("filed", [news.id]);
+    await render("/category/news");
+
+    await update({ name: "Headlines" });
+
+    cdn.assertNotStored("/category/news");
+  });
+
+  it("a rename purges an entry page that references the term in a field", async () => {
+    const { cdn, news, post, render, update } = await site();
+    await post("related", [], { topic: String(news.id) });
+    await render("/post/related");
+
+    await update({ name: "Headlines" });
+
+    cdn.assertNotStored("/post/related");
+  });
+
+  it("a re-slug purges a response that found the term by its slug", async () => {
+    const { cdn, news, post, render, update } = await site();
+    await post("filed", [news.id]);
+    await render("/count/news");
+
+    await update({ slug: "headlines" });
+
+    cdn.assertNotStored("/count/news");
+  });
+
+  it("a meta-only save purges the pages a rename does", async () => {
+    const { cdn, news, post, render, update } = await site();
+    await post("filed", [news.id]);
+    await post("unfiled");
+    await render("/post/filed");
+    await render("/category/news");
+    await render("/post/unfiled");
+
+    await update({ meta: { featured: true } });
+
+    cdn.assertNotStored("/post/filed");
+    cdn.assertNotStored("/category/news");
+    cdn.assertStored("/post/unfiled");
+  });
+
+  it("a rename keeps a post that never showed the term stored", async () => {
+    const { cdn, news, post, render, update } = await site();
+    await post("filed", [news.id]);
+    await post("unfiled");
+    await render("/post/unfiled");
+
+    await update({ name: "Headlines" });
+
+    cdn.assertStored("/post/unfiled");
   });
 });

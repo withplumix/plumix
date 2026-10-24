@@ -35,6 +35,8 @@ interface TermLookupRow {
  * type visible instead of widening to the contract's `HydratedReference`.
  */
 export const termLookupAdapter = {
+  kind: "term",
+
   async list(ctx, options) {
     const conditions = scopeConditions(options.scope);
     let limit: number;

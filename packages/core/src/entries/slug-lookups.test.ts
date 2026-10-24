@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { eq } from "../db/index.js";
+import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
 import { definePlugin } from "../plugin/define.js";
 import { createTracedContext } from "../test/traced-context.js";
@@ -49,6 +50,36 @@ describe("slug lookups after a write in the same request", () => {
     expect(newAfter?.id).toBe(user.id);
   });
 
+  test("a term slug reads the term that holds it after a re-slug", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      config: { plugins: [blog] },
+    });
+    const term = await harness.factory.category.create({ slug: "news" });
+
+    const [oldBefore, newBefore, oldAfter, newAfter] = await run(async () => {
+      const lookups = [
+        await findTermBySlug(ctx, "category", "news"),
+        await findTermBySlug(ctx, "category", "headlines"),
+      ];
+      const renamed = { ...term, slug: "headlines" };
+      await ctx.db
+        .update(terms)
+        .set({ slug: "headlines" })
+        .where(eq(terms.id, term.id));
+      await ctx.hooks.doAction("term:updated", renamed, term, ctx);
+      return [
+        ...lookups,
+        await findTermBySlug(ctx, "category", "news"),
+        await findTermBySlug(ctx, "category", "headlines"),
+      ];
+    });
+
+    expect(oldBefore?.id).toBe(term.id);
+    expect(newBefore).toBeNull();
+    expect(oldAfter).toBeNull();
+    expect(newAfter?.id).toBe(term.id);
+  });
+
   test("a term created after a lookup missed it is found", async () => {
     const { harness, ctx, run } = await createTracedContext({
       config: { plugins: [blog] },
@@ -63,5 +94,22 @@ describe("slug lookups after a write in the same request", () => {
 
     expect(before).toBeNull();
     expect(after?.slug).toBe("news");
+  });
+
+  test("a term deleted after a lookup found it is no longer found", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      config: { plugins: [blog] },
+    });
+    const term = await harness.factory.category.create({ slug: "news" });
+
+    const [before, after] = await run(async () => {
+      const found = await findTermBySlug(ctx, "category", "news");
+      await ctx.db.delete(terms).where(eq(terms.id, term.id));
+      await ctx.hooks.doAction("term:deleted", term, ctx);
+      return [found, await findTermBySlug(ctx, "category", "news")];
+    });
+
+    expect(before?.id).toBe(term.id);
+    expect(after).toBeNull();
   });
 });

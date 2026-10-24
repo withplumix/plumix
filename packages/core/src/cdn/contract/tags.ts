@@ -1,7 +1,7 @@
 /**
- * Archives carry `t:<type>`, permalinks `e:<id>`, pages that resolved a user
- * `u:<id>`, pages that read a settings group `s:<group>`; a write purges the
- * matching tags.
+ * Archives carry `t:<type>`, permalinks `e:<id>`, pages that rendered a term
+ * `tm:<id>`, pages that resolved a user `u:<id>`, pages that read a settings
+ * group `s:<group>`; a write purges the matching tags.
  */
 export function typeTag(entryType: string): string {
   return normalizeTag(`t:${entryType}`);
@@ -24,9 +24,22 @@ export function entryPurgeTags(entryType: string, entryId: number): string[] {
   return [typeTag(entryType), entryTag(entryId)];
 }
 
-/** A term archive carries the `t:<type>` tags of its taxonomy's entry types. */
+/** Created and deleted terms purge the `t:<type>` tags of their taxonomy's entry types. */
 export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {
   return taxonomyEntryTypes.map(typeTag);
+}
+
+/** A page that rendered a term, its archive or an entry's chip, carries it. */
+export function termTag(termId: number): string {
+  return `tm:${String(termId)}`;
+}
+
+/**
+ * No page is stored under it; it only drops the request memo's term slug
+ * lookups, whose misses have no term id to be tagged by.
+ */
+export function termSlugsTag(): string {
+  return "tm:slugs";
 }
 
 /** A page that read a user, an author's byline or archive, carries it. */
@@ -76,10 +89,7 @@ export function pluginChangedTags(
 /** The core entity a lookup adapter's ids name. */
 export type HydratedEntityKind = "entry" | "term" | "user";
 
-/**
- * The tag an id hydrated by a `kind` adapter stores a page under. A term has
- * no tag of its own, so its ids add none.
- */
+/** The tag an id hydrated by a `kind` adapter stores a page under. */
 export function hydratedEntityTags(
   kind: HydratedEntityKind,
   id: string,
@@ -90,6 +100,6 @@ export function hydratedEntityTags(
     case "user":
       return [userTag(Number(id))];
     case "term":
-      return [];
+      return [termTag(Number(id))];
   }
 }

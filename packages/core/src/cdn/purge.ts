@@ -7,6 +7,8 @@ import {
   normalizeTag,
   settingsTag,
   termPurgeTags,
+  termSlugsTag,
+  termTag,
   userSlugsTag,
   userTag,
 } from "./contract/tags.js";
@@ -92,7 +94,8 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     if (reassignedTo !== null) onUser({ id: reassignedTo }, ctx);
   });
 
-  // A term archive is stored under its taxonomy's entry types' `t:<type>` tags.
+  // A new or deleted term has no `tm:<id>` page yet or any more, so the pages
+  // listing its taxonomy are stored under its entry types' `t:<type>` tags.
   const onTerm = (
     term: { readonly taxonomy: string },
     ctx: AppContext,
@@ -101,12 +104,19 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
       ctx,
       termPurgeTags(termPageEntryTypeNames(ctx.plugins, term.taxonomy)),
     );
+    ctx.memo.invalidate([termSlugsTag()]);
   };
   hooks.addAction("term:created", onTerm);
   hooks.addAction("term:deleted", onTerm);
-  hooks.addAction("term:updated", (term, _previous, ctx) => onTerm(term, ctx));
+  const onTermEdit = (term: { readonly id: number }, ctx: AppContext): void => {
+    enqueuePurgeTags(ctx, [termTag(term.id)]);
+    ctx.memo.invalidate([termSlugsTag()]);
+  };
+  hooks.addAction("term:updated", (term, _previous, ctx) =>
+    onTermEdit(term, ctx),
+  );
   hooks.addAction("term:meta_changed", (term, _changes, ctx) =>
-    onTerm(term, ctx),
+    onTermEdit(term, ctx),
   );
 
   // A response that printed a settings group is stored under its tag.

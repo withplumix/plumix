@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { entryTag, hydratedEntityTags, userTag } from "./tags.js";
+import { entryTag, hydratedEntityTags, termTag, userTag } from "./tags.js";
 
 describe("hydratedEntityTags", () => {
   test("an entry id tags the page with the entry's tag", () => {
@@ -11,7 +11,7 @@ describe("hydratedEntityTags", () => {
     expect(hydratedEntityTags("user", "4")).toEqual([userTag(4)]);
   });
 
-  test("a term id adds no tag", () => {
-    expect(hydratedEntityTags("term", "3")).toEqual([]);
+  test("a term id tags the page with the term's tag", () => {
+    expect(hydratedEntityTags("term", "3")).toEqual([termTag(3)]);
   });
 });
