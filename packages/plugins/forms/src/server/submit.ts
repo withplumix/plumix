@@ -243,8 +243,8 @@ export function createSubmitHandler(
       userAgent,
     };
 
-    const vetoed = await validators.validate(candidate, ctx);
-    if (vetoed.length > 0) return reject(vetoed);
+    const validatorErrors = await validators.validate(candidate, ctx);
+    if (validatorErrors.length > 0) return reject(validatorErrors);
 
     const stored = form.store ? await insertSubmission(ctx, candidate) : null;
     // Spam skips the handler, so no notification goes out; it is still

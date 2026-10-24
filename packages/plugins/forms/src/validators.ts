@@ -58,7 +58,7 @@ export function createFormValidatorRegistry(): FormValidatorRegistry {
     },
     assertFormsExist: (forms) => {
       for (const { validator, contributor } of registered.values()) {
-        const slug = validator.forms?.find((one) => !forms.get(one));
+        const slug = validator.forms?.find((formSlug) => !forms.get(formSlug));
         if (slug !== undefined) {
           throw FormsError.unknownValidatorForm({
             slug,
@@ -69,15 +69,11 @@ export function createFormValidatorRegistry(): FormValidatorRegistry {
       }
     },
     validate: async (candidate, ctx) => {
+      const applicable = [...registered.values()].filter(
+        ({ validator }) => validator.forms?.includes(candidate.form) ?? true,
+      );
       const results = await Promise.all(
-        [...registered.values()]
-          .filter(
-            ({ validator }) =>
-              validator.forms?.includes(candidate.form) ?? true,
-          )
-          .map(({ validator, contributor }) =>
-            runValidator(validator, contributor, candidate, ctx),
-          ),
+        applicable.map((entry) => runValidator(entry, candidate, ctx)),
       );
       return results.flat();
     },
@@ -86,8 +82,7 @@ export function createFormValidatorRegistry(): FormValidatorRegistry {
 
 /** A throw counts as no errors: one broken validator refuses nothing. */
 async function runValidator(
-  validator: FormValidatorRegistration,
-  contributor: string,
+  { validator, contributor }: RegisteredValidator,
   candidate: FormSubmissionCandidate,
   ctx: AppContext,
 ): Promise<readonly FormFieldError[]> {
