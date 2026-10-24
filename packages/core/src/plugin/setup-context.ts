@@ -81,7 +81,7 @@ export function createPluginAfterSetupContext(
   );
 }
 
-/** The ladder forms still name a minimum rung until the ladder goes (#3366). */
+/** The ladder forms name a minimum rung; `grantTo` names the roles. */
 function rolesOfRegistration(
   grant:
     | UserRole

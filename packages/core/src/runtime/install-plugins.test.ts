@@ -1863,7 +1863,6 @@ const duplicateCases: readonly DuplicateCase[] = [
     read: (registry) =>
       variantOf(
         variantMinRole,
-        // The lowest rung it reaches; `grantTo` is in ladder order.
         registry.capabilities.get("report:export")?.grantTo[0],
       ),
   },

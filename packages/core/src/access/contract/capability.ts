@@ -53,7 +53,7 @@ export type CoreCapability = keyof typeof CORE_CAPABILITIES;
 
 /**
  * The default roles that receive an action; `admin` always does. A single
- * role is the ladder form, that role and every one above it (#3366 drops it).
+ * role is the ladder form: that role and every one above it.
  */
 export type ActionGrant = readonly UserRole[] | UserRole;
 

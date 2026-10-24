@@ -184,7 +184,7 @@ export const recipes = definePlugin("recipes", {
 
 ## Options that stay server-side
 
-Not every option reaches the browser. The projection that builds the plugin manifest works from an allowlist, and it holds back `hasAdminColumn`, `isInQuickEdit`, `rewrite` and `capabilities`. Two of those four still do their work on the server. `rewrite` sets the compiled route's base slug and decides whether term URLs nest, and `capabilities` overrides the minimum role for each of the five actions above. The other two reach nothing today, so do not expect `hasAdminColumn: true` to add a column to the entry list, or `isInQuickEdit` to change the quick-edit form.
+Not every option reaches the browser. The projection that builds the plugin manifest works from an allowlist, and it holds back `hasAdminColumn`, `isInQuickEdit`, `rewrite` and `capabilities`. Two of those four still do their work on the server. `rewrite` sets the compiled route's base slug and decides whether term URLs nest, and `capabilities` names the default roles that receive each of the five actions above. The other two reach nothing today, so do not expect `hasAdminColumn: true` to add a column to the entry list, or `isInQuickEdit` to change the quick-edit form.
 
 `isPublic: false` removes the taxonomy's public surface altogether. No term archive routes compile, and the term URL builder returns null.
 
