@@ -85,7 +85,7 @@ The API ignores a query key that names no public taxonomy. A taxonomy called `pa
 
 ## What an entry carries
 
-The response schemas are an allowlist. Nothing leaves the API unless the schema names it. An entry carries `id`, `type`, `slug`, `title`, `excerpt`, `content`, `contentGated`, `status`, `publishedAt`, `createdAt`, `updatedAt`, `author` (`id`, `name` and `avatarUrl`, or `null`), `terms` keyed by taxonomy, and two default-deny maps, `meta` and `images`. `contentGated` is `true` for an entry an [access policy](/access/overview/) lists as a teaser, whose `content` is then `null`. Dates are ISO 8601 strings. A term carries `id`, `name` and `slug`.
+The response schemas are an allowlist. Nothing leaves the API unless the schema names it. An entry carries `id`, `type`, `slug`, `title`, `excerpt`, `content`, `contentGated`, `status`, `publishedAt`, `createdAt`, `updatedAt`, `author` (`id`, `name` and `avatarUrl`), `terms` keyed by taxonomy, and two default-deny maps, `meta` and `images`. `contentGated` is `true` for an entry an [access policy](/access/overview/) lists as a teaser, whose `content` is then `null`. Dates are ISO 8601 strings. A term carries `id`, `name` and `slug`.
 
 `meta` holds only the fields declared with `.showInApi()`. `images` holds one key for each image role a field of that entry type declares, again only when that field opted in:
 

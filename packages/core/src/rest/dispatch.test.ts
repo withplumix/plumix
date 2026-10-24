@@ -135,6 +135,14 @@ function schemaPropertyMaps(node: JsonValue | undefined): JsonObject[] {
   return [...own, ...Object.values(node).flatMap(schemaPropertyMaps)];
 }
 
+/** Every object schema (a node with `properties`) in a JSON Schema document. */
+function objectSchemas(node: JsonValue | undefined): JsonObject[] {
+  if (Array.isArray(node)) return node.flatMap(objectSchemas);
+  if (node === undefined || !isJsonObject(node)) return [];
+  const own = node.properties !== undefined ? [node] : [];
+  return [...own, ...Object.values(node).flatMap(objectSchemas)];
+}
+
 function bearerGet(path: string, secret: string): Request {
   return new Request(`https://cms.example${path}`, {
     headers: { authorization: `Bearer ${secret}` },
@@ -1195,6 +1203,28 @@ describe("REST API — OpenAPI spec", () => {
     expect(entry?.publishedAt).toEqual({
       anyOf: [dateTime, { type: "null" }],
     });
+  });
+
+  test("the entry schema documents its author as always present", async () => {
+    const h = await restHarness();
+
+    const res = await h.dispatch(apiGet("/_plumix/api/v1/openapi.json"));
+    const doc = (await res.json()) as JsonObject;
+
+    const entry = objectSchemas(doc).find(
+      ({ properties }) =>
+        properties !== undefined &&
+        isJsonObject(properties) &&
+        "publishedAt" in properties,
+    );
+    const author = schemaPropertyMaps(doc).find(
+      (props) => "publishedAt" in props,
+    )?.author;
+    expect(entry?.required).toContain("author");
+    expect(author).toMatchObject({ type: "object" });
+    expect(author).not.toHaveProperty("anyOf");
+    expect(author).not.toHaveProperty("oneOf");
+    expect(author).not.toHaveProperty("nullable");
   });
 
   test("no timestamp field in the spec is an empty schema", async () => {

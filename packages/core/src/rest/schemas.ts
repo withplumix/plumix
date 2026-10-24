@@ -57,7 +57,7 @@ export const publicEntrySchema = v.object({
   publishedAt: v.nullable(v.date()),
   createdAt: v.date(),
   updatedAt: v.date(),
-  author: v.nullable(publicAuthorSchema),
+  author: publicAuthorSchema,
   // Associations are embedded, never nested as their own sub-resource.
   terms: v.record(v.string(), v.array(publicTermSchema)),
   // Only meta fields whitelisted with `showInApi` reach this map
