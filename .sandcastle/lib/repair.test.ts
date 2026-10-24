@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import type { MergeOutcome } from "./verdict.js";
+import { whyTheRebaseIsUnfinished } from "./freshen.js";
 import {
   afterCiFix,
   aRerunCannotTurnItGreen,
@@ -21,7 +22,6 @@ import {
   idsInJobUrl,
   recaptureScreenshots,
   SCREENSHOT_DIFF_STEP,
-  whyTheRebaseIsUnfinished,
 } from "./repair.js";
 
 describe("idsInJobUrl", () => {

@@ -8,8 +8,8 @@ import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { RepairOutcome } from "./run.js";
 import type { Journal } from "./telemetry.js";
 import type { FailingCheck, MergeOutcome, ReviewThread } from "./verdict.js";
-import { agentPhaseRunner, PROMPT_DIR } from "./agent.js";
-import { rebaseOntoLatestMain } from "./freshen.js";
+import { agentPhaseRunner } from "./agent.js";
+import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import { gateBehindCheck, GATES, GATES_LEFT_TO_CI } from "./gates.js";
 import {
   branchOfPullRequest,
@@ -23,7 +23,6 @@ import { say } from "./log.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
 import { untilTheRunCompletes } from "./run-completion.js";
 import {
-  AN_HOUR_IN_SECONDS,
   closePlumixSandbox,
   createPlumixSandbox,
   createUnbuiltSandbox,
@@ -247,20 +246,6 @@ export const afterCiFix = (
   return { next: "decline", reason: declined.reason };
 };
 
-export const whyTheRebaseIsUnfinished = async (
-  sandbox: Executor,
-): Promise<string | null> => {
-  const stopped = await sandbox.exec(
-    'test ! -d "$(git rev-parse --git-path rebase-merge)" && test ! -d "$(git rev-parse --git-path rebase-apply)"',
-  );
-  if (stopped.exitCode !== 0)
-    return "a rebase is still in progress in the sandbox";
-  const onMain = await sandbox.exec(
-    "git merge-base --is-ancestor origin/main HEAD",
-  );
-  return onMain.exitCode === 0 ? null : "HEAD does not contain origin/main";
-};
-
 export const repairPullRequest = async (
   ticket: Ticket,
   pullRequest: QueuedPullRequest,
@@ -289,19 +274,15 @@ export const repairPullRequest = async (
     const headBefore = (await sandbox.exec("git rev-parse HEAD")).stdout.trim();
     const rebase = await sandbox.exec("git rebase origin/main");
     if (rebase.exitCode !== 0) {
-      const resolved = await runAgentPhase("resolve-conflicts", IMPLEMENTER, {
-        promptFile: join(PROMPT_DIR, "resolve.md"),
-        promptArgs: {
-          TICKET: String(ticket.number),
-          PULL_REQUEST: String(pullRequest.number),
-        },
-        maxIterations: 10,
-        idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
-      });
-      const unfinished = await whyTheRebaseIsUnfinished(sandbox);
+      const { unfinished, stdout } = await resolveTheRebase(
+        sandbox,
+        runAgentPhase,
+        IMPLEMENTER,
+        ticket.number,
+      );
       if (unfinished) {
         return declined(
-          readDeclinedTag(resolved.stdout) ??
+          readDeclinedTag(stdout) ??
             `${pullRequest.url} conflicts with main and the resolver could not finish the rebase: ${unfinished}`,
         );
       }
@@ -374,7 +355,29 @@ export const repairPullRequest = async (
       if (gates.blocked) return declined(gates.blocked);
     }
 
-    const onMain = await rebaseOntoLatestMain(sandbox, syncRepoToMain);
+    const onMain = await rebaseOntoLatestMain(
+      sandbox,
+      syncRepoToMain,
+      async () =>
+        !(
+          await resolveTheRebase(
+            sandbox,
+            runAgentPhase,
+            IMPLEMENTER,
+            ticket.number,
+          )
+        ).unfinished,
+    );
+    if (onMain === "resolved" && !refusal.conflicted) {
+      const regated = await gatesUntilGreen(
+        sandbox,
+        GATES,
+        journal,
+        fixer,
+        "resolved",
+      );
+      if (regated.blocked) return declined(regated.blocked);
+    }
     if (onMain === "kept") {
       say(
         "  the latest main conflicts, so the branch is pushed as it was gated",
