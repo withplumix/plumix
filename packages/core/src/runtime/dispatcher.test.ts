@@ -247,6 +247,51 @@ describe("dispatcher — routing", () => {
     expect(await response.text()).toBe(indexBody);
   });
 
+  test("bounces a signed-in user whose role lacks admin:access, whatever its rank", async () => {
+    const adminOnly = definePlugin("admin-only", {
+      setup: (ctx) => {
+        ctx.registerCapability("admin:access", "admin");
+      },
+    });
+    const h = await createDispatcherHarness({
+      assets: htmlAssets("<!doctype html><title>admin</title>"),
+      config: { plugins: [adminOnly] },
+    });
+    const editor = await h.seedUser("editor");
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/admin", { method: "GET" }),
+      editor.id,
+    );
+
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/");
+  });
+
+  test("serves the admin shell to a signed-in user whose role holds admin:access, whatever its rank", async () => {
+    const membersToo = definePlugin("members-too", {
+      setup: (ctx) => {
+        ctx.registerCapability("admin:access", "subscriber");
+      },
+    });
+    const indexBody = "<!doctype html><title>admin</title>";
+    const h = await createDispatcherHarness({
+      assets: htmlAssets(indexBody),
+      config: { plugins: [membersToo] },
+    });
+    const subscriber = await h.seedUser("subscriber");
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/admin", { method: "GET" }),
+      subscriber.id,
+    );
+
+    const response = await h.dispatch(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toBe(indexBody);
+  });
+
   test("POST /_plumix/admin is rejected with 405 even when an assets binding is present", async () => {
     const assets = {
       fetch: (): Promise<Response> =>

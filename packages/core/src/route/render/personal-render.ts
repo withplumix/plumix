@@ -3,7 +3,7 @@ import type {
   AuthenticatedUser,
 } from "../../context/app-context.js";
 import type { RequestMemo } from "../../context/memo.js";
-import { canAccessAdmin } from "../../access/contract/rbac.js";
+import { getCapabilityResolver } from "../../auth/rbac.js";
 import { resolveLocale } from "../../i18n/resolve-locale.js";
 
 /**
@@ -25,7 +25,7 @@ const verdicts = new WeakMap<RequestMemo, RenderVerdict>();
 export function trackPrincipalReads(ctx: AppContext): AppContext {
   const user = ctx.user;
   if (user === null) return ctx;
-  const adminBarViewer = staffViewer(user);
+  const adminBarViewer = adminAccessViewer(ctx, user);
   const verdict: RenderVerdict = {
     personal: adminBarViewer !== null || localeIsPersonal(ctx),
     adminBarViewer,
@@ -55,12 +55,17 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
   };
 }
 
-/**
- * The staff check the admin shell makes (#2814): the bar has nothing to offer
- * anyone else.
- */
-function staffViewer(user: AuthenticatedUser): AuthenticatedUser | null {
-  return canAccessAdmin(user.role) ? user : null;
+/** The check the admin shell makes: the bar has nothing to offer anyone else. */
+function adminAccessViewer(
+  ctx: Pick<AppContext, "plugins">,
+  user: AuthenticatedUser,
+): AuthenticatedUser | null {
+  return getCapabilityResolver(ctx.plugins).hasCapability(
+    user.role,
+    "admin:access",
+  )
+    ? user
+    : null;
 }
 
 /**
@@ -89,10 +94,10 @@ export function renderIsPersonal(ctx: Pick<AppContext, "memo">): boolean {
  * directly; such a page is never stored.
  */
 export function adminBarViewer(
-  ctx: Pick<AppContext, "memo" | "user">,
+  ctx: Pick<AppContext, "memo" | "user" | "plugins">,
 ): AuthenticatedUser | null {
   const verdict = verdicts.get(ctx.memo);
   if (verdict !== undefined) return verdict.adminBarViewer;
   const user = ctx.user;
-  return user === null ? null : staffViewer(user);
+  return user === null ? null : adminAccessViewer(ctx, user);
 }

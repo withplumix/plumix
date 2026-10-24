@@ -44,6 +44,7 @@ const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
     "user:edit_own",
   ],
   contributor: [
+    "admin:access",
     "entry:page:create",
     "entry:page:edit_own",
     "entry:page:read",
@@ -60,6 +61,7 @@ const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
     "user:edit_own",
   ],
   author: [
+    "admin:access",
     "entry:page:create",
     "entry:page:edit_own",
     "entry:page:publish",
@@ -78,6 +80,7 @@ const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
     "user:edit_own",
   ],
   editor: [
+    "admin:access",
     "entry:page:create",
     "entry:page:delete",
     "entry:page:edit_any",
@@ -115,6 +118,7 @@ const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
     "user:list",
   ],
   admin: [
+    "admin:access",
     "entry:page:create",
     "entry:page:delete",
     "entry:page:edit_any",

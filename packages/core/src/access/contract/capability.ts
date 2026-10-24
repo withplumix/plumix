@@ -5,6 +5,9 @@ import type { UserRole } from "../../db/schema/users.js";
  * `promote` is split from `edit`: role escalation outranks a profile change.
  */
 export const CORE_CAPABILITIES = Object.freeze({
+  // Opens the admin shell and shows the admin bar: anyone below it gets a
+  // shell whose every RPC 403s.
+  "admin:access": "contributor",
   "entry:post:read": "subscriber",
   "entry:post:create": "contributor",
   "entry:post:edit_own": "contributor",
