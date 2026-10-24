@@ -140,7 +140,7 @@ RPC also answers anything but POST with a 405. oRPC reads a GET's input from `?d
 
 ## Cache tags
 
-A cached page is stored under tags, and a publish purges by tag rather than by URL. The content vocabulary is these two — coarse by design, since a page that lists content cannot enumerate what it will list next week. Every tag is lower-cased on the way in, because at least one target CDN matches tags case-insensitively.
+A cached page is stored under tags, and a publish purges by tag rather than by URL. The content vocabulary is these three — coarse by design, since a page that lists content cannot enumerate what it will list next week. Every tag is lower-cased on the way in, because at least one target CDN matches tags case-insensitively.
 
 A page is stored under the tags its route implies plus every tag its render declared. Core declares the entries it embedded, the authors it resolved, as `u:<id>`, and the settings groups it read, as `s:<group>`; every render reads the `site` group, so every page carries `s:site`. A plugin declares its own with `tagCdnEntry`, from a template dep's loader, a component or a hook. For its own data, which core doesn't model, a plugin calls `ctx.cache.reads(key)` instead, or `ctx.cache.reads()` when the response read all of it; core keeps those tags in a namespace named after the plugin.
 
