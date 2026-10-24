@@ -12,11 +12,6 @@ yourself. The skill only reports; its findings are your worklist.
 
 !`gh issue view {{TICKET}} --json number,title,body,comments`
 
-When that issue is a PRD (it has sub-issues), the spec is the sub-issues the PR
-description fixes, one `**Fixes #n**` section each: read every one with
-`gh issue view <n>`. The PRD's other open sub-issues are later work, so code for
-them is out of scope.
-
 The PR description:
 
 {{PR_BODY}}

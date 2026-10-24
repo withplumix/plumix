@@ -1,7 +1,6 @@
 import { execFileSync, spawnSync } from "node:child_process";
 
 import type { BlockedTicket } from "./moving-blockers.js";
-import type { ParentOfALeaf, SubIssue } from "./prd.js";
 import type { Queued } from "./run.js";
 import type {
   FailingCheck,
@@ -12,7 +11,6 @@ import { stillInTheLoopsHands, ticketOfLoopBranch } from "./in-flight.js";
 import { someTicketWaitsOnAMovingBlocker } from "./moving-blockers.js";
 import { blockersNamedIn } from "./named-blockers.js";
 import { retryWhatGitHubDropped, retryWhatGitHubDroppedNow } from "./outage.js";
-import { jobForLeaf } from "./prd.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -28,8 +26,6 @@ import { leftoverSandboxWorktree } from "./worktrees.js";
 export interface Ticket {
   readonly number: number;
   readonly title: string;
-  /** A PRD: its sub-issues ship one after another on one branch, as one pull request. */
-  readonly prd?: true;
 }
 
 interface ListedTicket extends Ticket {
@@ -78,7 +74,7 @@ export const listReadyTickets = (): readonly ListedTicket[] =>
     "--label",
     READY_LABEL,
     "--limit",
-    "500",
+    "100",
     "--json",
     "number,title,assignees",
   ]);
@@ -173,111 +169,10 @@ export const firstUnblockedUnassignedTicket = (
       countOpenBlockers(number) === 0 &&
       !isParentIssue(number) &&
       !waitsOnANamedBlocker(number)
-    ) {
-      const job = jobForLeaf({ number, title }, parentOf(number, alreadyTaken));
-      if (job) return job;
-    }
+    )
+      return { number, title };
   }
   return undefined;
-};
-
-const PARENT_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
-  repository(owner: $owner, name: $name) {
-    issue(number: $number) {
-      parent {
-        number
-        title
-        state
-        assignees { totalCount }
-        labels(first: 20) { nodes { name } }
-      }
-    }
-  }
-}`;
-
-const parentOf = (
-  ticketNumber: number,
-  alreadyTaken: ReadonlySet<number>,
-): ParentOfALeaf | undefined => {
-  const [owner, name] = REPO_SLUG.split("/");
-  const parent = ghJson<{
-    number: number;
-    title: string;
-    state: string;
-    assignees: { totalCount: number };
-    labels: { nodes: readonly { name: string }[] };
-  } | null>([
-    "api",
-    "graphql",
-    "-f",
-    `query=${PARENT_QUERY}`,
-    "-F",
-    `owner=${owner}`,
-    "-F",
-    `name=${name}`,
-    "-F",
-    `number=${ticketNumber}`,
-    "--jq",
-    ".data.repository.issue.parent",
-  ]);
-  if (!parent || parent.state !== "OPEN") return undefined;
-  return {
-    number: parent.number,
-    title: parent.title,
-    ready: parent.labels.nodes.some((label) => label.name === READY_LABEL),
-    claimed: parent.assignees.totalCount > 0 || alreadyTaken.has(parent.number),
-  };
-};
-
-const SUB_ISSUES_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
-  repository(owner: $owner, name: $name) {
-    issue(number: $number) {
-      subIssues(first: 50) {
-        nodes {
-          number
-          title
-          state
-          assignees { totalCount }
-          blockedBy(first: 50) { nodes { number state } }
-        }
-      }
-    }
-  }
-}`;
-
-export const subIssuesOf = (prdNumber: number): readonly SubIssue[] => {
-  const [owner, name] = REPO_SLUG.split("/");
-  return ghJson<
-    readonly {
-      number: number;
-      title: string;
-      state: string;
-      assignees: { totalCount: number };
-      blockedBy: { nodes: readonly { number: number; state: string }[] };
-    }[]
-  >([
-    "api",
-    "graphql",
-    "-f",
-    `query=${SUB_ISSUES_QUERY}`,
-    "-F",
-    `owner=${owner}`,
-    "-F",
-    `name=${name}`,
-    "-F",
-    `number=${prdNumber}`,
-    "--jq",
-    ".data.repository.issue.subIssues.nodes",
-  ]).map(({ number, title, state, assignees, blockedBy }) => ({
-    number,
-    title,
-    open: state === "OPEN",
-    assigned: assignees.totalCount > 0,
-    blockedBy: blockedBy.nodes.map((blocker) => ({
-      number: blocker.number,
-      open: blocker.state === "OPEN",
-    })),
-  }));
 };
 
 const READY_TICKETS_AND_THEIR_BLOCKERS_QUERY = `query($owner: String!, $name: String!, $label: String!) {
@@ -361,10 +256,7 @@ export const ticketByNumber = (wanted: number): Ticket | undefined => {
     "--json",
     "number,title,state",
   ]);
-  if (state !== "OPEN") return undefined;
-  return isParentIssue(number)
-    ? { number, title, prd: true }
-    : { number, title };
+  return state === "OPEN" ? { number, title } : undefined;
 };
 
 export const assignToSelf = (ticketNumber: number): void => {
