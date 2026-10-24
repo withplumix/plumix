@@ -686,6 +686,7 @@ type PluginDefinitionErrorCode =
   | "unknown_image_role"
   | "meta_box_references_unknown_scope"
   | "settings_page_references_unknown_group"
+  | "admin_bar_node_references_unknown_parent"
   | "admin_slug_derivation_failed"
   | "admin_manifest_placeholder_missing";
 
@@ -708,6 +709,8 @@ interface PluginDefinitionErrorFields {
   entryTypeName?: string;
   from?: string;
   scriptId?: string;
+  nodeId?: string;
+  parent?: string;
 }
 
 export class PluginDefinitionError extends Error {
@@ -734,6 +737,8 @@ export class PluginDefinitionError extends Error {
   readonly entryTypeName: string | undefined;
   readonly from: string | undefined;
   readonly scriptId: string | undefined;
+  readonly nodeId: string | undefined;
+  readonly parent: string | undefined;
 
   private constructor(
     code: PluginDefinitionErrorCode,
@@ -760,6 +765,8 @@ export class PluginDefinitionError extends Error {
     this.entryTypeName = fields.entryTypeName;
     this.from = fields.from;
     this.scriptId = fields.scriptId;
+    this.nodeId = fields.nodeId;
+    this.parent = fields.parent;
   }
 
   static invalidPluginIdLength(ctx: {
@@ -917,6 +924,18 @@ export class PluginDefinitionError extends Error {
       `Settings page "${ctx.pageName}" references group "${ctx.groupName}" ` +
         `which hasn't been registered. Call ` +
         `ctx.registerSettingsGroup("${ctx.groupName}", {...}) before the page.`,
+      ctx,
+    );
+  }
+
+  static adminBarNodeReferencesUnknownParent(ctx: {
+    nodeId: string;
+    parent: string;
+  }): PluginDefinitionError {
+    return new PluginDefinitionError(
+      "admin_bar_node_references_unknown_parent",
+      `Admin bar node "${ctx.nodeId}" names parent "${ctx.parent}", ` +
+        `which isn't a registered node.`,
       ctx,
     );
   }

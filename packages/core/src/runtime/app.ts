@@ -37,7 +37,11 @@ import type { EnvInput } from "./contract/env-input.js";
 import type { SchemaModule } from "./contract/slots.js";
 import type { DevRuntime } from "./dev.js";
 import { adminBarChrome } from "../admin-bar/component.js";
-import { registerCoreAdminBarContributors } from "../admin-bar/core-contributors.js";
+import {
+  registerCoreAdminBarNodes,
+  registerNewEntryAdminBarNodes,
+} from "../admin-bar/core-nodes.js";
+import { assertAdminBarParentsRegistered } from "../admin-bar/validate.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
 import { coreAuthMethods } from "../auth/core-methods.js";
 import { declareAuthMethods } from "../auth/declared-methods.js";
@@ -248,7 +252,6 @@ export async function buildApp(
   runtime: RuntimeContext = {},
 ): Promise<PlumixApp> {
   const hooks = new HookRegistry();
-  registerCoreAdminBarContributors(hooks);
   if (process.env.PLUMIX_DEV) {
     registerCoreDebugPanels(hooks);
     registerCoreErrorHints(hooks);
@@ -262,6 +265,7 @@ export async function buildApp(
   // nothing.
   registerCorePurgeInvalidator(hooks);
   const seededRegistry = createPluginRegistry(config.routes);
+  registerCoreAdminBarNodes(seededRegistry);
   registerCoreLookupAdapters(seededRegistry);
   registerCoreTemplateDeps(seededRegistry);
   registerCoreSettings(seededRegistry);
@@ -285,6 +289,8 @@ export async function buildApp(
   // Every role is registered by now, so the index built here is the complete
   // one the request path reads, and a misdeclared role fails this boot.
   resolveImageRoleIndex(registry);
+  registerNewEntryAdminBarNodes(seededRegistry);
+  assertAdminBarParentsRegistered(registry.adminBarNodes);
 
   const schema: Record<string, unknown> = { ...coreSchema };
   const origin = new Map<string, string>();

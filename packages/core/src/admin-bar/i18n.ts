@@ -9,9 +9,10 @@ import { messages as zhCnMessages } from "@plumix/core/locales/admin-bar-zh-CN";
 
 import type { CompiledCatalog } from "../blocks/index.js";
 import type { ResolvedMeta } from "../meta/contract/bags.js";
+import type { BarLocale } from "../plugin/admin-bar-node.js";
 import { resolveMessage } from "../blocks/index.js";
 
-export type BarLocale = "en" | "de" | "uk" | "ar" | "zh-CN";
+export type { BarLocale } from "../plugin/admin-bar-node.js";
 
 const CATALOGS: Readonly<Record<BarLocale, CompiledCatalog>> = {
   en: enMessages,

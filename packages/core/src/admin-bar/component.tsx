@@ -4,9 +4,10 @@ import type {
   AppContext,
   AuthenticatedUser,
   AuthNamespace,
+  Logger,
 } from "../context/app-context.js";
 import type { EntryEditRow } from "../entries/editability.js";
-import type { HookExecutor } from "../hooks/registry.js";
+import type { RegisteredAdminBarNode } from "../plugin/admin-bar-node.js";
 import type { BarStrings } from "./i18n.js";
 import type { AdminBarTreeNode, BarRenderContext } from "./types.js";
 import { useQueriedEntry } from "../blocks/renderer/index.js";
@@ -24,42 +25,47 @@ import {
 
 interface PlumixAdminBarProps {
   readonly viewer: AuthenticatedUser;
-  readonly hooks: HookExecutor;
   readonly request: Request;
   readonly siteName: string;
   readonly auth: AuthNamespace;
   readonly queriedEntryDetails?: BarRenderContext["queriedEntryDetails"];
   readonly entryTypes: BarRenderContext["entryTypes"];
+  readonly nodes: Iterable<RegisteredAdminBarNode>;
+  readonly logger: Logger;
 }
 
 export function PlumixAdminBar({
   viewer,
-  hooks,
   request,
   siteName,
   auth,
   queriedEntryDetails,
   entryTypes,
+  nodes,
+  logger,
 }: PlumixAdminBarProps): ReactNode {
   const queriedEntry = useQueriedEntry();
   const locale = resolveBarLocale(viewer);
   const direction = barDirection(locale);
   const strings = barMessages(locale);
   const tree = buildAdminBarTree(
-    collectAdminBarNodes(hooks, {
-      user: viewer,
-      queriedEntry,
-      queriedEntryDetails,
-      request,
-      siteName,
-      auth,
-      entryTypes,
-      locale,
-      direction,
-    }),
+    collectAdminBarNodes(
+      nodes,
+      {
+        user: viewer,
+        queriedEntry,
+        queriedEntryDetails,
+        request,
+        siteName,
+        auth,
+        entryTypes,
+        locale,
+        direction,
+      },
+      logger,
+    ),
   );
-  // An emptied tree is how a site or theme switches the bar off, so it must
-  // leave no offset or script behind either.
+  // A bar whose every node is hidden leaves no offset or script behind.
   if (tree.length === 0) return null;
   return (
     <>
@@ -107,7 +113,6 @@ export function adminBarChrome(
   return (
     <PlumixAdminBar
       viewer={viewer}
-      hooks={ctx.hooks}
       request={ctx.request}
       siteName={ctx.config.auth.magicLink?.siteName ?? "Site"}
       auth={ctx.auth}
@@ -120,6 +125,8 @@ export function adminBarChrome(
             }
       }
       entryTypes={ctx.plugins.entryTypes}
+      nodes={ctx.plugins.adminBarNodes.values()}
+      logger={ctx.logger}
     />
   );
 }

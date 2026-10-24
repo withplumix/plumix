@@ -5,16 +5,23 @@ import type {
   AuthenticatedUser,
   AuthNamespace,
   Db,
+  Logger,
 } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
-import type { AdminBarNode } from "./types.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { definePlugin } from "../plugin/define.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
-import { createTestContext } from "../test/context.js";
+import { installPlugins } from "../runtime/install-plugins.js";
+import { createTestContext, silentLogger } from "../test/context.js";
 import { adminBarChrome, PlumixAdminBar } from "./component.js";
-import { registerCoreAdminBarContributors } from "./core-contributors.js";
+import {
+  registerCoreAdminBarNodes,
+  registerNewEntryAdminBarNodes,
+} from "./core-nodes.js";
 
 const emptyRegistry = createBlockRegistry([]);
 
@@ -29,26 +36,31 @@ const request = new Request("https://cms.example/");
 const auth: AuthNamespace = { can: () => true };
 const entryTypes = new Map();
 
+/** The registry as boot leaves it with core's nodes and `types`. */
+function withCoreNodes(
+  types: PluginRegistry["entryTypes"] = new Map(),
+): PluginRegistry {
+  const registry = createPluginRegistry();
+  for (const [name, type] of types) registry.entryTypes.set(name, type);
+  registerCoreAdminBarNodes(registry);
+  registerNewEntryAdminBarNodes(registry);
+  return registry;
+}
+
 /**
  * The chrome as a page renders it: the bar for the principal on the context,
- * with the core contributors registered unless a test registers its own.
+ * with core's nodes registered unless a test registers its own.
  */
 function renderChrome(
   viewer: AuthenticatedUser | null,
-  hooks = withCoreContributors(),
+  plugins = withCoreNodes(),
 ): string {
-  const ctx = createTestContext({ db: {} as Db, user: viewer, hooks });
+  const ctx = createTestContext({ db: {} as Db, user: viewer, plugins });
   return renderToStaticMarkup(
     <PlumixProvider value={{ registry: emptyRegistry }}>
       {adminBarChrome(ctx, undefined)}
     </PlumixProvider>,
   );
-}
-
-function withCoreContributors(): HookRegistry {
-  const hooks = new HookRegistry();
-  registerCoreAdminBarContributors(hooks);
-  return hooks;
 }
 
 describe("adminBarChrome", () => {
@@ -60,14 +72,20 @@ describe("adminBarChrome", () => {
     expect(renderChrome({ ...user, role: "subscriber" })).toBe("");
   });
 
-  test("does not run admin_bar:nodes handlers for a subscriber", () => {
-    const hooks = new HookRegistry();
-    const handler = vi.fn((nodes: readonly AdminBarNode[]) => nodes);
-    hooks.addFilter("admin_bar:nodes", handler, { plugin: "test" });
+  test("does not ask a node whether it is visible for a subscriber", () => {
+    const plugins = createPluginRegistry();
+    const visible = vi.fn(() => true);
+    plugins.adminBarNodes.set("shop:orders", {
+      id: "shop:orders",
+      group: "primary",
+      title: "Orders",
+      visible,
+      registeredBy: "shop",
+    });
 
-    renderChrome({ ...user, role: "subscriber" }, hooks);
+    renderChrome({ ...user, role: "subscriber" }, plugins);
 
-    expect(handler).not.toHaveBeenCalled();
+    expect(visible).not.toHaveBeenCalled();
   });
 
   test.each<UserRole>(["contributor", "admin"])(
@@ -80,18 +98,164 @@ describe("adminBarChrome", () => {
   );
 });
 
+describe("registered admin bar nodes", () => {
+  async function renderWithPlugin(
+    register: Parameters<typeof definePlugin>[1],
+    logger: Logger = silentLogger,
+  ): Promise<string> {
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [definePlugin("shop", register)],
+    });
+    const ctx = createTestContext({
+      db: {} as Db,
+      user,
+      plugins: registry,
+      logger,
+    });
+    return renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry }}>
+        {adminBarChrome(ctx, undefined)}
+      </PlumixProvider>,
+    );
+  }
+
+  test("renders a plugin's node for a signed-in user", async () => {
+    const html = await renderWithPlugin((ctx) => {
+      ctx.registerAdminBarNode({
+        id: "shop:orders",
+        group: "primary",
+        title: "Orders",
+        href: () => "/_plumix/admin/pages/shop/orders",
+      });
+    });
+
+    expect(html).toContain(
+      '<li data-testid="plumix-admin-bar-node-shop:orders"><a href="/_plumix/admin/pages/shop/orders">Orders</a></li>',
+    );
+  });
+
+  test("hides a node whose visible returns false", async () => {
+    const html = await renderWithPlugin((ctx) => {
+      ctx.registerAdminBarNode({
+        id: "shop:orders",
+        group: "primary",
+        title: "Orders",
+        visible: (bar) => bar.user.role === "admin",
+      });
+      ctx.registerAdminBarNode({
+        id: "shop:cart",
+        group: "primary",
+        title: "Cart",
+      });
+    });
+
+    expect(html).not.toContain("plumix-admin-bar-node-shop:orders");
+    expect(html).toContain("plumix-admin-bar-node-shop:cart");
+  });
+
+  test.each([
+    ["early", ["shop:orders", "shop:cart", "shop:wishlist"]],
+    ["late", ["shop:cart", "shop:wishlist", "shop:orders"]],
+  ] as const)(
+    "places a node ordered %s ahead of registration order",
+    async (order, expected) => {
+      const html = await renderWithPlugin((ctx) => {
+        ctx.registerAdminBarNode({
+          id: "shop:cart",
+          group: "primary",
+          title: "Cart",
+        });
+        ctx.registerAdminBarNode({
+          id: "shop:orders",
+          group: "primary",
+          title: "Orders",
+          order,
+        });
+        ctx.registerAdminBarNode({
+          id: "shop:wishlist",
+          group: "primary",
+          title: "Wishlist",
+        });
+      });
+
+      const ids = [...html.matchAll(/plumix-admin-bar-node-(shop:\w+)/g)].map(
+        (match) => match[1],
+      );
+      expect(ids).toEqual(expected);
+    },
+  );
+
+  test("hides the children of a hidden node rather than lifting them to the top level", async () => {
+    const html = await renderWithPlugin((ctx) => {
+      ctx.registerAdminBarNode({
+        id: "shop:menu",
+        group: "primary",
+        title: "Shop",
+        visible: () => false,
+      });
+      ctx.registerAdminBarNode({
+        id: "shop:orders",
+        group: "primary",
+        title: "Orders",
+        parent: "shop:menu",
+      });
+    });
+
+    expect(html).not.toContain("plumix-admin-bar-node-shop:orders");
+  });
+
+  test.each(["href", "visible"] as const)(
+    "leaves out a node whose %s throws, logs it and renders the rest",
+    async (throwing) => {
+      const boom = new Error("orders offline");
+      const logger = { ...silentLogger, error: vi.fn() };
+
+      const html = await renderWithPlugin((ctx) => {
+        ctx.registerAdminBarNode({
+          id: "shop:orders",
+          group: "primary",
+          title: "Orders",
+          [throwing]: () => {
+            throw boom;
+          },
+        });
+        ctx.registerAdminBarNode({
+          id: "shop:cart",
+          group: "primary",
+          title: "Cart",
+        });
+      }, logger);
+
+      expect(html).not.toContain("plumix-admin-bar-node-shop:orders");
+      expect(html).toContain("plumix-admin-bar-node-shop:cart");
+      expect(logger.error).toHaveBeenCalledWith(
+        "admin_bar_node_failed: orders offline",
+        { node: "shop:orders", plugin: "shop", error: boom },
+      );
+    },
+  );
+});
+
 describe("PlumixAdminBar", () => {
-  test("renders nothing when a filter empties the node list", () => {
+  test("renders nothing when every node is hidden", () => {
     const admin: AuthenticatedUser = { ...user, role: "admin" };
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-    hooks.addFilter("admin_bar:nodes", () => [], { plugin: "theme" });
+    const nodes = [
+      {
+        id: "shop:orders",
+        group: "primary",
+        title: "Orders",
+        visible: () => false,
+        registeredBy: "shop",
+      },
+    ] as const;
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={admin}
-          hooks={hooks}
+          nodes={nodes}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -104,14 +268,12 @@ describe("PlumixAdminBar", () => {
   });
 
   test("renders the bar shell when user is populated", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -124,14 +286,12 @@ describe("PlumixAdminBar", () => {
   });
 
   test("right-anchors the account node via a dedicated class + margin-inline-start rule", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -151,14 +311,12 @@ describe("PlumixAdminBar", () => {
   });
 
   test("emits the inline CSS style block once and applies the .plumix-admin-bar class", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -180,14 +338,12 @@ describe("PlumixAdminBar", () => {
   // Which locale renders which translation is catalog content, gated by
   // `i18n:check`; these tests cover only the locale-to-chrome wiring.
   test("renders nav with an aria-label sourced from the bar catalog", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -200,14 +356,13 @@ describe("PlumixAdminBar", () => {
 
   test("sets the document lang attribute from the user's locale", () => {
     const ukUser = { ...user, meta: { locale: "uk" } };
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={ukUser}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -221,14 +376,13 @@ describe("PlumixAdminBar", () => {
 
   test("applies dir='rtl' and lang='ar' when the user locale is Arabic", () => {
     const arUser = { ...user, meta: { locale: "ar" } };
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={arUser}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="موقعي"
           auth={auth}
@@ -245,14 +399,13 @@ describe("PlumixAdminBar", () => {
 
   test("wraps the user's account email in <bdi> so RTL chrome doesn't flip it", () => {
     const arUser = { ...user, meta: { locale: "ar" } };
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={arUser}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="موقعي"
           auth={auth}
@@ -265,8 +418,6 @@ describe("PlumixAdminBar", () => {
   });
 
   test("emits a localized +New summary aria-label for screen readers", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
     const types = new Map([
       ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
     ]);
@@ -275,7 +426,8 @@ describe("PlumixAdminBar", () => {
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(types).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -288,8 +440,6 @@ describe("PlumixAdminBar", () => {
   });
 
   test("renders the +new group as a <details>/<summary> with one child per entry type", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
     const types = new Map([
       ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
       ["page", toRegisteredEntryType("page", { label: "Page" }, "test")],
@@ -299,7 +449,8 @@ describe("PlumixAdminBar", () => {
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(types).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -316,15 +467,40 @@ describe("PlumixAdminBar", () => {
     expect(html).toContain('href="/_plumix/admin/entries/pages/create"');
   });
 
-  test("renders the account as a dropdown with a Profile link and a Sign out button", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
+  test("lists the + New children in entry type registration order", () => {
+    const types = new Map([
+      ["page", toRegisteredEntryType("page", { label: "Page" }, "test")],
+      ["post", toRegisteredEntryType("post", { label: "Post" }, "test")],
+      ["event", toRegisteredEntryType("event", { label: "Event" }, "test")],
+    ]);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(types).adminBarNodes.values()}
+          logger={silentLogger}
+          request={request}
+          siteName="My Site"
+          auth={auth}
+          entryTypes={types}
+        />
+      </PlumixProvider>,
+    );
+
+    const children = [
+      ...html.matchAll(/plumix-admin-bar-node-\+new:(\w+)/g),
+    ].map((match) => match[1]);
+    expect(children).toEqual(["page", "post", "event"]);
+  });
+
+  test("renders the account as a dropdown with a Profile link and a Sign out button", () => {
+    const html = renderToStaticMarkup(
+      <PlumixProvider value={{ registry: emptyRegistry }}>
+        <PlumixAdminBar
+          viewer={user}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -345,14 +521,12 @@ describe("PlumixAdminBar", () => {
   });
 
   test("emits the inline sign-out island targeting the signout endpoint with the CSRF header", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -367,14 +541,12 @@ describe("PlumixAdminBar", () => {
   });
 
   test("renders an avatar initial for the mobile account collapse", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -391,14 +563,13 @@ describe("PlumixAdminBar", () => {
 
   test("shows the display name and derives the avatar initial from it", () => {
     const named = { ...user, name: "Alex Rivera" };
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
 
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={named}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -414,14 +585,12 @@ describe("PlumixAdminBar", () => {
   });
 
   test("keeps the bar visible on small screens (never sets the bar to display:none)", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}
@@ -437,14 +606,12 @@ describe("PlumixAdminBar", () => {
   });
 
   test("renders core contributor nodes as anchors with stable testids", () => {
-    const hooks = new HookRegistry();
-    registerCoreAdminBarContributors(hooks);
-
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar
           viewer={user}
-          hooks={hooks}
+          nodes={withCoreNodes(entryTypes).adminBarNodes.values()}
+          logger={silentLogger}
           request={request}
           siteName="My Site"
           auth={auth}

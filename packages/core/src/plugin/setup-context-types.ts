@@ -26,6 +26,7 @@ import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
 import type { TemplateDepLoader } from "../template-deps.js";
 import type { ViewResolvedDataOf } from "../template-registry.js";
+import type { AdminBarNodeOptions } from "./admin-bar-node.js";
 import type {
   EntryMetaBoxDrift,
   SettingsGroupDrift,
@@ -230,6 +231,11 @@ export interface PluginSetupContextBase {
 
   registerAdminPage(options: AdminPageOptions): void;
   registerDashboardWidget(options: DashboardWidgetOptions): void;
+  /**
+   * A node on the admin bar a signed-in staff member sees on the public site.
+   * Throws `DuplicateRegistrationError` on an id another plugin or core holds.
+   */
+  registerAdminBarNode(options: AdminBarNodeOptions): void;
   registerFieldType(options: FieldTypeOptions): void;
   /**
    * Merges with precedence theme > plugin > core; the `core/` namespace is

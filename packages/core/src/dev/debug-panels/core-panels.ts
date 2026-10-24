@@ -10,7 +10,7 @@ import { timelinePanel } from "./builtin/timeline.js";
 /**
  * Registers core's built-in debug panels. Wired at `buildApp` time behind
  * the dev gate, at low priority so plugin panels (default priority 100)
- * sort after core's. Same shape as `registerCoreAdminBarContributors`.
+ * sort after core's.
  */
 export function registerCoreDebugPanels(hooks: HookRegistry): void {
   hooks.addFilter(

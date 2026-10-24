@@ -6,10 +6,14 @@ import {
   deriveEntryTypeCapabilities,
   roleLevel,
 } from "../access/contract/rbac.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
+import { silentLogger } from "../test/context.js";
 import { collectAdminBarNodes } from "./collect.js";
-import { registerCoreAdminBarContributors } from "./core-contributors.js";
+import {
+  registerCoreAdminBarNodes,
+  registerNewEntryAdminBarNodes,
+} from "./core-nodes.js";
 
 const allow = (): boolean => true;
 
@@ -32,15 +36,6 @@ function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
   };
 }
 
-function typesMap(...slugs: readonly string[]): BarRenderContext["entryTypes"] {
-  return new Map(
-    slugs.map((slug) => [
-      slug,
-      toRegisteredEntryType(slug, { label: slug }, "test"),
-    ]),
-  );
-}
-
 /**
  * `can` as the role hierarchy answers it for `role`, over the capabilities
  * `types` derive.
@@ -60,15 +55,26 @@ function roleCan(
   };
 }
 
-function withCore(): HookRegistry {
-  const hooks = new HookRegistry();
-  registerCoreAdminBarContributors(hooks);
-  return hooks;
+/** Core's nodes as the bar for `overrides` shows them. */
+function coreNodes(
+  overrides: Partial<BarRenderContext> = {},
+): ReturnType<typeof collectAdminBarNodes> {
+  const bar = ctx(overrides);
+  const registry = createPluginRegistry();
+  for (const [name, type] of bar.entryTypes)
+    registry.entryTypes.set(name, type);
+  registerCoreAdminBarNodes(registry);
+  registerNewEntryAdminBarNodes(registry);
+  return collectAdminBarNodes(
+    registry.adminBarNodes.values(),
+    bar,
+    silentLogger,
+  );
 }
 
-describe("registerCoreAdminBarContributors — site link", () => {
+describe("core admin bar nodes — site link", () => {
   test("adds a 'site' node pointing at the admin root with the resolved site name", () => {
-    const nodes = collectAdminBarNodes(withCore(), ctx());
+    const nodes = coreNodes();
 
     const site = nodes.find((n) => n.id === "site");
     expect(site).toEqual({
@@ -81,9 +87,9 @@ describe("registerCoreAdminBarContributors — site link", () => {
   });
 });
 
-describe("registerCoreAdminBarContributors — +New group", () => {
+describe("core admin bar nodes — +New group", () => {
   test("omits the group when no entry types are registered", () => {
-    const nodes = collectAdminBarNodes(withCore(), ctx());
+    const nodes = coreNodes();
 
     expect(nodes.find((n) => n.id === "+new")).toBeUndefined();
   });
@@ -100,10 +106,10 @@ describe("registerCoreAdminBarContributors — +New group", () => {
       ],
     ]);
 
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({ entryTypes: types, auth: { can: roleCan("author", types) } }),
-    );
+    const nodes = coreNodes({
+      entryTypes: types,
+      auth: { can: roleCan("author", types) },
+    });
 
     expect(nodes.find((n) => n.id === "+new")).toBeUndefined();
   });
@@ -123,7 +129,7 @@ describe("registerCoreAdminBarContributors — +New group", () => {
         ),
       ],
     ]);
-    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
+    const nodes = coreNodes({ entryTypes: types });
 
     const children = nodes.filter((n) => n.parent === "+new");
     expect(children.map((n) => n.id)).toEqual([
@@ -151,7 +157,7 @@ describe("registerCoreAdminBarContributors — +New group", () => {
       ["page", toRegisteredEntryType("page", { label: "Page" }, "test")],
     ]);
 
-    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
+    const nodes = coreNodes({ entryTypes: types });
 
     const titles = nodes.filter((n) => n.parent === "+new").map((n) => n.title);
     expect(titles).toEqual(["Post", "Page"]);
@@ -170,7 +176,7 @@ describe("registerCoreAdminBarContributors — +New group", () => {
       ],
     ]);
 
-    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
+    const nodes = coreNodes({ entryTypes: types });
 
     const childIds = nodes.filter((n) => n.parent === "+new").map((n) => n.id);
     expect(childIds).toEqual(["+new:post"]);
@@ -188,7 +194,7 @@ describe("registerCoreAdminBarContributors — +New group", () => {
       ],
     ]);
 
-    const nodes = collectAdminBarNodes(withCore(), ctx({ entryTypes: types }));
+    const nodes = coreNodes({ entryTypes: types });
 
     expect(nodes.find((n) => n.id === "+new:secret")).toBeDefined();
   });
@@ -206,36 +212,19 @@ describe("registerCoreAdminBarContributors — +New group", () => {
       ],
     ]);
 
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({ entryTypes: types, auth: { can: roleCan("author", types) } }),
-    );
+    const nodes = coreNodes({
+      entryTypes: types,
+      auth: { can: roleCan("author", types) },
+    });
 
     const childIds = nodes.filter((n) => n.parent === "+new").map((n) => n.id);
     expect(childIds).toEqual(["+new:post"]);
   });
-
-  test("plugin can suppress its own entry type from the menu via the filter", () => {
-    const hooks = withCore();
-    hooks.addFilter(
-      "admin_bar:nodes",
-      (nodes) => nodes.filter((n) => n.id !== "+new:media"),
-      { plugin: "media", priority: 100 },
-    );
-
-    const nodes = collectAdminBarNodes(
-      hooks,
-      ctx({ entryTypes: typesMap("post", "page", "media") }),
-    );
-
-    const children = nodes.filter((n) => n.parent === "+new");
-    expect(children.map((n) => n.id)).toEqual(["+new:post", "+new:page"]);
-  });
 });
 
-describe("registerCoreAdminBarContributors — account dropdown", () => {
+describe("core admin bar nodes — account dropdown", () => {
   test("renders the account as a parent titled with the user's email (no direct link)", () => {
-    const nodes = collectAdminBarNodes(withCore(), ctx());
+    const nodes = coreNodes();
 
     const account = nodes.find((n) => n.id === "account");
     expect(account).toEqual({
@@ -249,35 +238,29 @@ describe("registerCoreAdminBarContributors — account dropdown", () => {
   });
 
   test("titles the account with the display name when the user has one", () => {
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({
-        user: {
-          id: 1,
-          email: "editor@cms.example",
-          name: "Alex Rivera",
-          role: "editor",
-          meta: {},
-        },
-      }),
-    );
+    const nodes = coreNodes({
+      user: {
+        id: 1,
+        email: "editor@cms.example",
+        name: "Alex Rivera",
+        role: "editor",
+        meta: {},
+      },
+    });
 
     expect(nodes.find((n) => n.id === "account")?.title).toBe("Alex Rivera");
   });
 
   test("falls back to the email when the name is empty or null", () => {
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({
-        user: {
-          id: 1,
-          email: "editor@cms.example",
-          name: null,
-          role: "editor",
-          meta: {},
-        },
-      }),
-    );
+    const nodes = coreNodes({
+      user: {
+        id: 1,
+        email: "editor@cms.example",
+        name: null,
+        role: "editor",
+        meta: {},
+      },
+    });
 
     expect(nodes.find((n) => n.id === "account")?.title).toBe(
       "editor@cms.example",
@@ -285,7 +268,7 @@ describe("registerCoreAdminBarContributors — account dropdown", () => {
   });
 
   test("adds a Profile child linking to the admin profile route", () => {
-    const nodes = collectAdminBarNodes(withCore(), ctx());
+    const nodes = coreNodes();
 
     expect(nodes.find((n) => n.id === "account:profile")).toEqual({
       id: "account:profile",
@@ -298,7 +281,7 @@ describe("registerCoreAdminBarContributors — account dropdown", () => {
   });
 
   test("adds a Sign out child carrying the signout action and no href", () => {
-    const nodes = collectAdminBarNodes(withCore(), ctx());
+    const nodes = coreNodes();
 
     expect(nodes.find((n) => n.id === "account:signout")).toEqual({
       id: "account:signout",
@@ -311,35 +294,31 @@ describe("registerCoreAdminBarContributors — account dropdown", () => {
   });
 });
 
-describe("registerCoreAdminBarContributors — edit-this link", () => {
+describe("core admin bar nodes — edit-this link", () => {
   test("does not appear when there is no queried entry", () => {
-    const nodes = collectAdminBarNodes(withCore(), ctx());
+    const nodes = coreNodes();
     expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
   });
 
   test("does not appear when queried entry lacks pre-resolved details", () => {
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({ queriedEntry: { kind: "entry", id: 42, preview: false } }),
-    );
+    const nodes = coreNodes({
+      queriedEntry: { kind: "entry", id: 42, preview: false },
+    });
     expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
   });
 
   test("appears when the renderer says the caller can edit, without asking auth", () => {
     const seen: string[] = [];
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({
-        queriedEntry: { kind: "entry", id: 42, preview: false },
-        queriedEntryDetails: { type: "post", canEdit: true },
-        auth: {
-          can: (cap: string) => {
-            seen.push(cap);
-            return false;
-          },
+    const nodes = coreNodes({
+      queriedEntry: { kind: "entry", id: 42, preview: false },
+      queriedEntryDetails: { type: "post", canEdit: true },
+      auth: {
+        can: (cap: string) => {
+          seen.push(cap);
+          return false;
         },
-      }),
-    );
+      },
+    });
 
     expect(nodes.find((n) => n.id === "edit-this")).toEqual({
       id: "edit-this",
@@ -354,19 +333,16 @@ describe("registerCoreAdminBarContributors — edit-this link", () => {
 
   test("does not appear when the renderer says the caller cannot edit", () => {
     const seen: string[] = [];
-    const nodes = collectAdminBarNodes(
-      withCore(),
-      ctx({
-        queriedEntry: { kind: "entry", id: 42, preview: false },
-        queriedEntryDetails: { type: "post", canEdit: false },
-        auth: {
-          can: (cap: string) => {
-            seen.push(cap);
-            return true;
-          },
+    const nodes = coreNodes({
+      queriedEntry: { kind: "entry", id: 42, preview: false },
+      queriedEntryDetails: { type: "post", canEdit: false },
+      auth: {
+        can: (cap: string) => {
+          seen.push(cap);
+          return true;
         },
-      }),
-    );
+      },
+    });
 
     expect(nodes.find((n) => n.id === "edit-this")).toBeUndefined();
     expect(seen.filter((cap) => cap.startsWith("entry:"))).toEqual([]);
