@@ -103,6 +103,35 @@ describe("buildApp — registerDocumentManifest", () => {
     expect(app.document.titleTemplate).toBe("%s | first");
   });
 
+  test("a plugin's html and body attributes merge by key over the theme's, with className concatenated", async () => {
+    const plugin = definePlugin("attrs", {
+      setup: (ctx) => {
+        ctx.registerDocumentManifest({
+          html: { lang: "fr", className: "plugin" },
+          body: { className: "plugin-body" },
+        });
+      },
+    });
+    const app = await buildApp(
+      plumix({
+        runtime: stubAdapter,
+        database: stubDatabase,
+        auth: stubAuth,
+        theme: defineTheme({
+          templates: [fallback(() => null)],
+          document: { html: { lang: "en", className: "site", dir: "ltr" } },
+        }),
+        plugins: [plugin],
+      }),
+    );
+    expect(app.document.html).toEqual({
+      lang: "fr",
+      className: "site plugin",
+      dir: "ltr",
+    });
+    expect(app.document.body).toEqual({ className: "plugin-body" });
+  });
+
   test("a plugin's manifest applies when the theme has no `document`", async () => {
     const plugin = definePlugin("scripts", {
       setup: (ctx) => {

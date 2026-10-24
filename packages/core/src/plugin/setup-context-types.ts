@@ -297,7 +297,7 @@ export interface PluginSetupContextBase {
 
   /**
    * Merged once at boot after the theme's own `document`, in plugin config
-   * order: arrays append and the rest is last-wins.
+   * order, by the same rules as a template's `document` fragment.
    */
   registerDocumentManifest(manifest: DocumentManifest): void;
 
