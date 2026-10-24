@@ -605,7 +605,7 @@ describe("PlumixAdminBar", () => {
     expect(html).toContain("height: 46px");
   });
 
-  test("renders core contributor nodes as anchors with stable testids", () => {
+  test("renders core nodes as anchors with stable testids", () => {
     const html = renderToStaticMarkup(
       <PlumixProvider value={{ registry: emptyRegistry }}>
         <PlumixAdminBar

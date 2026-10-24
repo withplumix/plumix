@@ -210,8 +210,8 @@ function renderLeaf(node: AdminBarTreeNode): ReactNode {
 }
 
 /**
- * User-supplied strings (account email, queried entry title once contributors
- * pass it through) get `<bdi>` wrapping so their script direction can't
+ * User-supplied strings (account email, queried entry title once a node
+ * passes it through) get `<bdi>` wrapping so their script direction can't
  * invert the surrounding chrome layout.
  */
 function BarLabel({ node }: { readonly node: AdminBarTreeNode }): ReactNode {
