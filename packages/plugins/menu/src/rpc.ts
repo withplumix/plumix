@@ -662,8 +662,6 @@ export function createMenuRouter(
           });
         }
       }
-      // Null `termSlug` means "unbind this location", a delete, so reads
-      // correctly return null.
       await context.settings.write(MENU_LOCATIONS_GROUP, {
         [input.location]: input.termSlug,
       });

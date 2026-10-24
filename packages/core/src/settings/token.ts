@@ -151,6 +151,9 @@ export async function writeSettingsKeys(
   for (const statement of statements) await statement;
 }
 
+/** A row binds its group, key and value, so a statement's rows stay under D1's cap. */
+const ROW_CHUNK = Math.floor(D1_MAX_BOUND_PARAMETERS / 3);
+
 /** Inserts each row whose key the group lacks; answers the keys it inserted. */
 export async function insertAbsentSettingsKeys(
   db: Db,
@@ -158,13 +161,13 @@ export async function insertAbsentSettingsKeys(
   rows: readonly { readonly key: string; readonly value: JsonValue }[],
 ): Promise<string[]> {
   const inserted: string[] = [];
-  for (const { key, value } of rows) {
+  for (const chunk of chunkForD1(rows, ROW_CHUNK)) {
     const landed = await db
       .insert(settings)
-      .values({ group, key, value })
+      .values(chunk.map(({ key, value }) => ({ group, key, value })))
       .onConflictDoNothing()
       .returning({ key: settings.key });
-    if (landed.length > 0) inserted.push(key);
+    inserted.push(...landed.map((row) => row.key));
   }
   return inserted;
 }

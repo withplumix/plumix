@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import type { CdnFake } from "../test/cdn-fake.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
-import { number, text } from "../plugin/fields/index.js";
+import { group, number, text } from "../plugin/fields/index.js";
 import { entry, fallback } from "../route/render/template-builders.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { defineTemplate } from "../template.js";
@@ -187,6 +187,13 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
           number("perPage").default(10),
         ],
       });
+      ctx.registerSettingsGroup("profile", {
+        label: "Profile",
+        fields: [
+          text("name").required(),
+          group("address").fields([text("city").maxLength(3)]),
+        ],
+      });
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const h = await createRpcHarness({
@@ -254,6 +261,70 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
     const copy = await h.context.settings.write("blog", { tagline: "Mine" });
 
     expect(copy.values).toEqual({ tagline: "Mine" });
+  });
+
+  test("a key mapped to undefined is removed, as null is", async () => {
+    const { h } = await harness();
+    await h.context.settings.write("notes", { title: "A", body: "B" });
+
+    const copy = await h.context.settings.write("notes", { title: undefined });
+
+    expect(copy.values).toEqual({ body: "B" });
+  });
+
+  // The error names the top-level key, however deep the field that failed.
+  test("refuses an invalid value, naming the key it sits under", async () => {
+    const { h } = await harness();
+
+    const flat = await h.context.settings
+      .write("profile", { name: null })
+      .catch((error: unknown) => error);
+    const nested = await h.context.settings
+      .write("profile", { name: "N", address: { city: "Lisbon" } })
+      .catch((error: unknown) => error);
+
+    expect(flat).toBeInstanceOf(SettingsWriteError);
+    expect((flat as SettingsWriteError).data).toMatchObject({
+      reason: "settings_invalid_value",
+      key: "profile.name",
+    });
+    expect(nested).toBeInstanceOf(SettingsWriteError);
+    expect((nested as SettingsWriteError).data).toMatchObject({
+      reason: "settings_invalid_value",
+      key: "profile.address",
+    });
+  });
+
+  // Like any system write, a key stored or removed moves the token of a saved
+  // group, so an open copy conflicts instead of overwriting it.
+  test("writeIfAbsent refuses an editor's copy read before it stored a key", async () => {
+    const { h, save } = await harness();
+    const { etag } = await save("notes", { title: "First" });
+
+    await h.context.settings.writeIfAbsent("notes", { body: "B" });
+
+    await expect(
+      h.client.settings.upsert({
+        group: "notes",
+        values: { title: "Mine" },
+        ifMatch: etag,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  test("removeValue refuses an editor's copy read before it removed a key", async () => {
+    const { h, save } = await harness();
+    const { etag } = await save("places", { header: "main" });
+
+    await h.context.settings.removeValue("places", "main");
+
+    await expect(
+      h.client.settings.upsert({
+        group: "places",
+        values: { footer: "x" },
+        ifMatch: etag,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
   });
 
   // Two first writers racing converge: the later one stores nothing and

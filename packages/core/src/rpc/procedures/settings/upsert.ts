@@ -35,8 +35,6 @@ export const upsert = base
         throw error;
       });
 
-    // Ship the authoritative bag to the output filter so plugins can observe
-    // the final shape in one place.
     return context.hooks.applyFilter(
       "rpc:settings.upsert:output",
       copy,

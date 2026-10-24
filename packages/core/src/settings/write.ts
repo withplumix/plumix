@@ -174,10 +174,7 @@ export const settingsWrites: SettingsWrites = {
   removeValue: removeSettingsValue,
 };
 
-/**
- * A write not claimed from a copy moves the token itself. Then re-reads the
- * authoritative bag, so the caller gets the final shape, and announces it.
- */
+/** A write not claimed from a copy moves the token itself. */
 async function settle(
   ctx: AppContext,
   groupName: string,
@@ -207,9 +204,7 @@ async function settle(
     ),
   };
 
-  // Fire only when the call actually changed state — an empty
-  // `values: {}` payload is a no-op and shouldn't wake up
-  // cache-invalidators / audit-log subscribers.
+  // An empty payload is a no-op, so it wakes no one.
   if (!changed) return copy;
   if (isPrivateSettingsGroup(groupName)) {
     // Its values are server-side secrets, so no subscriber hears them; core's
