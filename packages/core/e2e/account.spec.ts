@@ -37,8 +37,10 @@ test("a theme's account page renames the signed-in member", async ({
   await expect(page.getByTestId("account-error")).toHaveText("");
 });
 
-// The baseline is restored once per worker, not per test, so each test signs
-// in as its own member.
+/**
+ * The baseline is restored once per worker, not per test, so each test signs
+ * in as its own member.
+ */
 async function visitAsSubscriber(
   context: BrowserContext,
   page: Page,
