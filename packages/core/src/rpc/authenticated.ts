@@ -1,14 +1,20 @@
-import { authenticateTraced, tokenScopesOf } from "../auth/authenticator.js";
+import type { AuthResult } from "../auth/authenticator.js";
+import type { AppContext } from "../context/app-context.js";
+import {
+  authenticateSession,
+  authenticateTraced,
+  tokenScopesOf,
+} from "../auth/authenticator.js";
 import { withUser } from "../auth/with-user.js";
 import { ConflictError } from "../db/concurrency.js";
 import { LockedError, readEditLease } from "../db/edit-lease.js";
 import { base } from "./base.js";
 
-export const authenticated = base.middleware(
-  async ({ context, next, errors }) => {
-    // Same authenticator the raw routes use, so a request authed for one path
-    // is authed for the other.
-    const result = await authenticateTraced(context, context.authenticator);
+const resolvedBy = (
+  resolve: (context: AppContext) => Promise<AuthResult | null>,
+) =>
+  base.middleware(async ({ context, next, errors }) => {
+    const result = await resolve(context);
     if (!result) throw errors.UNAUTHORIZED();
 
     const { id, email, role, meta } = result.user;
@@ -33,5 +39,18 @@ export const authenticated = base.middleware(
       }
       throw error;
     }
-  },
+  });
+
+/**
+ * Same authenticator the raw routes use, so a request authed for one path is
+ * authed for the other.
+ */
+export const authenticated = resolvedBy((context) =>
+  authenticateTraced(context, context.authenticator),
 );
+
+/**
+ * For a procedure that creates or redirects a credential: an API-token caller
+ * reads as anonymous (ADR 0024).
+ */
+export const sessionAuthenticated = resolvedBy(authenticateSession);

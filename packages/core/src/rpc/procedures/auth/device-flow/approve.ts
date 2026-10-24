@@ -2,7 +2,7 @@ import {
   approveDeviceCode,
   lookupDeviceCodeByUserCode,
 } from "../../../../auth/device-flow.js";
-import { authenticated } from "../../../authenticated.js";
+import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { assertLookupOk } from "./lookup-helpers.js";
 import { deviceFlowApproveInputSchema } from "./schemas.js";
@@ -13,7 +13,7 @@ import { deviceFlowApproveInputSchema } from "./schemas.js";
  * isn't told apart.
  */
 export const approve = base
-  .use(authenticated)
+  .use(sessionAuthenticated)
   .input(deviceFlowApproveInputSchema)
   .handler(async ({ input, context, errors }) => {
     const found = await lookupDeviceCodeByUserCode(context.db, input.userCode);

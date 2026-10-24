@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { createApiToken } from "../../../auth/api-tokens.js";
 import { eq } from "../../../db/index.js";
 import { authTokens } from "../../../db/schema/auth_tokens.js";
 import { users } from "../../../db/schema/users.js";
@@ -77,6 +78,32 @@ describe("user.requestEmailChange", () => {
       code: "FORBIDDEN",
       data: { capability: "user:edit" },
     });
+  });
+
+  test("refuses an API-token caller, even one scoped to user:edit_own", async () => {
+    const request = new Request("https://cms.example/_plumix/rpc", {
+      method: "POST",
+    });
+    const h = await createRpcHarness({
+      request,
+      config: { auth: { magicLink: { siteName: "Test" } } },
+    });
+    const user = await h.factory.user.create({ role: "editor" });
+    const { secret } = await createApiToken(h.db, {
+      userId: user.id,
+      name: "scoped",
+      expiresAt: null,
+      scopes: ["user:edit_own"],
+    });
+    request.headers.set("authorization", `Bearer ${secret}`);
+
+    await expect(
+      h.client.user.requestEmailChange({
+        id: user.id,
+        newEmail: "attacker@example.test",
+      }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    h.mail.assertNothingSent();
   });
 
   test("CONFLICT/email_taken when another user has the target email", async () => {

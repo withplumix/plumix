@@ -1,5 +1,5 @@
 import { createApiToken } from "../../../../auth/api-tokens.js";
-import { authenticated } from "../../../authenticated.js";
+import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensCreateInputSchema } from "./schemas.js";
 
@@ -7,11 +7,11 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * The raw secret is returned exactly once; the DB stores only its hash and
- * prefix. No capability beyond `authenticated`: tokens inherit the user's
+ * prefix. No capability beyond a session: tokens inherit the user's
  * role at request time.
  */
 export const create = base
-  .use(authenticated)
+  .use(sessionAuthenticated)
   .input(apiTokensCreateInputSchema)
   .handler(async ({ input, context }) => {
     const expiresAt =
