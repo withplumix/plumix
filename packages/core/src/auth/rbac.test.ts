@@ -36,6 +36,12 @@ describe("createCapabilityResolver", () => {
     expect(resolver.requiredRole("nope:nothing")).toBeNull();
   });
 
+  test("a name on Object's prototype is not a capability", () => {
+    const resolver = createCapabilityResolver(emptyRegistry);
+    expect(resolver.requiredRole("constructor")).toBeNull();
+    expect(resolver.hasCapability("admin", "constructor")).toBe(false);
+  });
+
   test("requiredRole names a core capability's minimum role", () => {
     const resolver = createCapabilityResolver(emptyRegistry);
     expect(resolver.requiredRole("entry:post:publish")).toBe("author");

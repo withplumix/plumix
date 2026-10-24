@@ -8,11 +8,6 @@ import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { capabilitiesForRole, getCapabilityResolver } from "./rbac.js";
 
-/**
- * Every rung, every kind of capability: core, derived entry and term (with
- * and without an override, and pooled into core's `post`), and plugin
- * capabilities by `minRole` and `defaultGrants`.
- */
 const ladderSite = definePlugin("ladder", {
   setup: (ctx) => {
     ctx.registerEntryType("page", { label: "Pages" });
@@ -38,11 +33,7 @@ const ladderSite = definePlugin("ladder", {
   },
 });
 
-/**
- * What the ladder granted each rung before roles became capability sets: the
- * "rights unchanged" guard for #3359. Change it only with a ticket that
- * changes someone's rights.
- */
+/** Change this only in a change that changes someone's rights. */
 const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
   subscriber: [
     "entry:page:read",
@@ -189,33 +180,25 @@ function allCapabilityNames(registry: PluginRegistry): readonly string[] {
 }
 
 describe("the resolved role table", () => {
-  test("the session's capability list and hasCapability agree for every role", async () => {
-    const registry = await installLadderSite();
-    const resolver = getCapabilityResolver(registry);
-    const names = [
-      ...allCapabilityNames(registry),
-      ...registry.capabilities.keys(),
-    ];
-    for (const role of USER_ROLES) {
-      const listed = new Set(capabilitiesForRole(role, registry));
-      for (const name of names) {
-        expect(
-          { role, name, granted: resolver.hasCapability(role, name) },
-          `${role} / ${name}`,
-        ).toEqual({ role, name, granted: listed.has(name) });
-      }
-    }
-  });
-
   test.each(USER_ROLES)(
-    "%s holds exactly what the ladder granted it",
+    "the session's capability list and hasCapability agree for %s",
     async (role) => {
       const registry = await installLadderSite();
       const resolver = getCapabilityResolver(registry);
+      const names = allCapabilityNames(registry);
+
+      expect(
+        names.filter((name) => resolver.hasCapability(role, name)),
+      ).toEqual(capabilitiesForRole(role, registry));
+    },
+  );
+
+  test.each(USER_ROLES)(
+    "keeps the capabilities the ladder granted %s",
+    async (role) => {
+      const registry = await installLadderSite();
+
       expect(capabilitiesForRole(role, registry)).toEqual(LADDER_GRANTS[role]);
-      for (const name of LADDER_GRANTS[role]) {
-        expect(resolver.hasCapability(role, name), name).toBe(true);
-      }
     },
   );
 });

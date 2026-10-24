@@ -65,7 +65,7 @@ function resolveRoleCapabilities(plugins: PluginRegistry): RoleCapabilityTable {
   );
 }
 
-/** One table per registry, shared by the resolver and the session's list. */
+/** One table per registry. */
 const TABLE_BY_REGISTRY = new WeakMap<PluginRegistry, RoleCapabilityTable>();
 
 function roleCapabilityTable(plugins: PluginRegistry): RoleCapabilityTable {
