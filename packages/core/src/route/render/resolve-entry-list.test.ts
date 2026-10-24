@@ -19,6 +19,7 @@ import { entry as entryRef } from "../../plugin/fields/entry.js";
 import { number } from "../../plugin/fields/number.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { toggle } from "../../plugin/fields/toggle.js";
+import { writeUserMeta } from "../../rpc/procedures/user/meta.js";
 import { loadSiteSettings } from "../../seo/site-settings.js";
 import {
   photoField,
@@ -142,6 +143,33 @@ describe("resolveEntryList author memoization", () => {
 
     expect(before[0]?.author.name).toBe("Ada");
     expect(after[0]?.author.name).toBe("Grace");
+  });
+
+  test("a call after a meta-only save of the author in the same request reads the new meta", async () => {
+    const { harness, ctx, run } = await createTracedContext({
+      config: { plugins: [photoProfilePlugin] },
+    });
+    const seed = await harness.factory.user.create({});
+    const [before, after] = await Promise.all([
+      harness.factory.entry.create({ authorId: seed.id }),
+      harness.factory.entry.create({ authorId: seed.id }),
+    ]);
+    const author = await harness.factory.user.create({
+      meta: { portrait: String(before.id) },
+    });
+    const post = await harness.factory.entry.create({ authorId: author.id });
+
+    const [first, second] = await run(async () => {
+      const first = await resolveEntryList(ctx, [post]);
+      await writeUserMeta(ctx, author, {
+        upserts: new Map([["portrait", String(after.id)]]),
+        deletes: [],
+      });
+      return [first, await resolveEntryList(ctx, [post])];
+    });
+
+    expect(first[0]?.author.images.featured?.url).toBe(photoUrl(before.id));
+    expect(second[0]?.author.images.featured?.url).toBe(photoUrl(after.id));
   });
 
   test("publishing an entry leaves its author memoized", async () => {

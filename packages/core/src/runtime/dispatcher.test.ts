@@ -1929,7 +1929,7 @@ describe("dispatcher — public read-through CDN", () => {
     // store's.
     expect(response.headers.get("cache-control")).toBe("public, s-maxage=60");
     expect(response.headers.get("cache-tag")).toBe(
-      `t:post,e:${String(entry.id)},s:site`,
+      `t:post,e:${String(entry.id)},u:${String(author.id)},s:site`,
     );
   });
 
@@ -2287,9 +2287,14 @@ describe("dispatcher — embedded reference CDN tags (#1508)", () => {
 
     expect(put).toHaveBeenCalledOnce();
     const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
-    // No embedded tag: the route's own, and the `site` group every render
-    // reads for its `<title>` fallback.
-    expect(tags).toEqual(["t:post", `e:${String(plain.id)}`, "s:site"]);
+    // No embedded tag: the route's own, its author's, and the `site` group
+    // every render reads for its `<title>` fallback.
+    expect(tags).toEqual([
+      "t:post",
+      `e:${String(plain.id)}`,
+      `u:${String(author.id)}`,
+      "s:site",
+    ]);
   });
 });
 
