@@ -8,6 +8,7 @@ import type {
   ThemeBreakpoints,
   ThemeTokens,
 } from "./blocks/index.js";
+import type { AllowCustomStyles } from "./blocks/styles/style-policy.js";
 import type { DocumentManifest } from "./document-manifest.js";
 import type { MailOverrides } from "./mail/contract/registry.js";
 import type { RedirectRule } from "./route/contract/redirects.js";
@@ -188,6 +189,12 @@ export interface ThemeDescriptor extends TemplateDepDeclarations {
   readonly allowedBlocks?: readonly BlockName[];
   readonly document?: DocumentManifest;
   readonly tokens?: ThemeTokens;
+  /**
+   * Whether editors and agents may store custom style values, or only
+   * `tokens`; `true` when omitted. An array names the categories that keep
+   * custom values. Keyword options are never custom values.
+   */
+  readonly allowCustomStyles?: AllowCustomStyles;
   /**
    * Max-width px. Feeds both the SSR `@media` maxima and the editor canvas
    * widths, so preview equals shipped.

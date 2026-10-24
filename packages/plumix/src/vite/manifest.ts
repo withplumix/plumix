@@ -70,6 +70,7 @@ export async function computeManifestAndRegistry(
     manifest: buildManifest(registry, {
       ...options,
       allowedBlocks: options.theme.allowedBlocks,
+      allowCustomStyles: options.theme.allowCustomStyles,
       plugins,
     }),
     registry,

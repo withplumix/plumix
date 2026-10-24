@@ -23,6 +23,10 @@ export interface StyleFieldStateOptions {
   /** The value a wider device sets, which this one renders while it has none
    *  of its own (styles cascade desktop-first). */
   readonly inherited?: string;
+  /** The style policy's answer for this property; `true` when omitted. */
+  readonly customAllowed?: boolean;
+  /** Whether the policy refuses the value stored here. */
+  readonly refused?: boolean;
 }
 
 export interface StyleFieldState {
@@ -40,6 +44,10 @@ export interface StyleFieldState {
   /** Which input the control shows. Follows the value's kind when set; falls
    *  back to the user's last toggle when the value is unset. */
   readonly mode: StyleFieldMode;
+  /** A stored value the policy refuses, shown read-only; `null` otherwise. */
+  readonly forbiddenText: string | null;
+  /** Tokens only, no tokens to offer and nothing refused stored. */
+  readonly hidden: boolean;
   /** Switch the shown input, clearing a value the target mode can't hold. */
   setMode(mode: StyleFieldMode): void;
   setToken(id: string): void;
@@ -63,6 +71,8 @@ export function styleFieldState(
     emptyLiteralClears = true,
     literalOnly = false,
     inherited,
+    customAllowed = true,
+    refused = false,
   }: StyleFieldStateOptions,
 ): StyleFieldState {
   // A custom-only control ignores any derivable scale: no tokens, and a stored
@@ -72,7 +82,10 @@ export function styleFieldState(
   const hasTokens = !literalOnly && field.hasTokens;
   const pref = preferredMode ?? (hasTokens ? "token" : "custom");
 
+  const forbiddenText = refused ? (value ?? null) : null;
+
   const resolveMode = (): StyleFieldMode => {
+    if (!customAllowed) return "token";
     if (!tokenizable) return "custom";
     if (!selection) return pref;
     return selection.kind === "token" ? "token" : "custom";
@@ -98,10 +111,15 @@ export function styleFieldState(
     isColor: !literalOnly && field.isColor,
     hasTokens,
     options: literalOnly ? [] : field.options,
-    tokenId: selection?.kind === "token" ? selection.id : null,
+    tokenId:
+      selection?.kind === "token" && forbiddenText === null
+        ? selection.id
+        : null,
     literalText: resolveLiteralText(),
     inheritedText: resolveInheritedText(),
     mode: resolveMode(),
+    forbiddenText,
+    hidden: !customAllowed && !hasTokens && forbiddenText === null,
     setMode(next) {
       onPreferredModeChange(next);
       // Drop a value the target mode can't represent, so the other input

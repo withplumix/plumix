@@ -30,6 +30,7 @@ import { createSession, DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
 import { resolveAllowedBlocks } from "../blocks/allowed-blocks.js";
 import { coreBlocks, coreMarks, createBlockRegistry } from "../blocks/index.js";
+import { resolveStylePolicy } from "../blocks/styles/style-policy.js";
 import { createAppContext } from "../context/app.js";
 import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -151,6 +152,7 @@ function buildContext(
         allowedBlocks: config.theme.allowedBlocks,
       }),
     ),
+    stylePolicy: resolveStylePolicy(config.theme),
     marks,
     logger: silentLogger,
     authMethods,

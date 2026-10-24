@@ -4,6 +4,7 @@ import type {
   BlockRegistry,
   InsertableBlockEntry,
   JsonValue,
+  StylePolicy,
 } from "@plumix/core/blocks";
 import {
   blockSlotKeys,
@@ -13,7 +14,7 @@ import {
 } from "@plumix/core/blocks";
 import { labelSourceText } from "@plumix/core/i18n";
 
-import { holdsBlockOutside } from "./block-tree-ops.js";
+import { holdsBlockOutside, holdsForbiddenStyle } from "./block-tree-ops.js";
 
 const CONTENT_SLOT = "content";
 
@@ -43,6 +44,8 @@ interface GroupOptions {
   readonly allowed?: readonly string[];
   /** The theme's allowed blocks, from the manifest; undefined allows all. */
   readonly themeAllowed?: ReadonlySet<string>;
+  /** Hides a variation holding a value it refuses; undefined refuses none. */
+  readonly stylePolicy?: StylePolicy;
   /** Undefined is the top level, which hides parent-bound blocks. */
   readonly parentName?: string;
   /** Undefined hides entry-type-scoped blocks. */
@@ -62,6 +65,7 @@ export function groupInsertables(
     query,
     allowed,
     themeAllowed,
+    stylePolicy,
     parentName,
     entryType,
   }: GroupOptions,
@@ -85,7 +89,8 @@ export function groupInsertables(
     if (needle && !matchesEntry(entry, needle)) continue;
     if (
       entry.innerBlocks &&
-      holdsBlockOutside(entry.innerBlocks, registry, themeAllowed)
+      (holdsBlockOutside(entry.innerBlocks, registry, themeAllowed) ||
+        holdsForbiddenStyle(entry.innerBlocks, registry, stylePolicy))
     ) {
       continue;
     }
@@ -113,15 +118,21 @@ export function entryKey(entry: InsertableBlockEntry): string {
   return entry.slug === entry.name ? entry.slug : `${entry.name}/${entry.slug}`;
 }
 
-/** The patterns whose every block the theme allows; all without a set. */
+/**
+ * The patterns whose every block the theme allows and whose every style value
+ * its style policy accepts; all without a set or a policy.
+ */
 export function patternsWithin(
   patterns: readonly InserterPattern[],
   registry: BlockRegistry,
   themeAllowed: ReadonlySet<string> | undefined,
+  stylePolicy?: StylePolicy,
 ): readonly InserterPattern[] {
-  if (!themeAllowed) return patterns;
+  if (!themeAllowed && !stylePolicy) return patterns;
   return patterns.filter(
-    (pattern) => !holdsBlockOutside(pattern.content, registry, themeAllowed),
+    (pattern) =>
+      !holdsBlockOutside(pattern.content, registry, themeAllowed) &&
+      !holdsForbiddenStyle(pattern.content, registry, stylePolicy),
   );
 }
 

@@ -1,5 +1,9 @@
 import type { AdminArea, JsonObject } from "@plumix/core";
-import type { ThemeBreakpoints, ThemeTokens } from "@plumix/core/blocks";
+import type {
+  AllowCustomStyles,
+  ThemeBreakpoints,
+  ThemeTokens,
+} from "@plumix/core/blocks";
 import type {
   AccessPolicyChoice,
   AdminNavGroup,
@@ -73,7 +77,10 @@ const MANIFEST_FIELD_IS_ARRAY = {
   configuredSlots: false,
   refusedAdminAreas: true,
   frameworkRoutes: false,
-} as const satisfies Record<keyof PlumixManifest, boolean>;
+} as const satisfies Record<
+  Exclude<keyof PlumixManifest, "allowCustomStyles">,
+  boolean
+>;
 
 /**
  * Drops, not coerces: the payload is build-generated, so a bad shape means the
@@ -89,6 +96,10 @@ function normalize(value: unknown): PlumixManifest {
       ? Array.isArray(raw)
       : Boolean(raw) && typeof raw === "object";
     if (matches) result[key] = raw;
+  }
+  const policy = v.allowCustomStyles;
+  if (typeof policy === "boolean" || Array.isArray(policy)) {
+    result.allowCustomStyles = policy;
   }
   return result;
 }
@@ -157,6 +168,13 @@ export function getAllowedBlocks(
   source: PlumixManifest = currentManifest(),
 ): readonly string[] | undefined {
   return source.allowedBlocks;
+}
+
+/** The theme's `allowCustomStyles`; `true` when the manifest is silent. */
+export function getAllowCustomStyles(
+  source: PlumixManifest = currentManifest(),
+): AllowCustomStyles {
+  return source.allowCustomStyles ?? true;
 }
 
 export function findEntryTypeBySlug(

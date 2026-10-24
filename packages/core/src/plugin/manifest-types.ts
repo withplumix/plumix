@@ -6,6 +6,7 @@ import type {
   TermTaxonomyCapabilityAction,
 } from "../access/contract/capability.js";
 import type {
+  AllowCustomStyles,
   BlockNode,
   BlockVariation,
   PatternPreview,
@@ -336,6 +337,11 @@ export interface PlumixManifest {
    * Unlike the lists above, a reader treats a missing field as every block.
    */
   readonly allowedBlocks?: readonly string[];
+  /**
+   * The theme's `allowCustomStyles`, `true` when it sets none. A reader treats
+   * a missing field as `true` too.
+   */
+  readonly allowCustomStyles?: AllowCustomStyles;
   /**
    * Theme tokens from `defineTheme({ tokens })`. Routed through the
    * manifest channel because the precompiled admin shell can't import

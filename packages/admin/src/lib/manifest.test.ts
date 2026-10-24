@@ -16,6 +16,7 @@ import {
   findSettingsGroupByName,
   findSettingsPageByName,
   findTermTaxonomyByName,
+  getAllowCustomStyles,
   getAllowedBlocks,
   getConfiguredSlots,
   getPatterns,
@@ -825,5 +826,23 @@ describe("getConfiguredSlots", () => {
       cdn: false,
       mailer: false,
     });
+  });
+});
+
+describe("getAllowCustomStyles", () => {
+  test.each([
+    [false, false],
+    [
+      ["width", "height"],
+      ["width", "height"],
+    ],
+  ])("reads the theme's policy %j from the manifest payload", (sent, read) => {
+    const manifest = parseManifest(JSON.stringify({ allowCustomStyles: sent }));
+
+    expect(getAllowCustomStyles(manifest)).toEqual(read);
+  });
+
+  test("allows custom styles when the manifest is silent", () => {
+    expect(getAllowCustomStyles({})).toBe(true);
   });
 });

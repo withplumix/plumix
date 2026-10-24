@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { CoreBlockName } from "./blocks/core-blocks.js";
+import type { StyleCategory } from "./blocks/index.js";
 import type {
   ArchiveTypeData,
   EntryData,
@@ -474,5 +475,33 @@ describe("defineTheme — allowedBlocks", () => {
       "core/column",
       "core/columns",
     ]);
+  });
+});
+
+describe("defineTheme — allowCustomStyles", () => {
+  test("takes a boolean or the categories that keep custom values", () => {
+    const tokensOnly = defineTheme({
+      templates: [fallback(() => null)],
+      allowCustomStyles: false,
+    });
+    const sizesFree = defineTheme({
+      templates: [fallback(() => null)],
+      allowCustomStyles: ["width", "height"],
+    });
+
+    expect(tokensOnly.allowCustomStyles).toBe(false);
+    expect(sizesFree.allowCustomStyles).toEqual(["width", "height"]);
+    expectTypeOf<ThemeDescriptor["allowCustomStyles"]>().toEqualTypeOf<
+      boolean | readonly StyleCategory[] | undefined
+    >();
+  });
+  test("refuses a category no style property has", () => {
+    defineTheme({
+      templates: [fallback(() => null)],
+      // @ts-expect-error a misspelled category is not a StyleCategory
+      allowCustomStyles: ["colour"],
+    });
+
+    expectTypeOf<"colour">().not.toExtend<StyleCategory>();
   });
 });

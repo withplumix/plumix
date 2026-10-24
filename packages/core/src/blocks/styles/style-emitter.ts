@@ -71,6 +71,14 @@ export function tokenCategoryForProperty(
   return PROPERTY_TO_CATEGORY[property];
 }
 
+/** The category the style policy reads a property under. */
+export function styleCategoryForProperty(property: string): TokenCategory {
+  // A stored bucket key can be `__proto__`, which an index read would resolve.
+  return Object.hasOwn(PROPERTY_TO_CATEGORY, property)
+    ? (PROPERTY_TO_CATEGORY[property] ?? property)
+    : property;
+}
+
 const SAFE_CSS_TOKEN_RE = /^[A-Za-z0-9_-]+$/;
 
 export const VIEWPORT_MAX_PX: Readonly<Record<"medium" | "small", number>> = {

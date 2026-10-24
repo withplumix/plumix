@@ -1,4 +1,4 @@
-import type { BlockRegistry } from "../../../blocks/index.js";
+import type { BlockRegistry, StylePolicy } from "../../../blocks/index.js";
 import type { EntryContent } from "../../../db/schema/entries.js";
 import type {
   BlockContentErrors,
@@ -22,9 +22,9 @@ export function assertContentWithinByteCap(
 }
 
 /**
- * `starting` is the stored content the save starts from; a node it already
- * holds (same `id` and `name`) is kept even when its block is unregistered or
- * outside `allowedBlocks`.
+ * `starting` is the stored content the save starts from. What it holds on a
+ * node with the same `id` is kept, whatever the registry, `allowedBlocks` or
+ * `stylePolicy` say.
  */
 export function assertContentValidAgainstRegistries(
   content: EntryContent | null | undefined,
@@ -32,6 +32,7 @@ export function assertContentValidAgainstRegistries(
   registries: {
     readonly blocks: BlockRegistry;
     readonly allowedBlocks?: ReadonlySet<string>;
+    readonly stylePolicy?: StylePolicy;
   },
   errors: BlockContentErrors,
 ): void {
@@ -45,6 +46,7 @@ export function assertContentValidAgainstRegistries(
     registries.blocks,
     starting.filter((stored) => isEntryContent(stored)),
     registries.allowedBlocks,
+    registries.stylePolicy,
   );
   if (!result.ok) {
     throw errors.INVALID_BLOCK_CONTENT({

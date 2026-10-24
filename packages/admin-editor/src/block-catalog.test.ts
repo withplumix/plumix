@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockNode, BlockPattern, BlockSpec } from "@plumix/core/blocks";
+import type {
+  BlockNode,
+  BlockPattern,
+  BlockSpec,
+  StylePolicy,
+} from "@plumix/core/blocks";
 import {
   columnBlock,
   columnsBlock,
@@ -591,5 +596,98 @@ describe("expandPattern", () => {
     );
 
     expect(node?.attrs?.people).toEqual(people);
+  });
+});
+
+describe("the inserter under a tokens-only style policy", () => {
+  const tokensOnly: StylePolicy = {
+    allowCustomStyles: false,
+    tokens: { color: { primary: { value: "#06f" } } },
+  };
+  const registry = createBlockRegistry([
+    spec({ name: "core/heading", title: "Heading" }),
+    spec({
+      name: "core/card",
+      title: "Card",
+      defaultStyles: { large: { padding: "24px" } },
+    }),
+    spec({
+      name: "core/group",
+      title: "Group",
+      inputs: [{ name: "content", type: "slot" }],
+      variations: [
+        {
+          slug: "group/red",
+          title: "Red",
+          innerBlocks: [
+            {
+              id: "h",
+              name: "core/heading",
+              attrs: {},
+              style: { large: { color: "#e11" } },
+            },
+          ],
+        },
+        {
+          slug: "group/branded",
+          title: "Branded",
+          innerBlocks: [
+            {
+              id: "h",
+              name: "core/heading",
+              attrs: {},
+              style: { large: { color: "var(--plumix-color-primary, #06f)" } },
+            },
+          ],
+        },
+      ],
+    }),
+  ]);
+
+  test("hides a variation whose inner blocks hold a forbidden literal", () => {
+    const slugs = groupInsertables(registry, {
+      capabilities: NO_CAPS,
+      stylePolicy: tokensOnly,
+    }).flatMap((g) => g.entries.map((e) => e.slug));
+
+    expect(slugs).toEqual(["core/heading", "core/card", "group/branded"]);
+  });
+
+  test("hides a pattern holding a forbidden literal at any depth, keeping defaultStyles", () => {
+    const patterns: readonly BlockPattern[] = [
+      {
+        name: "card",
+        title: "Card",
+        content: [
+          {
+            id: "c",
+            name: "core/card",
+            attrs: {},
+            style: { large: { padding: "24px" } },
+          },
+        ],
+      },
+      {
+        name: "classy",
+        title: "Classy",
+        content: [
+          {
+            id: "g",
+            name: "core/group",
+            attrs: {
+              content: [
+                { id: "h", name: "core/heading", attrs: {}, className: "big" },
+              ],
+            },
+          },
+        ],
+      },
+    ];
+
+    expect(
+      patternsWithin(patterns, registry, undefined, tokensOnly).map(
+        (p) => p.name,
+      ),
+    ).toEqual(["card"]);
   });
 });

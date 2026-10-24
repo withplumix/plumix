@@ -5,6 +5,7 @@ import type {
   MarkSpec,
   ShortcodeRegistry,
 } from "../blocks/index.js";
+import type { StylePolicy } from "../blocks/styles/style-policy.js";
 import type { PlumixConfig } from "../config.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { MailCatalogs } from "../mail/catalogs.js";
@@ -88,6 +89,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly plugins: PluginRegistry;
   readonly blocks?: BlockRegistry;
   readonly allowedBlocks?: ReadonlySet<string>;
+  readonly stylePolicy?: StylePolicy;
   readonly marks?: readonly MarkSpec[];
   readonly shortcodes?: ShortcodeRegistry;
   readonly user?: AuthenticatedUser | null;
@@ -189,6 +191,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
     allowedBlocks: args.allowedBlocks,
+    stylePolicy: args.stylePolicy,
     marks: args.marks ?? EMPTY_MARK_LIST,
     shortcodes: args.shortcodes ?? EMPTY_SHORTCODE_REGISTRY,
     logger,

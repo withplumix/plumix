@@ -262,7 +262,7 @@ ones.
 The blocks a theme lets the editor offer and any writer save, from its `allowedBlocks` list: every registered block when it names none. An entry that already holds a block outside them keeps and renders it; a save cannot add a new one.
 
 **Style policy**:
-A theme's rule for style values: custom values allowed, or design tokens only. The editor and the server both enforce it.
+A theme's rule for style values, from its `allowCustomStyles`: custom values allowed (`true`, the default), design tokens only (`false`), or tokens only except the style categories it lists. Keyword options are never custom values. The editor and the server both enforce it; a value an entry already stores is kept, and a save cannot add a new one.
 
 ## Themes & templates
 

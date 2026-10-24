@@ -1205,6 +1205,20 @@ describe("buildManifest", () => {
     expect(manifest.allowedBlocks).toEqual(coreBlocks.map((b) => b.name));
   });
 
+  test("carries the theme's allowCustomStyles", () => {
+    const manifest = buildManifest(createPluginRegistry(), {
+      allowCustomStyles: ["width", "height"],
+    });
+
+    expect(manifest.allowCustomStyles).toEqual(["width", "height"]);
+  });
+
+  test("allows custom styles everywhere when the theme sets nothing", () => {
+    const manifest = buildManifest(createPluginRegistry());
+
+    expect(manifest.allowCustomStyles).toBe(true);
+  });
+
   test("dedups a plugin/theme block name clash, the theme winning", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("acme", (ctx) => {

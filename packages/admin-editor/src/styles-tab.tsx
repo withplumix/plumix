@@ -37,19 +37,28 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@plumix/admin-ui/tooltip";
-import { ROOT_TAGS } from "@plumix/core/blocks";
+import { ROOT_TAGS, STYLE_KEYWORDS } from "@plumix/core/blocks";
 
 import type { StyleBucket } from "./store.js";
 import type { StyleDeclaration } from "./style-declarations.js";
+import type { RefusedStyle } from "./style-policy-view.js";
 import type { TextMarkId, TextShadowParts } from "./styles-tab-model.js";
 import { findBlock } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { HtmlAttributes } from "./html-attributes.js";
 import { useEditorStore } from "./provider.js";
 import { deviceBucket } from "./store.js";
-import { HEX6, StyleControl } from "./style-control.js";
+import { ForbiddenValue, HEX6, StyleControl } from "./style-control.js";
 import { StyleDeclarations } from "./style-declarations.js";
 import { StyleFieldsProvider } from "./style-fields-context.js";
+import {
+  StylePolicyProvider,
+  useStylePolicyView,
+} from "./style-policy-context.js";
+import {
+  PERMISSIVE_STYLE_POLICY_VIEW,
+  stylePolicyView,
+} from "./style-policy-view.js";
 import {
   decodeKeyword,
   DEFAULT_TEXT_SHADOW,
@@ -61,6 +70,7 @@ import {
   parseBackgroundImageUrl,
   parseTextShadow,
   pressedTextMarks,
+  refusedWithoutChip,
   TAG_DEFAULT,
   tagNameChoice,
   TEXT_MARKS,
@@ -151,7 +161,7 @@ const BORDER_SECTION: SectionDef = {
     {
       property: "borderStyle",
       label: "Style",
-      options: ["none", "solid", "dashed", "dotted", "double"],
+      options: STYLE_KEYWORDS.borderStyle,
     },
     {
       property: "borderColor",
@@ -163,6 +173,18 @@ const BORDER_SECTION: SectionDef = {
     { property: "borderRadius", label: "Radius", category: "borderRadius" },
   ],
 };
+
+/** Keyword controls show no chip, so their refused values need another place. */
+const CHIP_PROPERTIES: ReadonlySet<string> = new Set([
+  ...[SIZE_SECTION, BACKGROUND_SECTION, TYPOGRAPHY_SECTION, BORDER_SECTION]
+    .flatMap((section) => section.controls)
+    .filter((control) => !control.options)
+    .map((control) => control.property),
+  ...["gap", "opacity", "boxShadow", "textShadow", "backgroundImage"],
+  ...["margin", "padding"].flatMap((prefix) =>
+    ["Top", "Right", "Bottom", "Left"].map((side) => `${prefix}${side}`),
+  ),
+]);
 
 /**
  * Default-open sections, in Builder's order. The raw-CSS "declarations" section
@@ -186,7 +208,7 @@ const SECTION_IDS = [
  * device's responsive bucket, so styles are set per breakpoint.
  */
 export function StylesTab(): ReactElement {
-  const { registry, tokens } = useEditorConfig();
+  const { registry, tokens, stylePolicy } = useEditorConfig();
   const activeId = useEditorStore((s) => s.activeId);
   const device = useEditorStore((s) => s.device);
   const block = useEditorStore((s) =>
@@ -223,6 +245,9 @@ export function StylesTab(): ReactElement {
   }
 
   const bucket: StyleBucket = deviceBucket(device);
+  const policy = stylePolicy
+    ? stylePolicyView(stylePolicy, block, registry.get(block.name), bucket)
+    : PERMISSIVE_STYLE_POLICY_VIEW;
   const current = block.style?.[bucket];
   // A non-string or empty value (hand-edited junk, a mid-retype clear) reads as
   // unset.
@@ -250,117 +275,134 @@ export function StylesTab(): ReactElement {
 
   return (
     <StyleFieldsProvider tokens={tokens}>
-      <div className="flex flex-col gap-2 p-3" data-testid="styles-tab">
-        <p
-          className="text-muted-foreground text-xs"
-          data-testid="styles-tab-scope"
-        >
-          <Trans id="editor.styles.scope" message="Editing" /> · {device}
-        </p>
-        <Accordion type="multiple" defaultValue={SECTION_IDS}>
-          <AccordionItem value="layout">
-            <AccordionTrigger data-testid="styles-section-layout">
-              <Trans id="editor.styles.layout" message="Layout" />
-            </AccordionTrigger>
-            <AccordionContent>
-              <LayoutControls valueOf={valueOf} setter={setter} />
-            </AccordionContent>
-          </AccordionItem>
-          <GenericSection
-            section={SIZE_SECTION}
-            valueOf={valueOf}
-            inheritedOf={inheritedOf}
-            setter={setter}
-          />
-          <AccordionItem value="visibility">
-            <AccordionTrigger data-testid="styles-section-visibility">
-              <Trans id="editor.styles.visibility" message="Visibility" />
-            </AccordionTrigger>
-            <AccordionContent>
-              <VisibilityControls
-                hidden={block.hidden}
-                onToggle={setHiddenOn}
-              />
-            </AccordionContent>
-          </AccordionItem>
-          <GenericSection
-            section={BACKGROUND_SECTION}
-            valueOf={valueOf}
-            inheritedOf={inheritedOf}
-            setter={setter}
-          />
-          <GenericSection
-            section={TYPOGRAPHY_SECTION}
-            valueOf={valueOf}
-            inheritedOf={inheritedOf}
-            setter={setter}
-          />
-          <AccordionItem value="spacing">
-            <AccordionTrigger data-testid="styles-section-spacing">
-              <Trans id="editor.styles.spacing" message="Spacing" />
-            </AccordionTrigger>
-            <AccordionContent>
-              <SpacingControls valueOf={valueOf} setter={setter} />
-            </AccordionContent>
-          </AccordionItem>
-          <GenericSection
-            section={BORDER_SECTION}
-            valueOf={valueOf}
-            inheritedOf={inheritedOf}
-            setter={setter}
-          />
-          <AccordionItem value="effects">
-            <AccordionTrigger data-testid="styles-section-effects">
-              <Trans id="editor.styles.effects" message="Shadows & Effects" />
-            </AccordionTrigger>
-            <AccordionContent className="flex flex-col gap-3">
-              <ShadowsEffectsControls valueOf={valueOf} setter={setter} />
-            </AccordionContent>
-          </AccordionItem>
-          {/* One escape hatch: author classes + raw CSS declarations — the
+      <StylePolicyProvider view={policy}>
+        <div className="flex flex-col gap-2 p-3" data-testid="styles-tab">
+          <p
+            className="text-muted-foreground text-xs"
+            data-testid="styles-tab-scope"
+          >
+            <Trans id="editor.styles.scope" message="Editing" /> · {device}
+          </p>
+          <Accordion type="multiple" defaultValue={SECTION_IDS}>
+            <AccordionItem value="layout">
+              <AccordionTrigger data-testid="styles-section-layout">
+                <Trans id="editor.styles.layout" message="Layout" />
+              </AccordionTrigger>
+              <AccordionContent>
+                <LayoutControls valueOf={valueOf} setter={setter} />
+              </AccordionContent>
+            </AccordionItem>
+            <GenericSection
+              section={SIZE_SECTION}
+              valueOf={valueOf}
+              inheritedOf={inheritedOf}
+              setter={setter}
+            />
+            <AccordionItem value="visibility">
+              <AccordionTrigger data-testid="styles-section-visibility">
+                <Trans id="editor.styles.visibility" message="Visibility" />
+              </AccordionTrigger>
+              <AccordionContent>
+                <VisibilityControls
+                  hidden={block.hidden}
+                  onToggle={setHiddenOn}
+                />
+              </AccordionContent>
+            </AccordionItem>
+            <GenericSection
+              section={BACKGROUND_SECTION}
+              valueOf={valueOf}
+              inheritedOf={inheritedOf}
+              setter={setter}
+            />
+            <GenericSection
+              section={TYPOGRAPHY_SECTION}
+              valueOf={valueOf}
+              inheritedOf={inheritedOf}
+              setter={setter}
+            />
+            <AccordionItem value="spacing">
+              <AccordionTrigger data-testid="styles-section-spacing">
+                <Trans id="editor.styles.spacing" message="Spacing" />
+              </AccordionTrigger>
+              <AccordionContent>
+                <SpacingControls valueOf={valueOf} setter={setter} />
+              </AccordionContent>
+            </AccordionItem>
+            <GenericSection
+              section={BORDER_SECTION}
+              valueOf={valueOf}
+              inheritedOf={inheritedOf}
+              setter={setter}
+            />
+            <AccordionItem value="effects">
+              <AccordionTrigger data-testid="styles-section-effects">
+                <Trans id="editor.styles.effects" message="Shadows & Effects" />
+              </AccordionTrigger>
+              <AccordionContent className="flex flex-col gap-3">
+                <ShadowsEffectsControls valueOf={valueOf} setter={setter} />
+              </AccordionContent>
+            </AccordionItem>
+            {/* One escape hatch: author classes + raw CSS declarations — the
             "drop to CSS" tools together. */}
-          <AccordionItem value="declarations">
-            <AccordionTrigger data-testid="styles-section-declarations">
-              <Trans id="editor.styles.customCss" message="Custom CSS" />
-            </AccordionTrigger>
-            <AccordionContent className="flex flex-col gap-3">
-              <CssClassesField
-                className={block.className}
-                onChange={(next) => setBlockClassName(activeId, next)}
-              />
-              {/* Divider so the raw declarations don't read as more class-name
+            {policy.allowsRawCss ? (
+              <AccordionItem value="declarations">
+                <AccordionTrigger data-testid="styles-section-declarations">
+                  <Trans id="editor.styles.customCss" message="Custom CSS" />
+                </AccordionTrigger>
+                <AccordionContent className="flex flex-col gap-3">
+                  <CssClassesField
+                    className={block.className}
+                    onChange={(next) => setBlockClassName(activeId, next)}
+                  />
+                  {/* Divider so the raw declarations don't read as more class-name
                 fields. */}
-              <div className="border-border border-t pt-3">
-                <StyleDeclarations
-                  declarations={declarations}
-                  onChange={(property, value) => setter(property)(value)}
+                  <div className="border-border border-t pt-3">
+                    <StyleDeclarations
+                      declarations={declarations}
+                      onChange={(property, value) => setter(property)(value)}
+                      onRename={(from, to) =>
+                        renameBlockStyleProperty(activeId, bucket, from, to)
+                      }
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ) : (
+              <ForbiddenCustomCss
+                className={policy.forbiddenClassName}
+                declarations={refusedWithoutChip(
+                  policy.refused,
+                  CHIP_PROPERTIES,
+                  valueOf("display"),
+                )}
+                onClearClassName={() => setBlockClassName(activeId, "")}
+                onClearDeclaration={(property) => setter(property)(null)}
+              />
+            )}
+            <AccordionItem value="html">
+              <AccordionTrigger data-testid="styles-section-html">
+                <Trans id="editor.htmlAttrs.title" message="HTML attributes" />
+              </AccordionTrigger>
+              <AccordionContent className="flex flex-col gap-3">
+                <TagNameField
+                  value={block.tagName}
+                  onChange={(tagName) => setBlockTagName(activeId, tagName)}
+                />
+                <HtmlAttributes
+                  attributes={block.htmlAttrs ?? {}}
+                  onChange={(key, value) =>
+                    updateBlockHtmlAttr(activeId, key, value)
+                  }
                   onRename={(from, to) =>
-                    renameBlockStyleProperty(activeId, bucket, from, to)
+                    renameBlockHtmlAttr(activeId, from, to)
                   }
                 />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="html">
-            <AccordionTrigger data-testid="styles-section-html">
-              <Trans id="editor.htmlAttrs.title" message="HTML attributes" />
-            </AccordionTrigger>
-            <AccordionContent className="flex flex-col gap-3">
-              <TagNameField
-                value={block.tagName}
-                onChange={(tagName) => setBlockTagName(activeId, tagName)}
-              />
-              <HtmlAttributes
-                attributes={block.htmlAttrs ?? {}}
-                onChange={(key, value) =>
-                  updateBlockHtmlAttr(activeId, key, value)
-                }
-                onRename={(from, to) => renameBlockHtmlAttr(activeId, from, to)}
-              />
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </StylePolicyProvider>
     </StyleFieldsProvider>
   );
 }
@@ -419,10 +461,17 @@ function GenericSection({
           <TextStyleControls valueOf={valueOf} setter={setter} />
         )}
         {section.id === "background" && (
-          <BackgroundImageField
+          <CustomOrTokens
+            label="Fill image"
+            property="backgroundImage"
             value={valueOf("backgroundImage")}
             onChange={setter("backgroundImage")}
-          />
+          >
+            <BackgroundImageField
+              value={valueOf("backgroundImage")}
+              onChange={setter("backgroundImage")}
+            />
+          </CustomOrTokens>
         )}
       </AccordionContent>
     </AccordionItem>
@@ -436,11 +485,13 @@ const TEXT_MARK_ICONS: Readonly<Record<TextMarkId, typeof Bold>> = {
   strikethrough: Strikethrough,
 };
 
-const TEXT_ALIGNMENTS = [
-  { value: "left", Icon: AlignLeft, label: "Align left" },
-  { value: "center", Icon: AlignCenter, label: "Align center" },
-  { value: "right", Icon: AlignRight, label: "Align right" },
-] as const;
+const ALIGNMENT_ICONS: Readonly<
+  Record<(typeof STYLE_KEYWORDS.textAlign)[number], typeof AlignLeft>
+> = {
+  left: AlignLeft,
+  center: AlignCenter,
+  right: AlignRight,
+};
 
 function TooltipToggleItem({
   value,
@@ -520,16 +571,19 @@ function TextStyleControls({
           value={valueOf("textAlign") ?? ""}
           onValueChange={(value) => setter("textAlign")(value || null)}
         >
-          {TEXT_ALIGNMENTS.map(({ value, Icon }) => (
-            <TooltipToggleItem
-              key={value}
-              value={value}
-              testid={`style-align-${value}`}
-              label={alignLabel(i18n, value)}
-            >
-              <Icon />
-            </TooltipToggleItem>
-          ))}
+          {STYLE_KEYWORDS.textAlign.map((value) => {
+            const Icon = ALIGNMENT_ICONS[value];
+            return (
+              <TooltipToggleItem
+                key={value}
+                value={value}
+                testid={`style-align-${value}`}
+                label={alignLabel(i18n, value)}
+              >
+                <Icon />
+              </TooltipToggleItem>
+            );
+          })}
         </ToggleGroup>
       </div>
     </TooltipProvider>
@@ -624,7 +678,7 @@ function LayoutControls({
       <LayoutToggle
         label="Display"
         property="display"
-        options={["block", "flex", "grid"]}
+        options={STYLE_KEYWORDS.display}
         valueOf={valueOf}
         setter={setter}
       />
@@ -632,7 +686,7 @@ function LayoutControls({
         <LayoutToggle
           label="Direction"
           property="flexDirection"
-          options={["row", "column"]}
+          options={STYLE_KEYWORDS.flexDirection}
           valueOf={valueOf}
           setter={setter}
         />
@@ -651,14 +705,14 @@ function LayoutControls({
           <LayoutToggle
             label="Justify"
             property="justifyContent"
-            options={["flex-start", "center", "flex-end", "space-between"]}
+            options={STYLE_KEYWORDS.justifyContent}
             valueOf={valueOf}
             setter={setter}
           />
           <LayoutToggle
             label="Align"
             property="alignItems"
-            options={["flex-start", "center", "flex-end", "stretch"]}
+            options={STYLE_KEYWORDS.alignItems}
             valueOf={valueOf}
             setter={setter}
           />
@@ -669,7 +723,7 @@ function LayoutControls({
       <LayoutToggle
         label="Align self"
         property="alignSelf"
-        options={["flex-start", "center", "flex-end", "stretch"]}
+        options={STYLE_KEYWORDS.alignSelf}
         valueOf={valueOf}
         setter={setter}
       />
@@ -898,7 +952,17 @@ function ShadowsEffectsControls({
 }): ReactElement {
   return (
     <>
-      <OpacityControl value={valueOf("opacity")} onChange={setter("opacity")} />
+      <CustomOrTokens
+        label="Opacity"
+        property="opacity"
+        value={valueOf("opacity")}
+        onChange={setter("opacity")}
+      >
+        <OpacityControl
+          value={valueOf("opacity")}
+          onChange={setter("opacity")}
+        />
+      </CustomOrTokens>
       <StyleControl
         label="Box shadow"
         property="boxShadow"
@@ -906,11 +970,85 @@ function ShadowsEffectsControls({
         value={valueOf("boxShadow")}
         onChange={setter("boxShadow")}
       />
-      <TextShadowControls
+      <CustomOrTokens
+        label="Text shadow"
+        property="textShadow"
         value={valueOf("textShadow")}
         onChange={setter("textShadow")}
-      />
+      >
+        <TextShadowControls
+          value={valueOf("textShadow")}
+          onChange={setter("textShadow")}
+        />
+      </CustomOrTokens>
     </>
+  );
+}
+
+function CustomOrTokens({
+  label,
+  property,
+  value,
+  onChange,
+  children,
+}: {
+  readonly label: string;
+  readonly property: string;
+  readonly value: string | undefined;
+  readonly onChange: (value: string | null) => void;
+  readonly children: ReactElement;
+}): ReactElement {
+  if (useStylePolicyView().allowsCustom(property)) return children;
+  return (
+    <StyleControl
+      label={label}
+      property={property}
+      value={value}
+      onChange={onChange}
+    />
+  );
+}
+
+/**
+ * Under tokens only, in place of the Custom CSS panel: the stored class name
+ * and declarations no other control shows, read-only and clearable. Absent
+ * while there are none.
+ */
+function ForbiddenCustomCss({
+  className,
+  declarations,
+  onClearClassName,
+  onClearDeclaration,
+}: {
+  readonly className: string | undefined;
+  readonly declarations: readonly RefusedStyle[];
+  readonly onClearClassName: () => void;
+  readonly onClearDeclaration: (property: string) => void;
+}): ReactElement | null {
+  if (className === undefined && declarations.length === 0) return null;
+  return (
+    <AccordionItem value="declarations">
+      <AccordionTrigger data-testid="styles-section-declarations">
+        <Trans id="editor.styles.customCss" message="Custom CSS" />
+      </AccordionTrigger>
+      <AccordionContent className="flex flex-col gap-2">
+        {className === undefined ? null : (
+          <ForbiddenValue
+            value={className}
+            testId="style-css-classes-forbidden"
+            onClear={onClearClassName}
+          />
+        )}
+        {declarations.map(({ property, value }) => (
+          <ForbiddenValue
+            key={property}
+            value={`${property}: ${value}`}
+            testId={`style-declaration-${property}-forbidden`}
+            onClear={() => onClearDeclaration(property)}
+          />
+        ))}
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 

@@ -10,6 +10,7 @@ import type {
   ShortcodeRegistry,
 } from "../blocks/index.js";
 import type { RendererUser } from "../blocks/renderer/context.js";
+import type { StylePolicy } from "../blocks/styles/style-policy.js";
 import type { PlumixConfig } from "../config.js";
 import type { EditLeaseSurface } from "../db/schema/edit_leases.js";
 import type * as coreSchema from "../db/schema/index.js";
@@ -195,6 +196,11 @@ export interface AppContextBase<
    * `resolveAllowedBlocks`. Absent allows every block in `blocks`.
    */
   readonly allowedBlocks?: ReadonlySet<string>;
+  /**
+   * The theme's `allowCustomStyles` with its tokens, which a save's content is
+   * checked against. Absent allows custom values everywhere.
+   */
+  readonly stylePolicy?: StylePolicy;
   readonly marks: readonly MarkSpec[];
   readonly shortcodes: ShortcodeRegistry;
   readonly logger: Logger;

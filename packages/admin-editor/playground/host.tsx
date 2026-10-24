@@ -5,7 +5,11 @@ import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { createRoot } from "react-dom/client";
 
-import type { BlockSpec } from "@plumix/core/blocks";
+import type {
+  AllowCustomStyles,
+  BlockSpec,
+  StyleCategory,
+} from "@plumix/core/blocks";
 import {
   coreBlocks,
   createBlockRegistry,
@@ -103,6 +107,19 @@ const readOnly = params.has("readonly");
  * list; absent, every block is allowed.
  */
 const allowedBlocks = params.get("allowed")?.split(",");
+/**
+ * `?styles=false` or `?styles=width,height` stands in for the manifest's
+ * `allowCustomStyles`; absent, custom values are allowed everywhere.
+ */
+function readAllowCustomStyles(): AllowCustomStyles | undefined {
+  const styles = params.get("styles");
+  if (styles === null) return undefined;
+  if (styles === "false") return false;
+  // Unchecked, like the manifest field it stands in for: a typo shows up as a
+  // category that keeps nothing custom.
+  return styles.split(",") as StyleCategory[];
+}
+const allowCustomStyles = readAllowCustomStyles();
 
 /** A stand-in for the admin's revision/share preview banner. */
 function PreviewBannerStub(): ReactElement {
@@ -137,6 +154,7 @@ if (root) {
           capabilities={new Set()}
           patterns={SEED_PATTERNS}
           allowedBlocks={allowedBlocks}
+          allowCustomStyles={allowCustomStyles}
           tokens={SEED_TOKENS}
           readOnly={readOnly}
           previewBanner={readOnly ? <PreviewBannerStub /> : undefined}

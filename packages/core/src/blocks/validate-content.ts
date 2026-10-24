@@ -1,9 +1,11 @@
 import type { BlockSpec } from "./block-registry.js";
 import type { EntryContent } from "./entry-content.js";
 import type { BlockNode } from "./render-block-tree.js";
+import type { ForbiddenStyle, StylePolicy } from "./styles/style-policy.js";
 import type { BlockContentValidationIssue } from "./validation-errors.js";
 import { blockSlotKeys } from "./block-slots.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
+import { forbiddenStyles } from "./styles/style-policy.js";
 
 export type BlockContentValidationResult =
   | { readonly ok: true }
@@ -25,17 +27,107 @@ export function validateEntryContent(
   registry: SpecLookup,
   starting: readonly EntryContent[] = [],
   allowed?: ReadonlySet<string>,
+  stylePolicy?: StylePolicy,
 ): BlockContentValidationResult {
   const offered = (name: string): boolean =>
     Boolean(registry.get(name)) && (!allowed || allowed.has(name));
   const kept = keptAsStored(content.blocks, starting, registry, offered);
   const errors: BlockContentValidationIssue[] = [];
   walk(content.blocks, "blocks", null, errors, registry, offered, kept);
+  if (stylePolicy) {
+    errors.push(
+      ...refusedStyles(content.blocks, starting, registry, stylePolicy),
+    );
+  }
   if (errors.length === 0) return { ok: true };
   return { ok: false, errors };
 }
 
 const identityOf = (node: BlockNode): string => `${node.id}\u0000${node.name}`;
+
+const styleIdentityOf = (node: BlockNode, style: ForbiddenStyle): string =>
+  style.kind === "className"
+    ? `${node.id}\u0000className\u0000${style.value}`
+    : `${node.id}\u0000${style.bucket}\u0000${style.property}\u0000${style.value}`;
+
+/**
+ * Each value the policy refuses, unless `starting` holds it on a node with the
+ * same `id`, at the same property and breakpoint. Each stored value matches
+ * once.
+ */
+function refusedStyles(
+  nodes: readonly BlockNode[],
+  starting: readonly EntryContent[],
+  registry: SpecLookup,
+  policy: StylePolicy,
+): readonly BlockContentValidationIssue[] {
+  const forbiddenOn = (node: BlockNode): readonly ForbiddenStyle[] =>
+    forbiddenStyles(node, policy, registry.get(node.name));
+  const available = mostHeldByAny(starting, registry, (node) =>
+    forbiddenOn(node).map((style) => styleIdentityOf(node, style)),
+  );
+  const issues: BlockContentValidationIssue[] = [];
+  eachNode(nodes, "blocks", registry, (node, path) => {
+    for (const style of forbiddenOn(node)) {
+      const identity = styleIdentityOf(node, style);
+      const left = available.get(identity) ?? 0;
+      if (left > 0) {
+        available.set(identity, left - 1);
+        continue;
+      }
+      issues.push(styleIssue(node, style, path));
+    }
+  });
+  return issues;
+}
+
+function styleIssue(
+  node: BlockNode,
+  style: ForbiddenStyle,
+  path: string,
+): BlockContentValidationIssue {
+  if (style.kind === "className") {
+    return {
+      code: "style_not_allowed",
+      message: `Class names are not allowed by the theme at ${path}.`,
+      path,
+      nodeName: node.name,
+      property: "className",
+    };
+  }
+  return {
+    code: "style_not_allowed",
+    message: `Custom value for "${style.property}" (${style.bucket}) is not allowed by the theme at ${path}.`,
+    path,
+    nodeName: node.name,
+    property: style.property,
+    breakpoint: style.bucket,
+  };
+}
+
+/**
+ * The most any one starting content holds of each identity, not the sum: live
+ * and its autosave share their nodes, and that must not allow a second copy.
+ */
+function mostHeldByAny(
+  starting: readonly EntryContent[],
+  registry: SpecLookup,
+  identitiesOf: (node: BlockNode) => readonly string[],
+): Map<string, number> {
+  const available = new Map<string, number>();
+  for (const content of starting) {
+    const counts = new Map<string, number>();
+    eachNode(content.blocks, "blocks", registry, (node) => {
+      for (const identity of identitiesOf(node)) {
+        counts.set(identity, (counts.get(identity) ?? 0) + 1);
+      }
+    });
+    for (const [identity, count] of counts) {
+      available.set(identity, Math.max(available.get(identity) ?? 0, count));
+    }
+  }
+  return available;
+}
 
 /** Visits every node with its issue path, in document order. */
 function eachNode(
@@ -67,19 +159,9 @@ function keptAsStored(
   registry: SpecLookup,
   offered: (name: string) => boolean,
 ): ReadonlySet<string> {
-  // The most any one starting content holds of an identity, not the sum: live
-  // and its autosave share their nodes, and that must not allow a second copy.
-  const available = new Map<string, number>();
-  for (const content of starting) {
-    const counts = new Map<string, number>();
-    eachNode(content.blocks, "blocks", registry, (node) => {
-      const identity = identityOf(node);
-      counts.set(identity, (counts.get(identity) ?? 0) + 1);
-    });
-    for (const [identity, count] of counts) {
-      available.set(identity, Math.max(available.get(identity) ?? 0, count));
-    }
-  }
+  const available = mostHeldByAny(starting, registry, (node) => [
+    identityOf(node),
+  ]);
   // By path, not by object: one object can sit in a tree twice.
   const kept = new Set<string>();
   eachNode(nodes, "blocks", registry, (node, path) => {

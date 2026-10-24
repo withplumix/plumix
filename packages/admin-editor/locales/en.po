@@ -589,6 +589,11 @@ msgid "editor.shortcuts.group.canvas"
 msgstr "Canvas"
 
 #. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.forbiddenValue.clear"
+msgstr "Clear"
+
+#. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx
 msgid "editor.shortcuts.gesture.click"
 msgstr "Click"
@@ -639,6 +644,11 @@ msgstr "Custom"
 #: src/styles-tab.tsx
 msgid "editor.styles.customCss"
 msgstr "Custom CSS"
+
+#. js-lingui-explicit-id
+#: src/style-control.tsx
+msgid "editor.styles.forbiddenValue"
+msgstr "Custom value <0>{value}</0> — not allowed by this theme"
 
 #. js-lingui-explicit-id
 #: src/shortcuts-dialog.tsx

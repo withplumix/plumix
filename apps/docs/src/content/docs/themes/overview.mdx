@@ -36,6 +36,13 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
   });
   ```
 
+- `allowCustomStyles` sets the style policy: whether the editor and anything writing content may store custom style values, or only your `tokens`. Leave it out, or set `true`, and every style control takes a custom value. Set `false` and every control offers only tokens: the Custom input is gone, a property whose category has no tokens is hidden, and the Custom CSS and class-name fields are hidden. Keyword options such as border style, alignment and display stay. An array names the categories that keep custom values, and every other category is tokens only. A category is a token group (`color`, `spacing`, `fontSize`, …) or, for a property with no shared group, the property itself (`width`, `height`, `opacity`, …). A value counts as a token only when it names a token the theme declares. The server holds every writer to the same rule, an agent writing over MCP or the RPC included: a save can't store a new custom value, a changed one, a token you don't declare, a Custom CSS declaration or a class name. An entry that already stores one keeps it and renders it, and the editor shows it read-only with a way to clear it or pick a token. A value equal to a block's own `defaultStyles` is always allowed, a duplicated or pasted block drops the values the policy refuses, and the editor's inserter hides patterns and variations holding one.
+
+  ```ts
+  defineTheme({ allowCustomStyles: false }); // tokens only
+  defineTheme({ allowCustomStyles: ["width", "height"] }); // tokens only, except these
+  ```
+
 - `redirects` are public-route rules the theme owns, for URL moves that belong to the design rather than to the content model. They lose a tie against `config.redirects` and against plugin-registered rules.
 - `css` lists stylesheet paths. The strings never enter the config module graph. The Vite plugin generates a client entry that imports each one, so Vite emits hashed bundles.
 - `viewTransitions` turns on the browser's animated transitions between pages. Core emits the CSS rule that enables them, and your stylesheet writes every animation. [Page Transitions](/themes/view-transitions/) covers the setting and has recipes to copy.

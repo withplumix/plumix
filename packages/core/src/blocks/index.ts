@@ -139,6 +139,7 @@ export {
   emitBlockStyleCss,
   emitThemeTokenCss,
   resolveThemeTokens,
+  styleCategoryForProperty,
   VIEWPORT_MAX_PX,
 } from "./styles/style-emitter.js";
 export type {
@@ -155,6 +156,19 @@ export type {
   StyleTokenOption,
 } from "./styles/style-field.js";
 export { sanitizeCssValue } from "./styles/sanitize-css.js";
+export {
+  allowsCustomStyles,
+  forbiddenStyles,
+  resolveStylePolicy,
+  STYLE_KEYWORDS,
+} from "./styles/style-policy.js";
+export type {
+  AllowCustomStyles,
+  ForbiddenStyle,
+  StyleBucketName,
+  StyleCategory,
+  StylePolicy,
+} from "./styles/style-policy.js";
 export { parseLoaderData, serializeLoaderData } from "./loader-data.js";
 export { parseRenderEnv } from "./render-env.js";
 export type { RenderEnv } from "./render-env.js";

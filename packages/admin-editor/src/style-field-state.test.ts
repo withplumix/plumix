@@ -224,3 +224,67 @@ describe("styleFieldState — inherited value", () => {
     expect(state.inheritedText).toBe("");
   });
 });
+
+describe("styleFieldState — under tokens only", () => {
+  test("offers tokens and no Custom input, even after a custom toggle", () => {
+    const state = styleFieldState(
+      padding,
+      undefined,
+      "custom",
+      options({ customAllowed: false }),
+    );
+
+    expect(state).toMatchObject({
+      mode: "token",
+      hidden: false,
+      forbiddenText: null,
+    });
+  });
+
+  test("shows a refused stored literal read-only beside the tokens", () => {
+    const state = styleFieldState(
+      padding,
+      "13px",
+      undefined,
+      options({ customAllowed: false, refused: true }),
+    );
+
+    expect(state).toMatchObject({
+      mode: "token",
+      tokenId: null,
+      hidden: false,
+      forbiddenText: "13px",
+    });
+  });
+
+  test("hides a property with no tokens while nothing is stored", () => {
+    const state = styleFieldState(
+      fontSize,
+      undefined,
+      undefined,
+      options({ customAllowed: false }),
+    );
+
+    expect(state.hidden).toBe(true);
+  });
+
+  test("shows a property with no tokens while a refused literal is stored", () => {
+    const state = styleFieldState(
+      fontSize,
+      "13px",
+      undefined,
+      options({ customAllowed: false, refused: true }),
+    );
+
+    expect(state).toMatchObject({ hidden: false, forbiddenText: "13px" });
+  });
+
+  test("offers the Custom input when the policy allows it", () => {
+    const state = styleFieldState(padding, "13px", undefined, options());
+
+    expect(state).toMatchObject({
+      hidden: false,
+      forbiddenText: null,
+    });
+  });
+});
