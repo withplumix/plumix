@@ -74,8 +74,8 @@ dev tree has to name all of its layers.
 
 ## Why the extension point is open and the configuration surface is closed
 
-`DebugPanel.id` stays `string`: anyone may contribute a panel through the
-`debug:panels` filter, including a one-off in a test or an app-local panel
+`DebugPanel.id` stays `string`: anyone may contribute a panel through
+`registerDebugPanel`, including a one-off in a test or an app-local panel
 nobody wants to declare a type for. Only _naming_ a panel in config is closed.
 
 A denylist of free strings is silently wrong when mistyped: any string
@@ -88,9 +88,10 @@ the extension point, so the registry closes them structurally.
 
 The trade is that a plugin panel is config-addressable only if its plugin ships
 the augmentation. A third-party panel whose author never adds one cannot be
-silenced from `plumix.config.ts` — accepted, because the filter removes panels
-and is always available, and because the alternative leaves every key in the
-block a silent-typo risk.
+silenced from `plumix.config.ts` — accepted, because the alternative leaves
+every key in the block a silent-typo risk. (The `debug:panels` filter once let
+a plugin remove a panel; ADR 0052 replaced it with `registerDebugPanel`, which
+cannot.)
 
 ## Consequences
 
