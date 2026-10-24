@@ -448,7 +448,6 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "styleCategoryForProperty",
           "allowsCustomStyles",
           "forbiddenStyles",
-          "refusesStyleValue",
           "resolveStylePolicy",
           "STYLE_KEYWORDS",
           "sanitizeCssValue",

@@ -44,8 +44,6 @@ export interface StyleFieldState {
   /** Which input the control shows. Follows the value's kind when set; falls
    *  back to the user's last toggle when the value is unset. */
   readonly mode: StyleFieldMode;
-  /** Whether the control offers the Custom input at all. */
-  readonly offersCustom: boolean;
   /** A stored value the policy refuses, shown read-only; `null` otherwise. */
   readonly forbiddenText: string | null;
   /** Tokens only, no tokens to offer and nothing refused stored. */
@@ -120,7 +118,6 @@ export function styleFieldState(
     literalText: resolveLiteralText(),
     inheritedText: resolveInheritedText(),
     mode: resolveMode(),
-    offersCustom: customAllowed,
     forbiddenText,
     hidden: !customAllowed && !hasTokens && forbiddenText === null,
     setMode(next) {

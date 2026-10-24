@@ -235,7 +235,6 @@ describe("styleFieldState — under tokens only", () => {
     );
 
     expect(state).toMatchObject({
-      offersCustom: false,
       mode: "token",
       hidden: false,
       forbiddenText: null,
@@ -284,7 +283,6 @@ describe("styleFieldState — under tokens only", () => {
     const state = styleFieldState(padding, "13px", undefined, options());
 
     expect(state).toMatchObject({
-      offersCustom: true,
       hidden: false,
       forbiddenText: null,
     });

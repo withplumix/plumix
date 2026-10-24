@@ -159,7 +159,6 @@ export { sanitizeCssValue } from "./styles/sanitize-css.js";
 export {
   allowsCustomStyles,
   forbiddenStyles,
-  refusesStyleValue,
   resolveStylePolicy,
   STYLE_KEYWORDS,
 } from "./styles/style-policy.js";
