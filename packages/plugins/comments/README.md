@@ -16,8 +16,6 @@ Read the [documentation](https://docs.plumix.dev/plugins/comments/) on docs.plum
 
 - Gravatar serves each commenter's avatar, from a URL the plugin builds out of their email (`src/server/gravatar.ts`).
 
-Moderation mail goes out through core's mailer slot, not through the plugin.
-
 ## Support
 
 Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.
