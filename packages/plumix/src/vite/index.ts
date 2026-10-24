@@ -1,14 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import {
-  copyFile,
-  cp,
-  mkdir,
-  readFile,
-  stat,
-  writeFile,
-} from "node:fs/promises";
+import { cp, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
 import type { IncomingMessage } from "node:http";
 import type { Plugin, UserConfig } from "vite";
@@ -55,7 +48,6 @@ import {
   collectEditorShortcodeModules,
 } from "./editor-block-modules.js";
 import { generateEditorEntrySource } from "./editor-entry-codegen.js";
-import { VitePluginError } from "./errors.js";
 import {
   loadAssetManifest,
   resolveIslandChunkUrl,
@@ -74,6 +66,7 @@ import {
 } from "./plugin-catalog-resolve.js";
 import { generatePluginCatalogsSource } from "./plugin-catalogs-codegen.js";
 import { injectPluginChunkScripts } from "./plugin-chunk-scripts.js";
+import { stagePluginChunks } from "./plugin-chunk-staging.js";
 import { stageUserPublic } from "./public-staging.js";
 import { stageIntoPlace } from "./stage-into-place.js";
 import { withoutUseClientWarning } from "./use-client-warning.js";
@@ -654,81 +647,6 @@ async function stageAdminInto(
     });
   }
   await injectIndexHtml(resolve(dest, "index.html"), manifest, allChunks);
-}
-
-async function stagePluginChunks(
-  adminDest: string,
-  plugins: readonly AnyPluginDescriptor[],
-  projectRoot: string,
-): Promise<readonly PluginChunkRef[]> {
-  const chunks: PluginChunkRef[] = [];
-  const withChunks = plugins.filter(
-    (p): p is AnyPluginDescriptor & { adminChunk: string } =>
-      typeof p.adminChunk === "string" && p.adminChunk.length > 0,
-  );
-  if (withChunks.length === 0) return chunks;
-
-  const pluginsDir = resolve(adminDest, "plugins");
-  await mkdir(pluginsDir, { recursive: true });
-  const staged = await Promise.all(
-    withChunks.map(async (plugin): Promise<PluginChunkRef> => {
-      const chunkSource = await resolvePluginAsset(
-        plugin.id,
-        "adminChunk",
-        plugin.adminChunk,
-        projectRoot,
-      );
-      const chunkCopy = copyFile(
-        chunkSource,
-        resolve(pluginsDir, `${plugin.id}.js`),
-      );
-      let cssFile: string | undefined;
-      let cssCopy: Promise<void> | undefined;
-      if (plugin.adminCss) {
-        const cssSource = await resolvePluginAsset(
-          plugin.id,
-          "adminCss",
-          plugin.adminCss,
-          projectRoot,
-        );
-        cssCopy = copyFile(cssSource, resolve(pluginsDir, `${plugin.id}.css`));
-        cssFile = `${plugin.id}.css`;
-      }
-      const pending: Promise<void>[] = [chunkCopy];
-      if (cssCopy) pending.push(cssCopy);
-      await Promise.all(pending);
-      return {
-        pluginId: plugin.id,
-        chunkFile: `${plugin.id}.js`,
-        cssFile,
-      };
-    }),
-  );
-  chunks.push(...staged);
-  return chunks;
-}
-
-/** Copies each plugin's compiled `<catalogPath>/<locale>.mjs` to the */
-async function resolvePluginAsset(
-  pluginId: string,
-  field: string,
-  relOrAbs: string,
-  projectRoot: string,
-): Promise<string> {
-  const source = isAbsolute(relOrAbs)
-    ? relOrAbs
-    : resolve(projectRoot, relOrAbs);
-  try {
-    await stat(source);
-  } catch {
-    throw VitePluginError.adminAssetNotFound({
-      pluginId,
-      field,
-      declared: relOrAbs,
-      resolved: source,
-    });
-  }
-  return source;
 }
 
 async function injectIndexHtml(

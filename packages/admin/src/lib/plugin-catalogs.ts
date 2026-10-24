@@ -34,8 +34,7 @@ export function createPluginCatalogLoader({
     const entry = manifest[pluginId];
     const path = entry?.catalogs[locale] ?? entry?.catalogs[entry.sourceLocale];
     if (!path) return Promise.resolve();
-    // `<base href>` doesn't reach a root-absolute specifier, and `import()`
-    // resolves a relative one against this module, not the page.
+    // `import()` ignores `<base href>` for both root-absolute and relative specifiers.
     const url = `${basePath}${path}`;
     const key = `${pluginId}|${locale}`;
     const cached = inflight.get(key);
