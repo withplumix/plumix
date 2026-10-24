@@ -39,7 +39,8 @@ type PluginContextErrorCode =
   | "meta_box_field_reserved_key"
   | "meta_box_field_unknown_condition_driver"
   | "template_dep_kind_reserved"
-  | "block_name_reserved_namespace";
+  | "block_name_reserved_namespace"
+  | "mark_name_reserved";
 
 interface PluginContextErrorFields {
   pluginId?: string;
@@ -598,6 +599,19 @@ export class PluginContextError extends Error {
       `Plugin "${ctx.pluginId}" registers block "${ctx.name}" in the reserved ` +
         `\`core/\` namespace, which is owned by plumix's built-in block ` +
         `primitives — register it under the \`${ctx.pluginId}/\` namespace instead.`,
+      ctx,
+    );
+  }
+
+  static markNameReserved(ctx: {
+    pluginId: string;
+    name: string;
+  }): PluginContextError {
+    return new PluginContextError(
+      "mark_name_reserved",
+      `Plugin "${ctx.pluginId}" registers mark "${ctx.name}", which is the ` +
+        `name of a plumix core mark — register it as ` +
+        `\`${ctx.pluginId}/${ctx.name}\` instead.`,
       ctx,
     );
   }
