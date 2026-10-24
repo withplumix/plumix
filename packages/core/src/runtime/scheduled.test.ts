@@ -1,3 +1,4 @@
+import { getEventListeners } from "node:events";
 import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { Db } from "../context/app-context.js";
@@ -584,5 +585,31 @@ describe("runScheduledTasks — a task's time budget", () => {
       timedOut: ["p:stops"],
     });
     expect(error).not.toHaveBeenCalled();
+  });
+
+  test("a task started after the shutdown is reported shut down without waiting", async () => {
+    const shutdown = new AbortController();
+    shutdown.abort(new DOMException("shut down", "AbortError"));
+    const app = fakeApp([
+      { id: "late", registeredBy: "p", handler: () => hang() },
+    ]);
+    const { ctx } = fakeCtx();
+
+    await expect(
+      runScheduledTasks(app, withSignal(ctx, shutdown.signal)),
+    ).resolves.toStrictEqual({ ran: 0, failed: [], timedOut: ["p:late"] });
+  });
+
+  test("a finished task leaves no listener on the shutdown signal", async () => {
+    const shutdown = new AbortController();
+    const app = fakeApp([
+      { id: "a", registeredBy: "p", handler: () => undefined },
+      { id: "b", registeredBy: "p", handler: () => undefined },
+    ]);
+    const { ctx } = fakeCtx();
+
+    await runScheduledTasks(app, withSignal(ctx, shutdown.signal));
+
+    expect(getEventListeners(shutdown.signal, "abort")).toHaveLength(0);
   });
 });

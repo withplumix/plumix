@@ -51,13 +51,13 @@ export interface ScheduledEvent {
  */
 export type ScheduledRunReport =
   | {
-      /** How many tasks completed without throwing or timing out. */
+      /** How many tasks completed without throwing, timing out or being shut down. */
       readonly ran: number;
       /** `plugin:task` for each that threw, in the order they ran. */
       readonly failed: readonly string[];
       /**
-       * `plugin:task` for each that outran its budget, in the order they ran.
-       * Kept apart from `failed`: a timeout is not a failure.
+       * `plugin:task` for each that outran its budget or was shut down, in the
+       * order they ran. Kept apart from `failed`: neither is a failure.
        */
       readonly timedOut: readonly string[];
       /**

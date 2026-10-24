@@ -245,6 +245,7 @@ describe("createScheduler", () => {
     expect(fireSignal?.reason).toBeInstanceOf(DOMException);
     expect(fireSignal?.reason).toMatchObject({
       name: "AbortError",
+      message: "shut down",
       cause: "shutdown",
     });
   });
