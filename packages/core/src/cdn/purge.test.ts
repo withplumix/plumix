@@ -54,10 +54,13 @@ async function storePages(cdn: CdnFake): Promise<void> {
 
 /** Fails naming the first page whose presence is not what the purge implies. */
 function assertOnlyPurged(cdn: CdnFake, purged: readonly string[]): void {
-  for (const path of Object.keys(PAGES)) {
-    if (purged.includes(path)) cdn.assertNotStored(path);
-    else cdn.assertStored(path);
-  }
+  const kept = Object.keys(PAGES).filter((path) => !purged.includes(path));
+  purged.forEach((path) => {
+    cdn.assertNotStored(path);
+  });
+  kept.forEach((path) => {
+    cdn.assertStored(path);
+  });
 }
 
 async function fakeCtx(
@@ -87,14 +90,14 @@ async function fakeCtx(
     "tag",
     toRegisteredTermTaxonomy("tag", { label: "Tags" }, "test"),
   );
+  function connectedCdn() {
+    if (cdnMode === "absent") return undefined;
+    if (cdnMode === "cannot-purge") return withoutPurge;
+    return cdn;
+  }
   const ctx = createTestContext({
     db,
-    cdn:
-      cdnMode === "absent"
-        ? undefined
-        : cdnMode === "purges"
-          ? cdn
-          : withoutPurge,
+    cdn: connectedCdn(),
     defer: (promise) => {
       deferred.push(promise);
     },

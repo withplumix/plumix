@@ -1427,13 +1427,9 @@ describe("a sitemap at the edge", () => {
     cdn.assertStored("/sitemap-entries-page-1.xml");
   });
 
-  test.each([
-    ["post", false],
-    ["page", false],
-    ["note", true],
-  ])(
-    "publishing a %s retires llms.txt unless the type is private",
-    async (type, kept) => {
+  test.each(["post", "page"])(
+    "publishing a %s retires llms.txt",
+    async (type) => {
       const cdn = fakeCdn();
       const h = await createHarness([postsAndPages], { cdn });
       const res = await h.fetch("/llms.txt");
@@ -1445,10 +1441,21 @@ describe("a sitemap at the edge", () => {
 
       await publish(h, type, "fresh");
 
-      if (kept) cdn.assertStored("/llms.txt");
-      else cdn.assertNotStored("/llms.txt");
+      cdn.assertNotStored("/llms.txt");
     },
   );
+
+  test("publishing an entry of a private type keeps llms.txt", async () => {
+    const cdn = fakeCdn();
+    const h = await createHarness([postsAndPages], { cdn });
+    await h.fetch("/llms.txt");
+    await h.drainDeferred();
+    cdn.assertStored("/llms.txt");
+
+    await publish(h, "note", "fresh");
+
+    cdn.assertStored("/llms.txt");
+  });
 
   test("changing an entry from public to members retires its sitemap page and llms.txt", async () => {
     const cdn = fakeCdn();
@@ -1527,31 +1534,39 @@ describe("a sitemap at the edge", () => {
   // Every SEO group changes cached output; content pages purge by type tag
   // since the cdn has no site-wide one.
   test.each([
-    ["the plugin's own group", "seo", false],
-    ["the verification group", "seo_verification", false],
-    ["the robots.txt group", "seo_robots", false],
-    ["the legacy site group", "site", false],
-    ["an unrelated group", "mail", true],
-  ])(
-    "a settings save on %s retires the cached set unless unrelated",
-    async (_label, group, kept) => {
-      const cdn = fakeCdn();
-      const h = await createHarness([blogPlugin, settingsSaver(group)], {
-        cdn,
-      });
-      await seedPost(h);
-      await render(h, cdn, "/sitemap-entries-post-1.xml");
-      await render(h, cdn, "/post/hello");
+    ["the plugin's own group", "seo"],
+    ["the verification group", "seo_verification"],
+    ["the robots.txt group", "seo_robots"],
+    ["the legacy site group", "site"],
+  ])("a settings save on %s retires the cached set", async (_label, group) => {
+    const cdn = fakeCdn();
+    const h = await createHarness([blogPlugin, settingsSaver(group)], { cdn });
+    await seedPost(h);
+    await render(h, cdn, "/sitemap-entries-post-1.xml");
+    await render(h, cdn, "/post/hello");
 
-      await h.dispatch(new Request("https://cms.example/fire-settings-change"));
-      await h.drainDeferred();
+    await h.dispatch(new Request("https://cms.example/fire-settings-change"));
+    await h.drainDeferred();
 
-      for (const path of ["/sitemap-entries-post-1.xml", "/post/hello"]) {
-        if (kept) cdn.assertStored(path);
-        else cdn.assertNotStored(path);
-      }
-    },
-  );
+    cdn.assertNotStored("/sitemap-entries-post-1.xml");
+    cdn.assertNotStored("/post/hello");
+  });
+
+  test("a settings save on an unrelated group keeps the cached set", async () => {
+    const cdn = fakeCdn();
+    const h = await createHarness([blogPlugin, settingsSaver("mail")], {
+      cdn,
+    });
+    await seedPost(h);
+    await render(h, cdn, "/sitemap-entries-post-1.xml");
+    await render(h, cdn, "/post/hello");
+
+    await h.dispatch(new Request("https://cms.example/fire-settings-change"));
+    await h.drainDeferred();
+
+    cdn.assertStored("/sitemap-entries-post-1.xml");
+    cdn.assertStored("/post/hello");
+  });
 
   test("with no cdn configured the sitemap still serves, generated per request", async () => {
     const h = await createHarness();

@@ -552,24 +552,22 @@ describe("a card at the edge", () => {
     expect(fake.inputs).toHaveLength(1);
   });
 
-  test("keeps a crafted query string from minting an entry of its own", async () => {
-    const cdn = fakeCdn();
-    const harness = await createHarness({ cdn });
-    const id = await seedEntry(harness);
-    const path = await cardPath(harness, id);
+  test.each([0, 1, 2])(
+    "keeps a crafted query string (junk=%i) from minting an entry of its own",
+    async (junk) => {
+      const cdn = fakeCdn();
+      const harness = await createHarness({ cdn });
+      const id = await seedEntry(harness);
+      const path = await cardPath(harness, id);
 
-    for (const junk of [0, 1, 2]) {
       await harness.fetch(`${path}?junk=${String(junk)}`);
-    }
-    await harness.drainDeferred();
+      await harness.drainDeferred();
 
-    // The edge keys on the whole URL, so answering these would leave three
-    // entries holding one card's immutable bytes — from an unauthenticated
-    // route at an enumerable id.
-    for (const junk of [0, 1, 2]) {
+      // The edge keys on the whole URL, so answering this would leave an
+      // entry holding the card's immutable bytes, from an unauthenticated route.
       cdn.assertNotStored(`${path}?junk=${String(junk)}`);
-    }
-  });
+    },
+  );
 
   const STORED = "https://cms.example/_plumix/og/card/entry/1/deadbeef.svg";
 

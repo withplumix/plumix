@@ -21,10 +21,6 @@ export interface CdnFake extends ConnectedCdn {
   readonly assertNotStored: (path: string) => void;
 }
 
-/**
- * Stores what the read-through puts and drops what a purge names, so a test
- * renders, writes, and checks the page is gone.
- */
 export function fakeCdn(): CdnFake {
   const stored = new Map<string, StoredResponse>();
 
@@ -82,7 +78,6 @@ export function fakeCdn(): CdnFake {
   };
 }
 
-/** Narrows, never widens: a private or cookie-setting render passes as is. */
 function decorate(response: Response, tags: readonly string[]): Response {
   if (response.headers.has("set-cookie")) return response;
   if (!responseAllowsSharedStorage(response)) return response;

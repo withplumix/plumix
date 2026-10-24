@@ -17,13 +17,20 @@ function page(path: string): Request {
 }
 
 describe("assertStored", () => {
-  test("passes for a stored path and fails listing what is stored", async () => {
+  test("passes for a stored path", async () => {
+    const cdn = fakeCdn();
+    await cdn.store.put(page("/feed?page=2"), new Response("feed"), []);
+
+    expect(() => {
+      cdn.assertStored("/feed?page=2");
+    }).not.toThrow();
+  });
+
+  test("fails listing what is stored", async () => {
     const cdn = fakeCdn();
     await cdn.store.put(page("/post/hello"), new Response("hello"), []);
     await cdn.store.put(page("/feed?page=2"), new Response("feed"), []);
 
-    cdn.assertStored("/post/hello");
-    cdn.assertStored("/feed?page=2");
     expect(() => {
       cdn.assertStored("/post/other");
     }).toThrow(
@@ -44,7 +51,17 @@ describe("assertStored", () => {
 });
 
 describe("assertNotStored", () => {
-  test("passes once a purge drops the path and fails listing what is stored", async () => {
+  test("passes once a purge drops the path", async () => {
+    const cdn = fakeCdn();
+    await cdn.store.put(page("/post/hello"), new Response("hello"), ["a"]);
+    await cdn.purgeTags(["a"]);
+
+    expect(() => {
+      cdn.assertNotStored("/post/hello");
+    }).not.toThrow();
+  });
+
+  test("fails listing what is stored", async () => {
     const cdn = fakeCdn();
     await cdn.store.put(page("/post/hello"), new Response("hello"), ["a"]);
     await cdn.store.put(page("/post/kept"), new Response("kept"), ["b"]);
@@ -55,8 +72,5 @@ describe("assertNotStored", () => {
       'Expected "/post/hello" not to be stored, but it is.\n' +
         "Stored:\n  - /post/hello\n  - /post/kept",
     );
-    await cdn.purgeTags(["a"]);
-    cdn.assertNotStored("/post/hello");
-    cdn.assertStored("/post/kept");
   });
 });

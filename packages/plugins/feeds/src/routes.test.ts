@@ -1845,22 +1845,24 @@ describe("a feed at the edge", () => {
     },
   );
 
-  test("publishing a post purges every cached feed it can appear in", async () => {
-    const cdn = fakeCdn();
-    const h = await createDispatcherHarness({
-      cdn,
-      config: { plugins: [blogWithTaxonomyPlugin, feeds()] },
-    });
-    await h.factory.category.create({ slug: "news", name: "News" });
-    const paths = ["/feed", "/post/feed", "/category/news/feed"];
-    for (const path of paths) (await h.fetch(path)).assertStatus(200);
-    await h.drainDeferred();
-    for (const path of paths) cdn.assertStored(path);
+  test.each(["/feed", "/post/feed", "/category/news/feed"])(
+    "publishing a post purges the cached feed at %s",
+    async (path) => {
+      const cdn = fakeCdn();
+      const h = await createDispatcherHarness({
+        cdn,
+        config: { plugins: [blogWithTaxonomyPlugin, feeds()] },
+      });
+      await h.factory.category.create({ slug: "news", name: "News" });
+      (await h.fetch(path)).assertStatus(200);
+      await h.drainDeferred();
+      cdn.assertStored(path);
 
-    await publishPost(h);
+      await publishPost(h);
 
-    for (const path of paths) cdn.assertNotStored(path);
-  });
+      cdn.assertNotStored(path);
+    },
+  );
 
   test("publishing an entry of a type that is not public keeps the cached feed", async () => {
     const cdn = fakeCdn();
