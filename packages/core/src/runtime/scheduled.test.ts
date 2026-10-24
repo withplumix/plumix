@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
 
 import type { Db } from "../context/app-context.js";
 import type { TelemetrySnapshot } from "../context/telemetry.js";
@@ -134,7 +134,7 @@ describe("runScheduledTasks", () => {
     });
 
     await expect(runScheduledTasks(fakeApp(tasks), ctx)).resolves.toStrictEqual(
-      { ran: 1, failed: ["p:failing"] },
+      { ran: 1, failed: ["p:failing"], timedOut: [] },
     );
   });
 
@@ -308,6 +308,204 @@ describe("runScheduledTasks — reporting what happened", () => {
 
     const report = await runScheduledTasks(app, ctx);
 
-    expect(report).toEqual({ ran: 1, failed: [] });
+    expect(report).toEqual({ ran: 1, failed: [], timedOut: [] });
+  });
+});
+
+describe("runScheduledTasks — a task's time budget", () => {
+  // Never settles, as a task stuck on an upstream that never answers.
+  const hang = (): Promise<void> => new Promise<void>(() => undefined);
+
+  test("a task that never settles times out after the 5-minute default, and the next task still runs", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const calls: string[] = [];
+    const app = fakeApp([
+      { id: "stuck", registeredBy: "p", handler: hang },
+      {
+        id: "next",
+        registeredBy: "p",
+        handler: () => {
+          calls.push("next");
+        },
+      },
+    ]);
+
+    const run = runScheduledTasks(app, fakeCtx().ctx);
+    await vi.advanceTimersByTimeAsync(5 * 60_000 - 1);
+    expect(calls).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(run).resolves.toStrictEqual({
+      ran: 1,
+      failed: [],
+      timedOut: ["p:stuck"],
+    });
+    expect(calls).toEqual(["next"]);
+  });
+
+  test("a task that declares a budget times out after it instead", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const app = fakeApp([
+      { id: "stuck", registeredBy: "p", timeoutMs: 1_500, handler: hang },
+    ]);
+
+    const run = runScheduledTasks(app, fakeCtx().ctx);
+    await vi.advanceTimersByTimeAsync(1_500);
+
+    await expect(run).resolves.toStrictEqual({
+      ran: 0,
+      failed: [],
+      timedOut: ["p:stuck"],
+    });
+  });
+
+  test("the budget aborts the task's ctx.signal with a TimeoutError, and a ctx.fetch in flight rejects", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    // Rejects with its signal's reason once it aborts, the way the platform
+    // `fetch` does.
+    vi.stubGlobal(
+      "fetch",
+      async (_input: RequestInfo | URL, init?: RequestInit) => {
+        await new Promise((resolve) => {
+          init?.signal?.addEventListener("abort", resolve, { once: true });
+        });
+        init?.signal?.throwIfAborted();
+        return new Response("unreachable");
+      },
+    );
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    let signal: AbortSignal | undefined;
+    let fetched: Promise<unknown> | undefined;
+    const app = fakeApp([
+      {
+        id: "stuck",
+        registeredBy: "p",
+        timeoutMs: 1_000,
+        handler: (ctx) => {
+          signal = ctx.signal;
+          fetched = ctx.fetch("https://slow.example/").catch((e: unknown) => e);
+          return hang();
+        },
+      },
+    ]);
+
+    const run = runScheduledTasks(app, fakeCtx().ctx);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(signal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    await run;
+
+    expect(signal?.reason).toBeInstanceOf(DOMException);
+    expect(signal?.reason).toMatchObject({
+      name: "TimeoutError",
+      cause: "timeout",
+    });
+    await expect(fetched).resolves.toBe(signal?.reason);
+  });
+
+  test("a task that throws an AbortError of its own failed, it did not time out", async () => {
+    const app = fakeApp([
+      {
+        id: "cancelled",
+        registeredBy: "p",
+        handler: () => {
+          throw new DOMException("upstream gave up", "AbortError");
+        },
+      },
+    ]);
+
+    await expect(runScheduledTasks(app, fakeCtx().ctx)).resolves.toStrictEqual({
+      ran: 0,
+      failed: ["p:cancelled"],
+      timedOut: [],
+    });
+  });
+
+  test("a task that rejects with its signal's reason when the budget runs out timed out", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const app = fakeApp([
+      {
+        id: "stops",
+        registeredBy: "p",
+        timeoutMs: 1_000,
+        handler: (ctx) =>
+          new Promise<void>((_resolve, reject) => {
+            ctx.signal.addEventListener("abort", () => {
+              reject(ctx.signal.reason as Error);
+            });
+          }),
+      },
+    ]);
+    const { ctx, error } = fakeCtx();
+
+    const run = runScheduledTasks(app, ctx);
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await expect(run).resolves.toStrictEqual({
+      ran: 0,
+      failed: [],
+      timedOut: ["p:stops"],
+    });
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  test("a timeout is a warning, not an error, and its span ends cancelled", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const snapshots: TelemetrySnapshot[] = [];
+    const warn = vi.fn();
+    const error = vi.fn();
+    const ctx = createTestContext({
+      db,
+      logger: { ...silentLogger, warn, error },
+      config: {
+        telemetry: {
+          consumers: [
+            { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+          ],
+        },
+      },
+    });
+    const app = fakeApp([
+      {
+        id: "stuck",
+        registeredBy: "p",
+        cron: "0 3 * * *",
+        timeoutMs: 90_000,
+        handler: hang,
+      },
+    ]);
+
+    const run = runScheduledTasks(app, ctx);
+    await vi.advanceTimersByTimeAsync(90_000);
+    await run;
+
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      `[plumix] scheduled task "p:stuck" timed out after 90s`,
+      { taskId: "stuck", plugin: "p", cron: "0 3 * * *", timeoutMs: 90_000 },
+    );
+    const span = snapshots[0]?.spans.find((s) => s.name === "cron: stuck");
+    expect(span).toMatchObject({
+      status: "cancelled",
+      message: "timed out after 90s",
+    });
+    expect(span?.error).toBeUndefined();
   });
 });

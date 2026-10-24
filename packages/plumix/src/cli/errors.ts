@@ -8,6 +8,7 @@ type PlumixCliErrorCode =
   | "meta_settle_unconfirmed"
   | "cron_run_database_unavailable"
   | "cron_run_tasks_failed"
+  | "cron_run_tasks_timed_out"
   | "cron_run_never_started"
   | "cron_run_missing_expression"
   | "cron_run_unknown_schedule"
@@ -148,6 +149,19 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       "cron_run_tasks_failed",
       `${String(ctx.failed.length)} scheduled task(s) failed on "${ctx.expression}": ${ctx.failed.join(", ")}`,
       "Each failure is logged above with its error. Siblings still ran.",
+      undefined,
+    );
+  }
+
+  /** Distinct from a task failing: the task was too slow, not broken. */
+  static cronRunTasksTimedOut(ctx: {
+    expression: string;
+    timedOut: readonly string[];
+  }): PlumixCliError {
+    return new PlumixCliError(
+      "cron_run_tasks_timed_out",
+      `${String(ctx.timedOut.length)} scheduled task(s) timed out on "${ctx.expression}": ${ctx.timedOut.join(", ")}`,
+      "Raise the task's `timeoutMs`, or have it stop when `ctx.signal` fires. Siblings still ran.",
       undefined,
     );
   }

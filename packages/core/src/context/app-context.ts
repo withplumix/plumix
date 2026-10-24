@@ -143,6 +143,12 @@ export interface AppContextBase<
   /** Traced, time-bounded `fetch`, one span per call; global `fetch` is not patched. */
   readonly fetch: PlumixFetch;
   /**
+   * Fires when the work this context serves should stop: a scheduled task's
+   * budget running out. It never fires on a request or `handler.run`, and
+   * `ctx.fetch` follows it.
+   */
+  readonly signal: AbortSignal;
+  /**
    * Consumers whose head-sampling vote said yes for this request — the
    * targets of post-response snapshot delivery. Absent when nothing sampled
    * (and `telemetry` is the no-op). Internal to the dispatcher.

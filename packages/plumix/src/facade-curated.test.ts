@@ -79,6 +79,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "a scheduled task's budget and how a report names it, which only " +
+      "this package's `cron` command reads",
+    names: ["formatTimeout", "scheduledTaskTimeoutMs"],
+  },
+  {
+    reason:
       "the send `plumix mail test` and core's mail test route share, which " +
       "only this package's `mail` command calls",
     names: ["sendMailTest"],
@@ -350,6 +356,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "how `--scope` names resolve to tables, which only this package's " +
           "sync and import commands and core's sync routes read",
         names: ["resolveScopes"],
+      },
+      {
+        reason:
+          "a scheduled task's budget and how a report names it, which only " +
+          "this package's `cron` command reads",
+        names: ["formatTimeout", "scheduledTaskTimeoutMs"],
       },
     ],
   },

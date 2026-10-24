@@ -87,15 +87,7 @@ export function createScheduler({
       try {
         const run = async (): Promise<void> => {
           const report = await fire(schedule.expression, minuteStart);
-          // Each failure is already logged with its error by core; this is the
-          // line that says the firing as a whole did not do its job.
-          if (report && (report.failed.length > 0 || report.aborted)) {
-            logger.error(
-              report.aborted === undefined
-                ? `[plumix] cron "${schedule.expression}": ${String(report.failed.length)} task(s) failed: ${report.failed.join(", ")}`
-                : `[plumix] cron "${schedule.expression}" never started: ${report.aborted}`,
-            );
-          }
+          if (report) logFiring(logger, schedule.expression, report);
         };
         if (!guard) {
           await run();
@@ -182,6 +174,39 @@ export function createScheduler({
       }
     },
   };
+}
+
+/**
+ * Core already logged each task; this line says the firing did not do its job.
+ * A timeout alone is a warning: too slow, not broken.
+ */
+function logFiring(
+  logger: SchedulerLogger,
+  expression: string,
+  report: ScheduledRunReport,
+): void {
+  if (report.aborted !== undefined) {
+    logger.error(
+      `[plumix] cron "${expression}" never started: ${report.aborted}`,
+    );
+    return;
+  }
+  const parts = [
+    ...(report.failed.length > 0
+      ? [
+          `${String(report.failed.length)} task(s) failed: ${report.failed.join(", ")}`,
+        ]
+      : []),
+    ...(report.timedOut.length > 0
+      ? [
+          `${String(report.timedOut.length)} task(s) timed out: ${report.timedOut.join(", ")}`,
+        ]
+      : []),
+  ];
+  if (parts.length === 0) return;
+  const line = `[plumix] cron "${expression}": ${parts.join("; ")}`;
+  if (report.failed.length > 0) logger.error(line);
+  else logger.warn(line);
 }
 
 /**

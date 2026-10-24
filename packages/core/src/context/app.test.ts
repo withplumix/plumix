@@ -400,3 +400,27 @@ describe("createAppContext ctx.fetch timeout", () => {
     >();
   });
 });
+
+describe("createAppContext ctx.signal", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("a request context's signal never aborts, even past a scheduled task's budget", async () => {
+    vi.useFakeTimers();
+    const harness = await createDispatcherHarness();
+    const ctx = createAppContext({
+      db: harness.db,
+      env: harness.env,
+      request: new Request("https://cms.example/"),
+      hooks: harness.app.hooks,
+      plugins: harness.app.plugins,
+      config: testConfig(),
+    });
+
+    await vi.advanceTimersByTimeAsync(60 * 60_000);
+
+    expect(ctx.signal).toBeInstanceOf(AbortSignal);
+    expect(ctx.signal.aborted).toBe(false);
+  });
+});

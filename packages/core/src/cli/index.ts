@@ -20,6 +20,8 @@ export type { CronSchedule } from "../runtime/contract/cron.js";
 export { CronSyntaxError, parseCron } from "../runtime/contract/cron.js";
 export {
   declaredSchedules,
+  formatTimeout,
+  scheduledTaskTimeoutMs,
   scheduledTasksFor,
 } from "../runtime/contract/schedules.js";
 export { CORE_DATA_MIGRATIONS } from "./data-migrations.js";

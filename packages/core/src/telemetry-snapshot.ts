@@ -21,9 +21,12 @@ export interface TelemetrySpan {
   /** Wall-clock duration; set when the span's work completes. */
   durationMs: number;
   /** "error" when the span's function threw or rejected; the error is captured
-   * before the failure propagates unchanged. */
-  status: "ok" | "error";
+   * before the failure propagates unchanged. "cancelled" when it was stopped
+   * early. */
+  status: "ok" | "error" | "cancelled";
   error?: TelemetrySpanError;
+  /** Why a cancelled span ended early, such as `timed out after 5m`. */
+  message?: string;
   readonly attributes: Record<string, JsonValue>;
   readonly children: TelemetrySpan[];
 }

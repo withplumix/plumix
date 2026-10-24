@@ -227,6 +227,8 @@ A trigger with no task behind it is harmless: the invocation runs, matches nothi
 
 A failing task is caught so its siblings still run, and the failure is logged with its error — visible in `wrangler tail` and Workers Logs. The invocation itself is then marked failed, so the Cron Trigger Past Events table, Workers analytics and anything alerting on them agree with the logs. One failed task is enough, which is the rule `plumix cron run` already applies on a Node deploy.
 
+A task also runs within a budget, five minutes unless it declares its own `timeoutMs`, so it is cut off from the firing before Workers' own limit. One that outruns it is logged as a warning and the next task runs, but a timeout alone does not mark the invocation failed, unlike `plumix cron run`, which exits non-zero on it.
+
 Whether Cloudflare replays the firing turns on whether any task succeeded, because that is what decides if a replay duplicates work. Cloudflare re-runs the whole handler, not the tasks that failed, and nothing on Workers deduplicates that — the run guard that does is a Node deploy's.
 
 - **No task succeeded.** The run never started, or every task it reached threw, so a replay repeats nothing. Plumix leaves Cloudflare's retry in place, which is the transient case a retry is for.

@@ -13,12 +13,13 @@ function spanName(method: string, url: string): string {
 }
 
 /**
- * Each call gets a span and a 10s deadline. The collector is read per call so
- * its post-vote activation is observed. No `traceparent` injection: no trace
- * ids exist yet.
+ * Each call gets a span and a 10s deadline, and follows `contextSignal`. The
+ * collector is read per call to observe its post-vote activation. No
+ * `traceparent`: no trace ids exist yet.
  */
 export function createTracedFetch(
   getTelemetry: () => TelemetryCollector,
+  contextSignal: AbortSignal,
 ): PlumixFetch {
   return (input, init) => {
     // `init.method` wins over a Request input's method — the same precedence
@@ -36,7 +37,7 @@ export function createTracedFetch(
       timeout === false
         ? undefined
         : { ms: timeout, signal: AbortSignal.timeout(timeout) };
-    const signals = [callerSignal, deadline?.signal].filter(
+    const signals = [callerSignal, deadline?.signal, contextSignal].filter(
       (signal) => signal !== undefined,
     );
     return getTelemetry().span(spanName(method, url), async (s) => {
@@ -45,7 +46,7 @@ export function createTracedFetch(
       try {
         const response = await globalThis.fetch(input, {
           ...platformInit,
-          ...(deadline && { signal: AbortSignal.any(signals) }),
+          signal: AbortSignal.any(signals),
         });
         s.set("http.response.status_code", response.status);
         return response;
