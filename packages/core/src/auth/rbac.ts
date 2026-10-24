@@ -2,7 +2,7 @@ import type { CoreCapability } from "../access/contract/capability.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { CORE_CAPABILITIES } from "../access/contract/capability.js";
-import { roleLevel } from "../access/contract/rbac.js";
+import { rolesFromRank } from "../access/contract/rbac.js";
 import { USER_ROLES } from "../db/schema/users.js";
 
 // The capability vocabulary lives in `access/contract/` so the plugin and
@@ -39,26 +39,20 @@ type RoleCapabilityTable = ReadonlyMap<UserRole, ReadonlySet<string>>;
  * pooled type's override tightens or loosens `entry:post:*`.
  */
 function resolveRoleCapabilities(plugins: PluginRegistry): RoleCapabilityTable {
-  const rungs = new Map<
-    string,
-    { readonly minRole: UserRole; readonly grants?: readonly UserRole[] }
-  >(
+  const receivers = new Map<string, readonly UserRole[]>(
     Object.entries(CORE_CAPABILITIES).map(([name, minRole]) => [
       name,
-      { minRole },
+      rolesFromRank(minRole),
     ]),
   );
   for (const [name, cap] of plugins.capabilities) {
-    rungs.set(name, { minRole: cap.minRole, grants: cap.defaultGrants });
+    receivers.set(name, cap.grantTo);
   }
   return new Map(
     USER_ROLES.map((role) => {
       const granted = new Set<string>();
-      for (const [name, { minRole, grants }] of rungs) {
-        const grantedByRank = roleLevel(role) >= roleLevel(minRole);
-        if (grantedByRank || grants?.includes(role)) {
-          granted.add(name);
-        }
+      for (const [name, roles] of receivers) {
+        if (roles.includes(role)) granted.add(name);
       }
       return [role, granted];
     }),
@@ -84,7 +78,8 @@ export function createCapabilityResolver(
   return {
     requiredRole(capability) {
       const fromPlugin = plugins.capabilities.get(capability);
-      if (fromPlugin) return fromPlugin.minRole;
+      // The lowest rung it reaches; `grantTo` is in ladder order.
+      if (fromPlugin) return fromPlugin.grantTo[0] ?? null;
       return isCoreCapability(capability)
         ? CORE_CAPABILITIES[capability]
         : null;

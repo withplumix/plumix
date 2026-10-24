@@ -219,3 +219,98 @@ describe("the resolved role table", () => {
     },
   );
 });
+
+async function rolesHolding(
+  capability: string,
+  ...plugins: Parameters<typeof installPlugins>[0]["plugins"]
+): Promise<readonly UserRole[]> {
+  const { registry } = await installPlugins({
+    hooks: new HookRegistry(),
+    plugins,
+  });
+  const resolver = getCapabilityResolver(registry);
+  return USER_ROLES.filter((role) => resolver.hasCapability(role, capability));
+}
+
+describe("a plugin naming the default roles that receive its capability", () => {
+  test("grantTo gives the capability to exactly those roles plus admin", async () => {
+    const plugin = definePlugin("badges", {
+      setup: (ctx) => {
+        ctx.registerCapability("badge:award", {
+          grantTo: ["contributor", "editor"],
+        });
+      },
+    });
+    expect(await rolesHolding("badge:award", plugin)).toEqual([
+      "contributor",
+      "editor",
+      "admin",
+    ]);
+  });
+
+  test("a capability registered without grantTo goes to admin only", async () => {
+    const plugin = definePlugin("audit", {
+      setup: (ctx) => {
+        ctx.registerCapability("audit:read");
+      },
+    });
+    expect(await rolesHolding("audit:read", plugin)).toEqual(["admin"]);
+  });
+
+  test("an entry type's override names the default roles that receive an action", async () => {
+    const plugin = definePlugin("library", {
+      setup: (ctx) => {
+        ctx.registerEntryType("asset", {
+          label: "Assets",
+          capabilities: { delete: ["author", "editor"] },
+        });
+      },
+    });
+    expect(await rolesHolding("entry:asset:delete", plugin)).toEqual([
+      "author",
+      "editor",
+      "admin",
+    ]);
+  });
+
+  test("a taxonomy's override names the default roles that receive an action", async () => {
+    const plugin = definePlugin("geo", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("region", {
+          label: "Regions",
+          capabilities: { manage: ["author"] },
+        });
+      },
+    });
+    expect(await rolesHolding("term:region:manage", plugin)).toEqual([
+      "author",
+      "admin",
+    ]);
+  });
+
+  test("two plugins pooling one capabilityType receive the union of their grants", async () => {
+    const docs = definePlugin("docs", {
+      setup: (ctx) => {
+        ctx.registerEntryType("doc", {
+          label: "Docs",
+          capabilityType: "knowledge",
+          capabilities: { delete: ["author"] },
+        });
+      },
+    });
+    const guides = definePlugin("guides", {
+      setup: (ctx) => {
+        ctx.registerEntryType("guide", {
+          label: "Guides",
+          capabilityType: "knowledge",
+          capabilities: { delete: ["contributor"] },
+        });
+      },
+    });
+    expect(await rolesHolding("entry:knowledge:delete", docs, guides)).toEqual([
+      "contributor",
+      "author",
+      "admin",
+    ]);
+  });
+});

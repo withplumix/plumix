@@ -408,12 +408,8 @@ export interface RegisteredSettingsPage extends SettingsPageOptions {
 
 export interface RegisteredCapability {
   readonly name: string;
-  readonly minRole: UserRole;
-  /**
-   * Roles granted the capability regardless of hierarchy: a role qualifies if
-   * it meets `minRole` or appears here.
-   */
-  readonly defaultGrants?: readonly UserRole[];
+  /** The default roles that receive it, in ladder order, `admin` included. */
+  readonly grantTo: readonly UserRole[];
   readonly registeredBy: string | null;
 }
 

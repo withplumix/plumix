@@ -52,23 +52,6 @@ describe("PluginContextError — extend-context factories", () => {
 });
 
 describe("PluginContextError — capability + settings + RPC factories", () => {
-  test("derivedCapabilityMinRoleMismatch", () => {
-    const err = PluginContextError.derivedCapabilityMinRoleMismatch({
-      pluginId: "blog",
-      capName: "edit_posts",
-      minRole: "editor",
-      existingMinRole: "author",
-      existingOwner: "core",
-    });
-    expect(err.code).toBe("derived_capability_min_role_mismatch");
-    expect(err.capName).toBe("edit_posts");
-    expect(err.minRole).toBe("editor");
-    expect(err.existingMinRole).toBe("author");
-    expect(err.message).toContain('capability "edit_posts"');
-    expect(err.message).toContain('minRole "editor"');
-    expect(err.message).toContain('minRole "author"');
-  });
-
   test("settingsPageDuplicateGroup", () => {
     const err = PluginContextError.settingsPageDuplicateGroup({
       name: "general",

@@ -93,7 +93,7 @@ export function auditLog(options: AuditLogPluginOptions = {}) {
       ctx.extendAppContext("audit", extension);
     },
     setup: (ctx) => {
-      ctx.registerCapability(AUDIT_LOG_READ_CAPABILITY, "admin");
+      ctx.registerCapability(AUDIT_LOG_READ_CAPABILITY);
 
       ctx.registerRpcRouter(router);
 

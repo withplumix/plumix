@@ -234,7 +234,7 @@ export const badges = definePlugin("acme-badges", {
   setup: () => undefined,
   afterSetup: (ctx, { names }) => {
     for (const name of names) {
-      ctx.registerCapability(`badge:${name}`, "editor");
+      ctx.registerCapability(`badge:${name}`, { grantTo: ["editor"] });
     }
   },
 });

@@ -45,7 +45,7 @@ describe("createCapabilityResolver", () => {
     const registry = createPluginRegistry();
     registry.capabilities.set("seo:manage", {
       name: "seo:manage",
-      minRole: "editor",
+      grantTo: ["editor", "admin"],
       registeredBy: "seo",
     });
     const resolver = createCapabilityResolver(registry);
@@ -58,7 +58,7 @@ describe("createCapabilityResolver", () => {
     // Simulate a plugin tightening `post:delete` from editor to admin.
     registry.capabilities.set("entry:post:delete", {
       name: "entry:post:delete",
-      minRole: "admin",
+      grantTo: ["admin"],
       registeredBy: "strict",
     });
     const resolver = createCapabilityResolver(registry);
@@ -66,11 +66,11 @@ describe("createCapabilityResolver", () => {
     expect(resolver.hasCapability("admin", "entry:post:delete")).toBe(true);
   });
 
-  test("post-type-derived caps resolve at their registered min-role", () => {
+  test("post-type-derived caps resolve for their registered roles", () => {
     const registry = createPluginRegistry();
     registry.capabilities.set("entry:landing_page:publish", {
       name: "entry:landing_page:publish",
-      minRole: "author",
+      grantTo: ["author", "editor", "admin"],
       registeredBy: "blog",
     });
     const resolver = createCapabilityResolver(registry);
@@ -131,30 +131,26 @@ describe("derived entry-type capabilities", () => {
   });
 });
 
-describe("defaultGrants on registered capabilities", () => {
-  test("resolver grants the cap to a role listed in defaultGrants, independent of hierarchy", () => {
+describe("a registered capability's receiving roles", () => {
+  test("resolver grants the cap to exactly the roles it names, independent of hierarchy", () => {
     const registry = createPluginRegistry();
     registry.capabilities.set("menu:manage", {
       name: "menu:manage",
-      minRole: "admin",
-      defaultGrants: ["editor"],
+      grantTo: ["contributor", "admin"],
       registeredBy: "menus",
     });
     const resolver = createCapabilityResolver(registry);
-    // Admin has it by hierarchy.
     expect(resolver.hasCapability("admin", "menu:manage")).toBe(true);
-    // Editor has it via explicit grant even though editor < admin.
-    expect(resolver.hasCapability("editor", "menu:manage")).toBe(true);
-    // Author isn't granted and doesn't meet the admin minRole.
-    expect(resolver.hasCapability("author", "menu:manage")).toBe(false);
+    expect(resolver.hasCapability("contributor", "menu:manage")).toBe(true);
+    // Ranking above a named role grants nothing.
+    expect(resolver.hasCapability("editor", "menu:manage")).toBe(false);
   });
 
   test("capabilitiesForRole emits the cap for every role it's granted to", () => {
     const registry = createPluginRegistry();
     registry.capabilities.set("menu:manage", {
       name: "menu:manage",
-      minRole: "admin",
-      defaultGrants: ["editor"],
+      grantTo: ["editor", "admin"],
       registeredBy: "menus",
     });
     expect(capabilitiesForRole("admin", registry)).toContain("menu:manage");
@@ -165,17 +161,5 @@ describe("defaultGrants on registered capabilities", () => {
     expect(capabilitiesForRole("subscriber", registry)).not.toContain(
       "menu:manage",
     );
-  });
-
-  test("caps without defaultGrants fall back to hierarchy-only behaviour", () => {
-    const registry = createPluginRegistry();
-    registry.capabilities.set("seo:manage", {
-      name: "seo:manage",
-      minRole: "editor",
-      registeredBy: "seo",
-    });
-    expect(capabilitiesForRole("admin", registry)).toContain("seo:manage");
-    expect(capabilitiesForRole("editor", registry)).toContain("seo:manage");
-    expect(capabilitiesForRole("author", registry)).not.toContain("seo:manage");
   });
 });

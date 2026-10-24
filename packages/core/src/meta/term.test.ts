@@ -7,6 +7,7 @@ import type {
   MutablePluginRegistry,
 } from "../plugin/manifest.js";
 import type { ActionSpy } from "../test/spies.js";
+import { rolesFromRank } from "../access/contract/rbac.js";
 import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
@@ -29,7 +30,11 @@ function taxonomyRegistry(): MutablePluginRegistry {
     "term:category:delete": "editor",
   };
   for (const [name, minRole] of Object.entries(caps)) {
-    registry.capabilities.set(name, { name, minRole, registeredBy: "test" });
+    registry.capabilities.set(name, {
+      name,
+      grantTo: rolesFromRank(minRole),
+      registeredBy: "test",
+    });
   }
   return registry;
 }
@@ -212,7 +217,11 @@ describe("term meta: registration + round-trip via term.update", () => {
       "term:tag:edit": "editor",
     };
     for (const [name, minRole] of Object.entries(tagCaps)) {
-      plugins.capabilities.set(name, { name, minRole, registeredBy: "test" });
+      plugins.capabilities.set(name, {
+        name,
+        grantTo: rolesFromRank(minRole),
+        registeredBy: "test",
+      });
     }
     registerTermMetaFields(plugins, "tag", [
       { key: "color", label: "Color", type: "string", inputType: "text" },

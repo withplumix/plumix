@@ -177,7 +177,9 @@ export function forms(options: FormsConfig = {}) {
         component: TEL_FIELD_COMPONENT,
       });
       ctx.registerBlock(createFormBlock(registry));
-      ctx.registerCapability(SUBMISSION_MODERATE_CAPABILITY, "editor");
+      ctx.registerCapability(SUBMISSION_MODERATE_CAPABILITY, {
+        grantTo: ["editor"],
+      });
       ctx.registerRpcRouter(createSubmissionsRouter(registry));
       for (const tool of createFormMcpTools(registry)) {
         ctx.registerMcpTool(tool);

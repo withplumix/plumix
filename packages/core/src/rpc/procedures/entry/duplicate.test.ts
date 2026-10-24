@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../../../db/schema/users.js";
+import { rolesFromRank } from "../../../access/contract/rbac.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { text } from "../../../plugin/fields/index.js";
@@ -25,7 +26,7 @@ function categoryRegistry() {
   ] as const satisfies readonly [string, UserRole][]) {
     registry.capabilities.set(`term:${name}:${action}`, {
       name: `term:${name}:${action}`,
-      minRole,
+      grantTo: rolesFromRank(minRole),
       registeredBy: "test",
     });
   }

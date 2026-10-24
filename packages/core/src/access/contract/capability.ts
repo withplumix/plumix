@@ -51,12 +51,18 @@ export type TermTaxonomyCapabilityAction =
   keyof typeof TERM_TAXONOMY_CAPABILITY_ACTIONS;
 export type CoreCapability = keyof typeof CORE_CAPABILITIES;
 
+/**
+ * The default roles that receive an action; `admin` always does. A single
+ * role is the ladder form, that role and every one above it (#3366 drops it).
+ */
+export type ActionGrant = readonly UserRole[] | UserRole;
+
 export type EntryTypeCapabilityOverrides = Partial<
-  Record<PostCapabilityAction, UserRole>
+  Record<PostCapabilityAction, ActionGrant>
 >;
 
 export type TermTaxonomyCapabilityOverrides = Partial<
-  Record<TermTaxonomyCapabilityAction, UserRole>
+  Record<TermTaxonomyCapabilityAction, ActionGrant>
 >;
 
 /**

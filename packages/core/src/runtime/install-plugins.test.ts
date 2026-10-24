@@ -294,14 +294,14 @@ describe("installPlugins", () => {
 
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
     expect(
-      registry.capabilities.get("entry:landing_page:create")?.minRole,
-    ).toBe("contributor");
+      registry.capabilities.get("entry:landing_page:create")?.grantTo,
+    ).toEqual(["contributor", "author", "editor", "admin"]);
     expect(
-      registry.capabilities.get("entry:landing_page:publish")?.minRole,
-    ).toBe("author");
+      registry.capabilities.get("entry:landing_page:publish")?.grantTo,
+    ).toEqual(["author", "editor", "admin"]);
     expect(
-      registry.capabilities.get("entry:landing_page:edit_any")?.minRole,
-    ).toBe("editor");
+      registry.capabilities.get("entry:landing_page:edit_any")?.grantTo,
+    ).toEqual(["editor", "admin"]);
     expect(
       registry.capabilities.get("entry:landing_page:delete")?.registeredBy,
     ).toBe("blog");
@@ -329,34 +329,6 @@ describe("installPlugins", () => {
     await expect(
       installPlugins({ hooks, plugins: [a, b] }),
     ).resolves.toBeDefined();
-  });
-
-  test("capabilityType pooling rejects divergent overrides between plugins", async () => {
-    // Both plugins share `capabilityType: "post"` but disagree on the
-    // `edit_any` override. Silent first-writer-wins would lock down (or
-    // loosen) the pooled cap based on registration order — fail loudly.
-    const hooks = new HookRegistry();
-    const strict = definePlugin("strict", {
-      setup: (ctx) => {
-        ctx.registerEntryType("docs", {
-          label: "Docs",
-          capabilityType: "post",
-          capabilities: { edit_any: "admin" },
-        });
-      },
-    });
-    const lax = definePlugin("lax", {
-      setup: (ctx) => {
-        ctx.registerEntryType("guides", {
-          label: "Guides",
-          capabilityType: "post",
-          capabilities: { edit_any: "author" },
-        });
-      },
-    });
-    await expect(
-      installPlugins({ hooks, plugins: [strict, lax] }),
-    ).rejects.toThrow(/minRole "author".*already registered.*minRole "admin"/);
   });
 
   test("capabilityType pooling accepts matching overrides between plugins", async () => {
@@ -397,12 +369,11 @@ describe("installPlugins", () => {
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     const cap = registry.capabilities.get("menu:manage");
-    expect(cap?.minRole).toBe("admin");
-    expect(cap?.defaultGrants).toEqual(["editor"]);
+    expect(cap?.grantTo).toEqual(["editor", "admin"]);
     expect(cap?.registeredBy).toBe("menus");
   });
 
-  test("registerCapability sorts + dedupes defaultGrants deterministically", async () => {
+  test("registerCapability orders + dedupes defaultGrants deterministically", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", {
       setup: (ctx) => {
@@ -413,9 +384,10 @@ describe("installPlugins", () => {
       },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    expect(registry.capabilities.get("upload:files")?.defaultGrants).toEqual([
+    expect(registry.capabilities.get("upload:files")?.grantTo).toEqual([
       "author",
       "editor",
+      "admin",
     ]);
   });
 
@@ -428,12 +400,16 @@ describe("installPlugins", () => {
     });
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    expect(registry.capabilities.get("term:region:assign")?.minRole).toBe(
+    expect(registry.capabilities.get("term:region:assign")?.grantTo).toEqual([
       "contributor",
-    );
-    expect(registry.capabilities.get("term:region:manage")?.minRole).toBe(
+      "author",
       "editor",
-    );
+      "admin",
+    ]);
+    expect(registry.capabilities.get("term:region:manage")?.grantTo).toEqual([
+      "editor",
+      "admin",
+    ]);
   });
 
   test("registerCapability is the escape hatch for plugin-specific caps", async () => {
@@ -446,7 +422,7 @@ describe("installPlugins", () => {
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.capabilities.get("seo:manage")).toEqual({
       name: "seo:manage",
-      minRole: "editor",
+      grantTo: ["editor", "admin"],
       registeredBy: "seo",
     });
   });
@@ -1887,7 +1863,8 @@ const duplicateCases: readonly DuplicateCase[] = [
     read: (registry) =>
       variantOf(
         variantMinRole,
-        registry.capabilities.get("report:export")?.minRole,
+        // The lowest rung it reaches; `grantTo` is in ladder order.
+        registry.capabilities.get("report:export")?.grantTo[0],
       ),
   },
   {
