@@ -431,6 +431,11 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.create.scope.inherit"
+#~ msgstr "Alle Ihre Berechtigungen erben"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -1707,6 +1712,11 @@ msgid "editor.toast.discarded"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.draftOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.duplicate"
 msgstr "Duplizieren"
@@ -2041,11 +2051,6 @@ msgstr "Wenn dieser Benutzer Beiträge verfasst hat, weist der nächste Schritt 
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
 msgstr "Alle meine Berechtigungen erben"
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.create.scope.inherit"
-msgstr "Alle Ihre Berechtigungen erben"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2871,6 +2876,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "Benutzer reaktivieren"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.readOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "Beiträge neu zuweisen an"
@@ -3031,6 +3041,11 @@ msgstr "Rolle"
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.sameAsMe"
 msgstr ""
 
 #. js-lingui-explicit-id

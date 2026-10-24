@@ -17,6 +17,7 @@ import { sessions } from "../../../db/schema/sessions.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { installPlugins } from "../../../runtime/install-plugins.js";
+import { currentEtag } from "../../../test/entry-etag.js";
 import { userFactory } from "../../../test/factories.js";
 import { createTestDb } from "../../../test/harness.js";
 import { createRpcHarness } from "../../../test/rpc.js";
@@ -39,6 +40,20 @@ async function apiTokenCaller(scopes: readonly string[]) {
   });
   request.headers.set("authorization", `Bearer ${secret}`);
   return h;
+}
+
+async function callerWithPresetToken(preset: "read_only" | "draft_only") {
+  const request = new Request("https://cms.example/_plumix/rpc", {
+    method: "POST",
+  });
+  const h = await createRpcHarness({ request });
+  const minter = await h.actingAs("editor");
+  const minted = await minter.client.auth.apiTokens.create({
+    name: "agent",
+    preset,
+  });
+  request.headers.set("authorization", `Bearer ${minted.secret}`);
+  return { h, editor: minter.user };
 }
 
 describe("auth.session", () => {
@@ -779,6 +794,130 @@ describe("auth.apiTokens", () => {
       scopes: null,
     });
     expect(created.token.scopes).toBeNull();
+  });
+});
+
+describe("auth.apiTokens.create — presets", () => {
+  test.each([
+    [
+      "read_only",
+      ["entry:post:read", "entry:post:read_revisions", "user:list"],
+    ],
+    [
+      "draft_only",
+      [
+        "admin:access",
+        "entry:post:create",
+        "entry:post:edit_any",
+        "entry:post:edit_own",
+        "entry:post:read",
+        "entry:post:read_revisions",
+        "user:edit_own",
+        "user:list",
+      ],
+    ],
+  ] as const)(
+    "the %s preset stores an explicit scope list",
+    async (preset, expected) => {
+      const h = await createRpcHarness({ authAs: "editor" });
+      await h.client.auth.apiTokens.create({ name: "agent", preset });
+
+      const [token] = await h.client.auth.apiTokens.list({});
+
+      expect(token?.scopes).toEqual(expected);
+    },
+  );
+
+  test("a read-only token reads a published entry", async () => {
+    const { h, editor } = await callerWithPresetToken("read_only");
+    const live = await h.factory.published.create({ authorId: editor.id });
+
+    await expect(h.client.entry.get({ id: live.id })).resolves.toMatchObject({
+      id: live.id,
+    });
+  });
+
+  test("a read-only token is refused creating an entry", async () => {
+    const { h } = await callerWithPresetToken("read_only");
+
+    await expect(
+      h.client.entry.create({ slug: "agent-draft" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a read-only token is refused updating an entry", async () => {
+    const { h, editor } = await callerWithPresetToken("read_only");
+    const live = await h.factory.published.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: live.id,
+        title: "rewritten",
+        ifMatch: await currentEtag(h.db, live.id),
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a draft-only token updates a draft", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        title: "rewritten",
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).resolves.toMatchObject({ title: "rewritten", status: "draft" });
+  });
+
+  test("a draft-only token is refused publishing a draft", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        status: "published",
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:publish" },
+    });
+  });
+
+  test("a draft-only token is refused scheduling a draft through entry.update", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        status: "scheduled",
+        publishedAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:publish" },
+    });
+  });
+
+  test("a draft-only token is refused trashing a draft through entry.update", async () => {
+    const { h, editor } = await callerWithPresetToken("draft_only");
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await expect(
+      h.client.entry.update({
+        id: draft.id,
+        status: "trash",
+        ifMatch: await currentEtag(h.db, draft.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "entry:post:delete" },
+    });
   });
 });
 

@@ -1,4 +1,5 @@
 import { createApiToken } from "../../../../auth/api-tokens.js";
+import { resolveApiTokenPreset } from "../../../../auth/token-presets.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensCreateInputSchema } from "./schemas.js";
@@ -19,11 +20,20 @@ export const create = base
         ? null
         : new Date(Date.now() + input.expiresInDays * MS_PER_DAY);
 
+    const scopes =
+      input.preset === undefined
+        ? input.scopes
+        : resolveApiTokenPreset(
+            input.preset,
+            context.user.role,
+            context.plugins,
+          );
+
     const minted = await createApiToken(context.db, {
       userId: context.user.id,
       name: input.name,
       expiresAt,
-      scopes: input.scopes,
+      scopes,
     });
 
     await context.hooks.doAction(

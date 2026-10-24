@@ -431,6 +431,11 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.create.scope.inherit"
+#~ msgstr "Успадкувати всі ваші дозволи"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -1707,6 +1712,11 @@ msgid "editor.toast.discarded"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.draftOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.duplicate"
 msgstr "Дублювати"
@@ -2041,11 +2051,6 @@ msgstr "Якщо цей користувач створив якісь запи�
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
 msgstr "Успадкувати всі мої дозволи"
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.create.scope.inherit"
-msgstr "Успадкувати всі ваші дозволи"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2871,6 +2876,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "Повторно ввімкнути користувача"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.readOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "Переназначити записи на"
@@ -3031,6 +3041,11 @@ msgstr "Роль"
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.sameAsMe"
 msgstr ""
 
 #. js-lingui-explicit-id

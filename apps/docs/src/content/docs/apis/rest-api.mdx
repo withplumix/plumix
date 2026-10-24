@@ -115,7 +115,7 @@ A user mints API tokens from the API tokens card on their own profile in the adm
 curl -H "Authorization: Bearer $PLUMIX_TOKEN" https://example.com/_plumix/api/v1/posts
 ```
 
-The request then reads as that user. A token minted with scopes can do only what both its scopes and its user's role allow. A token with no scopes carries the role's full capabilities. A token that is malformed, expired or revoked, or whose user is disabled, gets a 401. The API never quietly downgrades it to an anonymous read, so a client learns that its credential failed.
+The request then reads as that user. A token minted with scopes can do only what both its scopes and its user's role allow. A token with no scopes carries the role's full capabilities. The mint form offers "Same as me" (no scopes), "Read only" and "Draft, can't publish"; the last two store an explicit scope list when the token is minted, so a capability the role gains later never widens them. A token that is malformed, expired or revoked, or whose user is disabled, gets a 401. The API never quietly downgrades it to an anonymous read, so a client learns that its credential failed.
 
 API tokens are for server-to-server use. A token-authenticated response never carries CORS headers, so a token embedded in browser JavaScript cannot be used from another origin.
 

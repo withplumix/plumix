@@ -431,6 +431,11 @@ msgstr ""
 #~ msgstr "This site can't send email yet. Outbound email needs a mailer: slot in plumix.config.ts."
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.create.scope.inherit"
+#~ msgstr "Inherit all your permissions"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -1707,6 +1712,11 @@ msgid "editor.toast.discarded"
 msgstr "Draft discarded."
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.draftOnly"
+msgstr "Draft, can't publish"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.duplicate"
 msgstr "Duplicate"
@@ -2041,11 +2051,6 @@ msgstr "If this user authored any entries, the next step reassigns them. Leave \
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
 msgstr "Inherit all my permissions"
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.create.scope.inherit"
-msgstr "Inherit all your permissions"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2871,6 +2876,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "Re-enable user"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.readOnly"
+msgstr "Read only"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "Reassign entries to"
@@ -3032,6 +3042,11 @@ msgstr "Role"
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
 msgstr "Row {n}"
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.sameAsMe"
+msgstr "Same as me"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx

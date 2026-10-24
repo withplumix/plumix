@@ -1,10 +1,11 @@
+import type { TokenPreset } from "@/lib/scopes.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { copyText } from "@/lib/clipboard.js";
 import { toDate } from "@/lib/dates.js";
 import { orpc } from "@/lib/orpc.js";
-import { parseScopesText } from "@/lib/scopes.js";
+import { tokenGrantOf } from "@/lib/scopes.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
@@ -122,7 +123,7 @@ const createFormSchema = v.object({
     v.maxLength(64, vMessage(M.nameTooLong)),
   ),
   expires: v.picklist(["7", "30", "90", "never"]),
-  scopeMode: v.picklist(["inherit", "restrict"]),
+  scopeMode: v.picklist(["inherit", "read_only", "draft_only", "restrict"]),
   scopesText: v.pipe(v.string(), v.maxLength(4096)),
 });
 
@@ -160,15 +161,12 @@ export function SelfApiTokensCard(): ReactNode {
   const list = useQuery(orpc.auth.apiTokens.list.queryOptions({ input: {} }));
 
   const create = useMutation({
-    mutationFn: (input: {
-      name: string;
-      expiresInDays: number | null;
-      scopes: readonly string[] | null;
-    }) =>
+    mutationFn: (input: MintInput) =>
       orpc.auth.apiTokens.create.call({
         name: input.name,
         expiresInDays: input.expiresInDays,
         scopes: input.scopes === null ? null : [...input.scopes],
+        preset: input.preset,
       }),
     onSuccess: () =>
       queryClient.invalidateQueries({
@@ -227,6 +225,7 @@ interface MintInput {
   name: string;
   expiresInDays: number | null;
   scopes: readonly string[] | null;
+  preset?: TokenPreset;
 }
 interface MintResult {
   secret: string;
@@ -301,15 +300,12 @@ function ApiTokensCardView({
           <CreateTokenForm
             onSubmit={(values) => {
               setCreateError(null);
-              const scopes =
-                values.scopeMode === "inherit"
-                  ? null
-                  : parseScopesText(values.scopesText);
+              const grant = tokenGrantOf(values.scopeMode, values.scopesText);
               onMint(
                 {
                   name: values.name,
                   expiresInDays: EXPIRY_DAYS[values.expires],
-                  scopes,
+                  ...grant,
                 },
                 {
                   onSuccess: (result) => {
@@ -611,8 +607,42 @@ function CreateTokenForm({
                     />
                     <UILabel htmlFor="api-token-scope-inherit" variant="choice">
                       <Trans
-                        id="apiTokens.create.scope.inherit"
-                        message="Inherit all your permissions"
+                        id="apiTokens.create.scope.sameAsMe"
+                        message="Same as me"
+                      />
+                    </UILabel>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem
+                      value="read_only"
+                      id="api-token-scope-read-only"
+                      disabled={pending}
+                      data-testid="api-tokens-create-scope-read-only-radio"
+                    />
+                    <UILabel
+                      htmlFor="api-token-scope-read-only"
+                      variant="choice"
+                    >
+                      <Trans
+                        id="apiTokens.create.scope.readOnly"
+                        message="Read only"
+                      />
+                    </UILabel>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem
+                      value="draft_only"
+                      id="api-token-scope-draft-only"
+                      disabled={pending}
+                      data-testid="api-tokens-create-scope-draft-only-radio"
+                    />
+                    <UILabel
+                      htmlFor="api-token-scope-draft-only"
+                      variant="choice"
+                    >
+                      <Trans
+                        id="apiTokens.create.scope.draftOnly"
+                        message="Draft, can't publish"
                       />
                     </UILabel>
                   </div>

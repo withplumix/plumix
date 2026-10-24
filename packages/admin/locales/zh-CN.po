@@ -431,6 +431,11 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.create.scope.inherit"
+#~ msgstr "继承您的所有权限"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -1707,6 +1712,11 @@ msgid "editor.toast.discarded"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.draftOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.duplicate"
 msgstr "复制"
@@ -2041,11 +2051,6 @@ msgstr "如果此用户撰写了任何文章，下一步将重新分配它们。
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
 msgstr "继承我的所有权限"
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.create.scope.inherit"
-msgstr "继承您的所有权限"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2871,6 +2876,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "重新激活用户"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.readOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "将文章重新分配给"
@@ -3031,6 +3041,11 @@ msgstr "角色"
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.sameAsMe"
 msgstr ""
 
 #. js-lingui-explicit-id

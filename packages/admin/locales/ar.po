@@ -431,6 +431,11 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.create.scope.inherit"
+#~ msgstr "وراثة جميع صلاحياتك"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -1707,6 +1712,11 @@ msgid "editor.toast.discarded"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.draftOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.row.duplicate"
 msgstr "تكرار"
@@ -2041,11 +2051,6 @@ msgstr "إذا أنشأ هذا المستخدم أي منشورات، فإن ا�
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.scopeMode.inherit"
 msgstr "وراثة جميع صلاحياتي"
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.create.scope.inherit"
-msgstr "وراثة جميع صلاحياتك"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2871,6 +2876,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "إعادة تفعيل المستخدم"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.readOnly"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.delete.reassign.label"
 msgstr "إعادة تعيين المنشورات إلى"
@@ -3031,6 +3041,11 @@ msgstr "الدور"
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.create.scope.sameAsMe"
 msgstr ""
 
 #. js-lingui-explicit-id
