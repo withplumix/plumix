@@ -144,7 +144,6 @@ describe("authClient.oauth.accounts and unlink", () => {
   });
 
   test("a runtime that refuses oauthLinking resolves forbidden", async () => {
-    // As the demo runtime's gate answers every refused area's request.
     const { authClient } = createAuthClient({
       basePath: () => "",
       fetch: () =>
@@ -162,5 +161,37 @@ describe("authClient.oauth.accounts and unlink", () => {
 
     expect(listed.error?.code).toBe("forbidden");
     expect(unlinked.error?.code).toBe("forbidden");
+  });
+
+  test.each([
+    ["an answer that is not an RPC envelope", {}],
+    ["a list that is not a list of accounts", { json: { provider: "github" } }],
+  ])("accounts resolves unknown on %s", async (_name, body) => {
+    const { authClient } = createAuthClient({
+      basePath: () => "",
+      fetch: () => Promise.resolve(Response.json(body)),
+      navigate: () => undefined,
+    });
+
+    const listed = await authClient.oauth.accounts();
+
+    expect(listed.error?.code).toBe("unknown");
+    expect(listed.data).toBeNull();
+  });
+
+  test.each([
+    ["an answer that is not an RPC envelope", {}],
+    ["an unlink that names no provider", { json: {} }],
+  ])("unlink resolves unknown on %s", async (_name, body) => {
+    const { authClient } = createAuthClient({
+      basePath: () => "",
+      fetch: () => Promise.resolve(Response.json(body)),
+      navigate: () => undefined,
+    });
+
+    const unlinked = await authClient.oauth.unlink("github");
+
+    expect(unlinked.error?.code).toBe("unknown");
+    expect(unlinked.data).toBeNull();
   });
 });

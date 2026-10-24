@@ -72,7 +72,7 @@ export const oauthClient = defineAuthMethodClient("oauth", (kernel) => ({
     if (result.error) return result;
     const answer = v.safeParse(linkedAccountsSchema, result.data);
     if (!answer.success) return failure("unknown");
-    // Safety: the server lists only providers the site's config declares.
+    // Safety: the column holds the provider key the account was linked through.
     return success(answer.output as readonly LinkedOAuthAccount[]);
   },
   /**
