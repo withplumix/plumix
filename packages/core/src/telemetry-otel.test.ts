@@ -582,6 +582,35 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
     expect(calls).toHaveLength(0);
     expect(errors.some((m) => m.includes("otel export failed"))).toBe(true);
   });
+
+  test("a successful export releases each response body unread", async () => {
+    let released = 0;
+    const accepting = (): Promise<Response> =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream({
+            cancel() {
+              released += 1;
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const { errors } = await exportSnapshot(
+      snapshotWith({
+        spans: [
+          spanWith("import feed", [
+            { at: AT, level: "info", message: "imported", attributes: {} },
+          ]),
+        ],
+      }),
+      { logsEndpoint: LOGS_ENDPOINT, fetch: accepting },
+    );
+
+    expect(errors).toEqual([]);
+    expect(released).toBe(2);
+  });
 });
 
 describe("otelConsumer — OTLP/HTTP log export", () => {
@@ -621,7 +650,6 @@ describe("otelConsumer — OTLP/HTTP log export", () => {
     expect(resourceLogs?.scopeLogs[0]?.scope).toEqual({ name: "plumix" });
 
     const tracedSpans = exportedSpans(traces[0]);
-    // Nothing was dropped, so the root carries no dropped-logs count.
     const root = tracedSpans.find((s) => !s.parentSpanId);
     expect(attr(root, "plumix.dropped_logs")).toBeUndefined();
     const span = tracedSpans.find((s) => s.name === "import feed");
@@ -629,7 +657,7 @@ describe("otelConsumer — OTLP/HTTP log export", () => {
     expect(exportedLogRecords(call)).toEqual([
       {
         timeUnixNano: "1700000000003000000",
-        severityNumber: 13, // SEVERITY_NUMBER_WARN
+        severityNumber: 13,
         severityText: "WARN",
         body: { stringValue: "skipped item without a slug" },
         attributes: [
@@ -672,7 +700,7 @@ describe("otelConsumer — OTLP/HTTP log export", () => {
     expect(attr(root, "plumix.dropped_logs")).toEqual({ intValue: "3" });
   });
 
-  test("without logsEndpoint, no logs request goes out and the traces payload is what it was before span logs", async () => {
+  test("without logsEndpoint, no logs request goes out and the traces payload carries no log data", async () => {
     const logged = snapshotWith({
       spans: [
         spanWith("import feed", [

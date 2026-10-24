@@ -467,7 +467,7 @@ Work core or a plugin registers on a cron, fired by the scheduler: the platform'
 The claim that lets one replica run a scheduled firing when several fire it.
 
 **Telemetry consumer**:
-What the `telemetry` config slot sends request traces to; core's OTLP consumer exports them to any OpenTelemetry endpoint.
+What the `telemetry` config slot sends request traces to; core's OTLP consumer exports them, and optionally their span logs, to any OpenTelemetry endpoint.
 
 **Telemetry snapshot**:
 Everything recorded about one request or scheduled run (its spans, records and the deferred work it started), handed to every telemetry consumer once that work has settled.

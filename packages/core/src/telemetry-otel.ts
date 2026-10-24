@@ -51,7 +51,6 @@ interface OtlpLogRecord {
   spanId: string;
 }
 
-/** The OTLP `SeverityNumber` and text for each span log level. */
 const SEVERITY: Readonly<
   Record<TelemetrySpanLog["level"], { number: number; text: string }>
 > = {
@@ -75,7 +74,6 @@ export interface OtelConsumerOptions {
   /**
    * OTLP/HTTP logs endpoint, e.g. `https://…/otlp/v1/logs`. Set, each span
    * log exports as a log record linked to its span, sent with `headers`.
-   * Omitted = no logs are exported.
    */
   readonly logsEndpoint?: string;
   /** `service.name` resource attribute. */
@@ -255,7 +253,6 @@ interface ExportContext {
   readonly logger: { error(message: string): void };
 }
 
-/** Logs a failed POST instead of rejecting. */
 async function postExport(
   fetchFn: typeof globalThis.fetch,
   url: string,
@@ -330,8 +327,7 @@ export function otelConsumer(
               ...(dropped.spans > 0 && {
                 "plumix.dropped_spans": dropped.spans,
               }),
-              // Only when logs export: without `logsEndpoint` the traces
-              // payload stays what it was before span logs.
+              // Gated, so a site without `logsEndpoint` gets the same traces payload.
               ...(options.logsEndpoint !== undefined &&
                 dropped.logs > 0 && {
                   "plumix.dropped_logs": dropped.logs,
