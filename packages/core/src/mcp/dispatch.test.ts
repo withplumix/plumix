@@ -915,6 +915,36 @@ describe("MCP endpoint — error_list (dev gate)", () => {
     expect(errored?.error?.message).toBe("pivot me");
   });
 
+  test("an error on a defer span is listed, though the response succeeded", async () => {
+    const purging = definePlugin("test-purging", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/purges",
+          handler: (_request, appCtx) => {
+            appCtx.defer(Promise.reject(new Error("purge refused")));
+            return new Response("ok");
+          },
+        });
+      },
+    });
+    const h = await mcpHarness({ config: { plugins: [blog, purging] } });
+    const secret = await mintPat(h);
+
+    const ok = await h.dispatch(new Request("https://cms.example/purges"));
+    await h.drainDeferred();
+    expect(ok.status).toBe(200);
+
+    const { json } = await callTool(h, secret, 1, "error_list", {});
+    const entry = parseToolResult<MergedErrorRow[]>(json).find(
+      (e) => e.path === "/purges",
+    );
+    expect(entry).toMatchObject({
+      source: "server",
+      level: "error",
+      message: "purge refused",
+    });
+  });
+
   test("a successful request contributes nothing — the tool returns a list, not an error", async () => {
     const h = await mcpHarness({ config: { plugins: [blog] } });
     const author = await h.factory.user.create({ role: "editor" });

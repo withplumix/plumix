@@ -147,7 +147,13 @@ function addTreeSpans(
       kind: SPAN_KIND_INTERNAL,
       startTimeUnixNano: unixNano(span.startedAt),
       endTimeUnixNano,
-      attributes: toAttributes(span.attributes),
+      // OTLP has no unfinished status, so it stays unset and an attribute
+      // says the span was still running when the snapshot was taken.
+      attributes: toAttributes(
+        span.status === "unfinished"
+          ? { ...span.attributes, "plumix.unfinished": true }
+          : span.attributes,
+      ),
       ...(span.error && {
         events: [
           {

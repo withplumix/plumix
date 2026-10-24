@@ -33,10 +33,10 @@ export interface TelemetrySpan {
   readonly startedAt: number;
   /** Wall-clock duration; set when the span's work completes. */
   durationMs: number;
-  /** "error" when the span's function threw or rejected; the error is captured
-   * before the failure propagates unchanged. "cancelled" when it was stopped
-   * early. */
-  status: "ok" | "error" | "cancelled";
+  /** "error": its function threw or rejected, the error captured before it
+   * propagates. "cancelled": stopped early. "unfinished": still running when
+   * the snapshot was taken, timed up to then. */
+  status: "ok" | "error" | "cancelled" | "unfinished";
   error?: TelemetrySpanError;
   /** Why a cancelled span ended early, such as `timed out after 5m`. */
   message?: string;

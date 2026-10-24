@@ -63,7 +63,9 @@ differently. `handler.scheduled` opens an internal context on a synthetic
 `/_plumix/internal/scheduled?cron=…` request. A context that cannot open (a missing binding) returns
 the `aborted` arm. `runScheduledTasks` runs the matching tasks in order, each in a `cron: <id>`
 telemetry span. It catches each failure so siblings run, then flushes CDN purge tags and delivers
-the telemetry snapshot. Each task runs within its budget (`timeoutMs`, five minutes by default) on
+the telemetry snapshot the way a request does: work a task starts with `ctx.defer` is a `defer` span
+in that run's snapshot, which reaches the consumers once that work has settled, or after 10s with
+what is still running marked `unfinished`. Each task runs within its budget (`timeoutMs`, five minutes by default) on
 a context of its own whose `ctx.signal`, and the `ctx.fetch` that follows it, aborts with a
 `TimeoutError` (cause `"timeout"`) when the budget runs out. Core then stops waiting, reports the
 task in `timedOut`, logs a warning, ends its span `cancelled`, and runs the next task; a task that

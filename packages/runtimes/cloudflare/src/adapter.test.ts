@@ -181,6 +181,56 @@ describe("cloudflare adapter — createRuntimeHandler().fetch", () => {
     expect(snapshot?.spans.map((s) => s.name)).toEqual(["dispatch"]);
   });
 
+  test("the snapshot reaches the consumer through waitUntil only once the request's deferred work settles", async () => {
+    let settle!: () => void;
+    const work = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const deferring = definePlugin("deferring", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/defer",
+          handler: (_request, appCtx) => {
+            appCtx.defer(work);
+            return new Response("deferred");
+          },
+        });
+      },
+    });
+    const snapshots: TelemetrySnapshot[] = [];
+    const config = plumix({
+      runtime: cloudflare(),
+      database: stubDatabase,
+      auth,
+      theme,
+      plugins: [deferring],
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    const app = await buildApp(config);
+    const waited: Promise<unknown>[] = [];
+
+    await createRuntimeHandler(app).fetch(
+      new Request("https://cms.example/defer"),
+      {
+        env: {},
+        waitUntil: (promise) => void waited.push(promise),
+      },
+    );
+    const delivered = Promise.all(waited).then(() => snapshots.length);
+    await Promise.resolve();
+    expect(snapshots).toEqual([]);
+
+    settle();
+    expect(await delivered).toBe(1);
+    expect(
+      snapshots[0]?.spans.flatMap((s) => s.children).map((s) => s.name),
+    ).toContain("defer");
+  });
+
   test("passes the env + request through to the database adapter", async () => {
     let received: { env: unknown; requestUrl: string } | undefined;
     const capturingDatabase: DatabaseAdapter = {

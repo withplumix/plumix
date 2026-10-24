@@ -32,6 +32,7 @@ import type {
   ImageDelivery,
 } from "../runtime/contract/slots.js";
 import type { RequestAuthenticator } from "./authenticator.js";
+import type { TelemetryDelivery } from "./collector.js";
 import type { DevRuntime } from "./dev-runtime.js";
 import type { RequestMemo } from "./memo.js";
 import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
@@ -241,6 +242,11 @@ export interface AppContextBase<
    * (and `telemetry` is the no-op). Internal to the dispatcher.
    */
   readonly telemetryConsumers?: readonly TelemetryConsumer[];
+  /**
+   * What delivering the snapshot reads beyond `telemetry`, present with
+   * `telemetryConsumers`. Internal to delivery.
+   */
+  readonly telemetryDelivery?: TelemetryDelivery;
   readonly auth: AuthNamespace;
   readonly authenticator: RequestAuthenticator;
   /**

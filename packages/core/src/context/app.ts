@@ -30,6 +30,10 @@ import type {
   Logger,
   LogMeta,
 } from "./app-context.js";
+import type {
+  RequestTelemetryCollector,
+  TelemetryDelivery,
+} from "./collector.js";
 import type { DevRuntime } from "./dev-runtime.js";
 import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
 import { defaultAuthenticator } from "../auth/authenticator.js";
@@ -99,6 +103,11 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly dev?: DevRuntime;
   readonly logger?: Logger;
   readonly defer?: DeferFn;
+  /**
+   * Fires when snapshots still waiting on deferred work must be delivered now,
+   * as a drain of `defer`'s work does when it ends.
+   */
+  readonly telemetryShutdown?: AbortSignal;
   readonly assets?: AssetsBinding;
   readonly storage?: ConnectedObjectStorage;
   readonly cdn?: ConnectedCdn;
@@ -135,13 +144,23 @@ function logRejection(logger: Logger, error: unknown): void {
   logErrorSafely(logger, "[plumix] deferred promise rejected", error);
 }
 
-function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
+/**
+ * `collector` is read per call because the collector is swapped after the
+ * sampling vote; a sampled request times each call as a `defer` span.
+ */
+function wrapDefer(
+  logger: Logger,
+  target: DeferFn | undefined,
+  collector: () => RequestTelemetryCollector | undefined,
+): DeferFn {
   // Runtimes only handle the success path, so rejections are logged here
   // where the operator's logger is known.
+  const onRejected = (error: unknown): void => {
+    logRejection(logger, error);
+  };
   return (promise) => {
-    const handled = promise.catch((error: unknown) => {
-      logRejection(logger, error);
-    });
+    const handled =
+      collector()?.deferred(promise, onRejected) ?? promise.catch(onRejected);
     if (target === undefined) {
       void handled;
       return;
@@ -209,6 +228,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   const mailer = devMailWiring?.mailer ?? configuredMailer;
   const tracedMailer = mailer && traceMailer(mailer, () => base.telemetry);
   const neverAborted = new AbortController().signal;
+  let collector: RequestTelemetryCollector | undefined;
   const base: AppContextBase<TSchema> = {
     db: args.db,
     env: args.env,
@@ -231,7 +251,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     auth: {
       can: makeAuthCan(args.plugins, user, tokenScopes),
     },
-    defer: wrapDefer(logger, args.defer),
+    defer: wrapDefer(logger, args.defer, () => collector),
     // I/O slots wrapped once here so every consumer gets spans; the getters
     // read `base.telemetry` per call like `fetch` below.
     assets: args.assets && traceAssets(args.assets, () => base.telemetry),
@@ -320,9 +340,18 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     const mutable = base as {
       telemetry: TelemetryCollector;
       telemetryConsumers?: readonly TelemetryConsumer[];
+      telemetryDelivery?: TelemetryDelivery;
     };
-    mutable.telemetry = createTelemetryCollector();
+    const active = createTelemetryCollector();
+    collector = active;
+    mutable.telemetry = active;
     mutable.telemetryConsumers = sampled;
+    mutable.telemetryDelivery = {
+      settled: () => active.settled(),
+      spansAt: (at) => active.spansAt(at),
+      defer: args.defer,
+      shutdown: args.telemetryShutdown,
+    };
   }
   return ctx;
 }
