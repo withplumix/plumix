@@ -34,7 +34,7 @@ export interface RenderChrome {
   readonly adminBar: (
     ctx: AppContext,
     queriedEntry: EntryEditRow | undefined,
-  ) => ReactNode;
+  ) => Promise<ReactNode>;
   /** Unset outside the dev server, so a build carries none of its modules. */
   readonly debugBar?: (ctx: AppContext) => ReactNode;
 }

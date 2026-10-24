@@ -1,5 +1,5 @@
-import { existsSync, globSync, readFileSync } from "node:fs";
-import { dirname, join, sep } from "node:path";
+import { existsSync, globSync, readdirSync, readFileSync } from "node:fs";
+import { basename, dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vitest/config";
 
@@ -24,6 +24,28 @@ function workspaceGlobs(): string[] {
 const EMPTY_CATALOG = fileURLToPath(
   new URL("./empty-catalog.ts", import.meta.url),
 );
+
+/** Vite's prefix for a module no file backs. */
+const CATALOG_INDEX_PREFIX = "\0plumix-catalog-index:";
+
+/**
+ * A stand-in for `locales/index/<surface>.mjs`, which `i18n:compile` writes:
+ * the same locales, read from the `.po` files the compile reads, each
+ * loading the empty catalog.
+ */
+function catalogIndexStub(indexFile: string): string {
+  const surface = basename(indexFile, ".mjs");
+  const localesDir = dirname(dirname(indexFile));
+  const prefix = surface === "catalogs" ? "" : `${surface}-`;
+  const locales = readdirSync(localesDir)
+    .filter((file) => file.startsWith(prefix) && file.endsWith(".po"))
+    .map((file) => file.slice(prefix.length, -".po".length));
+  const loaders = locales.map(
+    (locale) =>
+      `  ${JSON.stringify(locale)}: () => import(${JSON.stringify(EMPTY_CATALOG)}),\n`,
+  );
+  return `export const catalogs = {\n${loaders.join("")}};\n`;
+}
 
 interface WorkspacePackage {
   readonly dir: string;
@@ -164,8 +186,14 @@ export function plumixSourceResolver(): Plugin {
       if (!target) return null;
       if (matched.star !== undefined)
         target = target.replaceAll("*", matched.star);
+      if (target.includes("/locales/index/"))
+        return CATALOG_INDEX_PREFIX + join(pkg.dir, target);
       if (target.includes("/locales/")) return EMPTY_CATALOG;
       return sourceCandidate(pkg.dir, target);
+    },
+    load(id) {
+      if (!id.startsWith(CATALOG_INDEX_PREFIX)) return null;
+      return catalogIndexStub(id.slice(CATALOG_INDEX_PREFIX.length));
     },
   };
 }

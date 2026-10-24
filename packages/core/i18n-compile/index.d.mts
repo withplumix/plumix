@@ -19,3 +19,7 @@ export type CompileCatalogsResult =
 export declare function compileCatalogs(
   options: CompileCatalogsOptions,
 ): Promise<CompileCatalogsResult>;
+
+/** The locales a catalog path template ships: one per `.po` file its
+ *  `{locale}` placeholder matches, sorted. */
+export declare function discoverCatalogLocales(catalogPath: string): string[];

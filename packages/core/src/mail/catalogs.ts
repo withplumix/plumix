@@ -1,22 +1,11 @@
-// Unit tests resolve these static imports to empty catalogs, so a test of
+// Unit tests resolve core's catalogs to empty ones, so a test of
 // translated output hands the `.po` in as a plugin catalog.
 
-import { messages as arMessages } from "@plumix/core/locales/mail-ar";
-import { messages as deMessages } from "@plumix/core/locales/mail-de";
-import { messages as enMessages } from "@plumix/core/locales/mail-en";
-import { messages as ukMessages } from "@plumix/core/locales/mail-uk";
-import { messages as zhCnMessages } from "@plumix/core/locales/mail-zh-CN";
+import { catalogs } from "@plumix/core/locales/index/mail";
 
 import type { CompiledCatalog } from "../blocks/index.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
-
-const CORE_MAIL_CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
-  en: enMessages,
-  de: deMessages,
-  uk: ukMessages,
-  ar: arMessages,
-  "zh-CN": zhCnMessages,
-};
+import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
 
 /** The merged catalog a mail renders against, for one locale. */
 export type MailCatalogs = (locale: string) => Promise<CompiledCatalog>;
@@ -24,17 +13,19 @@ export type MailCatalogs = (locale: string) => Promise<CompiledCatalog>;
 export function createMailCatalogs(
   pluginCatalogs: PluginCatalogs = {},
 ): MailCatalogs {
+  const core = lazyCatalogs(catalogs);
   // Once per locale per isolate: the catalogs are static build output.
   const merged = new Map<string, Promise<CompiledCatalog>>();
   return (locale) => {
     let catalog = merged.get(locale);
     if (catalog === undefined) {
-      catalog = Promise.all(
-        (pluginCatalogs[locale] ?? []).map((load) => load()),
-      ).then((modules) =>
+      catalog = Promise.all([
+        core.load(locale),
+        ...(pluginCatalogs[locale] ?? []).map((load) => load()),
+      ]).then(([base, ...modules]) =>
         modules.reduce<CompiledCatalog>(
           (acc, module) => ({ ...acc, ...module.messages }),
-          CORE_MAIL_CATALOGS[locale] ?? {},
+          base,
         ),
       );
       merged.set(locale, catalog);

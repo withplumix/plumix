@@ -25,7 +25,12 @@
       // at the root so a plugin added later gets the ordering too.
       "dependsOn": ["^build"],
       "inputs": ["locales/*.po"],
-      "outputs": ["locales/*.mjs", "locales/*.d.mts"],
+      "outputs": [
+        "locales/*.mjs",
+        "locales/*.d.mts",
+        "locales/index/*.mjs",
+        "locales/index/*.d.mts"
+      ],
       "outputLogs": "new-only"
     },
     "build": {

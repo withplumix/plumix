@@ -2,24 +2,14 @@
 // adapter names areas to visitors outside the admin, where no Lingui instance
 // runs.
 
-import { messages as arMessages } from "@plumix/core/locales/admin-area-ar";
-import { messages as deMessages } from "@plumix/core/locales/admin-area-de";
-import { messages as enMessages } from "@plumix/core/locales/admin-area-en";
-import { messages as ukMessages } from "@plumix/core/locales/admin-area-uk";
-import { messages as zhCnMessages } from "@plumix/core/locales/admin-area-zh-CN";
+import { catalogs } from "@plumix/core/locales/index/admin-area";
 
-import type { CompiledCatalog } from "../blocks/index.js";
 import type { AdminArea } from "../context/runtime-adapter.js";
 import { resolveMessage } from "../blocks/index.js";
+import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
 import { catalogLocale } from "../i18n/catalog-locale.js";
 
-const CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
-  en: enMessages,
-  de: deMessages,
-  uk: ukMessages,
-  ar: arMessages,
-  "zh-CN": zhCnMessages,
-};
+const CATALOGS = lazyCatalogs(catalogs);
 
 /**
  * Source descriptors — `plumix i18n verify` matches these against the po
@@ -65,7 +55,7 @@ function languageTag(entry: string): string | undefined {
  * serves, the source catalog included; English otherwise.
  */
 function negotiateLocale(acceptLanguage: string | null): string {
-  const shipped = Object.keys(CATALOGS);
+  const shipped = CATALOGS.locales;
   for (const entry of (acceptLanguage ?? "").split(
     ",",
     MAX_ACCEPT_LANGUAGE_ENTRIES,
@@ -82,12 +72,12 @@ function negotiateLocale(acceptLanguage: string | null): string {
  * `areas` as one localized list, in the first locale of an `Accept-Language`
  * header that labels ship for, or English.
  */
-export function listAdminAreas(
+export async function listAdminAreas(
   areas: readonly AdminArea[],
   acceptLanguage: string | null,
-): string {
+): Promise<string> {
   const locale = negotiateLocale(acceptLanguage);
-  const catalog = CATALOGS[locale] ?? enMessages;
+  const catalog = await CATALOGS.load(locale);
   return new Intl.ListFormat(locale, { type: "conjunction" }).format(
     areas.map((area) => resolveMessage(catalog, M[area])),
   );

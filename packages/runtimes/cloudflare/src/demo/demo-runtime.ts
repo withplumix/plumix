@@ -167,7 +167,7 @@ export function demoRuntime(
               ? injectToolbar(
                   response,
                   hasSession,
-                  listAdminAreas(
+                  await listAdminAreas(
                     DEMO_REFUSED_AREAS,
                     request.headers.get("accept-language"),
                   ),

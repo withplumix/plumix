@@ -1,22 +1,12 @@
 // Non-English catalogs ship untranslated; `lingui compile` without `--strict`
 // backfills English until a translator fills the `.po`.
 
-import { messages as arMessages } from "@plumix/core/locales/welcome-ar";
-import { messages as deMessages } from "@plumix/core/locales/welcome-de";
-import { messages as enMessages } from "@plumix/core/locales/welcome-en";
-import { messages as ukMessages } from "@plumix/core/locales/welcome-uk";
-import { messages as zhCnMessages } from "@plumix/core/locales/welcome-zh-CN";
+import { catalogs } from "@plumix/core/locales/index/welcome";
 
-import type { CompiledCatalog } from "../blocks/index.js";
 import { resolveMessage } from "../blocks/index.js";
+import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
 
-const CATALOGS: Readonly<Record<string, CompiledCatalog>> = {
-  en: enMessages,
-  de: deMessages,
-  uk: ukMessages,
-  ar: arMessages,
-  "zh-CN": zhCnMessages,
-};
+const CATALOGS = lazyCatalogs(catalogs);
 
 /**
  * Source descriptors — `plumix i18n verify` matches these against the po
@@ -41,10 +31,18 @@ export interface WelcomeStrings {
   readonly openAdmin: string;
 }
 
+/** Imports `locale`'s catalog for {@link welcomeMessages} to read. */
+export async function loadWelcomeCatalog(locale: string): Promise<void> {
+  await CATALOGS.load(locale);
+}
+
+/**
+ * Read in a render, which cannot await, so `loadWelcomeCatalog` runs first.
+ * `locale` is the resolved `ctx.locale.code` (an arbitrary string), so an
+ * unshipped locale reads the descriptors' English.
+ */
 export function welcomeMessages(locale: string): WelcomeStrings {
-  // `locale` is the resolved `ctx.locale.code` (an arbitrary string), so an
-  // unshipped locale falls back to the English catalog.
-  const catalog = CATALOGS[locale] ?? enMessages;
+  const catalog = CATALOGS.loaded(locale);
   return {
     running: resolveMessage(catalog, M.running),
     heading: resolveMessage(catalog, M.heading),
