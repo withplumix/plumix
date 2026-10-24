@@ -5,6 +5,10 @@ import type {
   AuthenticatedUser,
   Db,
 } from "../../context/app-context.js";
+import type { PluginRegistry } from "../../plugin/manifest.js";
+import { HookRegistry } from "../../hooks/registry.js";
+import { definePlugin } from "../../plugin/define.js";
+import { installPlugins } from "../../runtime/install-plugins.js";
 import { createTestContext } from "../../test/context.js";
 import {
   adminBarViewer,
@@ -19,8 +23,29 @@ const subscriber: AuthenticatedUser = {
   meta: {},
 };
 
-function contextFor(user: AuthenticatedUser | null): AppContext {
-  return createTestContext({ db: {} as Db, user });
+function contextFor(
+  user: AuthenticatedUser | null,
+  plugins?: PluginRegistry,
+): AppContext {
+  return createTestContext({ db: {} as Db, user, plugins });
+}
+
+/** Moves `admin:access` off its default rung, so the bar can't follow rank. */
+async function registryGrantingAdminAccess(grant: {
+  readonly minRole: AuthenticatedUser["role"];
+  readonly defaultGrants?: readonly AuthenticatedUser["role"][];
+}): Promise<PluginRegistry> {
+  const { registry } = await installPlugins({
+    hooks: new HookRegistry(),
+    plugins: [
+      definePlugin("admin-access", {
+        setup: (ctx) => {
+          ctx.registerCapability("admin:access", grant);
+        },
+      }),
+    ],
+  });
+  return registry;
 }
 
 describe("trackPrincipalReads", () => {
@@ -106,5 +131,23 @@ describe("adminBarViewer", () => {
     expect(adminBarViewer(contextFor(admin))).toBe(admin);
     expect(adminBarViewer(contextFor(subscriber))).toBeNull();
     expect(adminBarViewer(contextFor(null))).toBeNull();
+  });
+
+  test("hides the bar from a viewer whose role lacks admin:access, whatever its rank", async () => {
+    const editor: AuthenticatedUser = { ...subscriber, role: "editor" };
+    const adminsOnly = await registryGrantingAdminAccess({ minRole: "admin" });
+
+    expect(adminBarViewer(contextFor(editor, adminsOnly))).toBeNull();
+  });
+
+  test("shows the bar to a viewer whose role holds admin:access, whatever its rank", async () => {
+    const openToMembers = await registryGrantingAdminAccess({
+      minRole: "admin",
+      defaultGrants: ["subscriber"],
+    });
+
+    expect(adminBarViewer(contextFor(subscriber, openToMembers))).toBe(
+      subscriber,
+    );
   });
 });

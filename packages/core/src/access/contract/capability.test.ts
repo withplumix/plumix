@@ -22,6 +22,7 @@ describe("KnownCapability", () => {
       | "user:manage_tokens"
       | "plugin:manage"
       | "settings:manage"
+      | "admin:access"
     >();
   });
 

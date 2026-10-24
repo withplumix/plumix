@@ -24,6 +24,8 @@ export const CORE_CAPABILITIES = Object.freeze({
   "user:manage_tokens": "admin",
   "plugin:manage": "admin",
   "settings:manage": "admin",
+  // `subscriber` is the theme-only open-signup tier, which gets no admin.
+  "admin:access": "contributor",
 } as const satisfies Record<string, UserRole>);
 
 export const POST_TYPE_CAPABILITY_ACTIONS = {

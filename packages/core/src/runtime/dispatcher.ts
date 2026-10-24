@@ -8,7 +8,6 @@ import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { ContentRoute, PublicRouteMatch } from "../route/index.js";
 import type { PlumixApp } from "./app.js";
 import { resolveCapability } from "../access/contract/capability.js";
-import { canAccessAdmin } from "../access/contract/rbac.js";
 import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
 import { gateToResponse, policyForMatch } from "../access/gate.js";
 import { resolveAccess } from "../access/policy.js";
@@ -25,6 +24,7 @@ import {
 } from "../auth/csrf.js";
 import { matchAuthMethodRoute } from "../auth/declared-methods.js";
 import { loadAuthFlowRoutes } from "../auth/flow-routes-loader.js";
+import { getCapabilityResolver } from "../auth/rbac.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import { declaredPageTags } from "../cdn/contract/page-tags.js";
@@ -949,9 +949,15 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   const auth = ctxHasSession(ctx)
     ? await authenticateTraced(ctx, ctx.authenticator)
     : null;
-  // Non-staff would get a shell whose every RPC 403s; anonymous visitors still
+  // Without `admin:access` the shell's every RPC 403s; anonymous visitors still
   // need the SPA's login screen.
-  if (auth?.user && !canAccessAdmin(auth.user.role)) {
+  if (
+    auth?.user &&
+    !getCapabilityResolver(ctx.plugins).hasCapability(
+      auth.user.role,
+      "admin:access",
+    )
+  ) {
     return redirect(withBasePath("/", ctx.config.basePath), 302);
   }
   const locale = resolveLocale({

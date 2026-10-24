@@ -19,7 +19,7 @@ Four nouns carry the access model.
 - An **authenticator** decides who a request is. It reads credentials and returns a user or `null`. It never mints a session and never sets a cookie.
 - A **capability** is a permission string mapped to a minimum role. Code asks `ctx.auth.can(entryCapability("recipe", "publish"))` instead of comparing roles by hand.
 
-Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote`, `plugin:manage` and `settings:manage`. Core ships seventeen. Eight are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other nine are flat.
+Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote`, `plugin:manage` and `settings:manage`. Core ships eighteen. Eight are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other ten are flat.
 
 `ctx.user` is a projection of the user row rather than the row itself, carrying `id`, `email`, `name`, `role` and the stored `meta` bag. Nothing on it is a credential. It is still personal data, and core's own hook documentation says so, so keep the whole object out of third-party logging and analytics. `email`, `name` and whatever a plugin wrote into `meta` all ride along.
 
@@ -180,9 +180,9 @@ export const authenticator = chainAuthenticators(
 
 `ctx.auth.can(capability)` is the one place a capability decision happens. It resolves the capability's minimum role from core's table plus every capability plugins registered, compares it against the principal's role, and intersects the result with the request's token scopes. Every capability check in core and in plugins reads through it, which is why an authenticator that returns scopes narrows all of them at once.
 
-Two role checks sit outside it, and token scopes do not reach either. `canAccessAdmin(role)` compares the role's level against `STAFF_MIN_ROLE` to decide who gets the admin shell. `rolePolicy(required)` makes the same comparison for an access policy. Both ask about a tier on the ladder rather than about a named permission, so a scoped credential whose owner holds the tier still passes them.
+Two checks sit outside it, and token scopes do not reach either. The admin shell and the admin bar ask whether the principal's role holds `admin:access`. `rolePolicy(required)` compares the role's level against `required` for an access policy, so it asks about a tier on the ladder rather than about a named permission. A scoped credential whose owner's role passes either check still passes it.
 
-Not every signed-in principal is staff. `STAFF_MIN_ROLE` is `contributor`, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
+Not every signed-in principal is staff. `contributor` and every role above it hold `admin:access`, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
 
 ## Gated entries on every surface
 
