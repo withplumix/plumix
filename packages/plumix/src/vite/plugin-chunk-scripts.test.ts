@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { createDispatcherHarness, plumixRequest } from "@plumix/core/test";
+
 import { injectPluginChunkScripts } from "./plugin-chunk-scripts.js";
 
 const SHELL = "<!doctype html><html><head></head><body></body></html>";
@@ -13,20 +15,40 @@ const CHUNKS = [
   },
 ];
 
-/** What the browser fetches: each URL against the dispatcher's `<base href>`. */
-function resolvedPluginUrls(html: string, baseHref: string): string[] {
-  const urls = [
+/**
+ * What the browser fetches: the staged shell served by the dispatcher at a
+ * deep link, each plugin URL resolved against the page and its `<base href>`.
+ */
+async function servedPluginUrls(
+  stagedShell: string,
+  basePath: string,
+): Promise<string[]> {
+  const h = await createDispatcherHarness({
+    assets: {
+      fetch: () =>
+        Promise.resolve(
+          new Response(stagedShell, {
+            headers: { "content-type": "text/html" },
+          }),
+        ),
+    },
+    config: { basePath },
+  });
+  const pageUrl = `http://localhost${basePath}/_plumix/admin/entries/post`;
+  const response = await h.dispatch(plumixRequest(pageUrl));
+  const html = await response.text();
+  const baseHref = /<base href="([^"]*)">/.exec(html)?.[1] ?? "";
+  const base = new URL(baseHref, pageUrl);
+  return [
     ...html.matchAll(/data-plumix-plugin="[^"]*" (?:src|href)="([^"]*)"/g),
-  ].map((m) => m[1] ?? "");
-  const base = new URL(baseHref, "https://site.test/deep/link");
-  return urls.map((url) => new URL(url, base).pathname);
+  ].map((m) => new URL(m[1] ?? "", base).pathname);
 }
 
 describe("injectPluginChunkScripts", () => {
-  test("under a basePath, every plugin chunk and stylesheet resolves under the mount", () => {
-    const html = injectPluginChunkScripts(SHELL, CHUNKS);
+  test("under a basePath, the served shell's plugin chunks and stylesheets resolve under the mount", async () => {
+    const shell = injectPluginChunkScripts(SHELL, CHUNKS);
 
-    expect(resolvedPluginUrls(html, "/cms/_plumix/admin/")).toEqual([
+    expect(await servedPluginUrls(shell, "/cms")).toEqual([
       "/cms/_plumix/admin/plugins/hello.css",
       "/cms/_plumix/admin/plugins/hello.js",
       "/cms/_plumix/admin/plugins/site-bundle.css",
@@ -34,10 +56,10 @@ describe("injectPluginChunkScripts", () => {
     ]);
   });
 
-  test("at the domain root, plugin chunks and stylesheets resolve where they always have", () => {
-    const html = injectPluginChunkScripts(SHELL, CHUNKS);
+  test("at the domain root, the served shell's plugin chunks and stylesheets resolve where they always have", async () => {
+    const shell = injectPluginChunkScripts(SHELL, CHUNKS);
 
-    expect(resolvedPluginUrls(html, "/_plumix/admin/")).toEqual([
+    expect(await servedPluginUrls(shell, "")).toEqual([
       "/_plumix/admin/plugins/hello.css",
       "/_plumix/admin/plugins/hello.js",
       "/_plumix/admin/plugins/site-bundle.css",

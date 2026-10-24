@@ -151,4 +151,53 @@ describe("createPluginCatalogLoader", () => {
       );
     });
   });
+
+  describe("with no basePath given, the base comes from the page's <base href>", () => {
+    // The shell the dispatcher serves: its `<base>` and nothing else.
+    function pageWithBaseHref(href: string): void {
+      vi.stubGlobal("document", {
+        querySelector: (selector: string) =>
+          selector === "base"
+            ? {
+                getAttribute: (name: string) => (name === "href" ? href : null),
+              }
+            : null,
+      });
+    }
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    const manifest = {
+      plugin_x: {
+        sourceLocale: "en",
+        catalogs: { de: "/_plumix/admin/plugins/plugin_x/locales/de.mjs" },
+      },
+    };
+
+    test("a shell served under /cms imports under the mount", async () => {
+      pageWithBaseHref("/cms/_plumix/admin/");
+      const importCatalog = vi.fn(() => Promise.resolve({ messages: {} }));
+      const load = createPluginCatalogLoader({ manifest, importCatalog });
+
+      await load("plugin_x", "de");
+
+      expect(importCatalog).toHaveBeenCalledWith(
+        "/cms/_plumix/admin/plugins/plugin_x/locales/de.mjs",
+      );
+    });
+
+    test("a shell served at the domain root imports the manifest URL unchanged", async () => {
+      pageWithBaseHref("/_plumix/admin/");
+      const importCatalog = vi.fn(() => Promise.resolve({ messages: {} }));
+      const load = createPluginCatalogLoader({ manifest, importCatalog });
+
+      await load("plugin_x", "de");
+
+      expect(importCatalog).toHaveBeenCalledWith(
+        "/_plumix/admin/plugins/plugin_x/locales/de.mjs",
+      );
+    });
+  });
 });
