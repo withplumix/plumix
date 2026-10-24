@@ -474,6 +474,11 @@ msgid "editor.selection.count"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: src/unregistered-block-notice.tsx
+msgid "editor.unregistered.notice"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/editor-command-palette.tsx
 msgid "editor.palette.group.actions"
 msgstr ""

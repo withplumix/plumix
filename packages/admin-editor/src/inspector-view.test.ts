@@ -220,4 +220,20 @@ describe("inspectorView", () => {
 
     expect(view?.tableId).toBeNull();
   });
+
+  test("marks a block this site doesn't register, with nothing to set", () => {
+    const view = inspectorView(
+      registry,
+      [{ id: "o", name: "acme/gone", attrs: { title: "Kept" } }],
+      "o",
+      "large",
+      true,
+    );
+
+    expect(view).toMatchObject({
+      unregistered: true,
+      inputs: [],
+      nothingToSet: false,
+    });
+  });
 });

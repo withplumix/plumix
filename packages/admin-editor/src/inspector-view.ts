@@ -17,6 +17,8 @@ interface InspectorInput {
 
 export interface InspectorView {
   readonly block: BlockNode;
+  /** The site registers no such block, so the panel offers nothing to edit. */
+  readonly unregistered: boolean;
   readonly inputs: readonly InspectorInput[];
   readonly showAddColumn: boolean;
   /** The table whose rows and columns the table controls edit. */
@@ -62,11 +64,16 @@ export function inspectorView(
 
   return {
     block,
+    unregistered: !spec,
     inputs,
     showAddColumn,
     tableId,
     showRefresh,
     nothingToSet:
-      inputs.length === 0 && !showAddColumn && !tableId && !showRefresh,
+      Boolean(spec) &&
+      inputs.length === 0 &&
+      !showAddColumn &&
+      !tableId &&
+      !showRefresh,
   };
 }

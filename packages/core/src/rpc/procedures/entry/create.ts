@@ -88,8 +88,10 @@ export const create = base
     }
 
     assertContentWithinByteCap(filtered.content, errors);
+    // A new entry starts from no content, so every node is checked.
     assertContentValidAgainstRegistries(
       filtered.content,
+      [],
       { blocks: context.blocks },
       errors,
     );

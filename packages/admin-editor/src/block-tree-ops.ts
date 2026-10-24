@@ -448,6 +448,23 @@ export function collectBlocks(
 }
 
 /**
+ * Never copied, duplicated or pasted: a copy is a new instance of an
+ * unregistered block, which a save refuses.
+ */
+export function holdsUnregisteredBlock(
+  nodes: readonly BlockNode[],
+  blocks: BlockSpecLookup,
+): boolean {
+  return nodes.some(
+    (node) =>
+      !blocks.get(node.name) ||
+      slotChildren(node, blocks).some((children) =>
+        holdsUnregisteredBlock(children, blocks),
+      ),
+  );
+}
+
+/**
  * Ids are rewritten through each subtree, so repeated pastes stay independent.
  * A null `afterId` appends to the root.
  */

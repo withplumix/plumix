@@ -242,6 +242,40 @@ function renderUnknown(name: string, devState: DevWarnState): ReactNode {
   return createElement("template", { "data-plumix-unknown-block": name });
 }
 
+const UNREGISTERED_PLACEHOLDER = {
+  id: "blocks.unregistered.placeholder",
+  message:
+    "{name} isn't registered on this site. It's kept as-is and not shown on the live site.",
+};
+
+/**
+ * Edit-only, selectable through the seam so it can be moved or deleted. Inline
+ * styled like the appender, since the canvas carries the theme's CSS.
+ */
+function unregisteredPlaceholder(
+  node: BlockNode,
+  t: BlockContext["t"],
+): ReactNode {
+  const safeId = SAFE_ID_RE.test(node.id) ? node.id : undefined;
+  return createElement(
+    "div",
+    {
+      key: node.id,
+      "data-plumix-block": node.name,
+      "data-plumix-id": safeId,
+      "data-plumix-unregistered": "",
+      style: {
+        padding: "0.75rem 1rem",
+        border: "1px dashed rgba(127,127,127,0.45)",
+        borderRadius: "8px",
+        color: "rgba(127,127,127,0.95)",
+        fontSize: "0.875rem",
+      },
+    },
+    t(UNREGISTERED_PLACEHOLDER, { name: node.name }),
+  );
+}
+
 /**
  * Not a slot test: `[]` and a data array of `{ id, name }` objects pass too.
  * A node's slots come from {@link blockSlotKeys}.
@@ -382,6 +416,7 @@ function renderNode(
   const { registry, devState, loaderData } = env;
   const spec = registry.get(node.name);
   if (!spec) {
+    if (env.editing) return unregisteredPlaceholder(node, context.t);
     return createElement(
       Fragment,
       { key: node.id },

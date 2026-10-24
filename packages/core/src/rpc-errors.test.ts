@@ -63,7 +63,7 @@ describe("RPC_ERRORS subsets", () => {
       Parameters<typeof assertContentWithinByteCap>[1]
     >().toEqualTypeOf<Pick<RpcErrors, "CONFLICT">>();
     expectTypeOf<
-      Parameters<typeof assertContentValidAgainstRegistries>[2]
+      Parameters<typeof assertContentValidAgainstRegistries>[3]
     >().toEqualTypeOf<Pick<RpcErrors, "INVALID_BLOCK_CONTENT">>();
     expectTypeOf<Parameters<typeof sanitizeMetaForRpc>[2]>().toEqualTypeOf<
       Pick<RpcErrors, "CONFLICT">

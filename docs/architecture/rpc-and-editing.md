@@ -104,7 +104,7 @@ Error codes (`packages/core/src/rpc-errors.ts`): `UNAUTHORIZED`, `BAD_REQUEST {r
 - A write made from a copy carries `ifMatch`, and the update checks it in its `WHERE` clause. A stale or missing token is refused. [ADR 0048](../adr/0048-core-guards-every-edit-with-a-required-token-and-an-enforced-lease.md); `packages/core/src/db/concurrency.test.ts`, `packages/core/src/rpc/procedures/entry/concurrency.test.ts`.
 - While someone else holds a live lease, a write is `LOCKED` unless the caller sets `takeOver`. `packages/core/src/db/edit-lease.test.ts` and the `lease.test.ts` under each of entry, term, user and settings.
 - `FORBIDDEN` comes before `CONFLICT` and `LOCKED`, and before input validation for `requireCapability`. `packages/core/src/rpc/require-capability.test.ts`, `packages/core/src/rpc/authenticated.test.ts`.
-- No save stores content that names an unregistered block. `packages/core/src/blocks/validate-content.test.ts`.
+- No save stores a node of an unregistered block that the content it starts from didn't already hold. `packages/core/src/blocks/validate-content.test.ts`.
 - A plugin id can't shadow a core namespace. `NAMESPACE_FLAGS` fails typecheck on drift, and `registerRpcRouter` and `buildApp` both throw at runtime.
 - An autosave stores edits, not a copy, and never fires `entry:updated`. [ADR 0057](../adr/0057-an-autosave-stores-edits-not-a-snapshot.md); `packages/core/src/rpc/procedures/entry/update.test.ts`.
 - RPC is `POST` only and `no-store`, as the comment on `dispatchRpc` explains.

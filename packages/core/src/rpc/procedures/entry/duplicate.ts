@@ -8,6 +8,7 @@ import { canReadEntry } from "../../../entries/visibility.js";
 import { resolveEntryMeta } from "../../../meta/entry.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { assertContentValidAgainstRegistries } from "./content.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
 
 /**
@@ -48,6 +49,15 @@ export const duplicate = base
     if (!context.auth.can(createCapability)) {
       throw errors.FORBIDDEN({ data: { capability: createCapability } });
     }
+
+    // The copy starts from its source, so it keeps a block whose plugin is
+    // gone but not a tree the registry refuses in any other way.
+    assertContentValidAgainstRegistries(
+      source.content,
+      [source.content],
+      { blocks: context.blocks },
+      errors,
+    );
 
     const candidate: NewEntry = {
       type: source.type,

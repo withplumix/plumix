@@ -16,8 +16,9 @@ const TREE: readonly BlockNode[] = [
   {
     id: "g",
     name: "core/group",
-    attrs: { content: [{ id: "a", name: "core/x" }] },
+    attrs: { content: [{ id: "a", name: "acme/team" }] },
   },
+  { id: "o", name: "acme/gone" },
 ];
 
 function markup(selection: readonly string[]): string {
@@ -77,5 +78,19 @@ describe("SelectionToolbar", () => {
     expect(
       tagOf(markup(["a"]), "selection-toolbar-select-parent"),
     ).not.toContain('disabled=""');
+  });
+
+  test("offers no duplicate for a block this site doesn't register", () => {
+    const html = markup(["o"]);
+
+    expect(html).not.toContain('data-testid="selection-toolbar-duplicate"');
+    expect(html).toContain('data-testid="selection-toolbar-delete"');
+    expect(html).toContain('data-testid="selection-toolbar-move-up"');
+  });
+
+  test("offers no duplicate for a selection that holds one", () => {
+    expect(markup(["a", "o"])).not.toContain(
+      'data-testid="selection-toolbar-duplicate"',
+    );
   });
 });

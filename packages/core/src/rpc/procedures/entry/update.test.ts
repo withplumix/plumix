@@ -15,6 +15,7 @@ import { definePlugin } from "../../../plugin/define.js";
 import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
+import { upsertAutosave } from "../../../revisions/repository.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
 import { currentEtag } from "../../../test/entry-etag.js";
 import { editorUser } from "../../../test/factories.js";
@@ -2063,5 +2064,152 @@ describe("entry.update under an edit lease", () => {
       code: "CONFLICT",
       data: { reason: "etag_mismatch", holder: { id: ada.id, name: "Ada" } },
     });
+  });
+});
+
+describe("entry.update — blocks the entry already holds", () => {
+  // No plugin registers `acme/hero`, as after the plugin is uninstalled.
+  const orphan = { id: "hero1", name: "acme/hero", attrs: { title: "Hi" } };
+  const text = (id: string, body = "<p>Hello</p>") => ({
+    id,
+    name: "core/rich-text",
+    attrs: { body },
+  });
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+
+  async function holdingOrphan() {
+    const h = await createRpcHarness({ authAs: "author" });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "holds-orphan",
+      content: v2([orphan, text("p1")]),
+    });
+    return { h, own };
+  }
+
+  test("saves an entry holding an unregistered block and keeps the node unchanged", async () => {
+    const { h, own } = await holdingOrphan();
+    const content = v2([orphan, text("p1", "<p>Edited</p>")]);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
+  });
+
+  async function refusal(content: unknown) {
+    const { h, own } = await holdingOrphan();
+    const error: unknown = await h.client.entry
+      .update({
+        id: own.id,
+        content: content as never,
+        ifMatch: await currentEtag(h.db, own.id),
+      })
+      .catch((rejection: unknown) => rejection);
+    return error;
+  }
+
+  test("refuses a new node of an unregistered block", async () => {
+    const error = await refusal(
+      v2([orphan, { id: "hero2", name: "acme/hero", attrs: {} }]),
+    );
+
+    expect(error).toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({
+            code: "unknown_block_type",
+            path: "blocks[1]",
+          }),
+        ],
+      },
+    });
+  });
+
+  test("refuses a stored id used twice", async () => {
+    const error = await refusal(v2([orphan, orphan]));
+
+    expect(error).toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({
+            code: "unknown_block_type",
+            path: "blocks[1]",
+          }),
+        ],
+      },
+    });
+  });
+
+  test("refuses a stored id under another block name", async () => {
+    const error = await refusal(v2([{ ...orphan, name: "acme/other" }]));
+
+    expect(error).toMatchObject({ code: "INVALID_BLOCK_CONTENT" });
+  });
+
+  test("keeps a stored node moved into another parent among new siblings", async () => {
+    const { h, own } = await holdingOrphan();
+    const content = v2([
+      text("p0"),
+      {
+        id: "g1",
+        name: "core/group",
+        attrs: { content: [text("p2"), orphan, text("p3")] },
+      },
+    ]);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
+  });
+
+  test("keeps a node only the caller's autosave holds", async () => {
+    const plugins = createPluginRegistry();
+    plugins.entryTypes.set(
+      "post",
+      toRegisteredEntryType(
+        "post",
+        { label: "Posts", supports: ["autosave"] },
+        null,
+      ),
+    );
+    const h = await createRpcHarness({ authAs: "author", plugins });
+    const own = await h.factory.published.create({
+      authorId: h.user.id,
+      slug: "autosave-orphan",
+      content: v2([text("p1")]),
+    });
+    await upsertAutosave(h.db, {
+      entry: own,
+      authorId: h.user.id,
+      patch: {
+        title: own.title,
+        content: v2([orphan, text("p1")]),
+        excerpt: null,
+        meta: {},
+        metaDeletes: [],
+      },
+    });
+    const content = v2([text("p1"), orphan]);
+
+    const draft = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(draft.content).toEqual(content);
   });
 });

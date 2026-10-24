@@ -123,6 +123,32 @@ describe("entry.revisions.restore", () => {
     expect(live?.title).toBe("Second");
   });
 
+  test("restores a revision holding a block unregistered since", async () => {
+    const h = await createRpcHarness({
+      authAs: "editor",
+      plugins: registryWithRevisions(),
+    });
+    const live = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: { version: "plumix.v2", blocks: [] },
+    });
+    // No plugin registers `acme/hero` any more.
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [{ id: "hero1", name: "acme/hero", attrs: { title: "Hi" } }],
+    };
+    const revision = await h.factory.revision
+      .transient({ of: live })
+      .create({ content });
+
+    const restored = await h.client.entry.revisions.restore({
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, live.id),
+    });
+
+    expect(restored.content).toEqual(content);
+  });
+
   test("restoring a published revision onto a future-scheduled entry resets publishedAt to now", async () => {
     const h = await createRpcHarness({
       authAs: "editor",

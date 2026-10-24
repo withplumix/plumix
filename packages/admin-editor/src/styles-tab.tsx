@@ -66,6 +66,7 @@ import {
   TEXT_MARKS,
   toggleTextMark,
 } from "./styles-tab-model.js";
+import { UnregisteredBlockNotice } from "./unregistered-block-notice.js";
 
 interface ControlSpec {
   readonly property: string;
@@ -209,6 +210,15 @@ export function StylesTab(): ReactElement {
       >
         <Trans id="editor.styles.empty" message="Select a block to style it." />
       </p>
+    );
+  }
+
+  if (!registry.get(block.name)) {
+    return (
+      <UnregisteredBlockNotice
+        name={block.name}
+        testId="styles-tab-unregistered"
+      />
     );
   }
 

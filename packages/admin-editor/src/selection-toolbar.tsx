@@ -23,7 +23,9 @@ import type { OverlayBox } from "./overlay.js";
 import {
   canGroupSelection,
   canUngroupBlock,
+  collectBlocks,
   findParentId,
+  holdsUnregisteredBlock,
 } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { px } from "./overlay.js";
@@ -55,6 +57,13 @@ export function SelectionToolbar({
   );
   const canUngroup = useEditorStore((s) =>
     s.activeId ? canUngroupBlock(s.tree, s.activeId, registry) : false,
+  );
+  const canDuplicate = useEditorStore(
+    (s) =>
+      !holdsUnregisteredBlock(
+        collectBlocks(s.tree, s.selectedIds, registry),
+        registry,
+      ),
   );
   if (!activeId) return null;
 
@@ -165,15 +174,17 @@ export function SelectionToolbar({
             })}
           />
         ) : null}
-        <IconAction
-          testId="selection-toolbar-duplicate"
-          icon={<Copy className="size-4" />}
-          onClick={act(() => state.duplicateSelected())}
-          label={i18n._({
-            id: "editor.selection.duplicate",
-            message: "Duplicate",
-          })}
-        />
+        {canDuplicate ? (
+          <IconAction
+            testId="selection-toolbar-duplicate"
+            icon={<Copy className="size-4" />}
+            onClick={act(() => state.duplicateSelected())}
+            label={i18n._({
+              id: "editor.selection.duplicate",
+              message: "Duplicate",
+            })}
+          />
+        ) : null}
         <IconAction
           testId="selection-toolbar-delete"
           icon={<Trash2 className="size-4" />}

@@ -862,6 +862,50 @@ test.describe("editor playground", () => {
     await expect(blocks).toHaveCount(before);
   });
 
+  test("an unregistered block shows a placeholder that can be moved and deleted, nothing else", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const canvas = page.frameLocator(CANVAS_FRAME);
+    const retired = canvas.locator('[data-plumix-id="retired-hero"]');
+
+    await expect(retired).toHaveText(
+      "acme/retired-hero isn't registered on this site. It's kept as-is and not shown on the live site.",
+    );
+    await expect(retired).not.toContainText("From a removed plugin");
+
+    await retired.click();
+    await expect(page.getByTestId("plumix-selection-toolbar")).toBeVisible();
+    await expect(page.getByTestId("selection-toolbar-duplicate")).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByTestId("block-inspector-unregistered"),
+    ).toBeVisible();
+    await page.getByTestId("plumix-tab-styles").click();
+    await expect(page.getByTestId("styles-tab-unregistered")).toBeVisible();
+
+    const blocks = canvas.locator("[data-plumix-id]");
+    const lastId = async (): Promise<string | null> =>
+      blocks.last().getAttribute("data-plumix-id");
+    await expect.poll(lastId).toBe("retired-hero");
+    await page.getByTestId("selection-toolbar-move-up").click();
+    await expect.poll(lastId).not.toBe("retired-hero");
+
+    await page.getByTestId("plumix-tab-layers").click();
+    await page.getByTestId("layer-retired-hero").focus();
+    await page.keyboard.press("F2");
+    await expect(page.getByTestId("layer-rename-retired-hero")).toHaveCount(0);
+    await page.getByTestId("layer-menu-retired-hero").click();
+    for (const action of ["rename-action", "copy", "paste", "duplicate"]) {
+      await expect(
+        page.getByTestId(`layer-${action}-retired-hero`),
+      ).toHaveCount(0);
+    }
+    await page.getByTestId("layer-delete-retired-hero").click();
+    await expect(retired).toHaveCount(0);
+  });
+
   test("the Layers tab outlines the nested structure", async ({ page }) => {
     await page.goto("/");
 

@@ -13,6 +13,7 @@ import { useEditorConfig } from "./editor-config-context.js";
 import { inspectorView } from "./inspector-view.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
+import { UnregisteredBlockNotice } from "./unregistered-block-notice.js";
 
 interface BlockInspectorProps {
   /** When set, a loader-backed block gets a "Refresh data" control. */
@@ -98,6 +99,15 @@ export function BlockInspector({
           message="Select a block to edit its attributes."
         />
       </div>
+    );
+  }
+
+  if (view.unregistered) {
+    return (
+      <UnregisteredBlockNotice
+        name={view.block.name}
+        testId="block-inspector-unregistered"
+      />
     );
   }
 
