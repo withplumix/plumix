@@ -75,6 +75,7 @@ Entry and term capabilities derive from `POST_TYPE_CAPABILITY_ACTIONS` and `TERM
 - The session's capability list and `hasCapability` read one role table and never disagree. `auth/role-capabilities.test.ts`.
 - A plugin capability goes to the default roles its `grantTo` names plus `admin`, and to `admin` alone without it. `auth/role-capabilities.test.ts`.
 - A config role resolves exactly its grants plus its `extends` target's, `admin` holds every registered capability, and a name nothing registered fails the build but is ignored at runtime. [ADR 0055](../adr/0055-a-role-is-a-set-of-capabilities-declared-in-code.md); `auth/role-capabilities.test.ts`, `packages/plumix/src/vite/emit-plumix-sources.test.ts`.
+- Assigning a role, by invite or by edit, needs every capability it grants, and an edit also needs `user:promote`, so nobody assigns past themselves. `rpc/procedures/user/user.test.ts`.
 - The first user is admin, even under concurrency. `auth/bootstrap.test.ts`.
 - A sign-in method cannot mount over core's auth routes, and two owners cannot share a name. `auth/declared-methods.test.ts`.
 - A sign-in method cannot take one of the auth client's own keys, by its name or its camelCase form. [ADR 0050](../adr/0050-the-auth-client-manages-the-signed-in-users-own-account.md); `runtime/app-auth-method-validation.test.ts`.

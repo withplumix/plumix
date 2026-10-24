@@ -308,6 +308,62 @@ test.describe("/users/create", () => {
   });
 });
 
+test.describe("the config's roles", () => {
+  const manifest = {
+    ...emptyManifest(),
+    roles: [
+      ...(emptyManifest().roles ?? []),
+      { name: "designer", label: "Designer" },
+    ],
+  };
+  const ghost = user({ id: 7, email: "ghost@example.test", role: "ghost" });
+
+  test("the list's role filter offers them, and an undeclared role shows as unknown", async ({
+    page,
+  }) => {
+    await mockManifest(page, manifest);
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/list": [
+        user({ id: 6, email: "dee@example.test", role: "designer" }),
+        ghost,
+      ],
+    });
+    await page.goto("users");
+
+    await expect(page.getByTestId("users-list-role-6")).toHaveText("Designer");
+    await expect(page.getByTestId("users-list-role-7")).toHaveText(
+      "Unknown role ghost",
+    );
+    await page.getByTestId("users-role-filter").click();
+    await page.getByTestId("users-role-filter-designer").click();
+    await expect(page).toHaveURL(/role=designer/);
+  });
+
+  test("the edit screen shows an undeclared role as unknown and offers only declared ones", async ({
+    page,
+  }) => {
+    await mockManifest(page, manifest);
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": ghost,
+      "/user/list": [ghost],
+    });
+    await page.goto("users/7/edit");
+
+    await expect(page.getByTestId("user-edit-role-select")).toContainText(
+      "Unknown role ghost",
+    );
+    await page.getByTestId("user-edit-role-select").click();
+    await expect(
+      page.getByTestId("user-edit-role-select-designer"),
+    ).toContainText("Designer");
+    await expect(page.getByTestId("user-edit-role-select-ghost")).toHaveCount(
+      0,
+    );
+  });
+});
+
 test.describe("/users/$id/edit", () => {
   test("admin editing another user: form prefilled, role dropdown visible, Disable + Delete cards present", async ({
     page,
@@ -332,7 +388,7 @@ test.describe("/users/$id/edit", () => {
       "eddie@example.test",
     );
     await expect(page.getByTestId("user-edit-name-input")).toHaveValue("Eddie");
-    // The Radix role trigger shows the long role label, not a native value.
+    // The Radix role trigger shows the role's label, not a native value.
     await expect(page.getByTestId("user-edit-role-select")).toContainText(
       "Editor",
     );

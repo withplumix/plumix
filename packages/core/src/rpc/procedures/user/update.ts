@@ -17,6 +17,7 @@ import { assertLeaseAllows } from "../../concurrency.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { userRows } from "./concurrency.js";
 import {
+  assertCanAssignRole,
   assertCanEditUser,
   assertDeclaredRole,
   otherActiveAdminExists,
@@ -120,6 +121,7 @@ export const update = base
     if (wantsRoleChange) {
       assertCanChangeRole(context, accessGuards);
       assertDeclaredRole(context, filtered.role, errors);
+      assertCanAssignRole(context, filtered.role, accessGuards);
     }
     const demotingAdmin =
       wantsRoleChange && existing.role === "admin" && filtered.role !== "admin";

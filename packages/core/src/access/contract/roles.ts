@@ -1,3 +1,5 @@
+import type { MessageDescriptor } from "@lingui/core";
+
 import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
 import type {
@@ -12,6 +14,17 @@ import type {
 
 /** The roles core ships; `admin` always holds every capability. */
 export type DefaultRole = UserRole;
+
+/** What the admin shows for a default the config gives no label. */
+export const DEFAULT_ROLE_LABELS: Readonly<
+  Record<DefaultRole, MessageDescriptor>
+> = {
+  subscriber: { id: "userRole.subscriber", message: "Subscriber" },
+  contributor: { id: "userRole.contributor", message: "Contributor" },
+  author: { id: "userRole.author", message: "Author" },
+  editor: { id: "userRole.editor", message: "Editor" },
+  admin: { id: "userRole.admin", message: "Administrator" },
+};
 
 type CoreGroupAction<TGroup extends string> = CoreCapability extends infer TName
   ? TName extends `${TGroup}:${infer TAction}`

@@ -431,6 +431,31 @@ msgstr ""
 #~ msgstr ""
 
 #. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.admin"
+#~ msgstr "Адміністратор — повний контроль"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.author"
+#~ msgstr "Автор — публікація власних записів"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.contributor"
+#~ msgstr "Дописувач — чернетки без публікації"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.editor"
+#~ msgstr "Редактор — публікація та редагування будь-яких записів"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.subscriber"
+#~ msgstr "Передплатник — лише читання"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -812,14 +837,9 @@ msgid "breadcrumb.admin"
 msgstr "Адмінка"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.admin"
 msgstr "Адміністратор"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.admin"
-msgstr "Адміністратор — повний контроль"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -867,14 +887,9 @@ msgid "auth.device.approve.pending"
 msgstr "Схвалення…"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.author"
 msgstr "Автор"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.author"
-msgstr "Автор — публікація власних записів"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1167,14 +1182,9 @@ msgid "login.oauth.continueWith"
 msgstr "Продовжити з {label}"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.contributor"
 msgstr "Дописувач"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.contributor"
-msgstr "Дописувач — чернетки без публікації"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1759,14 +1769,9 @@ msgid "breadcrumb.editUser"
 msgstr "Редагувати користувача"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.editor"
 msgstr "Редактор"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.editor"
-msgstr "Редактор — публікація та редагування будь-яких записів"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3431,14 +3436,9 @@ msgid "entries.list.column.status"
 msgstr "Статус"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.subscriber"
 msgstr "Передплатник"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.subscriber"
-msgstr "Передплатник — лише читання"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts
@@ -3920,6 +3920,11 @@ msgstr "Невідомо"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.unknownDevice"
 msgstr "Невідомий пристрій"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/-role-name.tsx
+msgid "users.role.unknown"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

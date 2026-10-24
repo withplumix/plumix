@@ -259,6 +259,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "CORE_NAV_GROUPS",
       "MANIFEST_SCRIPT_ID",
       "configuredSlotsOf",
+      "roleEntries",
       "CORE_SCHEMA_MODULE",
       "createPluginSetupContext",
       "createPluginAfterSetupContext",

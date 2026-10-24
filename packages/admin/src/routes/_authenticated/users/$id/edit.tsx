@@ -17,7 +17,11 @@ import { UserEmailField } from "@/components/profile/user-email-field.js";
 import { useEditingCopy } from "@/editor/use-editing-copy.js";
 import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
-import { hasAuthorRoutes, visibleUserMetaBoxes } from "@/lib/manifest.js";
+import {
+  getRoles,
+  hasAuthorRoutes,
+  visibleUserMetaBoxes,
+} from "@/lib/manifest.js";
 import {
   extractMetaFieldErrors,
   META_FORM_BASE_PATH,
@@ -26,7 +30,6 @@ import {
 import { orpc } from "@/lib/orpc.js";
 import { slugField } from "@/lib/slug.js";
 import { useLabel } from "@/lib/use-label.js";
-import { ROLE_LABEL, ROLE_LABEL_LONG } from "@/lib/user-role-labels.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
@@ -79,10 +82,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-import { seedFromMetaBoxes, USER_ROLES } from "@plumix/core/manifest";
+import { seedFromMetaBoxes } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
-import { isUserRole, USERS_LIST_DEFAULT_SEARCH } from "../-constants.js";
+import { USERS_LIST_DEFAULT_SEARCH } from "../-constants.js";
+import { RoleName } from "../-role-name.js";
 
 type User = WithResolvedMeta<StoredUser>;
 
@@ -306,6 +310,7 @@ function UserEditForm({
 }): ReactNode {
   const navigate = useNavigate();
   const label = useLabel();
+  const roles = getRoles();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<MessageDescriptor | null>(
     null,
@@ -513,9 +518,7 @@ function UserEditForm({
                         </FormLabel>
                         <Select
                           value={field.value}
-                          onValueChange={(next) => {
-                            if (isUserRole(next)) field.onChange(next);
-                          }}
+                          onValueChange={field.onChange}
                         >
                           <FormControl>
                             <SelectTrigger
@@ -523,13 +526,19 @@ function UserEditForm({
                               onBlur={field.onBlur}
                               data-testid="user-edit-role-select"
                             >
-                              <SelectValue />
+                              <SelectValue>
+                                <RoleName role={field.value} roles={roles} />
+                              </SelectValue>
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {USER_ROLES.map((role) => (
-                              <SelectItem key={role} value={role}>
-                                {label(ROLE_LABEL_LONG[role])}
+                            {roles.map((role) => (
+                              <SelectItem
+                                key={role.name}
+                                value={role.name}
+                                data-testid={`user-edit-role-select-${role.name}`}
+                              >
+                                {label(role.label)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -544,9 +553,7 @@ function UserEditForm({
                       <Trans id="userEdit.role.label" message="Role" />
                     </UILabel>
                     <Badge variant="secondary" className="w-fit">
-                      {isUserRole(target.role)
-                        ? label(ROLE_LABEL[target.role])
-                        : target.role}
+                      <RoleName role={target.role} roles={roles} />
                     </Badge>
                     {isSelf ? (
                       <p className="text-muted-foreground text-xs">

@@ -177,6 +177,80 @@ describe("a role the site declares in config", () => {
   });
 });
 
+describe("a stored role the config no longer declares", () => {
+  test("grants no capabilities", async () => {
+    const h = await createRpcHarness();
+    const ghost = await h.factory.user.create({ role: "ghost" });
+    const acting = await h.actingAs(ghost);
+
+    const session = await acting.client.auth.session();
+    expect(session.user).toMatchObject({ role: "ghost", capabilities: [] });
+    await expect(
+      acting.client.user.update({
+        id: ghost.id,
+        ifMatch: await currentUserEtag(h.db, ghost.id),
+        name: "Renamed",
+      }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "user:edit_own" },
+    });
+  });
+});
+
+describe("assigning a role, whose capabilities the actor must hold", () => {
+  // Holds `user:promote` but not everything an editor does.
+  const plugins = () =>
+    createPluginRegistry(undefined, {
+      promoter: {
+        extends: "subscriber",
+        can: {
+          admin: ["access"],
+          user: ["list", "create", "edit", "promote"],
+        },
+      },
+    });
+
+  async function promoter() {
+    const h = await createRpcHarness({ plugins: plugins() });
+    const actor = await h.factory.user.create({ role: "promoter" });
+    return h.actingAs(actor);
+  }
+
+  test("a role with a capability the actor lacks is refused", async () => {
+    const h = await promoter();
+    const target = await h.factory.subscriber.create();
+    await expect(
+      h.client.user.update({
+        id: target.id,
+        ifMatch: await currentUserEtag(h.db, target.id),
+        role: "editor",
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(
+      await h.db.query.users.findFirst({ where: eq(users.id, target.id) }),
+    ).toMatchObject({ role: "subscriber" });
+  });
+
+  test("a role within the actor's capabilities is assigned", async () => {
+    const h = await promoter();
+    const target = await h.factory.author.create();
+    const updated = await h.client.user.update({
+      id: target.id,
+      ifMatch: await currentUserEtag(h.db, target.id),
+      role: "subscriber",
+    });
+    expect(updated.role).toBe("subscriber");
+  });
+
+  test("an invite for a role with a capability the actor lacks is refused", async () => {
+    const h = await promoter();
+    await expect(
+      h.client.user.invite({ email: "boss@example.test", role: "admin" }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
 describe("user.update", () => {
   test("subscriber can edit own profile (name)", async () => {
     const h = await createRpcHarness({ authAs: "subscriber" });

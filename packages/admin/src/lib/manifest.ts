@@ -15,6 +15,7 @@ import type {
   NamedTemplateChoice,
   PatternManifestEntry,
   PlumixManifest,
+  RoleManifestEntry,
   SettingsGroupManifestEntry,
   SettingsPageManifestEntry,
   TermMetaBoxManifestEntry,
@@ -27,6 +28,7 @@ import {
   configuredSlotsOf,
   entryTypeCapability,
   MANIFEST_SCRIPT_ID,
+  roleEntries,
   termTaxonomyCapability,
 } from "@plumix/core/manifest";
 
@@ -77,6 +79,7 @@ const MANIFEST_FIELD_IS_ARRAY = {
   configuredSlots: false,
   refusedAdminAreas: true,
   frameworkRoutes: false,
+  roles: true,
 } as const satisfies Record<
   Exclude<keyof PlumixManifest, "allowCustomStyles">,
   boolean
@@ -154,6 +157,13 @@ export function hasAuthorRoutes(
   source: PlumixManifest = currentManifest(),
 ): boolean {
   return source.frameworkRoutes?.author ?? true;
+}
+
+/** The roles a user can be given; the defaults when the manifest is silent. */
+export function getRoles(
+  source: PlumixManifest = currentManifest(),
+): readonly RoleManifestEntry[] {
+  return source.roles ?? roleEntries();
 }
 
 export function getPatterns(
