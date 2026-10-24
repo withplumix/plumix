@@ -11,10 +11,6 @@ import { lazyCatalogs } from "../blocks/lazy-catalogs.js";
 /** The merged catalog a mail renders against, for one locale. */
 export type MailCatalogs = (locale: string) => Promise<CompiledCatalog>;
 
-/**
- * `catalogLocales` is core's mail catalogs projected onto the site's enabled
- * locales, from `virtual:plumix/catalog-locales`.
- */
 export function createMailCatalogs(
   pluginCatalogs: PluginCatalogs = {},
   catalogLocales?: CatalogLocales,

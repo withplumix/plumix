@@ -48,10 +48,6 @@ export interface BarCatalogs {
   strings(locale: string): BarStrings;
 }
 
-/**
- * `catalogLocales` is the admin bar catalogs projected onto the site's
- * enabled locales, from `virtual:plumix/catalog-locales`.
- */
 export function barCatalogs(
   catalogLocales?: CatalogLocales,
   index: CatalogIndex = catalogs,

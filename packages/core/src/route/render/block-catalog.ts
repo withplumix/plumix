@@ -23,10 +23,6 @@ export type PluginCatalogs = Readonly<
 /** The merged block-render catalog for a request locale. */
 export type BlockCatalogs = (locale: string) => Promise<CompiledCatalog>;
 
-/**
- * `catalogLocales` is core's blocks catalogs projected onto the site's enabled
- * locales, from `virtual:plumix/catalog-locales`.
- */
 export function createBlockCatalogs(
   pluginCatalogs: PluginCatalogs = {},
   catalogLocales?: CatalogLocales,

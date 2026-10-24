@@ -17,8 +17,6 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     'import assetManifest from "virtual:plumix/asset-manifest";',
     // Each plugin's compiled catalogs by locale, for SSR block render strings.
     'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
-    // Core's catalogs by each enabled locale, for block, mail, welcome and
-    // admin bar strings.
     'import catalogLocales from "virtual:plumix/catalog-locales";',
     `import config from ${JSON.stringify(configModule)};`,
     "",

@@ -129,8 +129,6 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   // `virtual:plumix/plugin-catalogs` module the generated entry imports.
   let pluginCatalogFiles: ReadonlyMap<string, readonly PluginCatalogFile[]> =
     new Map();
-  // Populated from the site's enabled locales on each regenerate; served by
-  // the `virtual:plumix/catalog-locales` module the generated entry imports.
   let catalogLocales: CoreCatalogLocales | undefined;
   // Discovered at config() time so rollupOptions.input can be extended
   // before Vite resolves entries.

@@ -41,10 +41,6 @@ export interface WelcomeCatalogs {
   strings(locale: string): WelcomeStrings;
 }
 
-/**
- * `catalogLocales` is the welcome catalogs projected onto the site's enabled
- * locales, from `virtual:plumix/catalog-locales`.
- */
 export function welcomeCatalogs(
   catalogLocales?: CatalogLocales,
   index: CatalogIndex = catalogs,

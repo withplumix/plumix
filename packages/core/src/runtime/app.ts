@@ -437,8 +437,6 @@ export async function buildApp(
 
   const assetManifest = runtime.assetManifest ?? {};
   const renderEnv: RenderEnv = {
-    // The welcome screen reads its strings by the projection, which arrives
-    // after `plumix()` substituted it.
     theme:
       config.theme === welcomeTheme
         ? createWelcomeTheme(welcomeCatalogs(runtime.catalogLocales?.welcome))

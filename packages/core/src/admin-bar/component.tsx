@@ -32,7 +32,6 @@ interface PlumixAdminBarProps {
   readonly entryTypes: BarRenderContext["entryTypes"];
   readonly nodes: Iterable<RegisteredAdminBarNode>;
   readonly logger: Logger;
-  /** The catalogs core's nodes were registered with. */
   readonly catalogs: BarCatalogs;
 }
 
