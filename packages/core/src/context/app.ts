@@ -151,16 +151,15 @@ function wrapDefer(logger: Logger, target: DeferFn | undefined): DeferFn {
 }
 
 /**
- * Every call reaches `logger` with `requestId` in its meta, a caller's own
- * winning, and is kept on the current span of the collector `telemetry` reads
- * at the call.
+ * `telemetry` is read per call because the collector is swapped after the
+ * sampling vote.
  */
 function wrapLogger(
   logger: Logger,
   requestId: string,
   telemetry: () => TelemetryCollector,
 ): Logger {
-  const at =
+  const forLevel =
     (level: keyof Logger) =>
     (message: string, meta?: LogMeta): void => {
       const stamped = { requestId, ...meta };
@@ -168,10 +167,10 @@ function wrapLogger(
       telemetry().log(level, message, stamped);
     };
   return {
-    debug: at("debug"),
-    info: at("info"),
-    warn: at("warn"),
-    error: at("error"),
+    debug: forLevel("debug"),
+    info: forLevel("info"),
+    warn: forLevel("warn"),
+    error: forLevel("error"),
   };
 }
 

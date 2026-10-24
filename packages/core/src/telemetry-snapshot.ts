@@ -11,8 +11,8 @@ export interface TelemetrySpanError {
 }
 
 /**
- * A `ctx.logger` call made while its span was current. `attributes` is the
- * call's meta made JSON-safe, an `Error` in {@link TelemetrySpanError}'s shape.
+ * `attributes` is the call's meta made JSON-safe, an `Error` in
+ * {@link TelemetrySpanError}'s shape.
  * @public consumer-facing (imported by exporters, not core)
  */
 export interface TelemetrySpanLog {

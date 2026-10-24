@@ -32,7 +32,6 @@ function serializeError(error: Error): TelemetrySpanError {
   return { name: error.name, message: error.message, stack: error.stack };
 }
 
-/** The JSON-safe copy of a log's meta that a span log keeps. */
 function toAttributes(meta: LogMeta | undefined): Record<string, JsonValue> {
   try {
     return JSON.parse(

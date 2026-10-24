@@ -74,7 +74,6 @@ function TimelineChart({
   );
 }
 
-/** Each span's logs, listed under the span they were written in. */
 function SpanLogs({ timeline }: { readonly timeline: Timeline }): ReactNode {
   const spans = timeline.rows.filter((row) => row.logs.length > 0);
   if (spans.length === 0) return null;

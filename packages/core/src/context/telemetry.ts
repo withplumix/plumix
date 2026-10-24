@@ -41,10 +41,6 @@ export interface TelemetryCollector {
   record(namespace: string, entry: JsonValue | (() => JsonValue)): void;
   /** Time `fn`, record a span, and return `fn`'s result unchanged. */
   span<T>(name: string, fn: (s: TelemetrySpanHandle) => T): T;
-  /**
-   * Keeps a log call on the span current at the call; with none current it
-   * keeps nothing.
-   */
   log(
     level: TelemetrySpanLog["level"],
     message: string,
