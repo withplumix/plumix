@@ -4,28 +4,27 @@ import type { UserRole } from "../../db/schema/users.js";
  * `entry:`/`term:` prefixes keep an entry type and a same-named taxonomy apart.
  * `promote` is split from `edit`: role escalation outranks a profile change.
  */
-export const CORE_CAPABILITIES: Readonly<Record<string, UserRole>> =
-  Object.freeze({
-    "entry:post:read": "subscriber",
-    "entry:post:create": "contributor",
-    "entry:post:edit_own": "contributor",
-    "entry:post:publish": "author",
-    "entry:post:edit_any": "editor",
-    "entry:post:delete": "editor",
-    "entry:post:read_revisions": "editor",
-    "entry:post:restore_revision": "editor",
-    "user:list": "editor",
-    "user:edit_own": "subscriber",
-    "user:create": "admin",
-    "user:edit": "admin",
-    "user:promote": "admin",
-    "user:delete": "admin",
-    // Any user's API tokens. Separate from `user:edit` so a policy can grant
-    // one without the other; users manage their own tokens without it.
-    "user:manage_tokens": "admin",
-    "plugin:manage": "admin",
-    "settings:manage": "admin",
-  });
+export const CORE_CAPABILITIES = Object.freeze({
+  "entry:post:read": "subscriber",
+  "entry:post:create": "contributor",
+  "entry:post:edit_own": "contributor",
+  "entry:post:publish": "author",
+  "entry:post:edit_any": "editor",
+  "entry:post:delete": "editor",
+  "entry:post:read_revisions": "editor",
+  "entry:post:restore_revision": "editor",
+  "user:list": "editor",
+  "user:edit_own": "subscriber",
+  "user:create": "admin",
+  "user:edit": "admin",
+  "user:promote": "admin",
+  "user:delete": "admin",
+  // Any user's API tokens. Separate from `user:edit` so a policy can grant
+  // one without the other; users manage their own tokens without it.
+  "user:manage_tokens": "admin",
+  "plugin:manage": "admin",
+  "settings:manage": "admin",
+} as const satisfies Record<string, UserRole>);
 
 export const POST_TYPE_CAPABILITY_ACTIONS = {
   read: "subscriber",
