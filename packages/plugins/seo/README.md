@@ -12,6 +12,12 @@ pnpm add @plumix/plugin-seo
 
 Read the [documentation](https://docs.plumix.dev/plugins/seo/) on docs.plumix.dev.
 
+## Outside systems
+
+- Search, AI and social crawlers read the sitemaps (`src/sitemap.ts`).
+- Crawlers read `robots.txt` (`src/robots.ts`).
+- AI crawlers read `llms.txt` (`src/llms.ts`).
+
 ## Support
 
 Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.

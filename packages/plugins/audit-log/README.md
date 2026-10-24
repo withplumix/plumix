@@ -12,6 +12,10 @@ pnpm add @plumix/plugin-audit-log
 
 Read the [documentation](https://docs.plumix.dev/plugins/audit-log/) on docs.plumix.dev.
 
+## Outside systems
+
+Talks to nothing outside the site: it records into the site's own database.
+
 ## Support
 
 Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.

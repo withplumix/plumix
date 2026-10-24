@@ -12,6 +12,10 @@ pnpm add @plumix/plugin-media
 
 Read the [documentation](https://docs.plumix.dev/plugins/media/) on docs.plumix.dev.
 
+## Outside systems
+
+None of its own. The storage slot and image delivery it uploads to and serves from come from core and the runtime.
+
 ## Support
 
 Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.

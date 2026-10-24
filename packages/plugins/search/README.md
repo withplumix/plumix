@@ -12,6 +12,10 @@ pnpm add @plumix/plugin-search
 
 Read the [documentation](https://docs.plumix.dev/plugins/search/) on docs.plumix.dev.
 
+## Outside systems
+
+Talks to nothing outside the site: it indexes and queries the site's own database.
+
 ## Support
 
 Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.

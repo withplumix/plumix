@@ -84,11 +84,22 @@ Read the [documentation](${homepage}) on docs.plumix.dev.
 `;
 }
 
-export function cardFor(card: Card): string {
+const OUTSIDE_SYSTEMS = "## Outside systems\n\n";
+
+export function cardFor(card: Card, outside?: string): string {
+  const section = outside === undefined ? "" : `\n${OUTSIDE_SYSTEMS}${outside}`;
   return `# ${card.name}
 
 ${card.description}
 
-${body(card)}
+${body(card)}${section}
 ${FOOTER}`;
+}
+
+/** A plugin's own section: what it calls outside the site, and what calls it. */
+export function outsideSystems(readme: string): string | undefined {
+  const start = readme.indexOf(OUTSIDE_SYSTEMS);
+  if (start === -1) return undefined;
+  const body = readme.slice(start + OUTSIDE_SYSTEMS.length);
+  return body.slice(0, body.indexOf("\n## "));
 }

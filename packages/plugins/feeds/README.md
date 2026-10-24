@@ -12,6 +12,10 @@ pnpm add @plumix/plugin-feeds
 
 Read the [documentation](https://docs.plumix.dev/plugins/feeds/) on docs.plumix.dev.
 
+## Outside systems
+
+- Feed readers read the RSS and Atom feeds (`src/serialize.ts`).
+
 ## Support
 
 Ask questions in [Discussions](https://github.com/withplumix/plumix/discussions) and report bugs in [Issues](https://github.com/withplumix/plumix/issues). Report a security issue privately, as the [security policy](https://github.com/withplumix/plumix/blob/main/SECURITY.md) describes.
