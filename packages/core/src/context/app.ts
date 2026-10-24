@@ -49,7 +49,7 @@ import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { logErrorSafely } from "./log.js";
 import { createRequestMemo } from "./memo.js";
-import { bindSettings } from "./settings-namespace.js";
+import { bindSettings, rebindSettings } from "./settings-namespace.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
 import { createTracedFetch } from "./traced-fetch.js";
 import {
@@ -317,11 +317,13 @@ export function withSignal<TSchema extends Record<string, unknown>>(
   ctx: AppContext<TSchema>,
   signal: AbortSignal,
 ): AppContext<TSchema> {
-  return {
+  const derived: AppContext<TSchema> = {
     ...ctx,
     signal,
     fetch: createTracedFetch(() => ctx.telemetry, signal),
+    settings: rebindSettings(ctx.settings, () => derived),
   };
+  return derived;
 }
 
 export const consoleLogger: Logger = {

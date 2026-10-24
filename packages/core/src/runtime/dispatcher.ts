@@ -36,6 +36,7 @@ import { flushPurgeTags } from "../cdn/purge.js";
 import { readThrough, readThroughRoute } from "../cdn/read-through.js";
 import { pageTags } from "../cdn/tags.js";
 import { interfaceEnabled } from "../config.js";
+import { rebindSettings } from "../context/settings-namespace.js";
 import { requestStore } from "../context/stores.js";
 import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
@@ -248,7 +249,12 @@ function stripBasePathOrReject(
       : notFound("outside-base-path");
   }
   rawUrl.pathname = stripped;
-  return { ...ctx, request: new Request(rawUrl, ctx.request) };
+  const rooted: AppContext = {
+    ...ctx,
+    request: new Request(rawUrl, ctx.request),
+    settings: rebindSettings(ctx.settings, () => rooted),
+  };
+  return rooted;
 }
 
 /**
@@ -793,7 +799,12 @@ function withoutAmbientSession(
   ctx: AppContext,
 ): AppContext {
   if (route.formPost !== true || hasCsrfHeader(ctx.request)) return ctx;
-  return { ...ctx, authenticator: anonymousAuthenticator };
+  const sessionless: AppContext = {
+    ...ctx,
+    authenticator: anonymousAuthenticator,
+    settings: rebindSettings(ctx.settings, () => sessionless),
+  };
+  return sessionless;
 }
 
 function servedWithoutAmbientSession(

@@ -49,7 +49,7 @@ export function withUser<TSchema extends Record<string, unknown>>(
       user,
       i18n: ctx.config.i18n,
     }),
-    settings: rebindSettings(ctx.settings, () => coreView(next)),
+    settings: rebindSettings(ctx.settings, () => next),
   };
   // Onto `next` itself, since the rebound writes close over it.
   return Object.assign(next, {
@@ -57,12 +57,4 @@ export function withUser<TSchema extends Record<string, unknown>>(
     // tables, which every site's schema carries.
     entries: rebindToPrincipal(ctx.entries, next as unknown as AppContext),
   });
-}
-
-function coreView<TSchema extends Record<string, unknown>>(
-  ctx: AppContext<TSchema>,
-): AppContext {
-  // Safety: the settings write reaches only core's tables, which every
-  // site's schema carries beside its own.
-  return ctx as unknown as AppContext;
 }

@@ -32,13 +32,23 @@ export function bindSettings(
 }
 
 /**
- * A derived context that changes who is signed in rebinds, or the write's
- * subscribers would hear the context it was derived from.
+ * Every context derived by spreading another rebinds, or the write's
+ * subscribers would hear the signal, request or principal it was derived from.
  */
-export function rebindSettings(
+export function rebindSettings<TSchema extends Record<string, unknown>>(
   settings: SettingsNamespace,
-  ctx: () => AppContext,
+  ctx: () => AppContext<TSchema>,
 ): SettingsNamespace {
   const write = writes.get(settings);
-  return write === undefined ? settings : bindSettings(write, ctx);
+  return write === undefined
+    ? settings
+    : bindSettings(write, () => coreSchemaView(ctx()));
+}
+
+function coreSchemaView<TSchema extends Record<string, unknown>>(
+  ctx: AppContext<TSchema>,
+): AppContext {
+  // Safety: the settings write reaches only core's tables, which every
+  // site's schema carries beside its own.
+  return ctx as unknown as AppContext;
 }
