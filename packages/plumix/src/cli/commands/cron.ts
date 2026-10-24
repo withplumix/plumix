@@ -11,8 +11,10 @@ import type {
 } from "@plumix/core";
 import {
   declaredSchedules,
+  formatTimeout,
   parseCron,
   scheduledTasksFor,
+  scheduledTaskTimeoutMs,
 } from "@plumix/core/cli";
 import { loadOnce } from "@plumix/core/support";
 
@@ -195,16 +197,43 @@ async function fireSchedule(
       reason: runReport.aborted,
     });
   }
+  if (runReport !== undefined) printRunSummary(ctx.app, runReport);
   // An adapter that reported nothing failed nothing.
   const failed = runReport?.failed ?? [];
   if (failed.length > 0) {
     throw PlumixCliError.cronRunTasksFailed({ expression: fired, failed });
+  }
+  // Not a failure, but the run still did not do its job.
+  const timedOut = runReport?.timedOut ?? [];
+  if (timedOut.length > 0) {
+    throw PlumixCliError.cronRunTasksTimedOut({ expression: fired, timedOut });
   }
 
   const ran = scheduledTasksFor(ctx.app, fired)
     .map((task) => `${task.registeredBy}:${task.id}`)
     .join(", ");
   report.info(`Fired "${fired}": ${ran}`);
+}
+
+/** Each timed-out task with the budget it outran, then the counts. */
+function printRunSummary(
+  app: PlumixApp,
+  { ran, failed, timedOut }: Extract<ScheduledRunReport, { aborted?: never }>,
+): void {
+  for (const label of timedOut) {
+    const task = app.scheduledTasks.find(
+      (candidate) => `${candidate.registeredBy}:${candidate.id}` === label,
+    );
+    const budget =
+      task === undefined
+        ? ""
+        : ` after ${formatTimeout(scheduledTaskTimeoutMs(task))}`;
+    report.info(`✗ ${label} timed out${budget}`);
+  }
+  const total = ran + failed.length + timedOut.length;
+  report.info(
+    `${String(total)} task${total === 1 ? "" : "s"} · ${String(ran)} ran · ${String(failed.length)} failed · ${String(timedOut.length)} timed out`,
+  );
 }
 
 function normalise(expression: string): string {

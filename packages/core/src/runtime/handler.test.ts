@@ -842,7 +842,11 @@ describe("createPlumixHandler — scheduled reporting", () => {
       { env: {} },
     );
 
-    expect(report).toStrictEqual({ ran: 1, failed: ["reports:boom"] });
+    expect(report).toStrictEqual({
+      ran: 1,
+      failed: ["reports:boom"],
+      timedOut: [],
+    });
     expect(error).toHaveBeenCalledWith(
       `[plumix] scheduled task "reports:boom" failed: nope`,
       expect.objectContaining({ taskId: "boom", plugin: "reports" }),
@@ -871,7 +875,7 @@ describe("createPlumixHandler — scheduled reporting", () => {
         { env: {} },
       );
 
-      expect(report).toStrictEqual({ ran: 1, failed: [] });
+      expect(report).toStrictEqual({ ran: 1, failed: [], timedOut: [] });
       // Kept out of the report, so the log is the only place it surfaces.
       const logged = error.mock.calls.filter((args) =>
         args.some((arg) => String(arg).includes("commit failed")),
@@ -909,6 +913,36 @@ describe("createPlumixHandler — scheduled reporting", () => {
     } finally {
       error.mockRestore();
     }
+  });
+
+  test("reports a task that outran its budget as timed out, and runs the next", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const logger = spyLogger();
+    const hangsThenOk = definePlugin("reports", (ctx) => {
+      ctx.registerScheduledTask({
+        id: "stuck",
+        timeoutMs: 1_000,
+        handler: () => new Promise<void>(() => undefined),
+      });
+      ctx.registerScheduledTask({ id: "ok", handler: () => undefined });
+    });
+    const handler = await handlerFor({ plugins: [hangsThenOk] }, { logger });
+
+    const run = handler.scheduled?.(
+      { scheduledTime: 0, cron: UNCLAIMED_CRON },
+      { env: {} },
+    );
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await expect(run).resolves.toStrictEqual({
+      ran: 1,
+      failed: [],
+      timedOut: ["reports:stuck"],
+    });
+    expect(logger.error).not.toHaveBeenCalled();
   });
 
   test("a run that never started goes to the logger the runtime hands the handler", async () => {
@@ -957,7 +991,7 @@ describe("createPlumixHandler — scheduled reporting", () => {
         { scheduledTime: 0, cron: UNCLAIMED_CRON },
         { env: {} },
       );
-      expect(report).toStrictEqual({ ran: 1, failed: [] });
+      expect(report).toStrictEqual({ ran: 1, failed: [], timedOut: [] });
     } finally {
       error.mockRestore();
     }
@@ -988,6 +1022,7 @@ describe("createPlumixHandler — scheduled reporting", () => {
     expectTypeOf<{
       readonly ran: 2;
       readonly failed: readonly string[];
+      readonly timedOut: readonly string[];
     }>().toExtend<ScheduledRunReport>();
   });
 });

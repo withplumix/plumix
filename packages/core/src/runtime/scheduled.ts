@@ -2,9 +2,18 @@ import type { AppContext } from "../context/app-context.js";
 import type { ScheduledRunReport } from "../context/runtime-adapter.js";
 import type { PlumixApp } from "./app.js";
 import { flushPurgeTags } from "../cdn/purge.js";
+import { withSignal } from "../context/app.js";
 import { logErrorSafely } from "../context/log.js";
-import { scheduledTasksFor } from "./contract/schedules.js";
+import { requestStore } from "../context/stores.js";
+import {
+  formatTimeout,
+  scheduledTasksFor,
+  scheduledTaskTimeoutMs,
+} from "./contract/schedules.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
+
+const COMPLETED = Symbol("completed");
+const TIMED_OUT = Symbol("timed out");
 
 /**
  * Never returns the `aborted` arm. Omitting `firedCron` runs every task. Must
@@ -18,19 +27,70 @@ export async function runScheduledTasks(
 ): Promise<ScheduledRunReport> {
   const startedAt = Date.now();
   const failed: string[] = [];
+  const timedOut: string[] = [];
   let ran = 0;
   for (const task of scheduledTasksFor(app, firedCron)) {
+    const label = `${task.registeredBy}:${task.id}`;
+    const timeoutMs = scheduledTaskTimeoutMs(task);
+    const timedOutAfter = `timed out after ${formatTimeout(timeoutMs)}`;
+    const controller = new AbortController();
+    const taskCtx = withSignal(ctx, controller.signal);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Never rejects: losing the race leaves a task that ignores its signal
+    // running in the background, which core cannot stop and does not wait on.
+    const budget = new Promise<typeof TIMED_OUT>((resolve) => {
+      timer = setTimeout(() => {
+        // Settled before the abort, so a task that rejects with the signal's
+        // reason as it fires still loses the race and counts as timed out.
+        resolve(TIMED_OUT);
+        // Assigned, not passed: the options-bag constructor that takes a
+        // `cause` is missing from the DOM types core compiles against.
+        controller.abort(
+          Object.assign(new DOMException(timedOutAfter, "TimeoutError"), {
+            cause: "timeout",
+          }),
+        );
+      }, timeoutMs);
+    });
     try {
       // One span per task run, so cron work traces through the same collector
       // as request work — a failing task is an error span, not just a log line.
-      await ctx.telemetry.span(`cron: ${task.id}`, (s) => {
-        s.set("cron.plugin", task.registeredBy);
-        if (task.cron !== undefined) s.set("cron.schedule", task.cron);
-        return task.handler(ctx);
-      });
-      ran++;
+      const outcome = await ctx.telemetry.span(
+        `cron: ${task.id}`,
+        async (s) => {
+          s.set("cron.plugin", task.registeredBy);
+          if (task.cron !== undefined) s.set("cron.schedule", task.cron);
+          const settled = await Promise.race([
+            // Under the task's own context, so `getContext()` sees its signal.
+            requestStore
+              .run(taskCtx, () => Promise.resolve(task.handler(taskCtx)))
+              .then(() => COMPLETED),
+            budget,
+          ]);
+          if (settled === TIMED_OUT) s.cancel(timedOutAfter);
+          return settled;
+        },
+      );
+      if (outcome === TIMED_OUT) {
+        timedOut.push(label);
+        try {
+          // A warning: the task is too slow, not broken, so it is no error.
+          ctx.logger.warn(
+            `[plumix] scheduled task "${label}" ${timedOutAfter}`,
+            {
+              taskId: task.id,
+              plugin: task.registeredBy,
+              cron: task.cron,
+              timeoutMs,
+            },
+          );
+        } catch {
+          // A logger that throws must not also count the task as failed.
+        }
+      } else {
+        ran++;
+      }
     } catch (error) {
-      const label = `${task.registeredBy}:${task.id}`;
       failed.push(label);
       logErrorSafely(
         ctx.logger,
@@ -38,6 +98,8 @@ export async function runScheduledTasks(
         error,
         { taskId: task.id, plugin: task.registeredBy, cron: task.cron },
       );
+    } finally {
+      clearTimeout(timer);
     }
   }
   try {
@@ -53,5 +115,5 @@ export async function runScheduledTasks(
     // whether they worked.
     logErrorSafely(ctx.logger, "[plumix] scheduled run epilogue failed", error);
   }
-  return { ran, failed };
+  return { ran, failed, timedOut };
 }

@@ -1,5 +1,19 @@
 interface Scheduled {
   readonly cron?: string;
+  readonly timeoutMs?: number;
+}
+
+/** The same on every runtime; on Workers it fires before the platform's limit. */
+const DEFAULT_SCHEDULED_TASK_TIMEOUT_MS = 5 * 60_000;
+
+/** How long a firing waits for the task before it moves on. */
+export function scheduledTaskTimeoutMs(task: Scheduled): number {
+  return task.timeoutMs ?? DEFAULT_SCHEDULED_TASK_TIMEOUT_MS;
+}
+
+/** A budget as a report names it: `5m`, or `1.5s` when not whole minutes. */
+export function formatTimeout(ms: number): string {
+  return ms % 60_000 === 0 ? `${ms / 60_000}m` : `${ms / 1000}s`;
 }
 
 /**

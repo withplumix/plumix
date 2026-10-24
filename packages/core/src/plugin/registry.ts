@@ -808,6 +808,11 @@ export interface RegisteredLoginLink extends LoginLinkOptions {
 export interface ScheduledTask {
   readonly id: string;
   readonly cron?: string;
+  /**
+   * The task's budget: when it runs out, `ctx.signal` fires and the run moves
+   * on without waiting. Five minutes when omitted.
+   */
+  readonly timeoutMs?: number;
   readonly handler: (ctx: AppContext) => void | Promise<void>;
 }
 

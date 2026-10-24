@@ -74,6 +74,10 @@ export function createTelemetryCollector(): TelemetryCollector {
         set(key, value) {
           span.attributes[key] = typeof value === "function" ? value() : value;
         },
+        cancel(message) {
+          span.status = "cancelled";
+          span.message = message;
+        },
       };
       // Attach to the enclosing span (via AsyncLocalStorage) so nesting
       // reflects call structure; top-level spans become roots.

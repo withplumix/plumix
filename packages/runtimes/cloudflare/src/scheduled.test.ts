@@ -24,7 +24,7 @@ describe("surfaceScheduledFailure", () => {
   test("resolves when every task ran", () => {
     const { controller, noRetry } = firing();
     expect(() => {
-      surfaceScheduledFailure({ ran: 2, failed: [] }, controller);
+      surfaceScheduledFailure({ ran: 2, failed: [], timedOut: [] }, controller);
     }).not.toThrow();
     expect(noRetry).not.toHaveBeenCalled();
   });
@@ -54,7 +54,11 @@ describe("surfaceScheduledFailure", () => {
     const { controller } = firing();
     expect(() => {
       surfaceScheduledFailure(
-        { ran: 1, failed: ["blog:publish-scheduled", "og:warm-cards"] },
+        {
+          ran: 1,
+          failed: ["blog:publish-scheduled", "og:warm-cards"],
+          timedOut: [],
+        },
         controller,
       );
     }).toThrow(
@@ -65,7 +69,10 @@ describe("surfaceScheduledFailure", () => {
   test("declines the platform retry when the firing partly succeeded", () => {
     const { controller, noRetry } = firing();
     expect(() => {
-      surfaceScheduledFailure({ ran: 1, failed: ["blog:publish"] }, controller);
+      surfaceScheduledFailure(
+        { ran: 1, failed: ["blog:publish"], timedOut: [] },
+        controller,
+      );
     }).toThrow();
     expect(noRetry).toHaveBeenCalledTimes(1);
   });
@@ -74,7 +81,7 @@ describe("surfaceScheduledFailure", () => {
     const { controller, noRetry } = firing();
     expect(() => {
       surfaceScheduledFailure(
-        { ran: 0, failed: ["blog:publish", "og:warm"] },
+        { ran: 0, failed: ["blog:publish", "og:warm"], timedOut: [] },
         controller,
       );
     }).toThrow();

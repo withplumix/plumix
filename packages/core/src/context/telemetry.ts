@@ -24,6 +24,11 @@ export type {
  */
 export interface TelemetrySpanHandle {
   set(key: string, value: JsonValue | (() => JsonValue)): void;
+  /**
+   * Marks the span cancelled with why; it still ends when its function
+   * settles.
+   */
+  cancel(message: string): void;
 }
 
 export interface TelemetryCollector {
@@ -55,6 +60,7 @@ export interface TelemetryConfig {
 /** Shared no-op span handle: attributes (lazy or not) are never evaluated. */
 export const NOOP_HANDLE: TelemetrySpanHandle = {
   set: () => undefined,
+  cancel: () => undefined,
 };
 
 /**

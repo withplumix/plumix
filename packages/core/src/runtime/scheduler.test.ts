@@ -1,7 +1,11 @@
-import { describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, onTestFinished, test, vi } from "vitest";
 
+import type { Db } from "../context/app-context.js";
 import type { PlumixApp } from "./app.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
 import { virtualClock } from "../test/virtual-clock.js";
+import { runScheduledTasks } from "./scheduled.js";
 import { createScheduler } from "./scheduler.js";
 
 type TaskFields = Omit<PlumixApp["scheduledTasks"][number], "handler">;
@@ -292,7 +296,8 @@ describe("createScheduler — surfacing what a firing did", () => {
       ]),
       clock,
       logger: { info: vi.fn(), warn: vi.fn(), error },
-      fire: () => Promise.resolve({ ran: 1, failed: ["forms:retention"] }),
+      fire: () =>
+        Promise.resolve({ ran: 1, failed: ["forms:retention"], timedOut: [] }),
     });
 
     void scheduler.start();
@@ -324,5 +329,59 @@ describe("createScheduler — surfacing what a firing did", () => {
     expect(error).toHaveBeenCalledWith(
       expect.stringContaining("never started"),
     );
+  });
+});
+
+describe("createScheduler — a task that outruns its budget", () => {
+  let db: Db;
+  beforeAll(async () => {
+    db = await createTestDb();
+  });
+
+  test("the next firing runs instead of being skipped, and the firing's log names the task", async () => {
+    // The system clock, faked, so the scheduler's minute and the task's budget
+    // run on one timeline.
+    vi.useFakeTimers({ now: Date.parse("2026-09-07T02:59:30Z") });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const app = {
+      scheduledTasks: [
+        {
+          id: "stuck",
+          registeredBy: "demo",
+          timeoutMs: 30_000,
+          handler: () => new Promise<void>(() => undefined),
+        },
+      ],
+    };
+    const ctx = createTestContext({ db });
+    const fired: string[] = [];
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const scheduler = createScheduler({
+      app,
+      logger,
+      fire: (cron, at) => {
+        fired.push(new Date(at).toISOString());
+        return runScheduledTasks(app, ctx, cron);
+      },
+    });
+
+    void scheduler.start();
+    await vi.advanceTimersByTimeAsync(3 * 60_000);
+    await scheduler.stop({ timeoutMs: 0 });
+
+    expect(fired).toEqual([
+      "2026-09-07T03:00:00.000Z",
+      "2026-09-07T03:01:00.000Z",
+      "2026-09-07T03:02:00.000Z",
+    ]);
+    expect(logger.warn).not.toHaveBeenCalledWith(
+      expect.stringMatching(/missed/i),
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      `[plumix] cron "* * * * *": 1 task(s) timed out: demo:stuck`,
+    );
+    expect(logger.error).not.toHaveBeenCalled();
   });
 });

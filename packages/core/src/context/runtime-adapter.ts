@@ -45,10 +45,15 @@ export interface ScheduledEvent {
  */
 export type ScheduledRunReport =
   | {
-      /** How many tasks completed without throwing. */
+      /** How many tasks completed without throwing or timing out. */
       readonly ran: number;
       /** `plugin:task` for each that threw, in the order they ran. */
       readonly failed: readonly string[];
+      /**
+       * `plugin:task` for each that outran its budget, in the order they ran.
+       * Kept apart from `failed`: a timeout is not a failure.
+       */
+      readonly timedOut: readonly string[];
       /**
        * Declared so the key is known to both arms: excess-property checking
        * would otherwise let an aborted report pass as this one.

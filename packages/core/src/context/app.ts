@@ -171,6 +171,9 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
       : undefined;
   const mailer = devMailWiring?.mailer ?? configuredMailer;
   const tracedMailer = mailer && traceMailer(mailer, () => base.telemetry);
+  // Never aborted: only a scheduled task's context, derived through
+  // `withSignal`, has work that stops early.
+  const signal = new AbortController().signal;
   const base: AppContextBase<TSchema> = {
     db: args.db,
     env: args.env,
@@ -237,9 +240,10 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     // Consumers vote on the assembled context, so `telemetry` must exist
     // before the vote; the real collector replaces it below.
     telemetry: NOOP_TELEMETRY,
+    signal,
     // Reads `base.telemetry` per call, so the post-vote collector swap below
     // is observed without rebinding.
-    fetch: createTracedFetch(() => base.telemetry),
+    fetch: createTracedFetch(() => base.telemetry, signal),
   };
   if (args.appContextExtensions !== undefined) {
     // Safety: every key that already exists is rejected below, so no declared
@@ -293,6 +297,18 @@ function sampleTelemetryConsumers(
   }
   consumers.push(...(config?.consumers ?? []));
   return consumers.filter((c) => c.sample?.(ctx) ?? true);
+}
+
+/** `ctx` whose `signal`, and the `ctx.fetch` that follows it, is `signal`. */
+export function withSignal<TSchema extends Record<string, unknown>>(
+  ctx: AppContext<TSchema>,
+  signal: AbortSignal,
+): AppContext<TSchema> {
+  return {
+    ...ctx,
+    signal,
+    fetch: createTracedFetch(() => ctx.telemetry, signal),
+  };
 }
 
 export const consoleLogger: Logger = {

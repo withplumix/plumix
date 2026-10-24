@@ -311,7 +311,7 @@ describe("plumix cron run — reporting task failures", () => {
     // A CronJob wires alerting to the exit code. Reporting success for a run
     // where every task failed is the failure mode this exists to prevent.
     const scheduled = vi.fn(() =>
-      Promise.resolve({ ran: 0, failed: ["reports:purge"] }),
+      Promise.resolve({ ran: 0, failed: ["reports:purge"], timedOut: [] }),
     );
 
     let error: unknown;
@@ -326,7 +326,9 @@ describe("plumix cron run — reporting task failures", () => {
   });
 
   test("succeeds when the tasks did, reporting what ran", async () => {
-    const scheduled = vi.fn(() => Promise.resolve({ ran: 2, failed: [] }));
+    const scheduled = vi.fn(() =>
+      Promise.resolve({ ran: 2, failed: [], timedOut: [] }),
+    );
     const { lines, restore } = captureInfo();
     try {
       await cronCommand.run(await context(["run", "*/5 * * * *"], scheduled));
@@ -344,6 +346,65 @@ describe("plumix cron run — reporting task failures", () => {
     await expect(
       cronCommand.run(await context(["run", "*/5 * * * *"], scheduled)),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("plumix cron run — reporting tasks that timed out", () => {
+  test("names each timed-out task with its budget, prints the summary and fails", async () => {
+    // A timeout is not a failure, but the run still did not do its job, so a
+    // CronJob's alerting has to see it in the exit code.
+    const tasks: readonly TaskFields[] = [
+      { id: "retention-purge", cron: "0 3 * * *", registeredBy: "forms" },
+      { id: "retention-purge", cron: "0 3 * * *", registeredBy: "audit-log" },
+      {
+        id: "warm",
+        cron: "0 3 * * *",
+        registeredBy: "og",
+        timeoutMs: 90_000,
+      },
+    ];
+    const scheduled = vi.fn(() =>
+      Promise.resolve({
+        ran: 1,
+        failed: [],
+        timedOut: ["audit-log:retention-purge", "og:warm"],
+      }),
+    );
+    const { lines, restore } = captureInfo();
+
+    let error: unknown;
+    try {
+      await cronCommand.run(
+        await context(["run", "0 3 * * *"], scheduled, { tasks }),
+      );
+    } catch (thrown) {
+      error = thrown;
+    } finally {
+      restore();
+    }
+
+    expect(lines).toContain("✗ audit-log:retention-purge timed out after 5m");
+    expect(lines).toContain("✗ og:warm timed out after 90s");
+    expect(lines).toContain("3 tasks · 1 ran · 0 failed · 2 timed out");
+    expect(isCliError(error)).toBe(true);
+    expect(isCliError(error) ? error.code : "").toBe(
+      "cron_run_tasks_timed_out",
+    );
+    expect(String(error)).toContain("audit-log:retention-purge, og:warm");
+  });
+
+  test("prints the summary on a run where every task completed", async () => {
+    const scheduled = vi.fn(() =>
+      Promise.resolve({ ran: 2, failed: [], timedOut: [] }),
+    );
+    const { lines, restore } = captureInfo();
+    try {
+      await cronCommand.run(await context(["run", "*/5 * * * *"], scheduled));
+    } finally {
+      restore();
+    }
+
+    expect(lines).toContain("2 tasks · 2 ran · 0 failed · 0 timed out");
   });
 });
 
@@ -400,7 +461,7 @@ describe("plumix cron run — releasing the database", () => {
   test("releases it even when a task failed", async () => {
     const close = vi.fn();
     const scheduled = vi.fn(() =>
-      Promise.resolve({ ran: 0, failed: ["reports:purge"] }),
+      Promise.resolve({ ran: 0, failed: ["reports:purge"], timedOut: [] }),
     );
 
     await expect(

@@ -96,6 +96,16 @@ export function createScheduler({
                 : `[plumix] cron "${schedule.expression}" never started: ${report.aborted}`,
             );
           }
+          // A warning: a task that outran its budget is too slow, not broken.
+          if (
+            report &&
+            report.aborted === undefined &&
+            report.timedOut.length > 0
+          ) {
+            logger.warn(
+              `[plumix] cron "${schedule.expression}": ${String(report.timedOut.length)} task(s) timed out: ${report.timedOut.join(", ")}`,
+            );
+          }
         };
         if (!guard) {
           await run();
