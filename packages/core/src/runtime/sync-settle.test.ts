@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import { sync } from "../hooks/sync.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
 const SETTLE_URL = "https://cms.example/_plumix/api/v1/system/sync/settle";
@@ -50,7 +51,7 @@ describe("POST /_plumix/api/v1/system/sync/settle", () => {
   test("runs the settle and answers with its report for a token whose user manages settings", async () => {
     const h = await createDispatcherHarness();
     const events: unknown[] = [];
-    h.app.hooks.addAction("sync:after", (event) => {
+    h.app.hooks.on(sync.after, (event) => {
       events.push(event);
     });
     const secret = await tokenFor(h, "admin");

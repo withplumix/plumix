@@ -2,7 +2,7 @@
 
 Hooks are core's named extension points, the "hooks" half of the "Plugin system and hooks" component in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). They are moving, one subject at a time, from string names to declared values ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)):
 
-- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block` subject is the first to move.
+- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render` and `sync` subjects have moved.
 - **String names.** Every other extension point is still a string name: a filter is a pipeline, an action announces something, plugin authors subscribe through `ctx.addFilter` / `ctx.addAction`, and core and plugins fire them through `ctx.hooks`. The names are types, declared by augmenting `FilterRegistry` and `ActionRegistry`.
 
 Both live in one `HookRegistry` per app, in `packages/core/src/hooks/`.
@@ -53,13 +53,31 @@ const stars = await ctx.filters.apply(review.stars, 5, { review });
 
 Handlers run `early`, then unset, then `late`. Within each band core's own handlers run first, then the plugins' in the site's `plugins` config order, then in registration order, so a plugin's `afterSetup` handler still runs before a later plugin's `setup` one.
 
-Core's `block` subject (`packages/core/src/hooks/block-render.ts`), fired from `route/render/render-template.tsx`:
+Core's subjects are exported from `plumix/plugin`. `block` (`packages/core/src/hooks/block-render.ts`) is fired from `route/render/render-template.tsx`:
 
 | Value                | Kind        | Payload or value / input                               |
 | -------------------- | ----------- | ------------------------------------------------------ |
 | `block.loaderFailed` | event       | `{ spec, node, key, error }`, once per rejected loader |
 | `block.beforeRender` | sync filter | the block's element / `{ node, context }`              |
 | `block.afterRender`  | sync filter | the wrapped element / `{ node, context }`              |
+
+`render` (`packages/core/src/hooks/render.ts`) holds the filters on a page's render:
+
+| Value                   | Kind         | Value / input                                      | Fired from                                        |
+| ----------------------- | ------------ | -------------------------------------------------- | ------------------------------------------------- |
+| `render.document`       | async filter | the page's `DocumentManifest` / `{ data, title }`  | `route/render/render-template.tsx`                |
+| `render.single`         | async filter | `EntryData`                                        | `resolveEntryData` in `route/render/page-data.ts` |
+| `render.archive`        | async filter | `EntryTypeArchiveData`                             | `route/render/page-data.ts`                       |
+| `render.term`           | async filter | `TermArchiveData`                                  | `route/render/page-data.ts`                       |
+| `render.author`         | async filter | `AuthorArchiveData`                                | `route/render/page-data.ts`                       |
+| `render.date`           | async filter | `DateArchiveData`                                  | `route/render/page-data.ts`                       |
+| `render.frontPage`      | async filter | `FrontPageData`                                    | `route/render/page-data.ts`                       |
+| `render.search`         | async filter | `SearchData`                                       | `route/resolve.ts`                                |
+| `render.archiveEntries` | sync filter  | the archive's `EntryQuery` / `{ archive, params }` | `archiveEntries` in `route/archive-entries.ts`    |
+
+`render.document` also runs on an error page (`data.kind === "error"`), where a throwing handler is logged through `ctx.logger` and skipped, so the error page still renders. `render.archiveEntries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
+
+`sync` (`packages/core/src/hooks/sync.ts`) holds `sync.after`, an event with the `SyncAfterEvent` (`{ scopes, direction }`) as its payload, emitted by `settleSync` in `context/settle-sync.ts` once per sync, on a pull and a push alike.
 
 `spyEvent(hooks, event)` and `spyFilter(hooks, filter)` from `plumix/test` record what was emitted or filtered; the dispatcher and RPC harnesses expose them bound as `h.spyEvent` and `h.spyFilter`.
 
@@ -112,15 +130,12 @@ Execution (`HookExecutor`, on `ctx.hooks`; public type):
 
 Core's hook names, by the module that declares them (paths under `packages/core/src/`):
 
-| Declared in                                     | Names                                                                                                                                                               | Fired from                                                                         |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `rpc/hooks.ts`                                  | `rpc:<entry\|term\|user\|settings>.<proc>:input` / `:output` filters; `entry:before_save` and `entry:<type>:before_save`                                            | `rpc/procedures/**`                                                                |
-| `rpc/hooks.ts`                                  | `entry:published\|updated\|trashed\|restored\|deleted\|transition` plus `entry:<type>:…`; `entry:revision_*`, `entry:autosave_*`, `entry:meta_changed`              | `rpc/procedures/entry/lifecycle.ts`, `meta/entry.ts`                               |
-| `rpc/hooks.ts`                                  | `user:*`, `term:*`, `settings:group_changed`, `sync:after`                                                                                                          | `rpc/procedures/**`, `meta/term.ts`, `settings/write.ts`, `context/settle-sync.ts` |
-| `rpc/hooks.ts`                                  | `user:signed_in`, `user:signed_out`, `user:registered`, `user:email_*`, `credential:*`, `session:revoked`, `oauth_account:unlinked`, `api_token:*`, `device_code:*` | `auth/**`, `rpc/procedures/auth/**`                                                |
-| `route/render/page-data.ts`, `route/resolve.ts` | `resolve:<single\|archive\|term\|author\|date\|front-page\|search>:data`                                                                                            | same files                                                                         |
-| `route/archive-entries.ts`                      | `archive:entries` (sync, narrows an `EntryQuery`)                                                                                                                   | same file                                                                          |
-| `route/render/render-template.tsx`              | `render:document`                                                                                                                                                   | same file                                                                          |
+| Declared in    | Names                                                                                                                                                               | Fired from                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `rpc/hooks.ts` | `rpc:<entry\|term\|user\|settings>.<proc>:input` / `:output` filters; `entry:before_save` and `entry:<type>:before_save`                                            | `rpc/procedures/**`                                      |
+| `rpc/hooks.ts` | `entry:published\|updated\|trashed\|restored\|deleted\|transition` plus `entry:<type>:…`; `entry:revision_*`, `entry:autosave_*`, `entry:meta_changed`              | `rpc/procedures/entry/lifecycle.ts`, `meta/entry.ts`     |
+| `rpc/hooks.ts` | `user:*`, `term:*`, `settings:group_changed`                                                                                                                        | `rpc/procedures/**`, `meta/term.ts`, `settings/write.ts` |
+| `rpc/hooks.ts` | `user:signed_in`, `user:signed_out`, `user:registered`, `user:email_*`, `credential:*`, `session:revoked`, `oauth_account:unlinked`, `api_token:*`, `device_code:*` | `auth/**`, `rpc/procedures/auth/**`                      |
 
 First-party plugins declare their own the same way: `comment:*` (`plugins/comments/src/server/hooks.ts`), `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `menu:tree`, `menu:item`, `menu:saved`, `menu:deleted` (`plugins/menu`), `seo:*` (`plugins/seo/src/`).
 
@@ -141,7 +156,8 @@ Webhooks are declared in code per entry type: several per type, each a URL, cust
 - `packages/core/src/hooks/define.ts`: `defineEvent`, `defineFilter`, and the subscribing and firing types.
 - `packages/core/src/hooks/dispatch.ts`: `bindDispatch`, `rebindDispatch`, which build `ctx.events` and `ctx.filters`.
 - `packages/core/src/hooks/block-render.ts`: core's `block` subject.
-- `packages/core/src/hooks/registry.ts`: `HookRegistry`, `HookExecutor`, `isolate`, `sortEntries`, `sortSubscriptions`.
+- `packages/core/src/hooks/registry.ts`: `HookRegistry` (`getEventHandlers` lists an event's handlers in firing order, for a test that moves them between registries), `HookExecutor`, `isolate`, `sortEntries`, `sortSubscriptions`.
+- `packages/core/src/hooks/render.ts`, `sync.ts`: core's `render` and `sync` subjects.
 - `packages/core/src/hooks/types.ts`: `FilterRegistry`, `ActionRegistry`, `FilterName`, `ActionName`, `FilterFn`, `ActionFn`, `DEFAULT_HOOK_PRIORITY`.
 - `packages/core/src/hooks/public-hooks.ts`: side-effect imports that keep each augmentation in the published declarations. Imported from `packages/core/src/index.ts`.
 - `packages/core/src/hooks/errors.ts`: `HookExecutionError`.
@@ -160,8 +176,8 @@ Related but separate: a field's `.validate()` and `.sanitize()` are per-field ca
 - Behaviour of the declared API is guarded by `packages/core/src/hooks/registry.test.ts` (ordering, failure, cloning, telemetry), its types by `packages/core/src/hooks/define.test.ts`, and the boot check by `packages/core/src/runtime/install-plugins.test.ts`.
 
 - A hook name is a TypeScript contract. A rename breaks at compile time. Core has no runtime name check and keeps no aliases ([ADR 0009](../adr/0009-a-renamed-hook-breaks-at-compile-time.md)). `packages/plumix/src/facade-action-hooks.test.ts` checks that `entry:published` reaches `PluginSetupContext["addAction"]` from the built `dist/`.
-- An extension point hands out a narrowing query, not a raw filter. `archive:entries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
+- An extension point hands out a narrowing query, not a raw filter. `render.archiveEntries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
 - Each async filter step works on its own copy, so one handler's mutation can't leak into the next. Sync filters are not copied and must treat the value as read-only.
 - One failing action handler never stops the others or the caller. Its failure is logged as an error through the request's `ctx.logger`, naming the hook and the plugin (`core` for core's own), and marks its own `hook:` span `error`, never another handler's. Outside a request (at boot) there is no app logger and no trace yet, so it goes to `console.error`. A registry built with `onActionFailure` reports there instead.
-- `sync:after` failures are collected per owner and reported, not thrown (`context/settle-sync.ts`); see [sync and import](./sync-and-import.md).
+- `sync.after` failures are collected per owner from `emit`'s report and reported, not thrown (`context/settle-sync.ts`); see [sync and import](./sync-and-import.md).
 - Behaviour guarded by `packages/core/src/hooks/registry.test.ts` (ordering, priority, cloning, sync-async error, isolation, action failure).

@@ -126,7 +126,7 @@ Array order does not decide what gets a feed. The plugin reads the registry once
 
 ## Discovery links
 
-The plugin subscribes to `render:document` and appends the page's own feed, both formats:
+The plugin subscribes to `render.document` and appends the page's own feed, both formats:
 
 ```html
 <link
@@ -165,7 +165,7 @@ export const featured = definePlugin("featured", {
 
 `scope.archive` names the archive as core's lookup does — `frontPage`, `entryType` (with its `entryType`), `term` (with its `taxonomy`), `author`, `date`, or `archiveType` (with the plugin archive's `name`) — and `scope.params` holds what its route captured.
 
-`feed:items` shapes one feed's list and leaves the archive's page alone. To change which entries an archive holds — on its page and in its feed alike — narrow its query with core's [`archive:entries`](/routing/overview/#narrowing-an-archive) filter instead.
+`feed:items` shapes one feed's list and leaves the archive's page alone. To change which entries an archive holds — on its page and in its feed alike — narrow its query with core's [`render.archiveEntries`](/routing/overview/#narrowing-an-archive) filter instead.
 
 The plugin's own package must be installed for the hook name to type-check — it declares `feed:items` on `FilterRegistry` through the single `plumix` augmentation specifier, the same way every plugin declares a hook.
 

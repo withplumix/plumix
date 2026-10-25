@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, test, vi } from "vitest";
 import type { CdnStore, ConnectedCdn } from "../runtime/contract/slots.js";
 import type { ViewData } from "./contract/resolved-entry.js";
 import { authenticatedPolicy } from "../access/policy.js";
+import { render } from "../hooks/render.js";
 import { definePlugin } from "../plugin/define.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -72,7 +73,7 @@ describe("views (registerView)", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [comparePlugin], theme: compareTheme },
     });
-    const seen = h.spyFilter("render:document");
+    const seen = h.spyFilter(render.document);
 
     const response = await h.dispatch(
       new Request("https://cms.example/compare/abc"),
@@ -84,7 +85,7 @@ describe("views (registerView)", () => {
     expect(body).toContain("kettle vs toaster");
     expect(body).toContain("<title>Comparison abc</title>");
     expect(body).toContain('<meta name="share" content="abc"');
-    expect(seen.calls[0]?.rest[0]).toMatchObject({
+    expect(seen.calls[0]?.rest[0].data).toMatchObject({
       kind: "view",
       name: "compareShare",
       params: { id: "abc" },

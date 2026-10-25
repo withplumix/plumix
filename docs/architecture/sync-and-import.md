@@ -31,7 +31,7 @@ sequenceDiagram
   Note over CLI: prints the plan and asks first
   CLI->>Tgt: importData(dump, dryRun false)
   Tgt->>Tgt: compares heads again, then replaces each scope's tables
-  CLI->>Tgt: settle(sync:after, then a whole-CDN purge)
+  CLI->>Tgt: settle(sync.after, then a whole-CDN purge)
   Tgt-->>CLI: the settle report and how to restore the snapshot
 ```
 
@@ -46,10 +46,10 @@ sequenceDiagram
 | Sync scopes                                                                          | `content` (`terms`, `entries`, `entry_term`, `settings`), `users` (`users`, `credentials`), `media` (storage objects), `plugin:<id>`  | yes                                              |
 | `RuntimeSync`, `SyncEnd`, `DumpReader`, `DumpWriter`, `DumpManifest`                 | The transport contract                                                                                                                | yes, `plumix/cli`                                |
 | `SyncDatabase` via `DatabaseAdapter.openSync`                                        | What the sync routes read and replace                                                                                                 | yes, `plumix/runtime`                            |
-| `sync:after` action                                                                  | Runs inside the target after a replace                                                                                                | yes (hook)                                       |
+| `sync.after` event                                                                   | Runs inside the target after a replace                                                                                                | yes, `plumix/plugin`                             |
 | `GET …/system/sync/heads`, `GET …/export`, `POST …/import`, `…/snapshot`, `…/settle` | Under `/_plumix/api/v1/`; an API token whose user holds `settings:manage`                                                             | yes (HTTP)                                       |
 | `describeSyncContract`, `memorySync`                                                 | The transport contract suite and its reference                                                                                        | `plumix/test/conformance`; `memorySync` internal |
-| `settleSync`                                                                         | Runs listeners, then `cdn.purgeAll`; reports failures, never throws                                                                   | yes, `plumix/cli`                                |
+| `settleSync`                                                                         | Emits `sync.after`, then `cdn.purgeAll`; builds its report from `emit`'s failures, never throws                                       | yes, `plumix/cli`                                |
 
 How each runtime moves a sync:
 
@@ -74,7 +74,7 @@ local admins and their passkeys (`keepLocalAdmins`), because a remote passkey is
 origin. URLs naming the source origin are rewritten to the target's unless `--no-rewrite-urls` is
 given. A replaced term's concurrency token moves past the target's (`pastTargetTermTokens`, ADR
 0048). A sync or import writes as the system: it moves concurrency tokens without checking them, and
-it fires no entry actions; the target's `sync:after` listeners and the purge stand in for them.
+it fires no entry actions; the target's `sync.after` handlers and the purge stand in for them.
 An author added on the target without a role becomes a `member`.
 
 `plumix export` opens one end the way a sync does and writes every sync scope to the directory it is
@@ -101,5 +101,5 @@ authors the rows reference; `objects/index.ndjson` maps each storage key to its 
 - An import at other heads fails before any write. A contract case, and "a head mismatch fails before the export" in `packages/plumix/src/cli/commands/sync.test.ts`.
 - A remote write prints a plan and is confirmed; without a terminal it needs `--yes`. [ADR 0045](../adr/0045-a-runtime-names-its-remote-databases-from-its-platform-config.md); `sync.test.ts`, `import.test.tsx`.
 - The transport is a commands-module export, not an adapter member, so the server bundle carries no CLI or file-system code. ADR 0039.
-- A settle runs every step and reports each failure. The contract case "settle reports a failed listener as a step and still resolves"; `packages/core/src/runtime/sync-settle.test.ts`.
+- A settle runs every step and reports each failure: a `sync.after` handler that throws comes back from `ctx.events.emit` as `{ plugin, error }` and becomes the step `plugin:<id>` (`core` when core's own threw), and the CDN purge runs whatever the handlers did. The contract case "settle reports a failed listener as a step and still resolves"; `packages/core/src/runtime/sync-settle.test.ts`.
 - A sync or import is a system write that moves concurrency tokens without checking them. [ADR 0048](../adr/0048-core-guards-every-edit-with-a-required-token-and-an-enforced-lease.md).

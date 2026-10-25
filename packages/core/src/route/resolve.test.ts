@@ -12,6 +12,7 @@ import { createPreviewToken } from "../auth/preview-token.js";
 import { defineBlock } from "../blocks/index.js";
 import { eq, ne } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { render } from "../hooks/render.js";
 import { definePlugin } from "../plugin/define.js";
 import { upsertAutosave } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -334,7 +335,7 @@ describe("resolvePublicRoute — single", () => {
       authorId: author.id,
       publishedAt: new Date(),
     });
-    h.spyFilter("resolve:single:data").override((data) => ({
+    h.spyFilter(render.single).override((data) => ({
       ...data,
       entry: { ...data.entry, title: "Retitled in [year]" },
     }));
@@ -788,7 +789,7 @@ describe("resolvePublicRoute — single", () => {
       const seen: AppContext["resolvedEntity"][] = [];
       const plugin = definePlugin("entity-observer", {
         setup: (ctx) => {
-          ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+          ctx.filters.add(render.document, (manifest, _input, appCtx) => {
             seen.push(appCtx.resolvedEntity);
             return manifest;
           });
@@ -1153,10 +1154,10 @@ describe("resolvePublicRoute — archive", () => {
     expect(response.status).toBe(404);
   });
 
-  test("pagination counts only what an archive:entries handler leaves", async () => {
+  test("pagination counts only what a render.archiveEntries handler leaves", async () => {
     const hideOne = definePlugin("hide-one", {
       setup: (ctx) => {
-        ctx.addFilter("archive:entries", (query) =>
+        ctx.filters.add(render.archiveEntries, (query) =>
           query.where(ne(entries.slug, "p-21")),
         );
       },
@@ -2403,7 +2404,7 @@ describe("resolvePublicRoute — resolved route", () => {
     const seen: (AppContext["resolvedRoute"] | undefined)[] = [];
     const plugin = definePlugin("route-observer", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        ctx.filters.add(render.document, (manifest, _input, appCtx) => {
           seen.push(appCtx.resolvedRoute);
           return manifest;
         });

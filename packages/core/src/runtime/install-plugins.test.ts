@@ -2480,4 +2480,29 @@ describe("declared events and filters", () => {
       'Plugin "acme" registers filter "block:beforeRender" already registered by core.',
     );
   });
+
+  test.each([
+    ["filter", "render:document"],
+    ["filter", "render:archiveEntries"],
+    ["event", "sync:after"],
+  ] as const)(
+    "a plugin declaring core's %s %s fails boot naming core",
+    async (kind, id) => {
+      const plugin = definePlugin("acme", {
+        ...(kind === "event"
+          ? { events: [defineEvent<string>(id)] }
+          : { filters: [defineFilter<string>(id, { sync: false })] }),
+        setup: () => undefined,
+      });
+
+      const install = installPlugins({
+        hooks: new HookRegistry(),
+        plugins: [plugin],
+      });
+
+      await expect(install).rejects.toThrow(
+        `Plugin "acme" registers ${kind} "${id}" already registered by core.`,
+      );
+    },
+  );
 });

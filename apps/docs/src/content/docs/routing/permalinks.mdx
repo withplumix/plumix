@@ -168,7 +168,7 @@ export const redirects: PlumixConfigInput["redirects"] = [
 ];
 ```
 
-**The tag is a gap-filler.** Plumix emits `<link rel="canonical">` only when neither the template's document manifest nor a `render:document` subscriber already set one. A theme that wants to point a page elsewhere sets its own and wins.
+**The tag is a gap-filler.** Plumix emits `<link rel="canonical">` only when neither the template's document manifest nor a `render.document` handler already set one. A theme that wants to point a page elsewhere sets its own and wins.
 
 <Aside type="caution" title="Changing a slug breaks the old URL">
   Plumix stores no history of previous slugs, so renaming `sicilian-caponata`

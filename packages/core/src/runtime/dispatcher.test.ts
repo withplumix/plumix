@@ -25,6 +25,7 @@ import { entryPurgeTags, termTag } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
 import { etagOf } from "../db/concurrency.js";
+import { render } from "../hooks/render.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -2038,7 +2039,7 @@ describe("dispatcher — public read-through CDN", () => {
     const tagging = definePlugin("tagging", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.addFilter("render:document", (document, _data, appCtx) => {
+        ctx.filters.add(render.document, (document, _input, appCtx) => {
           tagCdnEntry(withUser(appCtx, { ...author, meta: {} }), ["x:1"]);
           return document;
         });
@@ -2749,7 +2750,7 @@ describe("dispatcher — telemetry consumers", () => {
     let spansSeenDuringRender: number | undefined;
     const plugin = definePlugin("telemetry-observer", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        ctx.filters.add(render.document, (manifest, _input, appCtx) => {
           spansSeenDuringRender = appCtx.telemetry.getSpans().length;
           return manifest;
         });
@@ -2763,7 +2764,7 @@ describe("dispatcher — telemetry consumers", () => {
     const seenCtx: AppContext[] = [];
     const recorder = definePlugin("telemetry-recorder", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        ctx.filters.add(render.document, (manifest, _input, appCtx) => {
           appCtx.telemetry.record("telemetry-recorder", {
             note: "during render",
           });
@@ -3085,11 +3086,11 @@ describe("dispatcher — telemetry consumers", () => {
     });
   });
 
-  test("filter execution appears as a hook span attributed with hook name and owning plugin", async () => {
+  test("filter execution appears as a filter span attributed with its id and owning plugin", async () => {
     const snapshots: TelemetrySnapshot[] = [];
     const decorator = definePlugin("test-decorator", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest) => manifest);
+        ctx.filters.add(render.document, (manifest) => manifest);
       },
     });
     const h = await createDispatcherHarness({
@@ -3108,12 +3109,12 @@ describe("dispatcher — telemetry consumers", () => {
 
     const [snapshot] = snapshots;
     const hook = flattenSpans(snapshot?.spans ?? []).find(
-      (span) => span.name === "hook: render:document",
+      (span) => span.name === "filter: render:document",
     );
     expect(hook).toBeDefined();
     expect(hook?.attributes).toEqual({
-      "hook.name": "render:document",
-      "hook.plugin": "test-decorator",
+      "filter.id": "render:document",
+      "filter.plugin": "test-decorator",
     });
   });
 
@@ -3527,7 +3528,7 @@ describe("dispatcher — ctx.fetch tracing", () => {
   ): AnyPluginDescriptor {
     return definePlugin("outbound-caller", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", async (manifest, _data, appCtx) => {
+        ctx.filters.add(render.document, async (manifest, _input, appCtx) => {
           await call(appCtx);
           return manifest;
         });

@@ -1,5 +1,5 @@
 import type { PluginDescriptor } from "plumix/plugin";
-import { definePlugin, loadSiteSettings } from "plumix/plugin";
+import { definePlugin, loadSiteSettings, render } from "plumix/plugin";
 
 import { applyFeedDiscovery } from "./discovery.js";
 import { handleFeed } from "./respond.js";
@@ -22,7 +22,7 @@ export { FEED_LIMIT } from "./items.js";
 export function feeds(): PluginDescriptor {
   return definePlugin("feeds", {
     setup: (ctx) => {
-      ctx.addFilter("render:document", async (manifest, data, appCtx) => {
+      ctx.filters.add(render.document, async (manifest, { data }, appCtx) => {
         const site = await loadSiteSettings(appCtx);
         return applyFeedDiscovery(
           manifest,

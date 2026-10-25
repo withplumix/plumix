@@ -11,6 +11,7 @@ import { BlockRenderer } from "../../blocks/renderer/index.js";
 import { getContext } from "../../context/stores.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
 import { block } from "../../hooks/block-render.js";
+import { render } from "../../hooks/render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { defineTemplate } from "../../template.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
@@ -71,7 +72,7 @@ async function seedPost(
   });
 }
 
-describe("SEO — canonical + render:document seam", () => {
+describe("SEO — canonical + render.document seam", () => {
   test("a public page renders exactly one canonical with the slash-less absolute URL", async () => {
     const theme = defineTheme({ templates: [fallback(() => null)] });
     const h = await createDispatcherHarness({
@@ -87,10 +88,10 @@ describe("SEO — canonical + render:document seam", () => {
     );
   });
 
-  test("a render:document subscriber can override the canonical (gap-filler skips)", async () => {
+  test("a render.document handler can override the canonical (gap-filler skips)", async () => {
     const seoPlugin = definePlugin("seo-test", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest) => ({
+        ctx.filters.add(render.document, (manifest) => ({
           ...manifest,
           link: [
             ...(manifest.link ?? []),
@@ -362,7 +363,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(body).not.toContain('data-testid="single"');
   });
 
-  test("runs resolve:single:data filters before the template renders", async () => {
+  test("runs render.single filters before the template renders", async () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
@@ -384,8 +385,8 @@ describe("resolvePublicRoute — single entry through theme", () => {
       publishedAt: new Date(),
     });
 
-    h.app.hooks.addFilter(
-      "resolve:single:data",
+    h.app.hooks.add(
+      render.single,
       (data) => ({
         ...data,
         entry: { ...data.entry, title: "Filtered" },
@@ -3071,7 +3072,7 @@ describe("resolvePublicRoute — archive through theme", () => {
     expect(body).toContain("entries:1");
   });
 
-  test("runs resolve:archive:data filters before the template renders", async () => {
+  test("runs render.archive filters before the template renders", async () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
@@ -3095,8 +3096,8 @@ describe("resolvePublicRoute — archive through theme", () => {
       publishedAt: new Date(),
     });
 
-    h.app.hooks.addFilter(
-      "resolve:archive:data",
+    h.app.hooks.add(
+      render.archive,
       (data) => ({ ...data, contentType: "filtered" }),
       { plugin: "test" },
     );
@@ -3458,7 +3459,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
     expect(body).toContain("page:2;entries:2");
   });
 
-  test("runs resolve:term:data filters before the template renders", async () => {
+  test("runs render.term filters before the template renders", async () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
@@ -3475,8 +3476,8 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       name: "Original",
     });
 
-    h.app.hooks.addFilter(
-      "resolve:term:data",
+    h.app.hooks.add(
+      render.term,
       (data) => ({
         ...data,
         term: { ...data.term, name: "Filtered" },
@@ -3940,7 +3941,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
     expect(body).not.toContain('data-testid="front-page"');
   });
 
-  test("runs resolve:front-page:data filters before the template renders", async () => {
+  test("runs render.frontPage filters before the template renders", async () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
@@ -3959,7 +3960,7 @@ describe("resolvePublicRoute — front-page through theme", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin], theme: theme },
     });
-    h.spyFilter("resolve:front-page:data").override((data) => ({
+    h.spyFilter(render.frontPage).override((data) => ({
       ...data,
       entries: data.entries.filter(
         (entry: ResolvedEntry) => entry.slug !== "filtered-out",
@@ -4342,7 +4343,7 @@ describe("resolvePublicRoute — search through theme", () => {
     expect(body).not.toContain('data-testid="hit-plain"');
   });
 
-  test("runs resolve:search:data filters before the search template renders", async () => {
+  test("runs render.search filters before the search template renders", async () => {
     const theme = defineTheme({
       templates: [
         fallback(() => null),
@@ -4353,8 +4354,8 @@ describe("resolvePublicRoute — search through theme", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin], theme: theme },
     });
-    h.app.hooks.addFilter(
-      "resolve:search:data",
+    h.app.hooks.add(
+      render.search,
       (data) => ({ ...data, query: `filtered:${data.query}` }),
       { plugin: "test" },
     );
@@ -4417,14 +4418,14 @@ describe("resolvePublicRoute — error pages through theme", () => {
     expect(body).toContain("<title>Not Found · Plumix</title>");
   });
 
-  test("an error page runs the `render:document` chain like any other", async () => {
+  test("an error page runs the `render.document` chain like any other", async () => {
     const theme = defineTheme({
       templates: [fallback(() => null), notFound(() => <main />)],
     });
     const seen: TemplateData["kind"][] = [];
     const headWriter = definePlugin("head-writer", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, data) => {
+        ctx.filters.add(render.document, (manifest, { data }) => {
           seen.push(data.kind);
           return {
             ...manifest,
@@ -4457,22 +4458,32 @@ describe("resolvePublicRoute — error pages through theme", () => {
     });
     const brokenPlugin = definePlugin("broken-head", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", () => {
+        ctx.filters.add(render.document, () => {
           throw new Error("subscriber blew up");
         });
       },
     });
 
+    const errors: string[] = [];
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin, brokenPlugin], theme: theme },
+      logger: {
+        debug: () => undefined,
+        info: () => undefined,
+        warn: () => undefined,
+        error: (message) => {
+          errors.push(message);
+        },
+      },
     });
     const response = await h.dispatch(
       new Request("https://cms.example/never-existed"),
     );
 
-    // `applyFilter` does not isolate a throw, and this render is already the
+    // `apply` does not isolate a throw, and this render is already the
     // failure path — escalating it would hide the 404 behind a 500.
     expect(response.status).toBe(404);
+    expect(errors).toContain("render.document failed on the error page");
   });
 
   test("an error page declares no canonical of its own", async () => {
@@ -4650,7 +4661,7 @@ describe("resolvePublicRoute — error pages through theme", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin], theme: theme },
     });
-    h.spyFilter("resolve:single:data").override(() => {
+    h.spyFilter(render.single).override(() => {
       throw new Error("kaboom-resolver-secret");
     });
     const author = await h.seedUser("admin");

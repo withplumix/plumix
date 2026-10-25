@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { sync } from "../hooks/sync.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import { settleSync } from "./settle-sync.js";
@@ -21,15 +22,15 @@ describe("settleSync", () => {
   test("a throwing listener and a throwing purge are both reported, and every other step still runs", async () => {
     const hooks = new HookRegistry();
     const ran: string[] = [];
-    hooks.addAction(
-      "sync:after",
+    hooks.on(
+      sync.after,
       () => {
         throw new Error("index unreachable");
       },
       { plugin: "search" },
     );
-    hooks.addAction(
-      "sync:after",
+    hooks.on(
+      sync.after,
       () => {
         ran.push("og");
       },
@@ -63,7 +64,7 @@ describe("settleSync", () => {
   test("hands every listener the event and the context", async () => {
     const hooks = new HookRegistry();
     const events: unknown[] = [];
-    hooks.addAction("sync:after", (event, appCtx) => {
+    hooks.on(sync.after, (event, appCtx) => {
       events.push([event, appCtx.origin]);
     });
     const ctx = await contextWith(hooks);
@@ -77,7 +78,7 @@ describe("settleSync", () => {
 
   test("a failing listener core registered is reported as the core step", async () => {
     const hooks = new HookRegistry();
-    hooks.addAction("sync:after", () => Promise.reject(new Error("nope")));
+    hooks.on(sync.after, () => Promise.reject(new Error("nope")));
     const ctx = await contextWith(hooks);
 
     const report = await settleSync(ctx, {

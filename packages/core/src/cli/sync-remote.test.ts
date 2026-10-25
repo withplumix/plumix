@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/libsql";
 import type { RuntimeSync } from "../context/runtime-adapter.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { SyncContractEnds } from "../test/conformance/sync.js";
+import { sync } from "../hooks/sync.js";
 import { describeSyncContract } from "../test/conformance/sync.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { memorySyncEnds } from "../test/sync/memory-ends.js";
@@ -29,10 +30,8 @@ async function remoteEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
       },
     },
   });
-  for (const handler of hooks.getActionHandlers("sync:after")) {
-    h.app.hooks.addAction("sync:after", handler.fn, {
-      plugin: handler.plugin,
-    });
+  for (const { handler, plugin } of hooks.getEventHandlers(sync.after)) {
+    h.app.hooks.on(sync.after, handler, { plugin });
   }
   const operator = await h.factory.user.create({
     id: 1000,
@@ -40,7 +39,7 @@ async function remoteEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
     role: "admin",
   });
   const { secret } = await h.factory.apiToken.create({ userId: operator.id });
-  const sync: RuntimeSync = {
+  const runtimeSync: RuntimeSync = {
     open: (options) =>
       options.target === "local"
         ? ends.sync.open(options)
@@ -53,7 +52,7 @@ async function remoteEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
             }),
           ),
   };
-  return { ...ends, sync, remoteUrl: REMOTE, apiToken: secret };
+  return { ...ends, sync: runtimeSync, remoteUrl: REMOTE, apiToken: secret };
 }
 
 describeSyncContract({ open: remoteEnds });

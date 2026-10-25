@@ -14,6 +14,7 @@ import { entrySearchCondition } from "../db/search-conditions.js";
 import { canEditEntry } from "../entries/editability.js";
 import { findAuthorBySlug, findTermBySlug } from "../entries/slug-lookups.js";
 import { publicEntryRows } from "../entries/visibility.js";
+import { render } from "../hooks/render.js";
 import { getAutosave, overlayAutosave } from "../revisions/repository.js";
 import {
   notFound,
@@ -42,14 +43,6 @@ import {
   resolveEntryList,
 } from "./render/resolve-entry-list.js";
 import { resolveSingleEntry } from "./single-entry.js";
-
-declare module "../hooks/types.js" {
-  interface FilterRegistry {
-    "resolve:search:data": (
-      data: SearchData,
-    ) => SearchData | Promise<SearchData>;
-  }
-}
 
 /**
  * `renderThroughTheme` returns `null` when the theme has no rule for the node
@@ -194,7 +187,7 @@ async function resolveSearch(
       pageCount: result.pageCount,
     },
   };
-  const data = await ctx.hooks.applyFilter("resolve:search:data", initial);
+  const data = await ctx.filters.apply(render.search, initial);
   const html = await renderThroughTheme({
     ctx,
     renderEnv,
@@ -405,7 +398,7 @@ async function resolveArchive(
   params: Record<string, string>,
   renderEnv: RenderEnv,
 ): Promise<Response> {
-  // Set before the listing resolves: a `resolve:archive:data` subscriber reads
+  // Set before the listing resolves: a `render.archive` handler reads
   // the entity off ctx.
   ctx.resolvedEntity = { kind: "entryType", entryType: intent.entryType };
 

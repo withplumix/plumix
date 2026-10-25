@@ -49,6 +49,10 @@ const site = definePlugin("site", {
   },
 });
 
+function readerOf({ app, db }: Pick<DispatcherHarness, "app" | "db">) {
+  return createTestContext({ db, hooks: app.hooks, plugins: app.plugins });
+}
+
 let h: DispatcherHarness;
 
 beforeEach(async () => {
@@ -76,7 +80,7 @@ describe("archiveAtPath", () => {
     ["/2026/04", { kind: "date" }, { year: "2026", month: "04" }],
     ["/talks/news", { kind: "archiveType", name: "talks" }, { track: "news" }],
   ])("%s is its archive", (path, archive, params) => {
-    const found = archiveAtPath(h.app, path);
+    const found = archiveAtPath(readerOf(h), path);
     expect(found?.archive).toEqual(archive);
     expect(found?.params).toEqual(params);
   });
@@ -89,7 +93,7 @@ describe("archiveAtPath", () => {
     ["params a plugin archive declines", "/talks/none"],
     ["an unknown path", "/no/such/thing"],
   ])("%s is no archive", (_what, path) => {
-    expect(archiveAtPath(h.app, path)).toBeNull();
+    expect(archiveAtPath(readerOf(h), path)).toBeNull();
   });
 
   test.each(["/", "/all-pages", "/topic/t", "/talks/t", "/2026"])(
@@ -126,7 +130,7 @@ describe("archiveAtPath", () => {
         }
       }
 
-      const found = archiveAtPath(h.app, path);
+      const found = archiveAtPath(readerOf(h), path);
       if (found === null) throw new Error(`no archive at ${path}`);
       const listing = await listEntryPage(ctx, found.entries, {
         page: 1,
@@ -177,7 +181,7 @@ describe("archiveBaseRoutes", () => {
         ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
       },
     });
-    const { app } = await createDispatcherHarness({
+    const { app, db } = await createDispatcherHarness({
       config: { plugins: [rooted] },
     });
 
@@ -186,7 +190,7 @@ describe("archiveBaseRoutes", () => {
     ).toEqual([
       { archive: { kind: "entryType", entryType: "post" }, pattern: "/" },
     ]);
-    expect(archiveAtPath(app, "/")?.archive).toEqual({
+    expect(archiveAtPath(readerOf({ app, db }), "/")?.archive).toEqual({
       kind: "entryType",
       entryType: "post",
     });
@@ -207,7 +211,7 @@ describe("archiveBaseRoutes", () => {
   });
 
   test("names no author or date archive where the site turned those routes off", async () => {
-    const { app } = await createDispatcherHarness({
+    const { app, db } = await createDispatcherHarness({
       config: { plugins: [site], routes: { author: false, date: false } },
     });
 
@@ -217,7 +221,7 @@ describe("archiveBaseRoutes", () => {
     expect(kinds).not.toContain("author");
     expect(kinds).not.toContain("date");
     expect(kinds).toContain("frontPage");
-    expect(archiveAtPath(app, "/authors/jane")).toBeNull();
-    expect(archiveAtPath(app, "/2026/04")).toBeNull();
+    expect(archiveAtPath(readerOf({ app, db }), "/authors/jane")).toBeNull();
+    expect(archiveAtPath(readerOf({ app, db }), "/2026/04")).toBeNull();
   });
 });

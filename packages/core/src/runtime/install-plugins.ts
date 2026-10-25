@@ -12,6 +12,8 @@ import type {
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { ThemeDescriptor } from "../theme.js";
 import { block } from "../hooks/block-render.js";
+import { render } from "../hooks/render.js";
+import { sync } from "../hooks/sync.js";
 import { assertValidPluginId } from "../plugin/define.js";
 import {
   DuplicateRegistrationError,
@@ -128,7 +130,11 @@ export async function installPlugins({
 
 type Declaration = AnyEventDefinition | AnyFilterDefinition;
 
-const CORE_DECLARATIONS: readonly Declaration[] = Object.values(block);
+const CORE_DECLARATIONS: readonly Declaration[] = [
+  ...Object.values(block),
+  ...Object.values(render),
+  ...Object.values(sync),
+];
 
 function assertUniqueDeclarations(
   plugins: readonly AnyPluginDescriptor[],

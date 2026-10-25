@@ -19,11 +19,11 @@ flowchart TD
   cn -- no --> rm["match the route map"]
   rm --> gate["load the user, access policy, gate, segment"]
   gate --> cdn["CDN read-through, when the cdn slot is set"]
-  cdn --> res["resolve the intent: page data and resolve:*:data"]
+  cdn --> res["resolve the intent: page data and the render.* page-data filters"]
   res --> tpl["pick the template rule"]
   tpl --> deps["template and block deps"]
   deps --> ld["block loaders"]
-  ld --> doc["document() and render:document"]
+  ld --> doc["document() and render.document"]
   doc --> html["render to HTML, add the islands bootstrap"]
 ```
 
@@ -31,22 +31,22 @@ A page step (an archive type's or view's `resolve`, a template dep, a block load
 
 ## Surface
 
-| Piece                                                                                                                                                                                       | Where                                             | Public?  |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- | -------- |
-| `routes: { author, date, search }`                                                                                                                                                          | `plumix()` config, `FrameworkRoutesInput`         | public   |
-| `redirects`                                                                                                                                                                                 | `plumix()` config, theme, `ctx.registerRedirects` | public   |
-| `registerRewriteRule(pattern, intent, { priority })`                                                                                                                                        | plugin setup context                              | public   |
-| `registerArchiveType(name, { routes, entries?, perPage?, title?, resolve, cacheable?, access? })`                                                                                           | plugin setup context                              | public   |
-| `registerView(name, { routes, access?, cacheable?, resolve })`                                                                                                                              | plugin setup context                              | public   |
-| `registerPublicRoute({ path, handler, access?, cacheable? })`, answered ahead of redirects                                                                                                  | plugin setup context                              | public   |
-| `registerTemplateDep(kind, { keyedBy, load })`                                                                                                                                              | plugin setup context                              | public   |
-| `pageNotFound()`, `redirectTo(location, status?)`                                                                                                                                           | `plumix/support`                                  | public   |
-| Template builders `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, `fallback`, `notFound`, `serverError`                                                              | `plumix/theme`                                    | public   |
-| Targeted selectors `forEntryType`, `forTermTaxonomy`, `forAuthor`, `forDate`, `forArchiveType`, `forView` and guards `isEntry`, `isTerm`, …                                                 | `plumix/theme`                                    | public   |
-| `resolveEntryData`, `resolveEntryList`, `resolveListingPage`, `resolveArchiveTypePage`                                                                                                      | `plumix/plugin`                                   | public   |
-| `buildEntryPermalink(s)`, `buildTermArchiveUrl(s)`, `archiveAtPath`, `archiveBaseRoutes`, `pageFacts`                                                                                       | `plumix/plugin`                                   | public   |
-| Filters `resolve:single:data`, `resolve:archive:data`, `resolve:term:data`, `resolve:author:data`, `resolve:date:data`, `resolve:front-page:data`, `resolve:search:data`, `render:document` | hook registry                                     | public   |
-| `compileRouteMap`, `routePublicRequest`, `resolvePublicRoute`, `renderThroughTheme`                                                                                                         | `packages/core/src/route/`                        | internal |
+| Piece                                                                                                                                                                     | Where                                                      | Public?  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | -------- |
+| `routes: { author, date, search }`                                                                                                                                        | `plumix()` config, `FrameworkRoutesInput`                  | public   |
+| `redirects`                                                                                                                                                               | `plumix()` config, theme, `ctx.registerRedirects`          | public   |
+| `registerRewriteRule(pattern, intent, { priority })`                                                                                                                      | plugin setup context                                       | public   |
+| `registerArchiveType(name, { routes, entries?, perPage?, title?, resolve, cacheable?, access? })`                                                                         | plugin setup context                                       | public   |
+| `registerView(name, { routes, access?, cacheable?, resolve })`                                                                                                            | plugin setup context                                       | public   |
+| `registerPublicRoute({ path, handler, access?, cacheable? })`, answered ahead of redirects                                                                                | plugin setup context                                       | public   |
+| `registerTemplateDep(kind, { keyedBy, load })`                                                                                                                            | plugin setup context                                       | public   |
+| `pageNotFound()`, `redirectTo(location, status?)`                                                                                                                         | `plumix/support`                                           | public   |
+| Template builders `entry`, `entryType`, `term`, `author`, `date`, `frontPage`, `search`, `fallback`, `notFound`, `serverError`                                            | `plumix/theme`                                             | public   |
+| Targeted selectors `forEntryType`, `forTermTaxonomy`, `forAuthor`, `forDate`, `forArchiveType`, `forView` and guards `isEntry`, `isTerm`, …                               | `plumix/theme`                                             | public   |
+| `resolveEntryData`, `resolveEntryList`, `resolveListingPage`, `resolveArchiveTypePage`                                                                                    | `plumix/plugin`                                            | public   |
+| `buildEntryPermalink(s)`, `buildTermArchiveUrl(s)`, `archiveAtPath`, `archiveBaseRoutes`, `pageFacts`                                                                     | `plumix/plugin`                                            | public   |
+| Filters `render.single`, `render.archive`, `render.term`, `render.author`, `render.date`, `render.frontPage`, `render.search`, `render.document`, `render.archiveEntries` | `render` in `hooks/render.ts`, fired through `ctx.filters` | public   |
+| `compileRouteMap`, `routePublicRequest`, `resolvePublicRoute`, `renderThroughTheme`                                                                                       | `packages/core/src/route/`                                 | internal |
 
 Page kinds ([ADR 0025](../adr/0025-a-page-kind-is-named-by-its-subject.md), amended by [ADR 0035](../adr/0035-an-app-page-is-a-view-not-an-archive.md)): `entry`, `entryType`, `term`, `author`, `date`, `archiveType`, `view`, `frontPage`, `search`.
 
@@ -58,7 +58,7 @@ Page kinds ([ADR 0025](../adr/0025-a-page-kind-is-named-by-its-subject.md), amen
 - **Resolve.** `resolveIntent` in `packages/core/src/route/resolve.ts` switches on the intent kind. Built-in listings go through `packages/core/src/route/render/page-data.ts` (`frontPageData`, `archiveData`, `termData`, `authorData`, `dateData`), each applying its `resolve:*:data` filter. Each archive's entry query is defined once in `archiveEntries` (`packages/core/src/route/archive-entries.ts`), born holding only public entries ([ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)). A term resolves by its last slug segment, and core's rules 301 to the canonical term URL ([ADR 0012](../adr/0012-a-term-is-addressed-by-its-slug.md)). A single entry resolves through `resolveSingleEntry` (`packages/core/src/route/single-entry.ts`), overlays the preview author's autosave, picks an edit mode, and calls `resolveEntryData`. Archive types go through `archiveTypePage` (`packages/core/src/route/render/archive-type-page.ts`). Views wrap `resolve`'s `data` in `{ kind: "view", name, params, data }`.
 - **Permalinks.** `packages/core/src/route/permalink.ts` builds entry and term URLs, nesting under ancestors where the type has hierarchical URLs. The batch forms load ancestor chains once.
 - **Template hierarchy.** `resolveRule` in `packages/core/src/route/render/rule-resolver.ts` tries targeted rules in declaration order, then the generic tier for the page kind, then `fallback`. `archiveType` and `view` have no generic tier. No match and no `fallback` returns `null`, which becomes a 404. `explainTemplateResolution` (`packages/core/src/route/render/template-hierarchy.ts`) feeds the debug bar.
-- **Theme render.** `renderThroughTheme` in `packages/core/src/route/render/render-template.tsx` resolves the template, unions template and block deps (`collectBlockDepKeys`) and loads each once with `loadTemplateDeps`. It runs block loaders (`prefetchEntryLoaders`) before `document()`, merges the document manifest, forces `canonical: false` for views, applies `render:document` and the canonical link, then renders the tree. View transitions apply only in the `live` edit mode ([ADR 0031](../adr/0031-a-theme-opts-into-native-page-transitions-and-owns-their-css.md)).
+- **Theme render.** `renderThroughTheme` in `packages/core/src/route/render/render-template.tsx` resolves the template, unions template and block deps (`collectBlockDepKeys`) and loads each once with `loadTemplateDeps`. It runs block loaders (`prefetchEntryLoaders`) before `document()`, merges the document manifest, forces `canonical: false` for views, applies `render.document` and the canonical link, then renders the tree. View transitions apply only in the `live` edit mode ([ADR 0031](../adr/0031-a-theme-opts-into-native-page-transitions-and-owns-their-css.md)).
 - **Personal renders.** In `packages/core/src/route/render/personal-render.ts`, `trackPrincipalReads` marks the render personal when it reads `ctx.user`, `ctx.tokenScopes`, `ctx.apiToken` or `ctx.auth.can()`, uses a principal's own locale, or shows the admin bar. `renderIsPersonal` is the verdict the read-through asks for ([ADR 0030](../adr/0030-a-render-that-reads-the-principal-is-never-shared.md)).
 
 ## Invariants

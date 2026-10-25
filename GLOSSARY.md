@@ -506,7 +506,7 @@ The runtime's own queue behind the `queue` config slot, for work that outlives a
 A URL, headers, events and payload an entry type declares in code. When one of its events fires, core POSTs the payload with those headers through the job queue.
 
 **Settle**:
-What a sync target runs after a sync lands: the `sync:after` listeners and a whole-CDN purge.
+What a sync target runs after a sync lands: the `sync.after` handlers and a whole-CDN purge.
 
 **Origin cache**:
 A runtime's own response cache that the CDN read-through stores shared renders in. A server runtime has none.

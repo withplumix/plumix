@@ -19,6 +19,7 @@ import type { ContractCase } from "./case.js";
 import { CORE_MIGRATIONS_FOLDER } from "../../cli/migrations.js";
 import { CORE_SYNC_SCOPE_TABLES, SYNC_AUTH_TABLES } from "../../cli/sync.js";
 import { HookRegistry } from "../../hooks/registry.js";
+import { sync } from "../../hooks/sync.js";
 import { testConfig } from "../config.js";
 import { memoryDump } from "../sync/memory-dump.js";
 import { describeContract } from "./case.js";
@@ -49,7 +50,7 @@ export interface SyncContractOptions {
   /**
    * Fresh ends for one case: core's migrations applied, no rows bar the
    * `apiToken` user's (id above 100), no objects. Each `settle` runs the
-   * `sync:after` listeners on `hooks`.
+   * `sync.after` handlers on `hooks`.
    */
   readonly open: (hooks: HookRegistry) => Promise<SyncContractEnds>;
 }
@@ -535,8 +536,8 @@ export const syncContractCases: readonly Case[] = [
     name: "settle reports a failed listener as a step and still resolves",
     run: async (options) => {
       const hooks = new HookRegistry();
-      hooks.addAction(
-        "sync:after",
+      hooks.on(
+        sync.after,
         () => {
           throw new Error("listener failed");
         },

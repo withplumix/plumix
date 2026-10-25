@@ -1,5 +1,4 @@
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
-import type { SyncAfterEvent } from "../context/runtime-adapter.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { Credential } from "../db/schema/credentials.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
@@ -383,15 +382,6 @@ declare module "../hooks/types.js" {
     "term:meta_changed": (
       term: { readonly id: number; readonly taxonomy: string },
       changes: TermMetaChanges,
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * Fires once on the target after `plumix sync` replaced its data, on a pull
-     * and a push alike. A throw is reported as a failed settle step.
-     */
-    "sync:after": (
-      event: SyncAfterEvent,
       ctx: AppContext,
     ) => void | Promise<void>;
 

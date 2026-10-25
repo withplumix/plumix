@@ -4,6 +4,7 @@ import type {
   SyncSettleFailure,
   SyncSettleReport,
 } from "./runtime-adapter.js";
+import { sync } from "../hooks/sync.js";
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -13,22 +14,15 @@ async function runListeners(
   ctx: AppContext,
   event: SyncAfterEvent,
 ): Promise<SyncSettleFailure[]> {
-  const failures: SyncSettleFailure[] = [];
-  for (const { fn, plugin } of ctx.hooks.getActionHandlers("sync:after")) {
-    try {
-      await fn(event, ctx);
-    } catch (error) {
-      failures.push({
-        step: plugin === null ? "core" : `plugin:${plugin}`,
-        message: messageOf(error),
-      });
-    }
-  }
-  return failures;
+  const failures = await ctx.events.emit(sync.after, event);
+  return failures.map(({ plugin, error }) => ({
+    step: plugin === null ? "core" : `plugin:${plugin}`,
+    message: messageOf(error),
+  }));
 }
 
 /**
- * Runs every `sync:after` listener, then purges the whole CDN. Each step runs
+ * Runs every `sync.after` handler, then purges the whole CDN. Each step runs
  * whatever the others did. A failure is reported, not thrown: the data it
  * follows is already replaced.
  */

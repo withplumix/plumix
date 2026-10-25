@@ -17,6 +17,7 @@ import {
   responseAllowsSharedStorage,
   SEGMENT_KEY_PARAM,
 } from "../cdn/decision.js";
+import { render } from "../hooks/render.js";
 import { definePlugin } from "../plugin/define.js";
 import {
   entry,
@@ -1145,7 +1146,7 @@ describe("access gate — a render that reads the principal is personal (#2915)"
     const can = vi.fn((ctx: AppContext) => ctx.auth.can("entry:article:read"));
     const headWriter = definePlugin("head-writer", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, requestCtx) => ({
+        ctx.filters.add(render.document, (manifest, _input, requestCtx) => ({
           ...manifest,
           meta: [{ name: "can-read", content: String(can(requestCtx)) }],
         }));

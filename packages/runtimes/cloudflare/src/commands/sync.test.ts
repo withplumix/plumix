@@ -24,7 +24,7 @@ import type {
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { drizzle } from "drizzle-orm/d1";
 import { migrate } from "drizzle-orm/d1/migrator";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, sync as syncEvents } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { describeSyncContract } from "plumix/test/conformance";
@@ -124,12 +124,12 @@ function contractSite(proxy: PlatformProxy): SyncContractSite {
   };
 }
 
-/** Runs the contract's `sync:after` listeners as a plugin of the site. */
+/** Runs the contract's `sync.after` handlers as a plugin of the site. */
 function siteConfig(hooks: HookRegistry): PlumixConfig {
   const conformance = definePlugin("conformance", {
     setup: (ctx) => {
-      for (const { fn } of hooks.getActionHandlers("sync:after")) {
-        ctx.addAction("sync:after", fn);
+      for (const { handler } of hooks.getEventHandlers(syncEvents.after)) {
+        ctx.events.on(syncEvents.after, handler);
       }
     },
   });
@@ -500,14 +500,14 @@ describe(
   "cloudflare sync — settling the local site",
   { timeout: 30_000 },
   () => {
-    // A site whose one `sync:after` listener is `listener`, on `binding`.
+    // A site whose one `sync.after` handler is `listener`, on `binding`.
     function settlingConfig(
       listener: (ctx: AppContext) => Promise<void>,
       binding = "DB",
     ): PlumixConfig {
       const probe = definePlugin("probe", {
         setup: (ctx) => {
-          ctx.addAction("sync:after", (_event, appCtx) => listener(appCtx));
+          ctx.events.on(syncEvents.after, (_event, appCtx) => listener(appCtx));
         },
       });
       return {

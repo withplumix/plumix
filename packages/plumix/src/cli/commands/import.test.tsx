@@ -10,6 +10,7 @@ import {
   defineTemplate,
   defineTheme,
   fallback,
+  sync,
 } from "@plumix/core";
 import { CORE_SYNC_SCOPE_TABLES } from "@plumix/core/cli";
 import { number, text } from "@plumix/core/fields";
@@ -344,10 +345,10 @@ describe("plumix import, writing", () => {
     ]);
   });
 
-  test("runs the site's sync:after listeners, with content as the scope", async () => {
+  test("runs the site's sync.after handlers, with content as the scope", async () => {
     const site = await blogSite();
     const events: unknown[] = [];
-    site.harness.app.hooks.addAction("sync:after", (event) => {
+    site.harness.app.hooks.on(sync.after, (event) => {
       events.push(event);
     });
     writeRecords("content.jsonl", [TOPIC, POST]);

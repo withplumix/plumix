@@ -1,4 +1,5 @@
 import type { PluginSetupContext } from "plumix/plugin";
+import { render } from "plumix/plugin";
 
 import type { CardInputs } from "../card-identity.js";
 import type { CardRegistry } from "../card-registry.js";
@@ -36,7 +37,7 @@ export function registerDevSurfaces(
   });
   // `seo:og_image` doesn't always fire, so the panel needs this to tell those
   // cases from a request that rendered no page.
-  ctx.addFilter("render:document", (manifest, data, appCtx) => {
+  ctx.filters.add(render.document, (manifest, { data }, appCtx) => {
     appCtx.telemetry.record(OG_PANEL_ID, (): OgPageTrace => ({
       phase: "page",
       pageKind: data.kind,

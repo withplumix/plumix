@@ -46,6 +46,7 @@ import { PlumixProvider } from "../../blocks/renderer/index.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
 import { block } from "../../hooks/block-render.js";
+import { render } from "../../hooks/render.js";
 import { nonEmpty } from "../../non-empty.js";
 import { applyCanonical } from "../../seo/canonical.js";
 import { loadSiteSettings } from "../../seo/site-settings.js";
@@ -78,22 +79,6 @@ import {
   resolveTemplate,
 } from "./template-hierarchy.js";
 import { TEMPLATE_PANEL_ID, templateNodeLabel } from "./template-node-label.js";
-
-declare module "../../hooks/types.js" {
-  interface FilterRegistry {
-    /**
-     * Fires on the assembled document, so theme tags are already present. Also
-     * fires on error renders (`kind: "error"`), where a throwing subscriber is
-     * logged and skipped.
-     */
-    "render:document": (
-      manifest: DocumentManifest,
-      data: TemplateData,
-      ctx: AppContext,
-      title: string,
-    ) => DocumentManifest | Promise<DocumentManifest>;
-  }
-}
 
 interface RenderArgs {
   readonly ctx: AppContext;
@@ -171,16 +156,13 @@ async function renderThroughThemeInner({
   // its `document` declares a canonical link of its own (ADR 0035).
   const pageDocument: DocumentManifest =
     data.kind === "view" ? { ...merged, canonical: false } : merged;
-  const filtered = await ctx.hooks.applyFilter(
-    "render:document",
-    pageDocument,
+  const filtered = await ctx.filters.apply(render.document, pageDocument, {
     data,
-    ctx,
     title,
-  );
+  });
   // The `<title>` fallback reads site settings from the DB — worth its own row
-  // in the waterfall. The `render:document` subscribers above are already
-  // traced per handler as `hook:` spans.
+  // in the waterfall. The `render.document` handlers above are already
+  // traced per handler as `filter:` spans.
   const site = await ctx.telemetry.span("render: head", () =>
     loadSiteSettings(ctx),
   );
@@ -354,15 +336,9 @@ async function applyErrorDocumentFilter({
   title,
 }: ErrorDocumentArgs): Promise<DocumentManifest> {
   try {
-    return await ctx.hooks.applyFilter(
-      "render:document",
-      merged,
-      data,
-      ctx,
-      title,
-    );
+    return await ctx.filters.apply(render.document, merged, { data, title });
   } catch (error) {
-    ctx.logger.error("render:document failed on the error page", {
+    ctx.logger.error("render.document failed on the error page", {
       err: error,
     });
     return merged;

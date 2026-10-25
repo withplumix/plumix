@@ -57,7 +57,7 @@ A sync runs these steps in order:
 7. A push without `--yes` asks for confirmation. Answering no changes nothing.
 8. A push takes a snapshot of the deployed site and prints how to restore it. When the import or a step after it fails, it prints that again.
 9. The target imports the dump.
-10. The target settles: every `sync:after` listener runs, then the whole CDN is purged. See [After a sync](#after-a-sync).
+10. The target settles: every `sync.after` handler runs, then the whole CDN is purged. See [After a sync](#after-a-sync).
 
 A pull takes no snapshot and asks for no confirmation: it only ever overwrites your local database.
 
@@ -119,7 +119,7 @@ While the export runs, `progress.json` records the dump's source, scopes and hea
 
 ## After a sync
 
-The target settles once per sync, on a pull and a push alike. Core's `settleSync` runs every `sync:after` listener, then purges the whole CDN through `purgeAll`. Each step runs whatever the others did. `@plumix/plugin-search` starts a rebuild of its index, and `@plumix/plugin-og` deletes its stored cards, when `content` was among the scopes.
+The target settles once per sync, on a pull and a push alike. Core's `settleSync` emits `sync.after`, then purges the whole CDN through `purgeAll`. Each step runs whatever the others did. `@plumix/plugin-search` starts a rebuild of its index, and `@plumix/plugin-og` deletes its stored cards, when `content` was among the scopes.
 
 When a step fails, the command fails with `sync_settle_failed`, says the data was replaced, and lists every failed step. A CDN that cannot purge everything is not a failure: the command says that cached pages refresh as their `ttl` runs out.
 

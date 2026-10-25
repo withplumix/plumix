@@ -2,7 +2,7 @@ import type { AnyPluginDescriptor, JsonValue } from "plumix";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import { eq, etagOf } from "plumix/db";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, render } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
@@ -121,7 +121,7 @@ describe("the SERP preview procedure", () => {
     const h = await createHarness([
       definePlugin("retitle", {
         setup: (ctx) => {
-          ctx.addFilter("resolve:single:data", (data) => ({
+          ctx.filters.add(render.single, (data) => ({
             ...data,
             entry: { ...data.entry, title: "Retitled in [year]" },
           }));
@@ -160,7 +160,7 @@ describe("the SERP preview procedure", () => {
     const h = await createHarness([
       definePlugin("reserved", {
         setup: (ctx) => {
-          ctx.addFilter("resolve:single:data", (data) => ({
+          ctx.filters.add(render.single, (data) => ({
             ...data,
             entry: {
               ...data.entry,

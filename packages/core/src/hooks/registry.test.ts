@@ -695,6 +695,27 @@ describe("telemetry", () => {
   });
 });
 
+describe("getEventHandlers", () => {
+  const saved = defineEvent<{ readonly id: number }>("test:saved");
+
+  test("returns an empty array when nothing subscribed", () => {
+    expect(new HookRegistry().getEventHandlers(saved)).toEqual([]);
+  });
+
+  test("returns each handler with its plugin, in the order emit starts them", () => {
+    const registry = new HookRegistry();
+    const late = () => undefined;
+    const normal = () => undefined;
+    registry.on(saved, late, { plugin: "b", order: "late" });
+    registry.on(saved, normal);
+
+    expect(registry.getEventHandlers(saved)).toEqual([
+      { handler: normal, plugin: null },
+      { handler: late, plugin: "b" },
+    ]);
+  });
+});
+
 describe("ctx.events.emit", () => {
   test("starts handlers early, then normal, then late, and within each core first, then config order, then registration order", async () => {
     const started: string[] = [];

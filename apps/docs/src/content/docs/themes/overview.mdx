@@ -117,7 +117,7 @@ A template may also carry `document`, either a literal manifest or a function ca
 
 ### Opting a page out of the canonical
 
-Every public page gets `<link rel="canonical" href="…">`, written from the site origin and the request path after every `render:document` subscriber has run. A page that is the canonical address of nothing shareable — an account view, a per-user shortlist — sets `canonical: false` in its `document` and gets none:
+Every public page gets `<link rel="canonical" href="…">`, written from the site origin and the request path after every `render.document` handler has run. A page that is the canonical address of nothing shareable — an account view, a per-user shortlist — sets `canonical: false` in its `document` and gets none:
 
 ```tsx
 import type { EntryData } from "plumix/theme";

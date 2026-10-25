@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { DispatcherHarness } from "../../test/dispatcher.js";
+import { render } from "../../hooks/render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { fallback } from "../../route/render/template-builders.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
@@ -26,7 +27,7 @@ const demoPlugin = definePlugin("debug-demo", {
       isPublic: true,
       hasArchive: true,
     });
-    ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+    ctx.filters.add(render.document, (manifest, _input, appCtx) => {
       appCtx.telemetry.record("debug-demo", { note: "recorded during render" });
       return manifest;
     });
