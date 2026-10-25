@@ -10,7 +10,6 @@ import {
 import {
   afterImplementing,
   afterReview,
-  asReviewNote,
   commitsTheBranchCarries,
   fixerFor,
   gatesUntilGreen,
@@ -496,29 +495,6 @@ describe("afterReview", () => {
     expect(next.next === "park" && next.reason).toContain(
       "a.ts — criterion 2 unmet",
     );
-  });
-});
-
-describe("asReviewNote", () => {
-  test("records what each review pass changed and what it chose to leave, with why", () => {
-    const note = asReviewNote(
-      ["renamed a helper", ""],
-      [
-        {
-          file: "b.ts",
-          line: 4,
-          summary: "kept the duplicate",
-          why: "the ticket pins it",
-        },
-      ],
-    );
-
-    expect(note).toContain("renamed a helper");
-    expect(note).toContain("`b.ts:4` — kept the duplicate: the ticket pins it");
-  });
-
-  test("adds nothing when the review changed nothing and left nothing", () => {
-    expect(asReviewNote(["", ""], [])).toBe("");
   });
 });
 
