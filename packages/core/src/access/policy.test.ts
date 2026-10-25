@@ -5,10 +5,12 @@ import type { UserRole } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
+import { entryCapability } from "./contract/capability.js";
 import {
   AccessError,
   anonymousPolicy,
   authenticatedPolicy,
+  capabilityPolicy,
   challenge,
   definePolicy,
   entitlement,
@@ -99,6 +101,76 @@ describe("resolveAccess — built-in policies", () => {
   it("redirects an anonymous visitor at a role gate", async () => {
     await expect(
       resolveAccess(ctx(null), rolePolicy("editor")),
+    ).resolves.toEqual({ segment: "anonymous", gate: { type: "redirect" } });
+  });
+});
+
+describe("resolveAccess — capability policy", () => {
+  it("grants a viewer whose role resolves the capability its capability segment", async () => {
+    await expect(
+      resolveAccess(ctx(user("editor")), capabilityPolicy("user:list")),
+    ).resolves.toEqual({
+      segment: "capability:user:list",
+      gate: { type: "allow" },
+    });
+  });
+
+  it("spells a capability reference's segment in its resolved namespace", async () => {
+    await expect(
+      resolveAccess(
+        ctx(user("editor")),
+        capabilityPolicy(entryCapability("post", "edit_any")),
+      ),
+    ).resolves.toEqual({
+      segment: "capability:entry:post:edit_any",
+      gate: { type: "allow" },
+    });
+  });
+
+  it("denies a viewer whose role lacks the capability", async () => {
+    await expect(
+      resolveAccess(ctx(user("author")), capabilityPolicy("user:list")),
+    ).resolves.toEqual({
+      segment: "authenticated",
+      gate: { type: "challenge", kind: "forbidden" },
+    });
+  });
+
+  it("denies an editor whose token scopes leave the capability out", async () => {
+    await expect(
+      resolveAccess(
+        createTestContext({
+          db,
+          user: user("editor"),
+          tokenScopes: ["entry:post:edit_any"],
+        }),
+        capabilityPolicy("user:list"),
+      ),
+    ).resolves.toEqual({
+      segment: "authenticated",
+      gate: { type: "challenge", kind: "forbidden" },
+    });
+  });
+
+  it("grants an editor whose token scopes include the capability", async () => {
+    await expect(
+      resolveAccess(
+        createTestContext({
+          db,
+          user: user("editor"),
+          tokenScopes: ["user:list"],
+        }),
+        capabilityPolicy("user:list"),
+      ),
+    ).resolves.toEqual({
+      segment: "capability:user:list",
+      gate: { type: "allow" },
+    });
+  });
+
+  it("redirects an anonymous visitor at a capability gate", async () => {
+    await expect(
+      resolveAccess(ctx(null), capabilityPolicy("user:list")),
     ).resolves.toEqual({ segment: "anonymous", gate: { type: "redirect" } });
   });
 });
@@ -279,10 +351,12 @@ describe("segment helpers", () => {
     expect(isBuiltinSegment("private")).toBe(true);
     expect(isBuiltinSegment("role:admin")).toBe(true);
     expect(isBuiltinSegment("role:subscriber")).toBe(true);
+    expect(isBuiltinSegment("capability:entry:post:edit_any")).toBe(true);
   });
 
   it("rejects unknown roles and custom labels", () => {
     expect(isBuiltinSegment("role:wizard")).toBe(false);
+    expect(isBuiltinSegment("capability:")).toBe(false);
     expect(isBuiltinSegment("members")).toBe(false);
     expect(isBuiltinSegment("entitlement:pro")).toBe(false);
   });

@@ -188,7 +188,7 @@ Registering a type mints nine capabilities named `entry:<type>:<action>`, each m
 | `entry:recipe:restore_revision` | editor       |
 | `entry:recipe:edit_layout`      | author       |
 
-`capabilities` raises or lowers the minimum role per action. `capabilityType` points a type's capabilities at another name, so two types sharing `capabilityType: "recipe"` pool one permission set rather than minting two. The namespace is resolved once, at registration: the registered type always carries a `capabilityType`, the type's own name unless it pools, and every capability check reads it from there, so a pooled type is gated by `entry:recipe:*` on every surface.
+`capabilities` names, per action, the default roles that receive it. `admin` always does. `capabilityType` points a type's capabilities at another name, so two types sharing `capabilityType: "recipe"` pool one permission set rather than minting two. When pooled types name different roles for an action, the capability goes to every role either one names. The namespace is resolved once, at registration: the registered type always carries a `capabilityType`, the type's own name unless it pools, and every capability check reads it from there, so a pooled type is gated by `entry:recipe:*` on every surface.
 
 ```ts
 import { definePlugin } from "plumix/plugin";
@@ -198,7 +198,7 @@ export const recipes = definePlugin("recipes", {
     ctx.registerEntryType("recipe", {
       label: "Recipes",
       labels: { singular: "Recipe", plural: "Recipes" },
-      capabilities: { publish: "editor", create: "author" },
+      capabilities: { publish: ["editor"], create: ["author", "editor"] },
     });
   },
 });

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../db/schema/users.js";
+import { rolesFromRank } from "../access/contract/rbac.js";
 import { and, asc, eq } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
@@ -23,17 +24,17 @@ function taxonomyRegistry(
     );
     registry.capabilities.set(`term:${name}:read`, {
       name: `term:${name}:read`,
-      minRole: "subscriber",
+      grantTo: rolesFromRank("subscriber"),
       registeredBy: "test",
     });
     registry.capabilities.set(`term:${name}:assign`, {
       name: `term:${name}:assign`,
-      minRole: opts.assignRole ?? "contributor",
+      grantTo: rolesFromRank(opts.assignRole ?? "contributor"),
       registeredBy: "test",
     });
     registry.capabilities.set(`term:${name}:edit`, {
       name: `term:${name}:edit`,
-      minRole: "editor",
+      grantTo: rolesFromRank("editor"),
       registeredBy: "test",
     });
   }

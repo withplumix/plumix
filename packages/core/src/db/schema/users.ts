@@ -3,7 +3,6 @@ import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import type { JsonObject } from "../../json.js";
-import { USER_ROLES } from "../../users/contract/roles.js";
 
 export type { UserRole } from "../../users/contract/roles.js";
 export { USER_ROLES } from "../../users/contract/roles.js";
@@ -17,7 +16,8 @@ export const users = sqliteTable(
     slug: t.text().notNull(),
     name: t.text(),
     avatarUrl: t.text(),
-    role: t.text({ enum: USER_ROLES }).notNull().default("subscriber"),
+    // Names a role the config declares; one it no longer declares grants none.
+    role: t.text().notNull().default("subscriber"),
     meta: t.text({ mode: "json" }).$type<JsonObject>().notNull().default({}),
     emailVerifiedAt: t.integer({ mode: "timestamp" }),
     disabledAt: t.integer({ mode: "timestamp" }),

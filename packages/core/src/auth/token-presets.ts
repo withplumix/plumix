@@ -1,4 +1,3 @@
-import type { UserRole } from "../db/schema/users.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { capabilitiesForRole } from "./rbac.js";
 
@@ -31,7 +30,7 @@ function actionOf(capability: string): string {
  */
 export function resolveApiTokenPreset(
   preset: ApiTokenPreset,
-  role: UserRole,
+  role: string,
   plugins: PluginRegistry,
 ): readonly string[] {
   const granted = capabilitiesForRole(role, plugins);

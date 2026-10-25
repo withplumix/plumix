@@ -1,6 +1,5 @@
 import * as v from "valibot";
 
-import { USER_ROLES } from "../../../db/schema/users.js";
 import { idParam } from "../../contract/validation.js";
 
 const sessionUserSchema = v.object({
@@ -8,7 +7,7 @@ const sessionUserSchema = v.object({
   email: v.string(),
   name: v.nullable(v.string()),
   avatarUrl: v.nullable(v.string()),
-  role: v.picklist(USER_ROLES),
+  role: v.string(),
   capabilities: v.array(v.string()),
 });
 

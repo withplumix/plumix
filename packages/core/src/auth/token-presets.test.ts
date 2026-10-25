@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../db/schema/users.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import {
   narrowestPresetHolding,
@@ -11,12 +10,12 @@ describe("resolveApiTokenPreset", () => {
   const plugins = createPluginRegistry();
   plugins.capabilities.set("audit_log:read", {
     name: "audit_log:read",
-    minRole: "admin",
+    grantTo: ["admin"],
     registeredBy: "audit-log",
   });
   plugins.capabilities.set("media:delete", {
     name: "media:delete",
-    minRole: "admin",
+    grantTo: ["admin"],
     registeredBy: "media",
   });
 
@@ -65,7 +64,7 @@ describe("resolveApiTokenPreset", () => {
   test("a role with no capabilities resolves to an empty list, not to everything", () => {
     // Safety: a stored role the capability table doesn't know reaches the
     // resolver only at runtime; the type admits none.
-    const unknownRole = "nobody" as UserRole;
+    const unknownRole = "nobody";
     expect(resolveApiTokenPreset("read_only", unknownRole, plugins)).toEqual(
       [],
     );

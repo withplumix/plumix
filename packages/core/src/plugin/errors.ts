@@ -5,7 +5,6 @@ type PluginContextErrorCode =
   | "extend_context_reserved_key"
   | "extend_app_context_builtin_collision"
   | "extend_context_duplicate"
-  | "derived_capability_min_role_mismatch"
   | "settings_page_duplicate_group"
   | "settings_group_reserved"
   | "plugin_id_collides_with_core_rpc_namespace"
@@ -53,9 +52,6 @@ interface PluginContextErrorFields {
   href?: string;
   descriptor?: string;
   existingOwner?: string;
-  capName?: string;
-  minRole?: string;
-  existingMinRole?: string;
   fieldKey?: string;
   driverKey?: string;
   pattern?: string;
@@ -81,9 +77,6 @@ export class PluginContextError extends Error {
   readonly href: string | undefined;
   readonly descriptor: string | undefined;
   readonly existingOwner: string | undefined;
-  readonly capName: string | undefined;
-  readonly minRole: string | undefined;
-  readonly existingMinRole: string | undefined;
   readonly fieldKey: string | undefined;
   readonly pattern: string | undefined;
   readonly count: number | undefined;
@@ -108,9 +101,6 @@ export class PluginContextError extends Error {
     this.href = fields.href;
     this.descriptor = fields.descriptor;
     this.existingOwner = fields.existingOwner;
-    this.capName = fields.capName;
-    this.minRole = fields.minRole;
-    this.existingMinRole = fields.existingMinRole;
     this.fieldKey = fields.fieldKey;
     this.pattern = fields.pattern;
     this.count = fields.count;
@@ -196,25 +186,6 @@ export class PluginContextError extends Error {
         `with "${ctx.key}", but "${ctx.existingOwner}" already registered it. ` +
         `Each extension key has exactly one provider — rename one or ` +
         `consolidate the providing plugin.`,
-      ctx,
-    );
-  }
-
-  static derivedCapabilityMinRoleMismatch(ctx: {
-    pluginId: string;
-    capName: string;
-    minRole: string;
-    existingMinRole: string;
-    existingOwner: string;
-  }): PluginContextError {
-    return new PluginContextError(
-      "derived_capability_min_role_mismatch",
-      `Plugin "${ctx.pluginId}" derived capability "${ctx.capName}" with ` +
-        `minRole "${ctx.minRole}", but it was already registered ` +
-        `with minRole "${ctx.existingMinRole}" by ` +
-        `"${ctx.existingOwner}". Two entry types ` +
-        `/ termTaxonomies sharing a capabilityType must agree on any ` +
-        `\`capabilities\` override — the pool has one cap per name.`,
       ctx,
     );
   }

@@ -274,7 +274,7 @@ describe("the submissions inbox", () => {
 
     expect(
       harness.app.plugins.capabilities.get(SUBMISSION_MODERATE_CAPABILITY),
-    ).toMatchObject({ minRole: "editor" });
+    ).toMatchObject({ grantTo: ["editor", "admin"] });
   });
 
   // Same drift the tel field guards against: the admin bundler resolves

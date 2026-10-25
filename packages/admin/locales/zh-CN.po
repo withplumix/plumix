@@ -436,6 +436,31 @@ msgstr ""
 #~ msgstr "继承您的所有权限"
 
 #. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.admin"
+#~ msgstr "管理员 — 完全控制"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.author"
+#~ msgstr "作者 — 发布自己的文章"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.contributor"
+#~ msgstr "贡献者 — 草稿，不发布"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.editor"
+#~ msgstr "编辑 — 发布并编辑所有文章"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.subscriber"
+#~ msgstr "订阅者 — 仅可读"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -823,14 +848,9 @@ msgid "breadcrumb.admin"
 msgstr "管理"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.admin"
 msgstr "管理员"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.admin"
-msgstr "管理员 — 完全控制"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -878,14 +898,9 @@ msgid "auth.device.approve.pending"
 msgstr "批准中…"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.author"
 msgstr "作者"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.author"
-msgstr "作者 — 发布自己的文章"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1178,14 +1193,9 @@ msgid "login.oauth.continueWith"
 msgstr "使用 {label} 继续"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.contributor"
 msgstr "贡献者"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.contributor"
-msgstr "贡献者 — 草稿，不发布"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1775,14 +1785,9 @@ msgid "breadcrumb.editUser"
 msgstr "编辑用户"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.editor"
 msgstr "编辑"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.editor"
-msgstr "编辑 — 发布并编辑所有文章"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3452,14 +3457,9 @@ msgid "entries.list.column.status"
 msgstr "状态"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.subscriber"
 msgstr "订阅者"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.subscriber"
-msgstr "订阅者 — 仅可读"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts
@@ -3941,6 +3941,11 @@ msgstr "未知"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.unknownDevice"
 msgstr "未知设备"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/-role-name.tsx
+msgid "users.role.unknown"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

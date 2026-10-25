@@ -1,5 +1,5 @@
 import type { Db } from "../context/app-context.js";
-import type { User, UserRole } from "../db/schema/users.js";
+import type { User } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
 import { and, eq, isUniqueConstraintError } from "../db/index.js";
 import { oauthAccounts } from "../db/schema/oauth_accounts.js";
@@ -69,12 +69,12 @@ export interface ExternalIdentityInput {
    * Lowercase email domain → the role a new user on it gets. Wins over
    * `defaultRole`.
    */
-  readonly allowedDomains?: Readonly<Record<string, UserRole>>;
+  readonly allowedDomains?: Readonly<Record<string, string>>;
   /**
    * The role a new user on an unlisted domain gets. Omit it and such a user is
    * refused with `domain_not_allowed`.
    */
-  readonly defaultRole?: UserRole;
+  readonly defaultRole?: string;
   /**
    * Defaults to `false`, refusing the first user, because passkey is the
    * dedicated first-admin path.

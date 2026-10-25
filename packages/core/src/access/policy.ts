@@ -1,6 +1,11 @@
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import type { UserRole } from "../db/schema/users.js";
-import type { Access, EntitlementSegment } from "./contract/access.js";
+import type {
+  Access,
+  CapabilitySegment,
+  EntitlementSegment,
+} from "./contract/access.js";
+import type { Capability } from "./contract/capability.js";
 import type {
   AccessOutcome,
   AccessPolicyFor,
@@ -8,6 +13,7 @@ import type {
   EntryAdmission,
 } from "./contract/policy.js";
 import { USER_ROLES } from "../db/schema/users.js";
+import { resolveCapability } from "./contract/capability.js";
 import { admissionMeets, admissionOf } from "./contract/policy.js";
 import { roleLevel } from "./contract/rbac.js";
 import { PRIVATE_SEGMENT } from "./contract/segments.js";
@@ -15,6 +21,7 @@ import { PRIVATE_SEGMENT } from "./contract/segments.js";
 export type {
   Access,
   BuiltinSegment,
+  CapabilitySegment,
   EntitlementSegment,
   Gate,
   Segment,
@@ -149,8 +156,13 @@ export async function resolveAccess(
 }
 
 const ROLE_PREFIX = "role:";
+const CAPABILITY_PREFIX = "capability:";
 
-/** True for `anonymous`, `authenticated`, `private`, or `role:<known-role>`. */
+/**
+ * True for `anonymous`, `authenticated`, `private`, `role:<known-role>`, or
+ * `capability:<name>`. A capability nobody registered is still built in: its
+ * policy grants it to nobody.
+ */
 export function isBuiltinSegment(segment: string): boolean {
   if (
     segment === "anonymous" ||
@@ -158,6 +170,9 @@ export function isBuiltinSegment(segment: string): boolean {
     segment === PRIVATE_SEGMENT
   ) {
     return true;
+  }
+  if (segment.startsWith(CAPABILITY_PREFIX)) {
+    return segment.length > CAPABILITY_PREFIX.length;
   }
   if (!segment.startsWith(ROLE_PREFIX)) return false;
   return (USER_ROLES as readonly string[]).includes(
@@ -200,6 +215,22 @@ export function rolePolicy(required: UserRole): AccessPolicy {
         return grant(`${ROLE_PREFIX}${required}`);
       }
       return challenge("forbidden");
+    },
+  });
+}
+
+/**
+ * A principal without the capability gets a 403, since redirecting to sign-in
+ * would loop. Grants the capability's segment, so every holder shares one
+ * variant.
+ */
+export function capabilityPolicy(capability: Capability): AccessPolicy {
+  return definePolicy({
+    resolve: (ctx) => {
+      if (!ctx.user) return redirectToLogin();
+      if (!ctx.auth.can(capability)) return challenge("forbidden");
+      const segment: CapabilitySegment = `${CAPABILITY_PREFIX}${resolveCapability(ctx.plugins, capability)}`;
+      return grant(segment);
     },
   });
 }

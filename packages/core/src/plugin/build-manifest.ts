@@ -80,6 +80,7 @@ import {
   byPriorityThen,
   configuredSlotsOf,
   CORE_NAV_GROUPS,
+  roleEntries,
 } from "./manifest-types.js";
 import { pluginCatalogUrl } from "./plugin-catalog-path.js";
 import { ENTRY_MENU_ICONS, TAXONOMY_MENU_ICONS } from "./registry.js";
@@ -276,6 +277,7 @@ export function buildManifest(
     configuredSlots,
     refusedAdminAreas,
     frameworkRoutes: { author: registry.frameworkRoutes.author },
+    roles: roleEntries(registry.roles),
   };
 }
 

@@ -1582,6 +1582,59 @@ describe("buildManifest", () => {
   });
 });
 
+describe("buildManifest roles", () => {
+  test("lists the default roles with their catalog labels when the config declares none", () => {
+    const manifest = buildManifest(createPluginRegistry());
+    expect(manifest.roles).toEqual([
+      {
+        name: "subscriber",
+        label: { id: "userRole.subscriber", message: "Subscriber" },
+      },
+      {
+        name: "contributor",
+        label: { id: "userRole.contributor", message: "Contributor" },
+      },
+      { name: "author", label: { id: "userRole.author", message: "Author" } },
+      { name: "editor", label: { id: "userRole.editor", message: "Editor" } },
+      {
+        name: "admin",
+        label: { id: "userRole.admin", message: "Administrator" },
+      },
+    ]);
+  });
+
+  test("adds the config's roles after the defaults, a role without a label showing its name", () => {
+    const designer = { id: "role.designer", message: "Designer" };
+    const manifest = buildManifest(
+      createPluginRegistry(undefined, {
+        designer: { label: designer, can: {} },
+        reviewer: { can: {} },
+        editor: { label: "Desk editor", can: {} },
+        author: { can: {} },
+      }),
+    );
+    expect(manifest.roles).toEqual([
+      {
+        name: "subscriber",
+        label: { id: "userRole.subscriber", message: "Subscriber" },
+      },
+      {
+        name: "contributor",
+        label: { id: "userRole.contributor", message: "Contributor" },
+      },
+      // A redefined default keeps its label unless the config gives one.
+      { name: "author", label: { id: "userRole.author", message: "Author" } },
+      { name: "editor", label: "Desk editor" },
+      {
+        name: "admin",
+        label: { id: "userRole.admin", message: "Administrator" },
+      },
+      { name: "designer", label: designer },
+      { name: "reviewer", label: "reviewer" },
+    ]);
+  });
+});
+
 describe("deriveAdminSlug", () => {
   test("slugifies the plural when set", () => {
     expect(deriveAdminSlug("product", "Products")).toBe("products");

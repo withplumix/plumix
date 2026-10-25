@@ -1,12 +1,12 @@
 import * as v from "valibot";
 
+import type { DefaultRole } from "../access/contract/roles.js";
 import type {
   PlumixAuthConfig,
   PlumixAuthInput,
 } from "../context/auth-config.js";
 import type { EnvInput } from "../runtime/contract/env-input.js";
 import type { OAuthProviderClient } from "./contract/oauth.js";
-import { USER_ROLES } from "../db/schema/users.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./contract/oauth.js";
 import { HTTPS_WILDCARD_PREFIX } from "./passkey/origin-policy.js";
 import { isSafeRedirect } from "./redirect.js";
@@ -257,11 +257,11 @@ const magicLinkSchema = v.object({
   ),
 });
 
+const roleNameSchema = (message: string) =>
+  v.pipe(v.string(message), v.nonEmpty(message));
+
 const selfSignupSchema = v.object({
-  defaultRole: v.picklist(
-    USER_ROLES,
-    "selfSignup.defaultRole must be a valid user role",
-  ),
+  defaultRole: roleNameSchema("selfSignup.defaultRole must name a role"),
 });
 
 const allowedDomainsSchema = v.record(
@@ -273,7 +273,7 @@ const allowedDomainsSchema = v.record(
         `allowedDomains key ${JSON.stringify(issue.input)} must be a non-empty lowercase domain`,
     ),
   ),
-  v.picklist(USER_ROLES, "allowedDomains role must be a valid user role"),
+  roleNameSchema("allowedDomains role must name a role"),
 );
 
 const authInputSchema = v.object({
@@ -322,11 +322,14 @@ export function auth<
     never,
     never
   >,
+  TRole extends string = DefaultRole,
 >(
-  input: PlumixAuthInput & {
+  input: PlumixAuthInput<TRole> & {
     readonly oauth?: { readonly providers: TProviders };
   },
-): PlumixAuthConfig & { readonly oauth?: { readonly providers: TProviders } } {
+): PlumixAuthConfig<TRole> & {
+  readonly oauth?: { readonly providers: TProviders };
+} {
   const result = v.safeParse(authInputSchema, input);
   if (!result.success) {
     const issues = toIssues(result.issues);

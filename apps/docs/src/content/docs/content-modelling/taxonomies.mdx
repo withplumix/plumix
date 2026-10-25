@@ -148,7 +148,7 @@ Registering a taxonomy mints five capabilities named `term:<taxonomy>:<action>`.
 | `term:cuisine:delete` | editor       | Deleting a term                           |
 | `term:cuisine:manage` | editor       | Nothing in core; a gate plugins can claim |
 
-The `term:` prefix keeps the namespaces apart, so a `cuisine` taxonomy and a `cuisine` entry type would never share a capability. `capabilities` on the registration raises or lowers the minimum role for any of the five, the same way it does for an entry type.
+The `term:` prefix keeps the namespaces apart, so a `cuisine` taxonomy and a `cuisine` entry type would never share a capability. `capabilities` on the registration names the default roles that receive any of the five, the same way it does for an entry type.
 
 Core's own term procedures gate on `edit` and `delete`; `manage` is there for a plugin that wants one taxonomy-wide switch. The menu plugin uses it, gating every menu mutation on `term:menu:manage`.
 

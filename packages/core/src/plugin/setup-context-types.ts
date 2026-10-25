@@ -134,6 +134,14 @@ export interface PluginSetupContextBase {
     id: Id,
     options: O & UserMetaBoxDrift<Id, O>,
   ): void;
+  /**
+   * `grantTo` names the default roles that receive the capability; `admin`
+   * always does, so a capability registered without it is admin's alone.
+   */
+  registerCapability(
+    name: string,
+    options?: { readonly grantTo?: readonly UserRole[] },
+  ): void;
   registerCapability(name: string, minRole: UserRole): void;
   registerCapability(
     name: string,
