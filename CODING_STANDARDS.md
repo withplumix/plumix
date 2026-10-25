@@ -150,8 +150,8 @@ migration under a new name, because installs that ran the old one won't run it a
 ## Tests
 
 Plumix has three test tiers: **unit**, **e2e** and **smoke**. A tier is chosen by what the test
-needs to observe the behaviour, never by convenience, and each tier has one location, one runner and
-one CI job, bar the smoke's editor spec, which Playwright runs inside the smoke
+needs to observe the behaviour, never by convenience, and each tier has one runner and one CI job,
+bar the smoke's editor spec, which Playwright runs inside the smoke
 ([ADR 0042](docs/adr/0042-tests-come-in-three-tiers.md)). The section covers every
 workspace package and app; `.sandcastle`, the ship loop's own harness, sits outside the workspace
 and outside the tiers. Typecheck, lint, format, knip, publint, attw, `i18n:check`,
@@ -162,7 +162,7 @@ neither: it reviews the unit tier.
 | Tier  | Proves                                               | Lives in                                                                                      | Runs with             | CI job             |
 | ----- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------- | ------------------ |
 | Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`; a feature test in `tests/feature/`                     | `pnpm test:unit`      | `Test`             |
-| E2E   | what a consumer sees and does on a running site      | the package's `tests/e2e/*.spec.ts`, against its `playground/`                                | `pnpm test:e2e`       | `Test (e2e)`       |
+| E2E   | what a consumer sees and does on a running site      | the package's `tests/e2e/*.spec.ts` (`e2e/` until ported), against its `playground/`          | `pnpm test:e2e`       | `Test (e2e)`       |
 | Smoke | a project scaffolded from the packed tarballs works  | `packages/create-plumix-app/scripts/smoke.mjs`, and the editor spec under `smoke/dev-editor/` | `pnpm smoke:scaffold` | `Smoke (scaffold)` |
 
 ### Where a test goes
@@ -211,7 +211,7 @@ file moves with the change that next edits it. Review holds every added or edite
 
 The unit tier holds two kinds of test, a unit test and a feature test
 ([ADR 0070](docs/adr/0070-a-site-is-tested-through-one-test-site-whose-services-are-fakes.md)).
-Every package and site lays its tests out the same way:
+A package or site lays its tests out this way:
 
 | Path             | Holds                                                                                                       |
 | ---------------- | ----------------------------------------------------------------------------------------------------------- |

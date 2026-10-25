@@ -16,9 +16,9 @@ download in the unit job, and an extra required CI job (#3035, #3036).
 > the behaviour. A unit test checks logic through a public API in one process,
 > on source. An e2e test drives a running site in a real browser. A smoke step
 > checks that a project scaffolded from the packed tarballs installs, builds,
-> starts and answers. Each tier has one location, one runner and one CI job, a
-> behaviour is tested in the lowest tier that can observe it, and checks that
-> do not run code are gates, not tiers.**
+> starts and answers. Each tier has one runner and one CI job and a fixed
+> layout, a behaviour is tested in the lowest tier that can observe it, and
+> checks that do not run code are gates, not tiers.**
 
 `CODING_STANDARDS.md#tests` is the working rule: the placement questions, what
 each tier may touch, the test-double order and the TDD loop. This record keeps

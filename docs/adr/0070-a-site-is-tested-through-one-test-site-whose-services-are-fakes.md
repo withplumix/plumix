@@ -2,8 +2,8 @@
 
 A developer testing a Plumix site or plugin had three partial harnesses and no
 whole one (#3439). `createTestContext`, `createRpcHarness` and
-`createDispatcherHarness` each covered part of the job: the RPC harness could not
-install plugins and its client knew only core's procedures, and the dispatcher
+`createDispatcherHarness` each covered part of the job: the RPC harness did not
+install plugins, only took a registry installed elsewhere, and its client knew only core's procedures, and the dispatcher
 harness had no context and could not act as a user. Outbound fetches, the logger,
 telemetry, time and scheduled tasks had no fake, so tests stubbed the global
 `fetch`, rebuilt capturing loggers, froze `Date` with fake timers and called a
@@ -44,7 +44,7 @@ hand-kept port registry and seeded everything in `globalSetup`.
   the current site, so moving one test site's clock leaves every other site and
   real time alone.
 - **Vitest.** Unit and feature tests run on Vitest, in the `unit` and `feature`
-  projects `defineTestConfig()` defines.
+  projects `defineTestConfig()` will define.
 - **E2E is served in process on Node.** The Playwright fixture boots the test
   site inside each worker, on its own in-memory database and port 0, whatever
   runtime the site deploys to. A spec uses the same `site`, factories and fakes
