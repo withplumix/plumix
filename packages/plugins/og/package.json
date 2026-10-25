@@ -75,7 +75,6 @@
     "@orpc/client": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
-    "@plumix/lingui-config": "workspace:*",
     "@plumix/plugin-blog": "workspace:*",
     "@plumix/plugin-seo": "workspace:*",
     "@plumix/prettier-config": "workspace:*",

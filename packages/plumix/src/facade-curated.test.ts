@@ -678,6 +678,9 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
     ],
   },
+  // The Lingui config a plugin's `lingui.config.ts` compiles its catalogs
+  // with, kept off `./i18n`, which the browser and server load.
+  "./lingui": { mirrors: "@plumix/core/lingui", withheld: [] },
   "./editor-runtime": {
     mirrors: "@plumix/admin-editor",
     withheld: [

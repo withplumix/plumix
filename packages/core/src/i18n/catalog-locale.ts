@@ -42,22 +42,34 @@ function shippedFor(
 }
 
 /**
- * The shipped locale whose catalog serves `locale`: the exact tag, then its
- * CLDR parent or the tag less its last subtag, repeatedly, never crossing a
- * script; `sourceLocale` when none ships.
+ * Every shipped locale on `locale`'s chain, nearest first: the exact tag, then
+ * its CLDR parent or the tag less its last subtag, repeatedly, never crossing
+ * a script.
+ */
+export function shippedChain(
+  locale: string,
+  shipped: readonly string[],
+): string[] {
+  const script = maximized(locale).script;
+  const chain: string[] = [];
+  for (const tag of fallbackChain(locale)) {
+    if (maximized(tag).script !== script) continue;
+    const match = shippedFor(tag, shipped);
+    if (match !== undefined) chain.push(match);
+  }
+  return chain;
+}
+
+/**
+ * The shipped locale whose catalog serves `locale`: the first on its
+ * {@link shippedChain}, or `sourceLocale` when none ships.
  */
 export function catalogLocale(
   locale: string,
   shipped: readonly string[],
   sourceLocale: string,
 ): string {
-  const script = maximized(locale).script;
-  for (const tag of fallbackChain(locale)) {
-    if (maximized(tag).script !== script) continue;
-    const match = shippedFor(tag, shipped);
-    if (match !== undefined) return match;
-  }
-  return sourceLocale;
+  return shippedChain(locale, shipped)[0] ?? sourceLocale;
 }
 
 /**

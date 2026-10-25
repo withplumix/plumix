@@ -221,7 +221,7 @@ Under `deploy:` it then prints what the runtime finds in the project's deploy co
 
 ### `i18n`
 
-Extracts translatable strings to `.po` catalogs and compiles them to the runtime format Lingui reads, via `@lingui/cli`. Four subcommands: `extract`, `compile`, `init` (scaffolds `lingui.config.ts` and `i18n:extract`, `i18n:compile`, `i18n:check` and `prepack` scripts that run these verbs, skipping anything that already exists), and `verify` (extracts to a snapshot, diffs the active message set, and restores — the CI gate behind `extract --check`).
+Extracts translatable strings to `.po` catalogs and compiles them to the runtime format Lingui reads, via `@lingui/cli`. Four subcommands: `extract`, `compile`, `init` (scaffolds a `lingui.config.ts` built with `defineLinguiConfig` from `plumix/lingui`, and `i18n:extract`, `i18n:compile`, `i18n:check` and `prepack` scripts that run these verbs, skipping anything that already exists), and `verify` (extracts to a snapshot, diffs the active message set, and restores — the CI gate behind `extract --check`).
 
 ```bash
 plumix i18n extract

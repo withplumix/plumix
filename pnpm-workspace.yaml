@@ -119,6 +119,7 @@ catalogs:
     drizzle-valibot: ^0.4.2
   lingui:
     "@lingui/cli": ^6.9.1
+    "@lingui/conf": ^6.9.1
     "@lingui/core": ^6.9.1
     "@lingui/format-po": ^6.9.1
     "@lingui/react": ^6.9.1

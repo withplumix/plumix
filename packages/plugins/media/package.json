@@ -72,7 +72,6 @@
     "@orpc/client": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
-    "@plumix/lingui-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/runtime-cloudflare": "workspace:*",
     "@plumix/typescript-config": "workspace:*",

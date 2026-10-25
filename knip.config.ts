@@ -209,6 +209,9 @@ const config: KnipConfig = {
         "src/cdn/cloudflare.ts",
         "src/fields/index.ts",
         "src/i18n/index.ts",
+        // `plumix/lingui` is imported by a plugin's `lingui.config.ts`, which
+        // the `@lingui/cli` binary loads — never an import knip follows.
+        "src/lingui.ts",
         "src/schema/index.ts",
         "src/test/index.ts",
         "src/test/playwright.ts",
@@ -285,6 +288,8 @@ const config: KnipConfig = {
         // `lingui.config.ts` is loaded by the `@lingui/cli` binary
         // (extract/compile) — never imported.
         "lingui.config.ts",
+        // With knip's vite plugin disabled below, list its config.
+        "vite.config.ts",
         // Catalog-extractor mirror for `@plumix/core` chrome descriptors
         // (CORE_NAV_GROUPS + CORE_NAV_ITEMS). Exists so `lingui extract`
         // picks the ids into admin's `.po`; never imported at runtime.
@@ -296,6 +301,10 @@ const config: KnipConfig = {
       // Disabling it lets `pnpm knip` run cold without a prior build.
       // Pattern follows sanity-io/sdk's knip.config.ts.
       playwright: false,
+      // vite.config.ts builds the lingui plugin, which loads lingui.config.ts,
+      // which imports `@plumix/core/lingui` from core's dist. Off for the same
+      // reason as playwright.
+      vite: false,
     },
     // The admin chunk is loaded by the plumix vite plugin at consumer
     // build time via `adminEntry` — knip can't follow that runtime path.

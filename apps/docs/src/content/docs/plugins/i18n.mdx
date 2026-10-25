@@ -1,6 +1,6 @@
 ---
 title: Translation Catalogs
-description: The i18n slot on a plugin descriptor, the two locale lists that have to agree, and why a shipped translation nobody declares is unreachable.
+description: The i18n slot on a plugin descriptor, the Lingui config the catalogs compile with, and why a shipped translation nobody declares is unreachable.
 tier: P2
 roster: true
 sidebar:
@@ -13,9 +13,19 @@ A plugin registers labels, and those labels render in the admin of every site th
 
 ## Overview
 
-Translating a plugin takes two halves, and each has its own list of locales.
+Translating a plugin takes two halves: the catalogs, and the slot that serves them.
 
-The first half is the catalogs themselves. Every user-visible string a plugin registers is a descriptor — an `{ id, message }` pair — and each one needs a msgid in a `.po` per locale for a translator to fill in. `lingui compile` then turns each filled-in `.po` into a runtime `<locale>.mjs`. Both steps are driven by the plugin's own `lingui.config.ts`, and the `locales` array in that file is what decides which `.po` files exist.
+The first half is the catalogs themselves. Every user-visible string a plugin registers is a descriptor — an `{ id, message }` pair — and each one needs a msgid in a `.po` per locale for a translator to fill in. `plumix i18n compile` then turns each filled-in `.po` into a runtime `<locale>.mjs`. Both steps are driven by the plugin's own `lingui.config.ts`, which `plumix i18n init` writes with the helper from `plumix/lingui`, the one core, the admin, the editor and every first-party plugin compile with:
+
+```ts
+import { defineLinguiConfig } from "plumix/lingui";
+
+export default defineLinguiConfig({ rootDir: import.meta.dirname });
+```
+
+It has no locale list. The `.po` files under `locales/` are the record of which locales the plugin ships, so adding a language is adding its `.po`. The helper applies the rest of the conventions: source locale `en`, PO without line numbers, and `<rootDir>/locales/{locale}` over `src`. A package with several translatable surfaces passes `surfaces`, a `catalogPath` and `include` dirs each.
+
+A catalog must be named for its canonical BCP 47 tag: `zh_CN.po` or `zh-cn.po` fails the compile with the name to rename it to.
 
 How a msgid gets into that `.po` depends on where the string lives. `lingui extract` collects what its Babel pass can see, which is the macros and `<Trans>` elements in the admin screens a plugin ships. It does not see a descriptor's labels: those are plain object literals in server-side code that never goes through the macro pipeline, which is why every first-party plugin's `en.po` is marked hand-authored. Both kinds land in the same catalog, so one slot covers both — and `plumix i18n verify` is what keeps source and catalog in step, because it scans for both shapes rather than relying on the extractor.
 
@@ -36,11 +46,15 @@ export const recipes = definePlugin("recipes", {
 
 At build time the site's manifest is projected from every installed descriptor. A plugin carrying an `i18n` slot gets an entry under `pluginI18n`, mapping each locale to a URL under `/_plumix/admin/plugins/<id>/locales/<locale>.mjs` (behind the site's `basePath`, when it has one), and `plumix build` copies the matching `.mjs` out of the installed package to sit behind it. The admin fetches those URLs at boot and merges the messages into its active Lingui instance. A plugin with no `i18n` slot gets no entry, so nothing is copied, nothing is served, and the admin renders every one of its strings in the source locale.
 
-<Aside type="caution" title="Two arrays named `locales`">
-  The array in `lingui.config.ts` decides which `.po` files exist and get
-  **compiled**. The array in the `i18n` slot decides what is **projected and
-  served**. Edit them in the same commit, every time.
+<Aside type="caution" title="Files compile, the slot serves">
+  The `.po` files decide what gets **compiled**. The `locales` array in the
+  `i18n` slot decides what is **projected and served**. Add a `.po` and its slot
+  entry in the same commit, every time.
 </Aside>
+
+### Partial regional catalogs
+
+A regional catalog only needs the messages that differ. Compile fills every message a catalog lacks from its CLDR parent locales, then from the tag with its last subtag dropped, never crossing a script. A `de-AT.po` that translates two strings compiles with the rest from `de.po`; a `zh-Hant.po` never fills from a Simplified `zh.po`. A message no catalog on that chain translates compiles to its source string.
 
 ## Quickstart
 
@@ -48,25 +62,13 @@ Adding Ukrainian to a plugin whose strings are authored in English.
 
 <Steps>
 
-1. **Scaffold the tooling.** Run this from the plugin's package root. It writes a `lingui.config.ts`, adds `i18n:extract`, `i18n:compile` and `i18n:check` scripts that run `plumix i18n extract`, `compile` and `verify`, adds a `prepack` script that runs `plumix i18n compile`, and adds the two `@lingui` packages as dev dependencies — each step skipped if it is already there. It does not touch your descriptor; the `i18n` slot is yours to write.
+1. **Scaffold the tooling.** Run this from the plugin's package root. It writes a `lingui.config.ts`, adds `i18n:extract`, `i18n:compile` and `i18n:check` scripts that run `plumix i18n extract`, `compile` and `verify`, adds a `prepack` script that runs `plumix i18n compile`, and adds `@lingui/cli` as a dev dependency — each step skipped if it is already there. It does not touch your descriptor; the `i18n` slot is yours to write.
 
    ```sh
    pnpm plumix i18n init
    ```
 
-2. **Add the locale to the lingui config**, so a `.po` exists for it and `plumix i18n compile` produces its `.mjs`.
-
-   ```ts no-typecheck
-   import { defineConfig } from "@lingui/cli";
-   import { formatter } from "@lingui/format-po";
-
-   export default defineConfig({
-     sourceLocale: "en",
-     locales: ["en", "uk"],
-     catalogs: [{ path: "<rootDir>/locales/{locale}", include: ["src"] }],
-     format: formatter({ lineNumbers: false }),
-   });
-   ```
+2. **Create `locales/uk.po`.** The file is what adds the locale: `plumix i18n compile` produces a `uk.mjs` for every `.po` it finds, with no config edit.
 
 3. **Get the msgids into `locales/uk.po`, and translate them.** Run the extractor for anything macro-visible; for a descriptor's labels, copy the msgids out of `en.po` — the extractor does not see them. Then check the two agree.
 
@@ -114,7 +116,7 @@ Three keys, all required once the slot is present.
 
 ### sourceLocale
 
-The locale every msgid is authored in. It mirrors `sourceLocale` in `lingui.config.ts`, and it lives on the manifest so the admin can resolve catalog paths without parsing a plugin's lingui config at run time.
+The locale every msgid is authored in. It mirrors the `en` source locale `plumix/lingui` compiles with, and it lives on the manifest so the admin can resolve catalog paths without parsing a plugin's lingui config at run time.
 
 ```ts
 import type { PluginI18nSlot } from "plumix";
@@ -158,7 +160,7 @@ The quiet one is the one that bites. Nothing at run time can tell an untranslate
 
 ### catalogPath
 
-The directory holding the compiled `<locale>.mjs` files, **relative to the plugin's own package root** — not to the site installing it. `"./locales"` is what every first-party plugin carrying a slot declares, and it lines up with the `<rootDir>/locales/{locale}` template `plumix i18n init` writes into the lingui config.
+The directory holding the compiled `<locale>.mjs` files, **relative to the plugin's own package root** — not to the site installing it. `"./locales"` is what every first-party plugin carrying a slot declares, and it lines up with the `<rootDir>/locales/{locale}` path `plumix/lingui` compiles to by default.
 
 ```ts
 import type { PluginI18nSlot } from "plumix";
@@ -198,7 +200,7 @@ A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so
 
 `plumix i18n verify` compares the descriptors in `src` against the msgids in `locales/*.po` and exits non-zero on drift in either direction, which catches a string added without an extract and a catalog entry left behind after a string was deleted. `plumix i18n init` wires it up as `i18n:check`; run it in CI.
 
-It does not compare the slot to the disk. A declared locale with no compiled catalog surfaces at `plumix build`; the reverse — a `.po` you translated and never declared — is visible to no tool at all, which is why the two `locales` arrays are a review habit rather than a check.
+It does not compare the slot to the disk. A declared locale with no compiled catalog surfaces at `plumix build`; the reverse — a `.po` you translated and never declared in the slot — is visible to no tool at all, which is why the slot's `locales` is a review habit rather than a check.
 
 ## Related
 

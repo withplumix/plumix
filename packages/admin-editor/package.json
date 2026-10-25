@@ -88,7 +88,6 @@
     "@lingui/react": "catalog:lingui",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
-    "@plumix/lingui-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",
     "@plumix/typescript-config": "workspace:*",
     "@plumix/vitest-config": "workspace:*",

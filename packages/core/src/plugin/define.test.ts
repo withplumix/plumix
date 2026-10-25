@@ -9,8 +9,7 @@ import {
   vi,
 } from "vitest";
 
-import { defineLinguiConfig } from "@plumix/lingui-config";
-
+import coreLingui from "../../lingui.config.js";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -141,10 +140,11 @@ describe("definePlugin — dataMigrations", () => {
 });
 
 describe("PLUGIN_I18N_SLOT", () => {
-  test("declares the source locale and locales a first-party plugin's lingui config extracts", () => {
-    const lingui = defineLinguiConfig();
-    expect(PLUGIN_I18N_SLOT.sourceLocale).toBe(lingui.sourceLocale);
-    expect(PLUGIN_I18N_SLOT.locales).toEqual(lingui.locales);
+  test("declares the source locale and the locales core's catalog files ship", () => {
+    expect(PLUGIN_I18N_SLOT.sourceLocale).toBe(coreLingui.sourceLocale);
+    expect([...PLUGIN_I18N_SLOT.locales].sort()).toEqual(
+      [...coreLingui.locales].sort(),
+    );
   });
 
   test("is the shared five-locale catalog declaration every first-party plugin ships", () => {

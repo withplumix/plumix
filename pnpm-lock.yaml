@@ -261,6 +261,9 @@ catalogs:
     '@lingui/cli':
       specifier: ^6.9.1
       version: 6.9.1
+    '@lingui/conf':
+      specifier: ^6.9.1
+      version: 6.9.1
     '@lingui/core':
       specifier: ^6.9.1
       version: 6.9.1
@@ -707,9 +710,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
@@ -888,9 +888,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
@@ -1045,9 +1042,15 @@ importers:
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.18.0
+      '@lingui/conf':
+        specifier: catalog:lingui
+        version: 6.9.1
       '@lingui/core':
         specifier: catalog:lingui
         version: 6.9.1(@babel/core@7.29.7(supports-color@10.2.2))
+      '@lingui/format-po':
+        specifier: catalog:lingui
+        version: 6.9.1
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.1
         version: 1.32.1(supports-color@10.2.2)(zod@4.6.5)
@@ -1121,9 +1124,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../tooling/prettier
@@ -1358,9 +1358,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -1465,9 +1462,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -1572,9 +1566,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/plugin-blog':
         specifier: workspace:*
         version: link:../blog
@@ -1782,9 +1773,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/plugin-pages':
         specifier: workspace:*
         version: link:../pages
@@ -1904,9 +1892,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -2020,9 +2005,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -2133,9 +2115,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/plugin-blog':
         specifier: workspace:*
         version: link:../blog
@@ -2245,9 +2224,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/prettier-config':
         specifier: workspace:*
         version: link:../../../tooling/prettier
@@ -2395,9 +2371,6 @@ importers:
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
-      '@plumix/lingui-config':
-        specifier: workspace:*
-        version: link:../../../tooling/lingui
       '@plumix/plugin-blog':
         specifier: workspace:*
         version: link:../blog
@@ -3022,37 +2995,6 @@ importers:
       vitest:
         specifier: catalog:vitest
         version: 5.0.4(@types/node@24.19.1)(@vitest/coverage-v8@5.0.4)(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-
-  tooling/lingui:
-    dependencies:
-      '@lingui/cli':
-        specifier: catalog:lingui
-        version: 6.9.1(esbuild@0.28.2)(rolldown@1.2.13)(supports-color@10.2.2)
-      '@lingui/format-po':
-        specifier: catalog:lingui
-        version: 6.9.1
-    devDependencies:
-      '@plumix/eslint-config':
-        specifier: workspace:*
-        version: link:../eslint
-      '@plumix/prettier-config':
-        specifier: workspace:*
-        version: link:../prettier
-      '@plumix/typescript-config':
-        specifier: workspace:*
-        version: link:../typescript
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.19.1
-      eslint:
-        specifier: 'catalog:'
-        version: 10.12.0(jiti@2.7.0)(supports-color@10.2.2)
-      prettier:
-        specifier: 'catalog:'
-        version: 3.9.10
-      typescript:
-        specifier: 'catalog:'
-        version: 6.0.3
 
   tooling/prettier:
     dependencies:

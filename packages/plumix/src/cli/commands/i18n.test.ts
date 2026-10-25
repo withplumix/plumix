@@ -759,11 +759,10 @@ describe("i18nCommand", () => {
       );
       const configPath = join(dir, "lingui.config.ts");
       expect(existsSync(configPath)).toBe(true);
-      const config = readFileSync(configPath, "utf8");
-      expect(config).toContain('sourceLocale: "en"');
-      expect(config).toContain('path: "<rootDir>/locales/{locale}"');
-      expect(config).toContain('include: ["src"]');
-      expect(config).toContain("formatter({ lineNumbers: false })");
+      expect(readFileSync(configPath, "utf8")).toBe(
+        'import { defineLinguiConfig } from "plumix/lingui";\n\n' +
+          "export default defineLinguiConfig({ rootDir: import.meta.dirname });\n",
+      );
     });
 
     test("scaffolds no scripts/ directory", async () => {
@@ -781,9 +780,8 @@ describe("i18nCommand", () => {
         prepack: "plumix i18n compile",
       });
       // Pinning to the constant — a version bump must be a deliberate
-      // test change so the gate against silent drift stays loud.
-      expect(pkg.devDependencies?.["@lingui/cli"]).toBe(LINGUI_DEP_RANGE);
-      expect(pkg.devDependencies?.["@lingui/format-po"]).toBe(LINGUI_DEP_RANGE);
+      // test change.
+      expect(pkg.devDependencies).toEqual({ "@lingui/cli": LINGUI_DEP_RANGE });
     });
 
     test("re-running init preserves user edits to scaffolded files", async () => {
