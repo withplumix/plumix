@@ -1,5 +1,6 @@
 import type { PluginSetupContext } from "plumix/plugin";
 import type { ConnectedObjectStorage } from "plumix/runtime";
+import { sync } from "plumix/plugin";
 
 import { CARD_STORAGE_PREFIX } from "./card-route.js";
 
@@ -22,7 +23,7 @@ async function deleteStoredCards(
  * so every card is dropped and rendered again on its next request.
  */
 export function registerSyncCardReset(ctx: PluginSetupContext): void {
-  ctx.addAction("sync:after", async (event, appCtx) => {
+  ctx.events.on(sync.after, async (event, appCtx) => {
     if (!event.scopes.includes("content") || appCtx.storage === undefined) {
       return;
     }

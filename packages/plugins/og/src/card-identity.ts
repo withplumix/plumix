@@ -33,7 +33,7 @@ export interface CardInputs {
 
 /**
  * The head passes filtered page data while the route rebuilds it from the row,
- * so a card keyed on anything `resolve:single:data` rewrites digests
+ * so a card keyed on anything a `render.single` handler rewrites digests
  * differently on each side.
  */
 export async function resolveCardIdentity(

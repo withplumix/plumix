@@ -1,7 +1,12 @@
 import type { AppContext } from "../context/app-context.js";
 import type { EntryQuery } from "../entries/contract/query.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import type { RouteIntent, RouteRule } from "./contract/intent.js";
+import type {
+  EntryArchive,
+  RouteIntent,
+  RouteRule,
+} from "./contract/intent.js";
+import { render } from "../hooks/render.js";
 import {
   listedEntryTypeNames,
   termPageEntryTypeNames,
@@ -11,33 +16,9 @@ import { matchRoute } from "./match.js";
 import { publicEntriesQuery } from "./render/entry-listing.js";
 
 /**
- * An archive described by an entry query. Search, views, and plugin archives
- * without `entries` are not one.
- */
-export type EntryArchive = Exclude<
-  RouteIntent,
-  { readonly kind: "entry" | "search" | "view" }
->;
-
-declare module "../hooks/types.js" {
-  interface FilterRegistry {
-    /**
-     * Narrow an archive's entries wherever its query is read, so page and feed
-     * agree. The public-entries rule reapplies, so a handler can hide an entry
-     * but never reveal one.
-     */
-    "archive:entries": (
-      query: EntryQuery,
-      archive: EntryArchive,
-      params: Record<string, string>,
-    ) => EntryQuery;
-  }
-}
-
-/**
  * What reading an archive's query needs: its definition, and its narrowings.
  */
-export type ArchiveReader = Pick<AppContext, "plugins" | "hooks">;
+export type ArchiveReader = Pick<AppContext, "plugins" | "filters">;
 
 /**
  * Author and date archives narrow this, since all three are a stream of posts.
@@ -78,18 +59,18 @@ function dateEntries(
 }
 
 /**
- * The archive's entry query after the `archive:entries` filter, or `null`
+ * The archive's entry query after the `render.archiveEntries` filter, or `null`
  * where the params place no archive. Its page and {@link archiveAtPath} share
  * it so they agree.
  */
 export function archiveEntries(
-  { plugins, hooks }: ArchiveReader,
+  { plugins, filters }: ArchiveReader,
   archive: EntryArchive,
   params: Record<string, string>,
 ): EntryQuery | null {
   const query = definedEntries(plugins, archive, params);
   if (query === null) return null;
-  return hooks.applyFilterSync("archive:entries", query, archive, params);
+  return filters.apply(render.archiveEntries, query, { archive, params });
 }
 
 function definedEntries(

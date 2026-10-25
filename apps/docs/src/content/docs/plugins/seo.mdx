@@ -14,7 +14,7 @@ import { Aside, TabItem, Tabs } from "@astrojs/starlight/components";
 
 The plugin exports a factory named `seo`. It adds no database tables and takes one optional argument, so installing it is a package install and one array entry.
 
-Every tag is written as a **gap-filler**: it is appended only when nothing has already set that `name` or `property`. A theme that declares its own `og:site_name` keeps it, and so does another plugin's — the contribution runs last on the `render:document` chain whatever order the `plugins` array is in, so nothing a site writes is overridden or duplicated. Installing this plugin adds what a page was missing and nothing else.
+Every tag is written as a **gap-filler**: it is appended only when nothing has already set that `name` or `property`. A theme that declares its own `og:site_name` keeps it, and so does another plugin's — the contribution runs `late` on the `render.document` chain whatever order the `plugins` array is in, after every handler that doesn't ask for `late` itself, so nothing a site writes is overridden or duplicated. Installing this plugin adds what a page was missing and nothing else.
 
 ## Quickstart
 
@@ -554,4 +554,4 @@ Read [Blog](/plugins/blog/) if the site has no entry type yet: an entry is what 
 
 To generate a social card per page rather than point every share at one default image, [OG Cards](/plugins/og/) takes the card pipeline apart.
 
-To change what a page says beyond what the settings group covers, the `render:document` filter is the same seam this plugin uses — [Overview](/plugins/overview/) covers the registration context a filter is added from.
+To change what a page says beyond what the settings group covers, the `render.document` filter is the same seam this plugin uses — [Overview](/plugins/overview/) covers the registration context a filter is added from.

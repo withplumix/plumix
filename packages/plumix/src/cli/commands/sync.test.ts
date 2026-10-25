@@ -20,7 +20,7 @@ import type {
   SyncEnd,
 } from "@plumix/core";
 import type { MemorySyncEnd, MemorySyncEnds } from "@plumix/core/test";
-import { HookRegistry } from "@plumix/core";
+import { HookRegistry, sync } from "@plumix/core";
 import { entries } from "@plumix/core/schema";
 import { createDispatcherHarness, memorySyncEnds } from "@plumix/core/test";
 
@@ -484,7 +484,7 @@ describe("plumix sync", () => {
 
   test("a push that fails after its snapshot prints how to restore it again", async () => {
     const hooks = new HookRegistry();
-    hooks.addAction("sync:after", () => Promise.reject(new Error("boom")));
+    hooks.on(sync.after, () => Promise.reject(new Error("boom")));
     const ends = await seededEnds({ hooks });
 
     await expect(
@@ -498,10 +498,10 @@ describe("plumix sync", () => {
     );
   });
 
-  test("fires sync:after once, with the scopes and the direction", async () => {
+  test("fires sync.after once, with the scopes and the direction", async () => {
     const hooks = new HookRegistry();
     const events: unknown[] = [];
-    hooks.addAction("sync:after", (event) => {
+    hooks.on(sync.after, (event) => {
       events.push(event);
     });
     const ends = await seededEnds({ hooks });
@@ -529,8 +529,8 @@ describe("plumix sync", () => {
 
   test("a push whose settle fails reports every failed step after the import committed", async () => {
     const hooks = new HookRegistry();
-    hooks.addAction(
-      "sync:after",
+    hooks.on(
+      sync.after,
       () => {
         throw new Error("index unreachable");
       },
@@ -607,7 +607,7 @@ describe("plumix sync", () => {
 
   test("keeps its dump after a sync that fails, and prints where", async () => {
     const hooks = new HookRegistry();
-    hooks.addAction("sync:after", () => Promise.reject(new Error("boom")));
+    hooks.on(sync.after, () => Promise.reject(new Error("boom")));
     const ends = await seededEnds({ hooks });
 
     await expect(
@@ -726,7 +726,7 @@ describe("plumix sync, after an interrupted pull", () => {
   test("a pull whose export completed before it failed imports the kept dump without exporting again", async () => {
     const hooks = new HookRegistry();
     let settled = 0;
-    hooks.addAction("sync:after", () => {
+    hooks.on(sync.after, () => {
       settled += 1;
       if (settled === 1) throw new Error("boom");
     });

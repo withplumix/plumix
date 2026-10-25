@@ -1,6 +1,6 @@
 import type { DocumentManifest, JsonValue } from "plumix";
 import type { DispatcherHarness, testSite } from "plumix/test";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, render } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 import { describe, expect, expectTypeOf, test } from "vitest";
@@ -305,7 +305,7 @@ describe("head meta", () => {
   test("another subscriber's tag wins however the config orders the two", async () => {
     const custom = definePlugin("custom-head", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest) => ({
+        ctx.filters.add(render.document, (manifest) => ({
           ...manifest,
           meta: [
             ...(manifest.meta ?? []),

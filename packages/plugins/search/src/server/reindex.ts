@@ -1,5 +1,6 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import { and, asc, desc, eq, gt, inArray, sql } from "plumix/db";
+import { sync } from "plumix/plugin";
 import { entries, entryChanges, terms } from "plumix/schema";
 
 import type { SearchReindexRun, SearchSourceType } from "../db/schema.js";
@@ -60,7 +61,7 @@ export async function startReindex(ctx: AppContext): Promise<SearchReindexRun> {
  * may hold for other rows, so the whole index is rebuilt.
  */
 export function registerSyncReindex(ctx: PluginSetupContext): void {
-  ctx.addAction("sync:after", async (event, appCtx) => {
+  ctx.events.on(sync.after, async (event, appCtx) => {
     if (!event.scopes.includes("content")) return;
     await startReindex(appCtx);
   });

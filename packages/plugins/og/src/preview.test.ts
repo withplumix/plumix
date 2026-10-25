@@ -3,7 +3,7 @@ import type { User } from "plumix/schema";
 import type { DispatcherHarness, testSite } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { eq } from "plumix/db";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, render } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
@@ -143,7 +143,7 @@ describe("the card preview in the entry editor", () => {
       before: [
         definePlugin("test_retitle", {
           setup: (ctx) => {
-            ctx.addFilter("resolve:single:data", (data) => ({
+            ctx.filters.add(render.single, (data) => ({
               ...data,
               entry: { ...data.entry, title: "Retitled in [year]" },
             }));
@@ -304,7 +304,7 @@ describe("the card preview in the entry editor", () => {
       before: [
         definePlugin("test_reserved", {
           setup: (ctx) => {
-            ctx.addFilter("resolve:single:data", (data) => ({
+            ctx.filters.add(render.single, (data) => ({
               ...data,
               entry: {
                 ...data.entry,

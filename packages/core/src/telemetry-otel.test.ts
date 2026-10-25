@@ -6,6 +6,7 @@ import type { JsonValue } from "./json.js";
 import type { OtelConsumerOptions } from "./telemetry-otel.js";
 import type { TelemetrySpan } from "./telemetry-snapshot.js";
 import type { ThemeDescriptor } from "./theme.js";
+import { render } from "./hooks/render.js";
 import { definePlugin } from "./plugin/define.js";
 import { fallback } from "./route/render/template-builders.js";
 import { otelConsumer } from "./telemetry-otel.js";
@@ -299,7 +300,7 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
   test("span attributes map to OTLP values; nested objects and mixed arrays are JSON-stringified", async () => {
     const attributed = definePlugin("attributed", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        ctx.filters.add(render.document, (manifest, _input, appCtx) => {
           appCtx.telemetry.span("attributed", (s) => {
             s.set("str", "hello");
             s.set("int", 42);
@@ -392,7 +393,7 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
   test("timestamped records become span events on the root, named by namespace", async () => {
     const recorder = definePlugin("recorder", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        ctx.filters.add(render.document, (manifest, _input, appCtx) => {
           appCtx.telemetry.record("recorder", { note: "during render" });
           appCtx.telemetry.record("recorder", "plain fact");
           return manifest;
@@ -429,7 +430,7 @@ describe("otelConsumer — OTLP/HTTP trace export", () => {
   test("cap-dropped spans and records surface as OTel dropped counts on the root span", async () => {
     const noisy = definePlugin("noisy", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest, _data, appCtx) => {
+        ctx.filters.add(render.document, (manifest, _input, appCtx) => {
           for (let i = 0; i < 1002; i++) {
             appCtx.telemetry.record("noisy", i);
           }

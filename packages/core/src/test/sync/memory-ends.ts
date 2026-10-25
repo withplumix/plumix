@@ -29,7 +29,7 @@ export interface MemorySyncEnds {
 }
 
 export interface MemorySyncEndsOptions {
-  /** Where both sites' `settle` finds its `sync:after` listeners. */
+  /** Where both sites' `settle` finds its `sync.after` handlers. */
   readonly hooks?: HookRegistry;
   /** The remote site's CDN, which its `settle` purges. */
   readonly remoteCdn?: ConnectedCdn;

@@ -10,7 +10,11 @@ import {
   grant,
 } from "plumix/auth";
 import { entryQuery, etagOf, sql } from "plumix/db";
-import { definePlugin, FRAMEWORK_PAGINATION_SUFFIX } from "plumix/plugin";
+import {
+  definePlugin,
+  FRAMEWORK_PAGINATION_SUFFIX,
+  render,
+} from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 import { createDispatcherHarness, fakeCdn } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
@@ -359,7 +363,7 @@ describe("feed routes", () => {
   });
 
   // The per-scope hrefs are unit-tested in `discovery.test.ts`; this is the
-  // end-to-end proof that the `render:document` subscriber is installed.
+  // end-to-end proof that the `render.document` handler is installed.
   test("feed discovery <link rel=alternate> tags appear in the head", async () => {
     const h = await harness(blogPlugin);
     await seedPost(h, "hello", "Hello World");
@@ -609,7 +613,7 @@ describe("a feed is its archive's entry query", () => {
   test("a handler excluding a term from the front page narrows its page and its feed", async () => {
     const narrowing = definePlugin("narrowing", {
       setup: (ctx) => {
-        ctx.addFilter("archive:entries", (query, archive) =>
+        ctx.filters.add(render.archiveEntries, (query, { archive }) =>
           archive.kind === "frontPage" ? query.where(outsideTagG) : query,
         );
       },
@@ -627,7 +631,7 @@ describe("a feed is its archive's entry query", () => {
   test("a handler narrowing a plugin archive changes its page and its feed together", async () => {
     const narrowing = definePlugin("narrowing", {
       setup: (ctx) => {
-        ctx.addFilter("archive:entries", (query, archive, params) =>
+        ctx.filters.add(render.archiveEntries, (query, { archive, params }) =>
           archive.kind === "archiveType" && archive.name === "series"
             ? query.ofTypes(params.name === "g" ? "page" : "post")
             : query,
@@ -642,7 +646,7 @@ describe("a feed is its archive's entry query", () => {
   test("a handler returning a fresh query still lists no draft, trashed or non-public entry", async () => {
     const widening = definePlugin("widening", {
       setup: (ctx) => {
-        ctx.addFilter("archive:entries", () => entryQuery());
+        ctx.filters.add(render.archiveEntries, () => entryQuery());
       },
     });
     const h = await seedSite(widening);
@@ -1486,7 +1490,7 @@ describe("archive-type feeds", () => {
   test("an alternate another plugin declared first wins over the archive feed", async () => {
     const declaring = definePlugin("declaring", {
       setup: (ctx) => {
-        ctx.addFilter("render:document", (manifest) => ({
+        ctx.filters.add(render.document, (manifest) => ({
           ...manifest,
           link: [
             ...(manifest.link ?? []),

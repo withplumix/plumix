@@ -963,16 +963,30 @@ test("plumix/plugin offers core's page-data resolvers, not the row assembler", (
 });
 
 // ADR 0052: a plugin declares and subscribes through values, not strings.
-test("plumix/plugin offers the event and filter declarers and core's block subject", () => {
+test("plumix/plugin offers the event and filter declarers and core's block, render and sync subjects", () => {
   const plugin = loaded(facade, "./plugin");
   expect({
     defineEvent: typeof plugin.defineEvent,
     defineFilter: typeof plugin.defineFilter,
     block: Object.keys(plugin.block ?? {}).sort(),
+    render: Object.keys(plugin.render ?? {}).sort(),
+    sync: Object.keys(plugin.sync ?? {}).sort(),
   }).toEqual({
     defineEvent: "function",
     defineFilter: "function",
     block: ["afterRender", "beforeRender", "loaderFailed"],
+    render: [
+      "archive",
+      "archiveEntries",
+      "author",
+      "date",
+      "document",
+      "frontPage",
+      "search",
+      "single",
+      "term",
+    ],
+    sync: ["after"],
   });
 });
 

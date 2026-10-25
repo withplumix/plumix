@@ -126,7 +126,7 @@ export class SyncError extends CliError<SyncErrorCode> {
     return new SyncError(
       "sync_settle_unreachable",
       "The local site's handler can't run work outside a request, so it can't settle",
-      "The data was replaced. Run the `sync:after` work yourself, or restart `plumix dev`.",
+      "The data was replaced. Run the `sync.after` work yourself, or restart `plumix dev`.",
       undefined,
     );
   }

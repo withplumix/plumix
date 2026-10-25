@@ -317,11 +317,11 @@ declare module "plumix" {
 
 ### Narrowing an archive
 
-`archive:entries` hands any archive's entry query to a plugin to narrow — core's front page, type, term, author and date archives as well as a plugin archive with `entries`. It is Plumix's `pre_get_posts` for archives. The handler receives the query, the archive it describes, and what the archive's URL captured, and returns a query. It runs wherever the archive's query is read, so the archive's page, its pagination and its feed all change together.
+`render.archiveEntries` hands any archive's entry query to a plugin to narrow — core's front page, type, term, author and date archives as well as a plugin archive with `entries`. It is Plumix's `pre_get_posts` for archives. The handler receives the query and `{ archive, params }`: the archive it describes and what the archive's URL captured. It returns a query. It runs wherever the archive's query is read, so the archive's page, its pagination and its feed all change together.
 
 ```ts
 import { sql } from "plumix/db";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, render } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 
 // Entries not filed under the `asides` category.
@@ -329,7 +329,7 @@ const notAnAside = sql`${entries.id} not in (select ${entryTerm.entryId} from ${
 
 export const quietFrontPage = definePlugin("quiet-front-page", {
   setup: (ctx) => {
-    ctx.addFilter("archive:entries", (query, archive) =>
+    ctx.filters.add(render.archiveEntries, (query, { archive }) =>
       archive.kind === "frontPage" ? query.where(notAnAside) : query,
     );
   },

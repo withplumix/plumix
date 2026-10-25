@@ -4,6 +4,7 @@ import type { AppContext } from "../../context/app-context.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { ResolvedNode } from "../contract/resolved-node.js";
 import type { ListingPageTarget } from "./page-data.js";
+import { render } from "../../hooks/render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { createTestContext } from "../../test/context.js";
@@ -116,11 +117,11 @@ describe("resolveListingPage", () => {
     expect(page?.data.pagination.total).toBe(1);
   });
 
-  test("hands archive:entries the params the page's URL would capture", async () => {
+  test("hands render.archiveEntries the params the page's URL would capture", async () => {
     const seen: Record<string, string>[] = [];
     const recording = definePlugin("recording", {
       setup: (ctx) => {
-        ctx.addFilter("archive:entries", (query, archive, params) => {
+        ctx.filters.add(render.archiveEntries, (query, { archive, params }) => {
           seen.push(params);
           return archive.kind === "date" ? query.none() : query;
         });

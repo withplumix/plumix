@@ -65,7 +65,7 @@ function hasCanonical(manifest: DocumentManifest): boolean {
 }
 
 /**
- * Only when neither the template nor a `render:document` subscriber set one,
+ * Only when neither the template nor a `render.document` handler set one,
  * and not for `canonical: false`.
  */
 export function applyCanonical(

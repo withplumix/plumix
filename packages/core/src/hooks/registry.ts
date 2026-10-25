@@ -214,6 +214,20 @@ export class HookRegistry implements HookExecutor {
     handlers.set(id, entries);
   }
 
+  /** An event's handlers in the order `emit` starts them, for a caller that moves them. */
+  getEventHandlers<TPayload>(event: EventDefinition<TPayload>): readonly {
+    readonly handler: EventHandler<TPayload>;
+    readonly plugin: string | null;
+  }[] {
+    return sortSubscriptions(this.#eventHandlers.get(event.id) ?? []).map(
+      (entry) => ({
+        // Safety: subscribed through `on`, so typed `EventHandler`.
+        handler: entry.handler as EventHandler<TPayload>,
+        plugin: entry.plugin,
+      }),
+    );
+  }
+
   async emit<TPayload>(
     event: EventDefinition<TPayload>,
     payload: TPayload,

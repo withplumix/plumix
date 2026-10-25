@@ -1,7 +1,7 @@
 // Side-effect: exposes core's `TemplateDepRegistry` augmentation.
 import "./template-deps-core.js";
-// Side-effect: anchors public core hook augmentations (seo:*, render:document,
-// resolve:*, …) into the published declaration graph (#1698).
+// Side-effect: anchors public core hook augmentations (entry:*, term:*, user:*,
+// …) into the published declaration graph.
 import "./hooks/public-hooks.js";
 // Side-effect: anchors core's `ctx.entries` augmentation the same way.
 import "./rpc/procedures/entry/writes-shared.js";
@@ -350,8 +350,8 @@ export type {
   ArchiveAtPath,
   ArchiveBaseRoute,
   ArchiveReader,
-  EntryArchive,
 } from "./route/archive-entries.js";
+export type { EntryArchive } from "./route/contract/intent.js";
 export {
   buildEntryPermalink,
   buildEntryPermalinks,

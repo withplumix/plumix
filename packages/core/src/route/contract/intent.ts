@@ -25,6 +25,15 @@ export type RouteIntent =
   | { readonly kind: "view"; readonly name: string };
 
 /**
+ * An archive described by an entry query. Search, views, and plugin archives
+ * without `entries` are not one.
+ */
+export type EntryArchive = Exclude<
+  RouteIntent,
+  { readonly kind: "entry" | "search" | "view" }
+>;
+
+/**
  * Compiled rule. `priority` preserves arch-doc ordering semantics — lower
  * number wins. Explicit `registerRewriteRule` defaults to 10; auto-generated
  * rules from `hasArchive` / `rewrite.slug` land at 50.

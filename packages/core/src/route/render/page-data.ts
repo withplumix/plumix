@@ -21,6 +21,7 @@ import { entries } from "../../db/schema/entries.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
 import { rememberAuthor, rememberTerm } from "../../entries/slug-lookups.js";
+import { render } from "../../hooks/render.js";
 import { labelSourceText } from "../../i18n/label.js";
 import { resolveTermMeta } from "../../meta/term.js";
 import { archiveEntries } from "../archive-entries.js";
@@ -34,27 +35,6 @@ import {
   resolveEntries,
   resolveTerm,
 } from "./resolve-entry-list.js";
-
-declare module "../../hooks/types.js" {
-  interface FilterRegistry {
-    "resolve:single:data": (data: EntryData) => EntryData | Promise<EntryData>;
-    "resolve:archive:data": (
-      data: EntryTypeArchiveData,
-    ) => EntryTypeArchiveData | Promise<EntryTypeArchiveData>;
-    "resolve:term:data": (
-      data: TermArchiveData,
-    ) => TermArchiveData | Promise<TermArchiveData>;
-    "resolve:author:data": (
-      data: AuthorArchiveData,
-    ) => AuthorArchiveData | Promise<AuthorArchiveData>;
-    "resolve:date:data": (
-      data: DateArchiveData,
-    ) => DateArchiveData | Promise<DateArchiveData>;
-    "resolve:front-page:data": (
-      data: FrontPageData,
-    ) => FrontPageData | Promise<FrontPageData>;
-  }
-}
 
 export const DEFAULT_ARCHIVE_PER_PAGE = 20;
 
@@ -88,8 +68,8 @@ export async function frontPageData(
   );
   if (listing === null) return null;
 
-  const data = await ctx.hooks.applyFilter("resolve:front-page:data", {
-    kind: "frontPage",
+  const data = await ctx.filters.apply(render.frontPage, {
+    kind: "frontPage" as const,
     ...listing,
   });
   return {
@@ -116,8 +96,8 @@ export async function archiveData(
   );
   if (listing === null) return null;
 
-  const data = await ctx.hooks.applyFilter("resolve:archive:data", {
-    kind: "entryType",
+  const data = await ctx.filters.apply(render.archive, {
+    kind: "entryType" as const,
     contentType: entryType,
     ...listing,
   });
@@ -154,8 +134,8 @@ export async function termData(
   if (listing === null) return null;
 
   const meta = await resolveTermMeta(ctx, term.taxonomy, term.meta);
-  const data = await ctx.hooks.applyFilter("resolve:term:data", {
-    kind: "term",
+  const data = await ctx.filters.apply(render.term, {
+    kind: "term" as const,
     taxonomy: term.taxonomy,
     term: resolveTerm(ctx, term, meta, url),
     ...listing,
@@ -188,8 +168,8 @@ export async function authorData(
   );
   if (listing === null) return null;
 
-  const data = await ctx.hooks.applyFilter("resolve:author:data", {
-    kind: "author",
+  const data = await ctx.filters.apply(render.author, {
+    kind: "author" as const,
     author,
     ...listing,
   });
@@ -224,8 +204,8 @@ export async function dateData(
   // but its URL makes it a subject, and every year ever is one (ADR 0029).
   if (listing === null || listing.pagination.total === 0) return null;
 
-  const data = await ctx.hooks.applyFilter("resolve:date:data", {
-    kind: "date",
+  const data = await ctx.filters.apply(render.date, {
+    kind: "date" as const,
     year,
     month,
     day,
@@ -251,8 +231,8 @@ export async function resolveEntryData(
     // eslint-disable-next-line no-restricted-syntax -- diagnostic throw
     throw new Error("resolveEntries: empty result for one row");
   }
-  const data = await ctx.hooks.applyFilter("resolve:single:data", {
-    kind: "entry",
+  const data = await ctx.filters.apply(render.single, {
+    kind: "entry" as const,
     entry,
   });
   // An untouched title was expanded at mint; expanding again would turn a

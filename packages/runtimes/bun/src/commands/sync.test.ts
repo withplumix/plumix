@@ -16,7 +16,7 @@ import type {
   SyncContractSite,
 } from "plumix/test/conformance";
 import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, sync as syncEvents } from "plumix/plugin";
 import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import { createDispatcherHarness, factoriesFor } from "plumix/test";
 import { describeSyncContract } from "plumix/test/conformance";
@@ -118,8 +118,8 @@ async function serve(
   hooks: HookRegistry,
 ): Promise<{ url: string; apiToken: string }> {
   const app = await buildApp(config);
-  for (const handler of hooks.getActionHandlers("sync:after")) {
-    app.hooks.addAction("sync:after", handler.fn, { plugin: handler.plugin });
+  for (const { handler, plugin } of hooks.getEventHandlers(syncEvents.after)) {
+    app.hooks.on(syncEvents.after, handler, { plugin });
   }
   const handler = createRuntimeHandler(app);
   const server = Bun.serve({

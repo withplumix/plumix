@@ -2,7 +2,7 @@ import type { Logger, TelemetrySpan } from "plumix";
 import type { DispatcherHarness, TestResponse } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { eq } from "plumix/db";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, render } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { fakeCdn } from "plumix/test";
 import { describe, expect, test } from "vitest";
@@ -730,7 +730,7 @@ describe("a card and the page it shares", () => {
       before: [
         definePlugin("test_retitle", {
           setup: (ctx) => {
-            ctx.addFilter("resolve:single:data", (data) => ({
+            ctx.filters.add(render.single, (data) => ({
               ...data,
               entry: { ...data.entry, title: "Retitled in [year]" },
             }));
