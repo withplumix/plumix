@@ -197,6 +197,14 @@ describe("MCP endpoint — the server", () => {
         },
         run: () => ({ trashed: true }),
       });
+      ctx.registerMcpTool({
+        name: "explode",
+        description: "Test-only: throws an error that is not an McpToolError.",
+        inputSchema: v.object({}),
+        run: () => {
+          throw new Error("kaboom");
+        },
+      });
       ctx.registerMcpTool(countThings);
     },
   });
@@ -267,6 +275,40 @@ describe("MCP endpoint — the server", () => {
     expect(json.result.isError).toBe(true);
     expect(json.result.content[0]?.text).toContain("bad_input");
     expect(json.result.content[0]?.text).toContain("limit");
+  });
+
+  test("an error that is not an McpToolError comes back as an isError result carrying only its message", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 1, "explode", {});
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content).toEqual([{ type: "text", text: "kaboom" }]);
+  });
+
+  test("an unknown tool is a JSON-RPC error", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+    const secret = await mintPat(h);
+
+    const res = await h.dispatch(
+      mcpRequest(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "no_such_tool", arguments: {} },
+        },
+        { secret },
+      ),
+    );
+
+    const json = (await res.json()) as {
+      result?: unknown;
+      error?: { message: string };
+    };
+    expect(json.result).toBeUndefined();
+    expect(json.error?.message).toContain("no_such_tool");
   });
 
   test("a request on the 2026-07-28 spec is answered in JSON", async () => {

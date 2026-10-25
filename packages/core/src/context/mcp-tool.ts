@@ -17,7 +17,6 @@ export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
    */
   readonly jsonSchema?: JsonObject;
   /**
-   * Listed verbatim; left out, the tool is listed as `{ readOnlyHint: true }`.
    * Advisory only: nothing authorizes on them.
    */
   readonly annotations?: {

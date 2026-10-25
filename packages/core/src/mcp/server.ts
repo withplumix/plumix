@@ -30,8 +30,8 @@ export function buildMcpServer(
         annotations: tool.annotations ?? READ_ONLY,
       },
       (input): Promise<CallToolResult> =>
-        // One span per tool call. The SDK checks the input before this runs,
-        // and answers an unknown tool or a bad input without it.
+        // The SDK refuses an unknown tool or a bad input before this runs, so
+        // neither opens a span.
         ctx.telemetry.span(
           `mcp: ${tool.name}`,
           async (s): Promise<CallToolResult> => {
@@ -55,11 +55,7 @@ export function buildMcpServer(
   return server;
 }
 
-/**
- * The tool's valibot schema as the SDK takes it: valibot checks the input, and
- * `tools/list` shows the projected JSON Schema. A refusal carries the
- * `bad_input` code an `McpToolError` would.
- */
+/** The `bad_input` prefix gives a refusal the code an `McpToolError` would. */
 function toolInput(tool: McpTool): StandardSchemaWithJSON {
   const jsonSchema = () => toToolInputJsonSchema(tool);
   return {
