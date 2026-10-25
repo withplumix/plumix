@@ -1,10 +1,12 @@
 import type { Label } from "plumix/i18n";
+import type { PluginDescriptor } from "plumix/plugin";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
+import type { AuditLogRouter } from "./rpc.js";
 import type { AuditExtension } from "./server/auditExtension.js";
 import type { AuditLogRetentionConfig } from "./server/retention.js";
 import type { AuditLogStorage } from "./types.js";
@@ -75,7 +77,9 @@ const AUDIT_LABELS = {
  * Records lifecycle events to an activity feed. A request's events are
  * buffered and written in one insert after the response, via `ctx.defer`.
  */
-export function auditLog(options: AuditLogPluginOptions = {}) {
+export function auditLog(
+  options: AuditLogPluginOptions = {},
+): PluginDescriptor<undefined, { readonly audit_log: AuditLogRouter }> {
   const storage = options.storage ?? sqlite();
   const retention = options.retention ?? DEFAULT_RETENTION;
   // Fail fast on misconfigured retention — see assertValidRetention.

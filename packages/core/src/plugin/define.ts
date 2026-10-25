@@ -3,6 +3,7 @@ import type { AnyMailDefinition } from "../mail/contract/registry.js";
 import type { SchemaModule } from "../runtime/contract/slots.js";
 import type { AuthMethodDefinition } from "./auth-method.js";
 import type { PluginProvidesContext } from "./provides-context.js";
+import type { PluginRpcRouter } from "./registry.js";
 import type {
   PluginAfterSetupContext,
   PluginSetupContext,
@@ -40,7 +41,13 @@ export interface PluginI18nSlot {
   readonly catalogPath: string;
 }
 
-export interface PluginDescriptor<TState = undefined> {
+/** Keyed by the plugin id `registerRpcRouter` mounts each router under. */
+export type PluginRpcRouters = Readonly<Record<string, PluginRpcRouter>>;
+
+export interface PluginDescriptor<
+  TState = undefined,
+  TRpc extends PluginRpcRouters = Record<never, never>,
+> {
   readonly id: string;
   readonly version?: string;
   /**
@@ -92,6 +99,11 @@ export interface PluginDescriptor<TState = undefined> {
   readonly adminChunk?: string;
   readonly adminCss?: string;
   readonly adminPeerVersion?: string;
+  /**
+   * Type only, never set: the routers `setup` registers, so `site.rpc` types
+   * them. A method, so a descriptor declaring them still fits `PluginDescriptor`.
+   */
+  "~rpc"?(routers: TRpc): void;
 }
 
 export interface DefinePluginInput<TState> {

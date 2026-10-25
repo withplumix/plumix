@@ -1,12 +1,13 @@
 import type { ImageDelivery, JsonObject } from "plumix";
 import type { User } from "plumix/schema";
-import type { DispatcherHarness } from "plumix/test";
+import type { DispatcherHarness, testSite } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { eq } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { og } from "./index.js";
 import type { CardPreview } from "./preview.js";
 import type { HarnessOptions } from "./test/harness.js";
 import { card, cardKey } from "./index.js";
@@ -433,5 +434,17 @@ describe("the card preview field type", () => {
     expect(harness.app.plugins.fieldTypes.has(CARD_PREVIEW_INPUT_TYPE)).toBe(
       false,
     );
+  });
+});
+
+describe("the plugin's procedures on a test site", () => {
+  test("are typed on site.rpc where the plugin is installed", () => {
+    type Rpc = Awaited<
+      ReturnType<typeof testSite<Record<never, never>, [ReturnType<typeof og>]>>
+    >["rpc"];
+
+    expectTypeOf<Rpc["og"]["preview"]>()
+      .parameter(0)
+      .toEqualTypeOf<{ entryId: number }>();
   });
 });

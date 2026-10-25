@@ -12,6 +12,7 @@ import {
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
+import type { MenuRouter } from "./rpc.js";
 import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
 import { createMenuRouter, MENU_MANAGE_CAPABILITY } from "./rpc.js";
 import { menuTag } from "./server/cache-tags.js";
@@ -184,7 +185,9 @@ export interface MenuPluginOptions {
  * A menu is a `terms` row and its items are `entries` rows linked through
  * `entry_term`; no tables of its own.
  */
-export function menu(options: MenuPluginOptions = {}): PluginDescriptor {
+export function menu(
+  options: MenuPluginOptions = {},
+): PluginDescriptor<undefined, { readonly menu: MenuRouter }> {
   return definePlugin("menu", {
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,

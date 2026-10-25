@@ -276,6 +276,7 @@ export type {
   PluginRouteAuth,
   PluginRouteMethod,
   PluginRpcRouter,
+  PluginRpcRouters,
   PluginSetup,
   PluginSetupContext,
   PluginSetupContextBase,

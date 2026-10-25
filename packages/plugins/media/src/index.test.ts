@@ -1,3 +1,4 @@
+import type { testSite } from "plumix/test";
 import { eq, etagOf, typeTag } from "plumix/db";
 import { text } from "plumix/fields";
 import {
@@ -18,7 +19,7 @@ import {
   plumixRequest,
   userFactory,
 } from "plumix/test";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, expectTypeOf, test, vi } from "vitest";
 
 import { media as mediaField } from "./builder.js";
 import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
@@ -2398,5 +2399,19 @@ describe("@plumix/plugin-media — purging the pages that show an item", () => {
     await h.drainDeferred();
 
     cdn.assertNotStored("/post/hello");
+  });
+});
+
+describe("the plugin's procedures on a test site", () => {
+  test("are typed on site.rpc where the plugin is installed", () => {
+    type Rpc = Awaited<
+      ReturnType<
+        typeof testSite<Record<never, never>, [ReturnType<typeof media>]>
+      >
+    >["rpc"];
+
+    expectTypeOf<Rpc["media"]["delete"]>()
+      .parameter(0)
+      .toEqualTypeOf<{ id: number }>();
   });
 });
