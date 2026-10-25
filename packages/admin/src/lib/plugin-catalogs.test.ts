@@ -88,6 +88,30 @@ describe("createPluginCatalogLoader", () => {
     expect(i18n.messages["plugin.x.label"]).toEqual(["Translated"]);
   });
 
+  test("an enabled regional locale imports its catalog locale's URL and loads under the enabled locale", async () => {
+    i18n.load({ "de-AT": {} });
+    i18n.activate("de-AT");
+    const id = "plugin.x.label";
+    const importCatalog = vi.fn(() =>
+      Promise.resolve({ messages: { [id]: ["Übersetzt"] } }),
+    );
+    const load = createPluginCatalogLoader({
+      manifest: {
+        plugin_x: {
+          sourceLocale: "en",
+          catalogs: { en: "/en.mjs", "de-AT": "/de.mjs" },
+        },
+      },
+      importCatalog,
+    });
+
+    await load("plugin_x", "de-AT");
+
+    expect(importCatalog).toHaveBeenCalledWith("/de.mjs");
+    expect(i18n.locale).toBe("de-AT");
+    expect(i18n._(id)).toBe("Übersetzt");
+  });
+
   test("a locale the plugin doesn't ship falls back to its source catalog", async () => {
     // The production admin can't compile `descriptor.message`, so without a
     // compiled catalog a placeholder renders raw: "Added {label} to the menu".

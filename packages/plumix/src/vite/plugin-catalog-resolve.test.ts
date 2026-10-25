@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import type { ResolvedLocale } from "@plumix/core";
+import type { ResolvedI18n, ResolvedLocale } from "@plumix/core";
 import {
   buildManifest,
   createPluginRegistry,
@@ -40,6 +40,13 @@ const UK: ResolvedLocale = {
 const DE: ResolvedLocale = {
   code: "de",
   label: "German",
+  direction: "ltr",
+  enabled: true,
+};
+
+const DE_AT: ResolvedLocale = {
+  code: "de-AT",
+  label: "German (Austria)",
   direction: "ltr",
   enabled: true,
 };
@@ -211,7 +218,10 @@ describe("stagePluginCatalogs — real FS", () => {
     }
   }
 
-  function stage(declared: readonly string[]): Promise<void> {
+  function stage(
+    declared: readonly string[],
+    i18n: ResolvedI18n = SITE_I18N,
+  ): Promise<void> {
     const plugin = definePlugin("vendor", {
       setup: () => undefined,
       i18n: {
@@ -222,7 +232,7 @@ describe("stagePluginCatalogs — real FS", () => {
     });
     const manifest = buildManifest(createPluginRegistry(), {
       plugins: [plugin],
-      i18n: SITE_I18N,
+      i18n,
     });
     return stagePluginCatalogs(dest, [plugin], manifest, projectRoot);
   }
@@ -233,6 +243,17 @@ describe("stagePluginCatalogs — real FS", () => {
 
     const staged = join(dest, pluginCatalogStagedPath("vendor", "uk"));
     expect(await readFile(staged, "utf8")).toContain('"vendor.hello":"uk"');
+  });
+
+  test("stages the catalog an enabled regional locale reads", async () => {
+    await installPlugin(["en", "de"]);
+    await stage(["en", "de"], {
+      defaultLocale: DE_AT,
+      locales: [DE_AT],
+    });
+
+    const staged = join(dest, pluginCatalogStagedPath("vendor", "de"));
+    expect(await readFile(staged, "utf8")).toContain('"vendor.hello":"de"');
   });
 
   test("skips a locale the site has not enabled", async () => {
@@ -329,7 +350,11 @@ describe("collectPluginCatalogFiles — real FS", () => {
     });
     const bare = definePlugin("bare", { setup: () => undefined });
 
-    const files = await collectPluginCatalogFiles([vendor, bare], projectRoot);
+    const files = await collectPluginCatalogFiles(
+      [vendor, bare],
+      ["en", "de"],
+      projectRoot,
+    );
 
     const locales = join(
       projectRoot,
@@ -338,6 +363,80 @@ describe("collectPluginCatalogFiles — real FS", () => {
     expect(Object.fromEntries(files)).toEqual({
       en: [{ path: join(locales, "en.mjs"), source: true }],
       de: [{ path: join(locales, "de.mjs"), source: false }],
+    });
+  });
+
+  test("an enabled locale whose declared catalog is not compiled reads the source catalog", async () => {
+    const vendor = definePlugin("vendor", {
+      setup: () => undefined,
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "uk"],
+        catalogPath: "./locales",
+      },
+    });
+
+    const files = await collectPluginCatalogFiles(
+      [vendor],
+      ["uk"],
+      projectRoot,
+    );
+
+    const locales = join(
+      projectRoot,
+      "node_modules/@plumix/plugin-vendor/locales",
+    );
+    expect(files.get("uk")).toEqual([
+      { path: join(locales, "en.mjs"), source: true },
+    ]);
+  });
+
+  test("a plugin whose source catalog is not compiled serves nothing for the locales that read it", async () => {
+    await rm(
+      join(projectRoot, "node_modules/@plumix/plugin-vendor/locales/en.mjs"),
+    );
+    const vendor = definePlugin("vendor", {
+      setup: () => undefined,
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+    });
+
+    const files = await collectPluginCatalogFiles(
+      [vendor],
+      ["de", "fr"],
+      projectRoot,
+    );
+
+    expect([...files.keys()]).toEqual(["de"]);
+  });
+
+  test("keys each catalog by the enabled locale it serves, the source catalog included", async () => {
+    const vendor = definePlugin("vendor", {
+      setup: () => undefined,
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+    });
+
+    const files = await collectPluginCatalogFiles(
+      [vendor],
+      ["de-AT", "fr"],
+      projectRoot,
+    );
+
+    const locales = join(
+      projectRoot,
+      "node_modules/@plumix/plugin-vendor/locales",
+    );
+    expect(Object.fromEntries(files)).toEqual({
+      en: [{ path: join(locales, "en.mjs"), source: true }],
+      "de-AT": [{ path: join(locales, "de.mjs"), source: false }],
+      fr: [{ path: join(locales, "en.mjs"), source: true }],
     });
   });
 });

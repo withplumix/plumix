@@ -361,9 +361,9 @@ export interface PlumixManifest {
    */
   readonly i18n?: I18nManifest;
   /**
-   * Admin fetches `pluginI18n[id].catalogs[locale]` at boot. Locales are
-   * limited to the site's enabled ones; the source locale never appears, as
-   * Lingui falls back to `descriptor.message`.
+   * Admin fetches `pluginI18n[id].catalogs[locale]` at boot. Keyed by the
+   * site's enabled locales, each at its catalog locale's URL, plus the
+   * source locale's own.
    */
   readonly pluginI18n?: PluginI18nManifest;
   /**

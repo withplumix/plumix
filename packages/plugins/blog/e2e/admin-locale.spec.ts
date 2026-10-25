@@ -1,6 +1,6 @@
 import { expect, test } from "plumix/test/playwright";
 
-test("the admin opens in an enabled zh-CN, under its lang and in Chinese", async ({
+test("the admin opens in an enabled zh-CN, under its lang and in Chinese, the plugin strings included", async ({
   page,
 }) => {
   // `?lang=` outranks the stored locale another spec may have picked. A deep
@@ -9,4 +9,5 @@ test("the admin opens in an enabled zh-CN, under its lang and in Chinese", async
 
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
   await expect(page.getByTestId("status-view-all")).toHaveText("全部");
+  await expect(page.getByTestId("content-list-heading")).toHaveText("文章");
 });

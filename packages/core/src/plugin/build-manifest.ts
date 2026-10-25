@@ -71,6 +71,7 @@ import {
   DEFAULT_BREAKPOINTS,
 } from "../blocks/index.js";
 import { assignPatternIds } from "../blocks/pattern-registry.js";
+import { projectCatalogLocales } from "../i18n/catalog-locale.js";
 import { labelSourceText } from "../i18n/label.js";
 import { DuplicateAdminSlugError, PluginDefinitionError } from "./errors.js";
 import { projectMetaBoxField } from "./fields/project-field.js";
@@ -278,9 +279,9 @@ function projectPluginI18n(
   siteI18n: ResolvedI18n | undefined,
 ): PluginI18nManifest {
   if (!plugins) return {};
-  const siteLocales = new Set(
-    (siteI18n?.locales ?? []).filter((l) => l.enabled).map((l) => l.code),
-  );
+  const siteLocales = (siteI18n?.locales ?? [])
+    .filter((l) => l.enabled)
+    .map((l) => l.code);
   const out: Record<
     string,
     { sourceLocale: string; catalogs: Record<string, string> }
@@ -288,14 +289,15 @@ function projectPluginI18n(
   for (const plugin of plugins) {
     if (!plugin.i18n) continue;
     const { sourceLocale, locales } = plugin.i18n;
+    // With no site i18n, keep the plugin's full locale list.
+    const enabled = siteLocales.length > 0 ? siteLocales : locales;
     const catalogs: Record<string, string> = {
       [sourceLocale]: pluginCatalogUrl(plugin.id, sourceLocale),
     };
-    for (const locale of locales) {
-      if (locale === sourceLocale) continue;
-      // With no site i18n, keep the plugin's full locale list.
-      if (siteLocales.size > 0 && !siteLocales.has(locale)) continue;
-      catalogs[locale] = pluginCatalogUrl(plugin.id, locale);
+    for (const [locale, catalog] of Object.entries(
+      projectCatalogLocales(enabled, locales, sourceLocale),
+    )) {
+      catalogs[locale] = pluginCatalogUrl(plugin.id, catalog);
     }
     out[plugin.id] = { sourceLocale, catalogs };
   }
