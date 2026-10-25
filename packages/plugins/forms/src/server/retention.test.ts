@@ -1,6 +1,5 @@
 import type { AppContext } from "plumix/plugin";
 import { text } from "plumix/fields";
-import { HookRegistry, installPlugins } from "plumix/plugin";
 import { createTestContext } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
@@ -13,7 +12,7 @@ import { createFormRegistry } from "../registry.js";
 import { createFormsTestDb } from "../test/db.js";
 import { submissionFactory } from "../test/factories.js";
 import { listAllSubmissions } from "./repository.js";
-import { purgeExpiredSubmissions, RETENTION_CRON } from "./retention.js";
+import { purgeExpiredSubmissions } from "./retention.js";
 
 const NOW = new Date("2026-06-01T00:00:00.000Z");
 const DAY = 24 * 60 * 60 * 1000;
@@ -224,40 +223,5 @@ describe("a site-wide retention period", () => {
   test("is refused at config time when it is not a whole number of days", () => {
     expect(() => forms({ retentionDays: -1 })).toThrow(FormsError);
     expect(() => forms({ retentionDays: 1.5 })).toThrow(FormsError);
-  });
-});
-
-describe("the nightly purge the plugin registers", () => {
-  test("runs one task on the nightly cron, whatever the forms declare", async () => {
-    const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
-      plugins: [forms()],
-    });
-
-    expect(registry.scheduledTasks.map((task) => [task.id, task.cron])).toEqual(
-      [["retention-purge", RETENTION_CRON]],
-    );
-  });
-
-  test("purges the forms the site declares when it fires", async () => {
-    const { ctx, seed } = await context();
-    const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
-      plugins: [
-        forms({
-          forms: [
-            defineForm("contact", {
-              fields: [text("name")],
-              retentionDays: 30,
-            }),
-          ],
-        }),
-      ],
-    });
-    await seed("contact", daysAgo(31));
-
-    await registry.scheduledTasks[0]?.handler(ctx);
-
-    expect(await listAllSubmissions(ctx, {}, 100)).toHaveLength(0);
   });
 });

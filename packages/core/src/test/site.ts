@@ -18,6 +18,7 @@ import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import type { Travel } from "./site-clock.js";
+import type { TestRunReport, TestSchedule } from "./schedule.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
@@ -36,6 +37,7 @@ import { fakeMail } from "./mail-fake.js";
 import { TestPage } from "./page.js";
 import { appendCookie, buildRequest } from "./request.js";
 import { siteClock } from "./site-clock.js";
+import { findTask, runTasks, scheduleOf } from "./schedule.js";
 import { createSiteDatabase } from "./site-database.js";
 import { migrationFolders } from "./site-migrations.js";
 
@@ -93,6 +95,14 @@ export interface TestSite<
   readonly travel: (by: Travel) => void;
   /** Stops this site's clock at an instant, which `travel` then moves. */
   readonly freezeTime: (iso: string) => void;
+  /**
+   * Fires `cron` as the scheduler would: every task on it, and every task
+   * that declares no cron. Deferred work settles before it resolves.
+   */
+  readonly runSchedule: (cron: string) => Promise<TestRunReport>;
+  /** Runs one task by its `plugin:task` id, whatever its cron. */
+  readonly runTask: (id: string) => Promise<TestRunReport>;
+  readonly schedule: TestSchedule;
 }
 
 type InstalledRpc<TPlugins extends readonly AnyPluginDescriptor[]> =
@@ -185,6 +195,23 @@ export async function testSite<
     ) as TFactories),
   };
 
+  async function fire(
+    tasks: typeof app.scheduledTasks,
+    cron?: string,
+  ): Promise<TestRunReport> {
+    const query = cron === undefined ? "" : `?cron=${encodeURIComponent(cron)}`;
+    const ctx = contextFor(
+      new Request(`https://cms.example/_plumix/internal/scheduled${query}`, {
+        method: "POST",
+      }),
+    );
+    const report = await requestStore.run(ctx, () =>
+      runTasks(tasks, ctx, cron),
+    );
+    await drainDeferred();
+    return report;
+  }
+
   function siteActingAs(
     principal: Principal,
   ): TestSite<TFactories, InstalledRpc<TPlugins>> {
@@ -245,6 +272,9 @@ export async function testSite<
         siteActingAs(typeof next === "string" ? { role: next } : next),
       travel: time.travel,
       freezeTime: time.freezeTime,
+      runSchedule: (cron) => fire(app.scheduledTasks, cron),
+      runTask: (id) => fire([findTask(app.scheduledTasks, id, "runTask")]),
+      schedule: scheduleOf(app.scheduledTasks),
     };
   }
 

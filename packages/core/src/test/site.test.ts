@@ -376,3 +376,74 @@ describe("the site's clock", () => {
     },
   );
 });
+
+let swept = 0;
+const sweeper = definePlugin("sweeper", {
+  setup: (ctx) => {
+    ctx.registerScheduledTask({
+      id: "sweep",
+      cron: "0 3 * * *",
+      handler: () => {
+        swept += 1;
+      },
+    });
+  },
+});
+const weekly = definePlugin("weekly", {
+  setup: (ctx) => {
+    ctx.registerScheduledTask({
+      id: "digest",
+      cron: "0 0 * * SUN",
+      handler: () => undefined,
+    });
+  },
+});
+const failing = definePlugin("failing", {
+  setup: (ctx) => {
+    ctx.registerScheduledTask({
+      id: "throws",
+      cron: "0 4 * * *",
+      handler: () => {
+        throw new Error("boom");
+      },
+    });
+    ctx.registerScheduledTask({
+      id: "stalls",
+      cron: "0 4 * * *",
+      timeoutMs: 10,
+      // Settles once the budget aborts it, so nothing outlives the test.
+      handler: (appCtx) =>
+        new Promise<void>((resolve) => {
+          appCtx.signal.addEventListener("abort", () => resolve());
+        }),
+    });
+  },
+});
+const scheduling = await testSite({ plugins: [sweeper, weekly, failing] });
+
+describe("the site's scheduled tasks", () => {
+  test("are registered on their cron and run one by its id", async () => {
+    scheduling.schedule.assertScheduled("sweeper:sweep", "0 3 * * *");
+
+    const report = await scheduling.runTask("sweeper:sweep");
+
+    report.assertRan("sweeper:sweep");
+    expect(swept).toBe(1);
+  });
+
+  test("fire only the tasks on the cron a test fires", async () => {
+    const report = await scheduling.runSchedule("0 0 * * SUN");
+
+    report.assertRan("weekly:digest");
+    expect(() => report.assertRan("sweeper:sweep")).toThrow(
+      'assertRan: expected "sweeper:sweep" to have run, but the firing did not select it.',
+    );
+  });
+
+  test("report a task that throws as failed and one past its budget as timed out", async () => {
+    const report = await scheduling.runSchedule("0 4 * * *");
+
+    report.assertFailed("failing:throws").assertTimedOut("failing:stalls");
+    expect(report.ran).toEqual([]);
+  });
+});
