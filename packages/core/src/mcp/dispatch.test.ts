@@ -1,6 +1,7 @@
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { McpTool } from "../context/mcp-tool.js";
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
@@ -191,6 +192,77 @@ describe("MCP endpoint — no database wipe", () => {
     expect(
       json.result.tools.filter((t) => /fresh|wipe|migrat|drop/i.test(t.name)),
     ).toEqual([]);
+  });
+});
+
+describe("MCP endpoint — a plugin write tool", () => {
+  const text = (id: string) => ({
+    id,
+    name: "core/rich-text",
+    attrs: { body: "<p>Hi</p>" },
+  });
+  const inputSchema = v.object({ id: v.number(), ifMatch: v.string() });
+  // A site's own write tool, saving through the procedures' `ctx.entries`.
+  const appendText: McpTool<typeof inputSchema> = {
+    name: "append_text",
+    description: "Test-only: appends a text block to an entry.",
+    inputSchema,
+    run: async (toolCtx, { id, ifMatch }) => {
+      await toolCtx.entries.update({
+        id,
+        ifMatch: new Date(ifMatch),
+        content: {
+          version: "plumix.v2",
+          blocks: [text("p1"), text("p2")],
+        },
+      });
+      return { saved: true };
+    },
+  };
+  const writer = definePlugin("test-writer", {
+    setup: (ctx) => {
+      ctx.registerMcpTool(appendText);
+    },
+  });
+
+  test("refuses a layout change from a writer without edit_layout", async () => {
+    const h = await mcpHarness({ config: { plugins: [blog, writer] } });
+    const user = await h.factory.user.create({ role: "contributor" });
+    const { secret } = await h.factory.apiToken.create({
+      userId: user.id,
+      scopes: null,
+    });
+    const entry = await h.factory.entry.create({
+      type: "post",
+      status: "draft",
+      authorId: user.id,
+      content: { version: "plumix.v2", blocks: [text("p1")] },
+    });
+
+    const { json } = await callTool(h, secret, 1, "append_text", {
+      id: entry.id,
+      ifMatch: entry.updatedAt.toISOString(),
+    });
+
+    expect(json).toMatchObject({
+      error: {
+        data: {
+          issues: [
+            expect.objectContaining({
+              code: "layout_change",
+              path: "blocks[1]",
+            }),
+          ],
+        },
+      },
+    });
+    const row = await h.db.query.entries.findFirst({
+      where: (entries, { eq }) => eq(entries.id, entry.id),
+    });
+    expect(row?.content).toEqual({
+      version: "plumix.v2",
+      blocks: [text("p1")],
+    });
   });
 });
 

@@ -99,6 +99,63 @@ describe("ctx.entries.update", () => {
   });
 });
 
+describe("ctx.entries — a principal without edit_layout", () => {
+  const text = (id: string) => ({
+    id,
+    name: "core/rich-text",
+    attrs: { body: "<p>Hi</p>" },
+  });
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+
+  test("update refuses a layout change, naming the node", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const entry = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: v2([text("p1")]),
+    });
+
+    await expect(
+      authedCtx(h).entries.update({
+        id: entry.id,
+        ifMatch: entry.updatedAt,
+        content: v2([text("p1"), text("p2")]),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({ code: "layout_change", path: "blocks[1]" }),
+        ],
+      },
+    });
+  });
+
+  test("create refuses content holding a block", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+
+    await expect(
+      authedCtx(h).entries.create({
+        type: "post",
+        title: "Hello",
+        slug: "hello",
+        status: "draft",
+        sortOrder: 0,
+        content: v2([text("p1")]),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({ code: "layout_change", path: "blocks[0]" }),
+        ],
+      },
+    });
+  });
+});
+
 describe("ctx.entries.create", () => {
   test("the entry is authored by the context's principal", async () => {
     const h = await createRpcHarness({ authAs: "editor" });

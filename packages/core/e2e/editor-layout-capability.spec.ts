@@ -4,6 +4,7 @@ import type { BlockNode } from "@plumix/core/blocks";
 import { factoriesFor } from "@plumix/core/test";
 import {
   actingAs,
+  dragTo,
   expect,
   openPlaygroundDb,
   test,
@@ -77,6 +78,35 @@ test("a writer without edit_layout sees no control that changes layout", async (
   await expect(inspector.getByTestId("block-input-openInNewTab")).toHaveCount(
     0,
   );
+});
+
+test("a writer without edit_layout can't drag a block in the layers or the canvas", async ({
+  editor,
+  page,
+}) => {
+  const order = [
+    "core/rich-text",
+    "core/button",
+    "core/separator",
+    "core/group",
+  ];
+
+  // Raw drags: the driver's own `layers.drag` waits for the order to change.
+  await page.getByTestId("plumix-tab-layers").click();
+  await dragTo(
+    page,
+    page.getByTestId("layer-text"),
+    page.getByTestId("layer-separator"),
+  );
+  await dragTo(
+    page,
+    editor.canvas.block("core/rich-text"),
+    editor.canvas.block("core/separator"),
+  );
+  await editor.save();
+
+  expect(await editor.canvas.blocks()).toEqual(order);
+  expect((await editor.stored()).map((node) => node.name)).toEqual(order);
 });
 
 test("a writer without edit_layout can't select a block with no content inputs", async ({
