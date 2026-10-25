@@ -69,6 +69,7 @@ export {
   partialMatch,
   randomCredentialId,
   spyAction,
+  spyEvent,
   spyFilter,
 } from "@plumix/core/test";
 

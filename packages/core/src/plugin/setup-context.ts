@@ -108,9 +108,26 @@ function createContextBase({
     }
   };
 
+  const subscriber = {
+    plugin: pluginId,
+    rank: registry.pluginIds.indexOf(pluginId),
+  };
+
   const ctx: PluginSetupContextBase = {
     id: pluginId,
     theme,
+
+    events: {
+      on: (event, handler, options) => {
+        hooks.on(event, handler, { ...subscriber, order: options?.order });
+      },
+    },
+
+    filters: {
+      add: (filter, handler, options) => {
+        hooks.add(filter, handler, { ...subscriber, order: options?.order });
+      },
+    },
 
     addFilter: (name, fn, options) => {
       hooks.addFilter(name, fn, { ...options, plugin: pluginId });

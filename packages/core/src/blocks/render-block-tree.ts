@@ -440,7 +440,7 @@ function renderNode(
   if (data && data.error !== null) {
     // Same shape as the unknown-block path: emit nothing when the block
     // didn't declare a fallback. Observability flows through the
-    // `blocks:loader:error` hook, not a console warn here.
+    // `block.loaderFailed` event, not a console warn here.
     if (!spec.errorFallback) return createElement(Fragment, { key: node.id });
     rendered = spec.errorFallback({ attrs, error: data.error });
   } else {

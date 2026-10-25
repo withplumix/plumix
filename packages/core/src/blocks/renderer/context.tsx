@@ -79,9 +79,9 @@ export interface PlumixContextValue {
    * allowed.
    */
   readonly imageRemotePatterns?: readonly RemotePattern[];
-  /** Bridge into the framework's `block:before_render` / `block:after_render`
-   *  filters — populated by core with a closure over its request-scoped
-   *  `HookExecutor`. Absent in the editor canvas, which has no hook runtime. */
+  /** Bridge into the `block.beforeRender` / `block.afterRender` filters,
+   *  closed over the request's `ctx.filters`. Absent in the editor canvas,
+   *  which runs no filters. */
   readonly renderFilters?: BlockRenderFilters;
 }
 

@@ -93,14 +93,15 @@ async function defaultRegistry(): Promise<TestBundle> {
 describe("getMenuByName", () => {
   let db: Awaited<ReturnType<typeof createTestDb>>;
   let factories: ReturnType<typeof factoriesFor>;
+  let bundle: TestBundle;
   let ctx: AppContext;
   let authorId: number;
 
   beforeEach(async () => {
     db = await createTestDb();
     factories = factoriesFor(db);
-    const registry = await defaultRegistry();
-    ctx = ctxFor(db, registry);
+    bundle = await defaultRegistry();
+    ctx = ctxFor(db, bundle);
     const author = await adminUser
       .transient({ db })
       .create({ email: "menu-author@example.test" });
@@ -465,7 +466,7 @@ describe("getMenuByName", () => {
       const local = createTestContext({
         db,
         plugins: ctx.plugins,
-        hooks: ctx.hooks,
+        hooks: bundle.hooks,
         request: new Request(url),
         config: { basePath: "" },
       });

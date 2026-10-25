@@ -41,6 +41,7 @@ import { rebindSettings } from "../context/settings-namespace.js";
 import { requestStore } from "../context/stores.js";
 import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
+import { rebindDispatch } from "../hooks/dispatch.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { loadOnce } from "../load-once.js";
 import {
@@ -254,6 +255,7 @@ function stripBasePathOrReject(
     ...ctx,
     request: new Request(rawUrl, ctx.request),
     settings: rebindSettings(ctx.settings, () => rooted),
+    ...rebindDispatch(ctx, () => rooted),
   };
   return rooted;
 }
@@ -808,6 +810,7 @@ function withoutAmbientSession(
     ...ctx,
     authenticator: anonymousAuthenticator,
     settings: rebindSettings(ctx.settings, () => sessionless),
+    ...rebindDispatch(ctx, () => sessionless),
   };
   return sessionless;
 }

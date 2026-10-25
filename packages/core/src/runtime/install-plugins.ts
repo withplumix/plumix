@@ -1,5 +1,9 @@
 import type { AnyPluginDescriptor } from "../config.js";
 import type { MutableDevRuntime } from "../context/dev-runtime.js";
+import type {
+  AnyEventDefinition,
+  AnyFilterDefinition,
+} from "../hooks/define.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type {
   MutablePluginRegistry,
@@ -7,8 +11,12 @@ import type {
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { ThemeDescriptor } from "../theme.js";
+import { block } from "../hooks/block-render.js";
 import { assertValidPluginId } from "../plugin/define.js";
-import { PluginDefinitionError } from "../plugin/errors.js";
+import {
+  DuplicateRegistrationError,
+  PluginDefinitionError,
+} from "../plugin/errors.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createPluginProvidesContext } from "../plugin/provides-context.js";
 import {
@@ -61,6 +69,7 @@ export async function installPlugins({
     seenIds.add(descriptor.id);
     registry.pluginIds.push(descriptor.id);
   }
+  assertUniqueDeclarations(plugins);
 
   // Per call, not per descriptor: the same descriptor installed into two apps
   // gets two states.
@@ -115,4 +124,34 @@ export async function installPlugins({
   }
 
   return { hooks, registry, appContextExtensions };
+}
+
+type Declaration = AnyEventDefinition | AnyFilterDefinition;
+
+const CORE_DECLARATIONS: readonly Declaration[] = Object.values(block);
+
+function assertUniqueDeclarations(
+  plugins: readonly AnyPluginDescriptor[],
+): void {
+  const owners = new Map<string, string | null>(
+    CORE_DECLARATIONS.map((declaration) => [declaration.id, null]),
+  );
+  for (const descriptor of plugins) {
+    const declarations: readonly Declaration[] = [
+      ...(descriptor.events ?? []),
+      ...(descriptor.filters ?? []),
+    ];
+    for (const declaration of declarations) {
+      const owner = owners.get(declaration.id);
+      if (owner !== undefined) {
+        throw DuplicateRegistrationError.alreadyRegistered({
+          kind: declaration.kind,
+          identifier: declaration.id,
+          pluginId: descriptor.id,
+          previousOwner: owner,
+        });
+      }
+      owners.set(declaration.id, descriptor.id);
+    }
+  }
 }

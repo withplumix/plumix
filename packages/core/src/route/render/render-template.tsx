@@ -45,6 +45,7 @@ import {
 import { PlumixProvider } from "../../blocks/renderer/index.js";
 import { mergeDocumentManifest } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
+import { block } from "../../hooks/block-render.js";
 import { nonEmpty } from "../../non-empty.js";
 import { applyCanonical } from "../../seo/canonical.js";
 import { loadSiteSettings } from "../../seo/site-settings.js";
@@ -389,23 +390,14 @@ async function prefetchEntryLoaders(
   const loaderData = await ctx.telemetry.span("render: loaders", (s) => {
     s.set("loaders.blocks", blocks.length);
     return resolveBlockLoaders(blocks, ctx.blocks, ctx, {
-      // Not awaited, so observability never back-pressures loaders; caught,
-      // because an unhandled rejection kills a Workers request.
+      // Not awaited, so observability never back-pressures loaders.
       onLoaderError: (event: LoaderErrorEvent) => {
         if (honoursOutcome && isPageOutcome(event.error)) {
           pageOutcome ??= event.error;
           return;
         }
         firstLoaderError ??= event;
-        ctx.hooks
-          .applyFilter("blocks:loader:error", undefined, event)
-          .catch((hookError: unknown) => {
-            ctx.logger.error("[plumix] blocks:loader:error hook threw", {
-              hookError,
-              blockName: event.spec.name,
-              nodeId: event.node.id,
-            });
-          });
+        void ctx.events.emit(block.loaderFailed, event);
       },
     });
   });
@@ -526,18 +518,14 @@ async function renderTree({
   const entry = "entry" in data ? { ...data.entry } : null;
   // Bind once so the resolver closure keeps the non-null narrowing.
   const imageDelivery = ctx.imageDelivery;
-  // Bridge into the framework filters so plugins can subscribe via
-  // `addFilter("block:before_render" | "block:after_render", ...)`. Sync
-  // (not `applyFilter`) because these fire mid-React-render, inside
-  // `renderBlockTree`'s walk — see `applyFilterSync`'s own doc comment.
   const renderFilters: BlockRenderFilters = {
     beforeRender: (element, node, blockContext) =>
-      ctx.hooks.applyFilterSync("block:before_render", element, {
+      ctx.filters.apply(block.beforeRender, element, {
         node,
         context: blockContext,
       }),
     afterRender: (element, node, blockContext) =>
-      ctx.hooks.applyFilterSync("block:after_render", element, {
+      ctx.filters.apply(block.afterRender, element, {
         node,
         context: blockContext,
       }),

@@ -10,6 +10,7 @@ import { defineBlock } from "../../blocks/index.js";
 import { BlockRenderer } from "../../blocks/renderer/index.js";
 import { getContext } from "../../context/stores.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
+import { block } from "../../hooks/block-render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { defineTemplate } from "../../template.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
@@ -2199,16 +2200,16 @@ describe("resolvePublicRoute — single entry through theme", () => {
     expect(await response.text()).toContain("<p>Welcome to Acme</p>");
   });
 
-  test("block:before_render / block:after_render decorate a real block render", async () => {
+  test("a plugin subscribing to block.beforeRender and block.afterRender decorates a rendered block", async () => {
     const seen: string[] = [];
     const decorator = definePlugin("acme-decorator", {
       setup: (ctx) => {
-        ctx.addFilter("block:before_render", (element, hookCtx) => {
-          seen.push(`before:${hookCtx.node.name}`);
+        ctx.filters.add(block.beforeRender, (element, input) => {
+          seen.push(`before:${input.node.name}`);
           return createElement("mark", { "data-testid": "before" }, element);
         });
-        ctx.addFilter("block:after_render", (element, hookCtx) => {
-          seen.push(`after:${hookCtx.node.name}`);
+        ctx.filters.add(block.afterRender, (element, input) => {
+          seen.push(`after:${input.node.name}`);
           return element;
         });
       },
@@ -2572,6 +2573,46 @@ describe("resolvePublicRoute — block loader dev-fatal escalation (#1600)", () 
     expect(body).toContain('data-testid="probe"');
     expect(body).toContain("degraded");
     expect(body).not.toContain("plumix-dev-error");
+  });
+
+  test("a plugin subscribing to block.loaderFailed receives the failing loader and the request's ctx", async () => {
+    delete process.env.PLUMIX_DEV;
+    const received: {
+      block: string;
+      key: string;
+      error: unknown;
+      url: string;
+    }[] = [];
+    const observer = definePlugin("acme-loader-observer", {
+      setup: (ctx) => {
+        ctx.events.on(block.loaderFailed, (failure, requestCtx) => {
+          received.push({
+            block: failure.spec.name,
+            key: failure.key,
+            error: failure.error,
+            url: requestCtx.request.url,
+          });
+        });
+      },
+    });
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [blogPlugin, throwingLoaderPlugin, observer],
+        theme: throwingLoaderTheme,
+      },
+    });
+    await seedLoaderPost(h, "acme/throwing-loader");
+
+    await h.dispatch(new Request(`${DEV_ORIGIN}/post/with-loader`));
+
+    expect(received).toEqual([
+      {
+        block: "acme/throwing-loader",
+        key: "marker",
+        error: new Error("loader kaboom"),
+        url: `${DEV_ORIGIN}/post/with-loader`,
+      },
+    ]);
   });
 
   test("dev gate on: the failing loader query is surfaced, flagged as failed", async () => {

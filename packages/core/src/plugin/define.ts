@@ -1,4 +1,8 @@
 import type { ShortcodeSpec } from "../blocks/index.js";
+import type {
+  AnyEventDefinition,
+  AnyFilterDefinition,
+} from "../hooks/define.js";
 import type { AnyMailDefinition } from "../mail/contract/registry.js";
 import type { SchemaModule } from "../runtime/contract/slots.js";
 import type { AuthMethodDefinition } from "./auth-method.js";
@@ -70,6 +74,13 @@ export interface PluginDescriptor<TState = undefined> {
    * answers at `/_plumix/auth/<name>/`.
    */
   readonly authMethods?: readonly AuthMethodDefinition[];
+  /**
+   * The events this plugin declares with `defineEvent`, so a duplicate id
+   * fails boot whether or not anything subscribes.
+   */
+  readonly events?: readonly AnyEventDefinition[];
+  /** The filters this plugin declares with `defineFilter`; see `events`. */
+  readonly filters?: readonly AnyFilterDefinition[];
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   /**
@@ -107,6 +118,10 @@ export interface DefinePluginInput<TState> {
   readonly mails?: readonly AnyMailDefinition[];
   /** See {@link PluginDescriptor.authMethods}. */
   readonly authMethods?: readonly AuthMethodDefinition[];
+  /** See {@link PluginDescriptor.events}. */
+  readonly events?: readonly AnyEventDefinition[];
+  /** See {@link PluginDescriptor.filters}. */
+  readonly filters?: readonly AnyFilterDefinition[];
   readonly schema?: SchemaModule;
   readonly schemaModule?: string;
   /** See {@link PluginDescriptor.dataMigrations}. */
@@ -170,6 +185,8 @@ export function definePlugin<TState = undefined>(
     shortcodes: input.shortcodes,
     mails: input.mails,
     authMethods: input.authMethods,
+    events: input.events,
+    filters: input.filters,
     schema: input.schema,
     schemaModule: input.schemaModule,
     dataMigrations: input.dataMigrations,

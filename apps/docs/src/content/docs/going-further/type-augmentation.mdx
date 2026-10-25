@@ -86,7 +86,39 @@ Core seeds `post` and `page`, `category` and `tag`, the eight default pattern ca
 
 ### Hooks
 
-`FilterRegistry` and `ActionRegistry` map a hook name to its handler signature. A plugin that fires a hook declares it, and TypeScript then types every `addFilter` or `addAction` call against that name. A plugin declares its hooks in its own package, so they type-check only in a project that installs it.
+An event or filter you declare yourself needs no augmentation. Declare it as a value with `defineEvent` or `defineFilter` from `plumix/plugin`, list it in your plugin's descriptor, and export it for other plugins to subscribe to:
+
+```ts
+import type { AppContext } from "plumix/plugin";
+import { defineEvent, defineFilter, definePlugin } from "plumix/plugin";
+
+interface Review {
+  readonly id: number;
+  readonly stars: number;
+}
+
+export const review = {
+  posted: defineEvent<{ readonly review: Review }>("reviews:posted"),
+  stars: defineFilter<number, { readonly review: Review }>("reviews:stars"),
+};
+
+export const reviews = definePlugin("reviews", {
+  events: [review.posted],
+  filters: [review.stars],
+  setup: () => undefined,
+});
+
+export async function postReview(ctx: AppContext, posted: Review) {
+  const stars = await ctx.filters.apply(review.stars, posted.stars, {
+    review: posted,
+  });
+  await ctx.events.emit(review.posted, { review: { ...posted, stars } });
+}
+```
+
+Another plugin imports `review` and subscribes in `setup` with `ctx.events.on(review.posted, handler)` or `ctx.filters.add(review.stars, handler)`, and TypeScript types the payload, the value and the input from the declaration. Two declarations sharing an id fail boot. Core's own `block` subject is declared the same way.
+
+The extension points that have not moved yet are still string names. `FilterRegistry` and `ActionRegistry` map such a name to its handler signature, and TypeScript types every `addFilter` or `addAction` call against it.
 
 ### Meta
 
