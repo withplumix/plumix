@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { adrNumbersIn, nextFreeAdr } from "./lib/adr.js";
+import { decideWhatTheDocsSettle } from "./lib/decide.js";
 import {
   aReadyTicketWaitsOnAMovingBlocker,
   closeCompletedParent,
@@ -148,6 +149,23 @@ const report = await runShipLoop(
           throw error;
         },
       );
+    },
+    decide: (ticket, reason) => {
+      const journal = new Journal(import.meta.dirname);
+      return decideWhatTheDocsSettle(ticket, reason, journal).then(
+        (settled) => {
+          journal.finish(settled ? "shipped" : "failed", reason);
+          return settled;
+        },
+        (error: unknown) => {
+          journal.finish("failed", String(error));
+          throw error;
+        },
+      );
+    },
+    retake: ({ number }) => {
+      claimed.delete(number);
+      if (onlyTickets.length) namedTickets.unshift(number);
     },
     park: ({ number }, reason, pullRequestUrl, briefFails) =>
       parkTicket(number, reason, pullRequestUrl, briefFails),

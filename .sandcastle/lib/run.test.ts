@@ -46,6 +46,8 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     ticketClosed: () => true,
     brokenCheckout: () => undefined,
     aBlockerIsMoving: () => false,
+    decide: async () => false,
+    retake: () => {},
     pause: async () => {},
     say: () => {},
   };
@@ -105,6 +107,65 @@ describe("runShipLoop", () => {
       true,
       true,
     ]);
+  });
+
+  test("a park the documents settle is decided and the ticket shipped again, not left for a person", async () => {
+    const waiting = [ticket(1)];
+    let attempts = 0;
+    const retaken: number[] = [];
+    const { ports: p, parked } = ports({
+      nextTicket: () => waiting.shift(),
+      ship: async (t) => {
+        attempts += 1;
+        return attempts === 1
+          ? { status: "blocked", reason: "1 premise(s) in the brief are false" }
+          : {
+              status: "queued",
+              pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+            };
+      },
+      decide: async () => true,
+      retake: (t) => {
+        retaken.push(t.number);
+        waiting.push(t);
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(parked).toEqual([]);
+    expect(retaken).toEqual([1]);
+    expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1]);
+  });
+
+  test("a ticket that parks again after a decision goes to a person, so the loop never argues with itself", async () => {
+    const waiting = [ticket(1)];
+    const decided: number[] = [];
+    const { ports: p, parked } = ports({
+      nextTicket: () => waiting.shift(),
+      ship: async () => ({ status: "blocked", reason: "a spec gap" }),
+      decide: async (t) => {
+        decided.push(t.number);
+        return true;
+      },
+      retake: (t) => void waiting.push(t),
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(decided).toEqual([1]);
+    expect(parked.map(({ number }) => number)).toEqual([1]);
+  });
+
+  test("a park the decider cannot settle goes to a person", async () => {
+    const { ports: p, parked } = ports({
+      ship: async () => ({ status: "blocked", reason: "needs a secret" }),
+      decide: async () => false,
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(parked).toHaveLength(3);
   });
 
   test("a ticket blocked inside its lane is parked and never queued", async () => {
