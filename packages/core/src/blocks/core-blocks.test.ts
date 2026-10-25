@@ -6,6 +6,26 @@ import { coreBlocks } from "./core-blocks.js";
 import { renderBlockTreeToHtml } from "./test/index.js";
 
 describe("coreBlocks", () => {
+  test("marks the inputs a writer without edit_layout may change as content", () => {
+    const content = coreBlocks.flatMap((spec) =>
+      (spec.inputs ?? [])
+        .filter((input) => input.content)
+        .map((input) => `${spec.name}.${input.name}`),
+    );
+
+    expect(content.sort()).toEqual([
+      "core/button.href",
+      "core/button.label",
+      "core/code.text",
+      "core/details.summary",
+      "core/embed.url",
+      "core/rich-text.body",
+      "core/table-cell.text",
+      "core/table-header-cell.text",
+      "core/video.src",
+    ]);
+  });
+
   test("names exactly the blocks `CoreBlockName` lists", () => {
     // A key missing from or extra to the union fails to type-check.
     const listed: Record<CoreBlockName, true> = {

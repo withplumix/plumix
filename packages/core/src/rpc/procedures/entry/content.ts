@@ -33,8 +33,14 @@ export function assertContentValidAgainstRegistries(
     readonly blocks: BlockRegistry;
     readonly allowedBlocks?: ReadonlySet<string>;
     readonly stylePolicy?: StylePolicy;
+    readonly auth: { can(capability: string): boolean };
   },
   errors: BlockContentErrors,
+  /** Without `capability`, a save changes only the content inputs of `from`. */
+  layout: {
+    readonly capability: string;
+    readonly from: readonly (EntryContent | null | undefined)[];
+  },
 ): void {
   if (content == null) return;
   // Only the v2 envelope round-trips through validation. Legacy payloads
@@ -47,6 +53,12 @@ export function assertContentValidAgainstRegistries(
     starting.filter((stored) => isEntryContent(stored)),
     registries.allowedBlocks,
     registries.stylePolicy,
+    {
+      can: (capability) => registries.auth.can(capability),
+      layoutFrom: registries.auth.can(layout.capability)
+        ? undefined
+        : layout.from.filter((stored) => isEntryContent(stored)),
+    },
   );
   if (!result.ok) {
     throw errors.INVALID_BLOCK_CONTENT({

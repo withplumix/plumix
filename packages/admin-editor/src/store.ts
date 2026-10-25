@@ -22,10 +22,12 @@ import {
 
 import type { MoveTarget } from "./block-tree-ops.js";
 import type { History } from "./history.js";
+import type { LayoutGate } from "./layout-gate.js";
 import {
   appendTableColumn,
   appendTableRow,
   duplicateBlock,
+  findBlock,
   findParentId,
   flattenTree,
   groupBlocks,
@@ -441,8 +443,16 @@ export function createEditorStore(
     readonly selection?: readonly string[];
     /** A duplicate or paste drops the values it refuses; undefined refuses none. */
     readonly stylePolicy?: StylePolicy;
+    /** Refuses selecting a block it doesn't let the writer select. */
+    readonly layout?: LayoutGate;
   },
 ): EditorStoreApi {
+  const selectable = (tree: readonly BlockNode[], id: string): boolean => {
+    const layout = initial?.layout;
+    if (!layout || layout.editsLayout) return true;
+    const node = findBlock(tree, id, blocks);
+    return layout.selects(node && blocks.get(node.name));
+  };
   return createStore<InternalStore>((set) => ({
     tree: initial?.tree ?? [],
     selectedIds: new Set<string>(initial?.selection),
@@ -623,6 +633,7 @@ export function createEditorStore(
       ),
     select: (id, options) =>
       set((state) => {
+        if (!selectable(state.tree, id)) return {};
         if (!options?.additive) {
           return { selectedIds: new Set([id]), activeId: id };
         }
@@ -712,16 +723,20 @@ export function createEditorStore(
         });
       }),
     revealBlock: (id) =>
-      set((state) => ({
-        selectedIds: new Set([id]),
-        activeId: id,
-        frameRequest: state.frameRequest + 1,
-      })),
+      set((state) =>
+        selectable(state.tree, id)
+          ? {
+              selectedIds: new Set([id]),
+              activeId: id,
+              frameRequest: state.frameRequest + 1,
+            }
+          : {},
+      ),
     selectParent: () =>
       set((state) => {
         if (!state.activeId) return {};
         const parentId = findParentId(state.tree, state.activeId, blocks);
-        if (!parentId) return {};
+        if (!parentId || !selectable(state.tree, parentId)) return {};
         return { selectedIds: new Set([parentId]), activeId: parentId };
       }),
     moveSelectedBy: (delta) =>

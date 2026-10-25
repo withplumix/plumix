@@ -8,7 +8,9 @@ import type {
 } from "@plumix/core/blocks";
 
 import type { ResolvePluginFieldType } from "./block-input-control.js";
+import type { LayoutGate } from "./layout-gate.js";
 import { EditorError } from "./errors.js";
+import { layoutGate } from "./layout-gate.js";
 
 /** Session-stable for the editor's lifetime. */
 export interface EditorConfig {
@@ -32,6 +34,8 @@ export interface EditorConfig {
   readonly stylePolicy?: StylePolicy;
   /** Absent in a deployment with no plugin field registry. */
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
+  /** What the writer may do to layout; absent grants all of it. */
+  readonly layout?: LayoutGate;
 }
 
 const EditorConfigContext = createContext<EditorConfig | null>(null);
@@ -45,6 +49,7 @@ export function EditorConfigProvider({
   allowedBlocks,
   stylePolicy,
   resolvePluginFieldType,
+  layout,
   children,
 }: EditorConfig & { readonly children: ReactNode }): ReactElement {
   const config = useMemo<EditorConfig>(
@@ -55,6 +60,7 @@ export function EditorConfigProvider({
       allowedBlocks,
       stylePolicy,
       resolvePluginFieldType,
+      layout,
     }),
     [
       registry,
@@ -63,6 +69,7 @@ export function EditorConfigProvider({
       allowedBlocks,
       stylePolicy,
       resolvePluginFieldType,
+      layout,
     ],
   );
   return (
@@ -78,4 +85,11 @@ export function useEditorConfig(): EditorConfig {
   const config = useContext(EditorConfigContext);
   if (!config) throw EditorError.missingConfigProvider();
   return config;
+}
+
+const FULL_LAYOUT = layoutGate(true);
+
+/** The one gate every layout control asks. */
+export function useLayoutGate(): LayoutGate {
+  return useEditorConfig().layout ?? FULL_LAYOUT;
 }

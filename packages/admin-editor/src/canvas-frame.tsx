@@ -27,7 +27,7 @@ import {
   pasteableAtRoot,
 } from "./clipboard-ops.js";
 import { connectCanvas } from "./connect-canvas.js";
-import { useEditorConfig } from "./editor-config-context.js";
+import { useEditorConfig, useLayoutGate } from "./editor-config-context.js";
 import { deviceLabel } from "./editor-toolbar.js";
 import { overlayBox, px } from "./overlay.js";
 import {
@@ -75,6 +75,7 @@ export function CanvasFrame({
   onResolveBlockDeps,
 }: CanvasFrameProps): ReactElement {
   const { registry, allowedBlocks } = useEditorConfig();
+  const { editsLayout } = useLayoutGate();
   const { i18n } = useLingui();
   const locale = i18n.locale;
   const store = useEditorStoreApi();
@@ -161,13 +162,15 @@ export function CanvasFrame({
       onKey: ({ down, code, shiftKey }) =>
         keyHandlerRef.current?.(down, code, shiftKey),
       onRequestAdd: ({ parentId, slotKey }) => requestAdd(parentId, slotKey),
-      onClipboard: (op) => void clipboard.run(op),
+      onClipboard: (op) => {
+        if (editsLayout) void clipboard.run(op);
+      },
       onRequestDeps: onResolveBlockDeps
         ? (tree) => void onResolveBlockDeps(tree).then(connection.pushDeps)
         : undefined,
       // The canvas has no i18n runtime. Not a dep: Lingui returns a fresh `{}`
       // for an unloaded locale, which would reconnect on every render.
-      config: { locale, catalog: i18n.messages },
+      config: { locale, catalog: i18n.messages, editsLayout },
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
@@ -192,6 +195,7 @@ export function CanvasFrame({
     i18n,
     locale,
     clipboard,
+    editsLayout,
     onResolveBlockDeps,
   ]);
 
@@ -212,6 +216,8 @@ export function CanvasFrame({
 
   // Defers to native copy on a text selection and to fields while typing.
   useEffect(() => {
+    // Copying and pasting blocks is layout; the browser's own copy stays.
+    if (!editsLayout) return;
     const onKeyDown = (e: KeyboardEvent): void => {
       const op = clipboardOpFromEvent(e);
       if (!op) return;
@@ -220,7 +226,7 @@ export function CanvasFrame({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [clipboard]);
+  }, [clipboard, editsLayout]);
 
   // Overlays live in a clip layer pinned over the canvas viewport, so their
   // boxes are expressed relative to that layer's top-left (the container's
@@ -409,7 +415,7 @@ export function CanvasFrame({
         </div>
       )}
 
-      {!readOnly && pendingAdd && (
+      {!readOnly && editsLayout && pendingAdd && (
         <Popover
           open
           onOpenChange={(next) => {

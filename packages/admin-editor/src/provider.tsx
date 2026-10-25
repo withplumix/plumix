@@ -11,6 +11,7 @@ import type {
 import type { SerializedLoaderData } from "@plumix/core/blocks/renderer";
 
 import type { CameraStore, CameraStoreApi } from "./camera-store.js";
+import type { LayoutGate } from "./layout-gate.js";
 import type { EditorDevice, EditorStore, EditorStoreApi } from "./store.js";
 import { createCameraStore } from "./camera-store.js";
 import { EditorError } from "./errors.js";
@@ -38,6 +39,7 @@ export function EditorProvider({
   starterOpen,
   selection,
   stylePolicy,
+  layout,
   children,
 }: {
   /** The block specs, which decide each node's slots for every tree edit. */
@@ -53,6 +55,8 @@ export function EditorProvider({
   readonly selection?: readonly string[];
   /** A duplicate or paste drops the values it refuses. */
   readonly stylePolicy?: StylePolicy;
+  /** Decides which blocks can be selected. */
+  readonly layout?: LayoutGate;
   readonly children: ReactNode;
 }): ReactElement {
   const [store] = useState<EditorStoreApi>(() =>
@@ -63,6 +67,7 @@ export function EditorProvider({
       starterOpen,
       selection,
       stylePolicy,
+      layout,
     }),
   );
   const [camera] = useState<CameraStoreApi>(() => createCameraStore({ zoom }));

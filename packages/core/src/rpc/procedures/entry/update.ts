@@ -179,6 +179,14 @@ export async function updateEntry(
     [existing.content, currentEdits?.content],
     context,
     errors,
+    {
+      capability: entryCapabilityByName(
+        context.plugins,
+        existing.type,
+        "edit_layout",
+      ),
+      from: [existing.content, currentEdits?.content],
+    },
   );
 
   // Checked before either write path so an undeclared key is rejected

@@ -200,9 +200,14 @@ describe("connectRuntime (canvas/iframe side)", () => {
     });
 
     const catalog = { "blocks.appender.addBlock": ["Ajouter un bloc"] };
-    fromHost({ type: "host:config", locale: "fr", catalog });
+    fromHost({
+      type: "host:config",
+      locale: "fr",
+      catalog,
+      editsLayout: false,
+    });
 
-    expect(seen.at(-1)).toEqual({ locale: "fr", catalog });
+    expect(seen.at(-1)).toEqual({ locale: "fr", catalog, editsLayout: false });
     conn.dispose();
   });
 

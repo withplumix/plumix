@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "@plumix/core/blocks";
+import { createBlockRegistry } from "@plumix/core/blocks";
 
 import { treeBlocks } from "../test/tree-blocks.js";
+import { layoutGate } from "./layout-gate.js";
 import {
   createEditorStore,
   DESKTOP_CANVAS_WIDTH,
@@ -19,6 +21,30 @@ describe("deviceBucket", () => {
 });
 
 describe("editor store", () => {
+  test("a writer without edit_layout selects only a block with a content input", () => {
+    const blocks = createBlockRegistry([
+      {
+        name: "acme/text",
+        render: () => null,
+        inputs: [{ name: "body", type: "text", content: true }],
+      },
+      { name: "acme/rule", render: () => null },
+    ]);
+    const store = createEditorStore(blocks, {
+      tree: [
+        { id: "t", name: "acme/text" },
+        { id: "r", name: "acme/rule" },
+      ],
+      layout: layoutGate(false),
+    });
+
+    store.getState().select("r");
+    expect(store.getState().activeId).toBeNull();
+
+    store.getState().select("t");
+    expect(store.getState().activeId).toBe("t");
+  });
+
   test("select replaces the selection and marks the block active", () => {
     const store = createEditorStore(treeBlocks);
 

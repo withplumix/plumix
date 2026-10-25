@@ -4,13 +4,14 @@ import type { BlockNode, BlockRegistry } from "@plumix/core/blocks";
 import { createBlockRegistry } from "@plumix/core/blocks";
 
 import { inspectorView } from "./inspector-view.js";
+import { layoutGate } from "./layout-gate.js";
 
 const registry: BlockRegistry = createBlockRegistry([
   {
     name: "core/heading",
     render: () => null,
     inputs: [
-      { name: "text", type: "text", label: "Text" },
+      { name: "text", type: "text", label: "Text", content: true },
       { name: "level", type: "select", label: "Level", options: [] },
     ],
   },
@@ -202,6 +203,40 @@ describe("inspectorView", () => {
 
     expect(view?.showAddColumn).toBe(shown);
   });
+
+  test("a writer without edit_layout gets only the content inputs", () => {
+    const view = inspectorView(
+      registry,
+      [{ id: "h1", name: "core/heading", attrs: { text: "Hi", level: 2 } }],
+      "h1",
+      "large",
+      false,
+      undefined,
+      layoutGate(false),
+    );
+
+    expect(view?.inputs.map(({ input }) => input.name)).toEqual(["text"]);
+  });
+
+  test.each([
+    ["Add column", [{ id: "b1", name: "core/columns" }], "b1"],
+    ["the table controls", tableTree, "c0"],
+  ])(
+    "a writer without edit_layout gets no %s",
+    (_, tree: readonly BlockNode[], id) => {
+      const view = inspectorView(
+        registry,
+        tree,
+        id,
+        "large",
+        false,
+        undefined,
+        layoutGate(false),
+      );
+
+      expect([view?.showAddColumn, view?.tableId]).toEqual([false, null]);
+    },
+  );
 
   test("a selected table cell keeps its table's controls in reach", () => {
     const view = inspectorView(registry, tableTree, "c0", "large", false);

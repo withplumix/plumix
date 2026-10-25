@@ -227,6 +227,13 @@ _Avoid_: Gutenberg, Builder.io (these are the reference models, not plumix terms
 **Block input**:
 A single editable control declared on a block — an attribute, a style-bound property, or a slot input.
 
+**Content input**:
+A block input marked `content: true`: the text, link or media a writer without the layout capability may still change. Every other input is layout, and a slot or style-bound input always is.
+
+**Layout capability**:
+`entry:<type>:edit_layout`, which lets a writer change an entry's layout as well as its content: add, remove, move or rename a block node, and change its style, visibility, HTML attributes, class name, tag name or any input that isn't a content input. Authors, editors and admins hold it by default. The editor and the server both enforce it; the server refuses a layout change with a `layout_change` issue.
+_Avoid_: design permission, structure permission
+
 **Variation**:
 A preset of a block (attributes plus optional child body) surfaced in the inserter.
 

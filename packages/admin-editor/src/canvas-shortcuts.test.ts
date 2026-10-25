@@ -1,8 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
 
+import { createBlockRegistry } from "@plumix/core/blocks";
+
 import { treeBlocks } from "../test/tree-blocks.js";
 import { createCameraStore } from "./camera-store.js";
 import { canvasHandlesHostKey, runCanvasShortcut } from "./canvas-shortcuts.js";
+import { layoutGate } from "./layout-gate.js";
 import { createEditorStore } from "./store.js";
 
 const noop = (): void => undefined;
@@ -25,6 +28,29 @@ describe("runCanvasShortcut", () => {
     });
 
     expect(store.getState().tree.map((node) => node.id)).toEqual(["b"]);
+  });
+
+  test("selection.delete removes nothing for a writer without edit_layout", () => {
+    const blocks = createBlockRegistry([
+      {
+        name: "acme/text",
+        render: () => null,
+        inputs: [{ name: "body", type: "text", content: true }],
+      },
+    ]);
+    const tree = [{ id: "a", name: "acme/text" }];
+    const store = createEditorStore(blocks, { tree });
+    store.getState().select("a");
+
+    runCanvasShortcut("selection.delete", {
+      store,
+      camera: createCameraStore(),
+      zoomToSelection: noop,
+      togglePanels: noop,
+      layout: layoutGate(false),
+    });
+
+    expect(store.getState().tree).toEqual(tree);
   });
 
   test("history.undo and history.redo step through the edits", () => {

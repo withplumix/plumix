@@ -13,6 +13,7 @@ export const detailsBlock = defineBlock({
     {
       name: "summary",
       type: "text",
+      content: true,
       label: {
         id: "block.core.details.input.summary.label",
         message: "Summary",

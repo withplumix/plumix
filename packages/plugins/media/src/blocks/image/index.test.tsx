@@ -49,6 +49,14 @@ const widthLadder: ImageResolver = (src, o) =>
   o?.width === undefined ? src : `${src}?w=${o.width}`;
 
 describe("media/image v2", () => {
+  test("marks the picked image, alt and caption as content", () => {
+    const content = (imageBlock.inputs ?? [])
+      .filter((input) => input.content)
+      .map((input) => input.name);
+
+    expect(content).toEqual(["media", "alt", "caption"]);
+  });
+
   test("renders <figure><img></figure> with src + alt", () => {
     const html = renderBlockSpecToHtml(imageBlock, {
       src: "/_plumix/media/x/photo.jpg",

@@ -57,6 +57,14 @@ export const duplicate = base
       [source.content],
       context,
       errors,
+      {
+        capability: entryCapabilityByName(
+          context.plugins,
+          source.type,
+          "edit_layout",
+        ),
+        from: [source.content],
+      },
     );
 
     const candidate: NewEntry = {

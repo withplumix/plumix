@@ -15,11 +15,13 @@ export const buttonBlock = defineBlock({
     {
       name: "label",
       type: "text",
+      content: true,
       label: { id: "block.core.button.input.label.label", message: "Label" },
     },
     {
       name: "href",
       type: "text",
+      content: true,
       label: { id: "block.core.button.input.href.label", message: "Href" },
     },
     {

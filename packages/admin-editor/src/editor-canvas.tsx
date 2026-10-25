@@ -69,6 +69,14 @@ const XRAY_STYLE = `[data-plumix-xray] [data-plumix-block] {
   outline-offset: -1px;
 }`;
 
+/**
+ * Inserting is layout. The slot appenders render inside the blocks, so a rule
+ * hides them rather than the walker; `!important` beats their inline style.
+ */
+const CONTENT_ONLY_STYLE = `[data-plumix-content-only] [data-plumix-add] {
+  display: none !important;
+}`;
+
 const NO_LOADER_DATA: ResolvedBlockLoaders = new Map();
 
 /** Runs inside the editor iframe and never owns the tree; the host does. */
@@ -340,13 +348,16 @@ export function EditorCanvas({
           ref={containerRef}
           data-testid="plumix-editor-canvas"
           data-plumix-xray={xray ? "" : undefined}
+          data-plumix-content-only={
+            config?.editsLayout === false ? "" : undefined
+          }
           onClick={handleClick}
           onMouseOver={handleMouseOver}
           onMouseOut={handleMouseOut}
         >
-          {/* X-ray outline rule; the data-plumix-xray attribute above gates it. */}
+          {/* X-ray outline and content-only rules; the attributes above gate them. */}
           {/* eslint-disable-next-line shadcn/no-inline-styles -- the canvas mounts in the theme page's preview iframe, where the editor bootstrap injects a script and no admin stylesheet */}
-          <style>{XRAY_STYLE}</style>
+          <style>{`${XRAY_STYLE}\n${CONTENT_ONLY_STYLE}`}</style>
           {/* BlockTree (not BlockRenderer) so the canvas doesn't re-emit the
               SSR content-root boundary it was mounted into — just the
               per-block data-plumix-id seam for selection. */}

@@ -14,6 +14,7 @@ describe("KnownCapability", () => {
       | "entry:post:delete"
       | "entry:post:read_revisions"
       | "entry:post:restore_revision"
+      | "entry:post:edit_layout"
       | "user:list"
       | "user:edit_own"
       | "user:create"

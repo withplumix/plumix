@@ -62,6 +62,7 @@ export const richTextBlock = defineBlock({
     {
       name: "body",
       type: "richtext",
+      content: true,
       label: { id: "block.core.rich-text.input.body.label", message: "Body" },
     },
   ],

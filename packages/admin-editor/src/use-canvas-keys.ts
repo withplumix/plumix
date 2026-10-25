@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { View } from "./canvas-view.js";
 import type { EditorShortcutId } from "./shortcuts.js";
 import { canvasHandlesHostKey, runCanvasShortcut } from "./canvas-shortcuts.js";
+import { useLayoutGate } from "./editor-config-context.js";
 import { useCameraStoreApi, useEditorStoreApi } from "./provider.js";
 import {
   forwardedShortcut,
@@ -49,6 +50,7 @@ export function useCanvasKeys({
 }): CanvasKeys {
   const store = useEditorStoreApi();
   const camera = useCameraStoreApi();
+  const layout = useLayoutGate();
   const [panReady, setPanReady] = useState(false);
   const keyHandlerRef = useRef<CanvasKeyHandler | null>(null);
 
@@ -70,6 +72,7 @@ export function useCanvasKeys({
       store,
       camera,
       zoomToSelection,
+      layout,
       togglePanels: () =>
         window.dispatchEvent(
           new KeyboardEvent("keydown", { key: "b", metaKey: true }),
@@ -143,6 +146,7 @@ export function useCanvasKeys({
   }, [
     store,
     camera,
+    layout,
     zoomToSelection,
     panByClientDelta,
     commitLive,

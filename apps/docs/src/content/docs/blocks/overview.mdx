@@ -97,6 +97,29 @@ The renderer, not the save, filters two of those keys. `htmlAttrs` survives only
 
 The `style` buckets become a `<style>` element beside the block, scoped to that node's class. `large` emits unconditionally, `medium` inside `@media (max-width: 991px)` and `small` inside `@media (max-width: 640px)`. A theme moves both maxima by declaring its own `tablet` and `mobile` breakpoints. The editor canvas reads the same two numbers, so the preview breaks where the page does.
 
+## Content and layout
+
+A site can let someone change a page's content without changing its layout. The capability that decides it is `entry:<type>:edit_layout`, one per entry type. Authors, editors and admins hold it by default. A writer without it may still change the inputs a block marks `content: true`, and nothing else: they can't add, remove, move or rename a node, and can't touch its `style`, `hidden`, `htmlAttrs`, `className`, `tagName` or any other input. `label` is editor metadata and stays free.
+
+Mark each input that holds what a copywriter edits, its text, link or media:
+
+```ts
+import { defineBlock } from "plumix/blocks";
+
+export const quote = defineBlock({
+  name: "acme/quote",
+  title: "Quote",
+  inputs: [
+    { name: "text", type: "textarea", content: true },
+    { name: "cite", type: "text", content: true },
+    { name: "showCite", type: "boolean" },
+  ],
+  render: ({ attrs }) => <blockquote>{attrs.text}</blockquote>,
+});
+```
+
+An input without the marker counts as layout, so a block with none is fully locked for such a writer, and the editor won't let them select it. A slot input and an input with `styleProperty` are always layout. The server enforces the same line on every save, MCP agents included, and refuses a layout change with `INVALID_BLOCK_CONTENT` and a `layout_change` issue naming the node.
+
 ## Where the registry comes from
 
 Three layers contribute specs, and boot merges them in one order: the 17 core blocks first, then every block a [plugin](/plugins/overview/) registered through `registerBlock`, then the blocks the [theme](/themes/overview/) declares. The later layer wins a name collision, so a theme can replace a plugin's block. Neither can replace a core one. `registerBlock` rejects any name starting `core/` before it reaches the registry, and a theme's `blocks` are checked the same way, so all 17 are always present rather than opt-in and the collision rule only ever settles a plugin against the theme.

@@ -52,6 +52,7 @@ export const imageBlock: BlockSpec = defineBlock({
     {
       name: "media",
       type: "media",
+      content: true,
       label: {
         id: "plugin.media.block.image.input.media.label",
         message: "Image",
@@ -69,6 +70,7 @@ export const imageBlock: BlockSpec = defineBlock({
     {
       name: "alt",
       type: "text",
+      content: true,
       label: {
         id: "plugin.media.block.image.input.alt.label",
         message: "Alternative text",
@@ -77,6 +79,7 @@ export const imageBlock: BlockSpec = defineBlock({
     {
       name: "caption",
       type: "text",
+      content: true,
       label: {
         id: "plugin.media.block.image.input.caption.label",
         message: "Caption",

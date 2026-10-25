@@ -15,6 +15,7 @@ export const CORE_CAPABILITIES = Object.freeze({
   "entry:post:delete": "editor",
   "entry:post:read_revisions": "editor",
   "entry:post:restore_revision": "editor",
+  "entry:post:edit_layout": "author",
   "user:list": "editor",
   "user:edit_own": "subscriber",
   "user:create": "admin",
@@ -38,6 +39,9 @@ export const POST_TYPE_CAPABILITY_ACTIONS = {
   read_revisions: "editor",
   // Restoring overwrites the live row.
   restore_revision: "editor",
+  // Structure and style; `edit_own`/`edit_any` alone change only the inputs a
+  // block marks `content`.
+  edit_layout: "author",
 } as const satisfies Record<string, UserRole>;
 
 export const TERM_TAXONOMY_CAPABILITY_ACTIONS = {

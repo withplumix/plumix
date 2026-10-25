@@ -60,6 +60,7 @@ describe("deriveEntryTypeCapabilities", () => {
             delete: "admin",
             read_revisions: "admin",
             restore_revision: "admin",
+            edit_layout: "admin",
           },
         },
         null,

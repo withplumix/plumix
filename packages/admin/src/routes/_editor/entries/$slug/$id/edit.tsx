@@ -70,6 +70,7 @@ import {
 } from "@plumix/core/blocks";
 import {
   ACCESS_POLICY_META_KEY,
+  entryTypeCapability,
   NAMED_TEMPLATE_META_KEY,
   termTaxonomyCapability,
 } from "@plumix/core/manifest";
@@ -358,6 +359,11 @@ function EntryEditor({
   const renderLabel = useLabel();
   const entryTypeName = entryType?.name;
   const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
+  // The server refuses a layout change without it; the editor hides the
+  // controls that make one.
+  const editsLayout =
+    entryType === undefined ||
+    capabilitySet.has(entryTypeCapability(entryType, "edit_layout"));
   const [hasLocalDraft, setHasLocalDraft] = useState(false);
   const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
   // Bumped after a template-rendered field (title/excerpt/meta/template)
@@ -1076,6 +1082,7 @@ function EntryEditor({
       defaultValue={isEntryContent(entry.content) ? entry.content : undefined}
       registry={registry}
       capabilities={capabilitySet}
+      editsLayout={editsLayout}
       patterns={patterns}
       allowedBlocks={allowedBlocks}
       allowCustomStyles={allowCustomStyles}

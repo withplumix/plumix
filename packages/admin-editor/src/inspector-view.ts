@@ -5,8 +5,10 @@ import type {
   JsonValue,
 } from "@plumix/core/blocks";
 
+import type { LayoutGate } from "./layout-gate.js";
 import type { StyleBucket } from "./store.js";
 import { enclosingTableId, findBlock } from "./block-tree-ops.js";
+import { layoutGate } from "./layout-gate.js";
 
 interface InspectorInput {
   readonly input: BlockInput;
@@ -42,6 +44,7 @@ export function inspectorView(
   bucket: StyleBucket,
   canRefresh: boolean,
   allowed?: ReadonlySet<string>,
+  layout: LayoutGate = layoutGate(true),
 ): InspectorView | null {
   const block = activeId ? findBlock(tree, activeId, registry) : undefined;
   if (!block) return null;
@@ -49,7 +52,7 @@ export function inspectorView(
   const spec = registry.get(block.name);
   // A slot input as a control would overwrite the children with a string.
   const inputs = (spec?.inputs ?? [])
-    .filter((input) => input.type !== "slot")
+    .filter((input) => input.type !== "slot" && layout.offersInput(input))
     .map((input): InspectorInput => {
       const styleProp = input.styleProperty;
       if (!styleProp) return { input, value: block.attrs?.[input.name] };
@@ -58,12 +61,13 @@ export function inspectorView(
       const stored = block.style?.[bucket]?.[styleProp];
       return { input, value: stored === "" ? undefined : stored };
     });
-  // The table the selection sits in (the table itself, or the one owning the
-  // selected row/cell), so the table controls stay in reach while editing
-  // cells.
-  const tableId = enclosingTableId(tree, block.id, registry);
+  // The table the selection sits in, so its controls stay in reach while
+  // editing a cell. Adding a row or column inserts blocks: layout.
+  const tableId = layout.editsLayout
+    ? enclosingTableId(tree, block.id, registry)
+    : null;
   const showRefresh = canRefresh && Boolean(spec?.loaders);
-  const showAddColumn = block.name === "core/columns";
+  const showAddColumn = layout.editsLayout && block.name === "core/columns";
 
   return {
     block,

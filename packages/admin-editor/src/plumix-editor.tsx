@@ -36,11 +36,15 @@ import { patternsWithin } from "./block-catalog.js";
 import { BlockInspector } from "./block-inspector.js";
 import { CanvasFrame } from "./canvas-frame.js";
 import { EditorCommandPalette } from "./editor-command-palette.js";
-import { EditorConfigProvider } from "./editor-config-context.js";
+import {
+  EditorConfigProvider,
+  useLayoutGate,
+} from "./editor-config-context.js";
 import { EditorHeader } from "./editor-header.js";
 import { EditorShortcuts, EditorToolbar } from "./editor-toolbar.js";
 import { JsonSourceDialog } from "./json-inspector.js";
 import { LayersTab } from "./layers-tab.js";
+import { layoutGate } from "./layout-gate.js";
 import {
   EditorProvider,
   useEditorStore,
@@ -55,6 +59,7 @@ import { StarterModal } from "./starter-modal.js";
 import { StylesTab } from "./styles-tab.js";
 
 const NO_CAPABILITIES: ReadonlySet<string> = new Set();
+const NO_STARTERS: readonly InserterPattern[] = [];
 /**
  * Stable so a fresh `{}` doesn't defeat the config provider's memo each render.
  */
@@ -75,6 +80,11 @@ export interface PlumixEditorProps {
   readonly registry: BlockRegistry;
   /** Viewer capabilities, gating which blocks the catalog offers. */
   readonly capabilities?: ReadonlySet<string>;
+  /**
+   * Whether the viewer holds `edit_layout` on this entry type; `true` when
+   * absent. Without it only content inputs are editable.
+   */
+  readonly editsLayout?: boolean;
   /** Theme + plugin patterns offered in the inserter alongside the blocks. */
   readonly patterns?: readonly InserterPattern[];
   /**
@@ -159,6 +169,7 @@ export function PlumixEditor({
   origin,
   registry,
   capabilities = NO_CAPABILITIES,
+  editsLayout = true,
   patterns,
   allowedBlocks,
   allowCustomStyles,
@@ -204,7 +215,10 @@ export function PlumixEditor({
     () => selectStarterPatterns(offeredPatterns, entryType),
     [offeredPatterns, entryType],
   );
-  const seedStarterOpen = shouldOpenStarter(defaultValue, starterCandidates);
+  const layout = layoutGate(editsLayout);
+  // Starting a blank entry from a pattern inserts blocks: layout.
+  const starters = layout.editsLayout ? starterCandidates : NO_STARTERS;
+  const seedStarterOpen = shouldOpenStarter(defaultValue, starters);
 
   if (readOnly) {
     return (
@@ -241,6 +255,7 @@ export function PlumixEditor({
       breakpoints={breakpoints}
       starterOpen={seedStarterOpen}
       stylePolicy={stylePolicy}
+      layout={layout}
     >
       <EditorConfigProvider
         registry={registry}
@@ -249,6 +264,7 @@ export function PlumixEditor({
         allowedBlocks={allowedSet}
         stylePolicy={stylePolicy}
         resolvePluginFieldType={resolvePluginFieldType}
+        layout={layout}
       >
         {/* shadcn sidebar-16 pattern: a flex-col provider with a full-width
             header, then a flex row whose offcanvas rails (position: fixed) are
@@ -288,26 +304,33 @@ export function PlumixEditor({
               })}
             >
               <Tabs
-                defaultValue="blocks"
+                defaultValue={layout.editsLayout ? "blocks" : "layers"}
                 className="flex h-full min-h-0 flex-col"
               >
                 <SidebarHeader>
                   <TabsList>
-                    <TabsTrigger value="blocks" data-testid="plumix-tab-blocks">
-                      <Trans id="editor.tab.blocks" message="Blocks" />
-                    </TabsTrigger>
+                    {layout.editsLayout ? (
+                      <TabsTrigger
+                        value="blocks"
+                        data-testid="plumix-tab-blocks"
+                      >
+                        <Trans id="editor.tab.blocks" message="Blocks" />
+                      </TabsTrigger>
+                    ) : null}
                     <TabsTrigger value="layers" data-testid="plumix-tab-layers">
                       <Trans id="editor.tab.layers" message="Layers" />
                     </TabsTrigger>
                   </TabsList>
                 </SidebarHeader>
                 <SidebarContent>
-                  <TabsContent value="blocks">
-                    <BlockCatalog
-                      patterns={offeredPatterns}
-                      entryType={entryType}
-                    />
-                  </TabsContent>
+                  {layout.editsLayout ? (
+                    <TabsContent value="blocks">
+                      <BlockCatalog
+                        patterns={offeredPatterns}
+                        entryType={entryType}
+                      />
+                    </TabsContent>
+                  ) : null}
                   <TabsContent value="layers">
                     <LayersTab />
                   </TabsContent>
@@ -315,7 +338,7 @@ export function PlumixEditor({
               </Tabs>
             </Sidebar>
             <SidebarInset className="min-w-0">
-              <EditorToolbar hasStarters={starterCandidates.length > 0} />
+              <EditorToolbar hasStarters={starters.length > 0} />
               <CanvasFrame
                 previewUrl={previewUrl}
                 origin={origin}
@@ -337,7 +360,7 @@ export function PlumixEditor({
         />
         <JsonSourceDialog />
         <ShortcutsDialog />
-        <StarterModal candidates={starterCandidates} />
+        <StarterModal candidates={starters} />
         {overlay}
         {onChange ? <TreeChangeEmitter onChange={onChange} /> : null}
       </EditorConfigProvider>
@@ -357,6 +380,8 @@ function RightRail({
 }): ReactElement {
   const rightPanel = useEditorStore((s) => s.rightPanel);
   const setRightPanel = useEditorStore((s) => s.setRightPanel);
+  // Style, visibility and HTML attributes are all layout.
+  const { editsLayout } = useLayoutGate();
   const { i18n } = useLingui();
   return (
     <Sidebar
@@ -383,9 +408,11 @@ function RightRail({
             <TabsTrigger value="block" data-testid="plumix-tab-block">
               <Trans id="editor.tab.block" message="Block" />
             </TabsTrigger>
-            <TabsTrigger value="styles" data-testid="plumix-tab-styles">
-              <Trans id="editor.tab.styles" message="Styles" />
-            </TabsTrigger>
+            {editsLayout ? (
+              <TabsTrigger value="styles" data-testid="plumix-tab-styles">
+                <Trans id="editor.tab.styles" message="Styles" />
+              </TabsTrigger>
+            ) : null}
             <TabsTrigger value="page" data-testid="plumix-tab-page">
               <Trans id="editor.tab.page" message="Page" />
             </TabsTrigger>
@@ -395,9 +422,11 @@ function RightRail({
           <TabsContent value="block">
             <BlockInspector onRefreshBlockLoader={onRefreshBlockLoader} />
           </TabsContent>
-          <TabsContent value="styles">
-            <StylesTab />
-          </TabsContent>
+          {editsLayout ? (
+            <TabsContent value="styles">
+              <StylesTab />
+            </TabsContent>
+          ) : null}
           <TabsContent value="page" data-testid="plumix-page-panel">
             {documentPanel ?? (
               <p className="text-muted-foreground p-4 text-sm">

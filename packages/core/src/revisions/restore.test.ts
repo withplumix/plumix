@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
+import { deriveEntryTypeCapabilities } from "../access/contract/rbac.js";
 import { etagOf } from "../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { entries } from "../db/schema/entries.js";
@@ -423,6 +424,72 @@ function registryWithAutosave(): ReturnType<typeof createPluginRegistry> {
   );
   return plugins;
 }
+
+describe("entry.revisions.restore — a writer without edit_layout", () => {
+  const text = (id: string, body = "<p>Hi</p>") => ({
+    id,
+    name: "core/rich-text",
+    attrs: { body },
+  });
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+
+  // An editor on a type that keeps layout to admins.
+  async function restoring(revisionContent: ReturnType<typeof v2>) {
+    const plugins = createPluginRegistry();
+    const post = toRegisteredEntryType(
+      "post",
+      {
+        label: "Posts",
+        supports: ["revisions"],
+        capabilities: { edit_layout: "admin" },
+      },
+      "test",
+    );
+    plugins.entryTypes.set("post", post);
+    for (const cap of deriveEntryTypeCapabilities(post)) {
+      plugins.capabilities.set(cap.name, { ...cap, registeredBy: "test" });
+    }
+    const h = await createRpcHarness({ authAs: "editor", plugins });
+    const live = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: v2([text("p1")]),
+    });
+    const revision = await h.factory.revision
+      .transient({ of: live })
+      .create({ content: revisionContent });
+    return h.client.entry.revisions.restore({
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, live.id),
+    });
+  }
+
+  test("refuses a revision whose structure differs from live", async () => {
+    await expect(restoring(v2([text("p1"), text("p2")]))).rejects.toMatchObject(
+      {
+        code: "INVALID_BLOCK_CONTENT",
+        data: {
+          issues: [
+            expect.objectContaining({
+              code: "layout_change",
+              path: "blocks[1]",
+            }),
+          ],
+        },
+      },
+    );
+  });
+
+  test("restores a revision that differs from live only in content", async () => {
+    const content = v2([text("p1", "<p>Earlier</p>")]);
+
+    const restored = await restoring(content);
+
+    expect(restored.content).toEqual(content);
+  });
+});
 
 describe("entry.revisions.restore — autosave destination (#292)", () => {
   test("restores the revision's drafted body into the caller's autosave row, anchoring title to live", async () => {
