@@ -10,7 +10,12 @@ import type { Journal } from "./telemetry.js";
 import type { FailingCheck, MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner } from "./agent.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
-import { gateBehindCheck, GATES, GATES_LEFT_TO_CI } from "./gates.js";
+import {
+  gateBehindCheck,
+  GATES,
+  GATES_AFTER_A_RESOLVED_REBASE,
+  GATES_LEFT_TO_CI,
+} from "./gates.js";
 import {
   branchOfPullRequest,
   clearLeftoverWorktree,
@@ -376,7 +381,7 @@ export const repairPullRequest = async (
     if (onMain === "resolved" && !refusal.conflicted) {
       const regated = await gatesUntilGreen(
         sandbox,
-        GATES,
+        GATES_AFTER_A_RESOLVED_REBASE,
         journal,
         fixer,
         "resolved",

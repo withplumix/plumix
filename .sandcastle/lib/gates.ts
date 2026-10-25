@@ -65,6 +65,11 @@ export const GATES: readonly Gate[] = [
  * the 27 gate minutes per ticket on 2026-10-23. The implementer runs the tests it
  * touched, and a repair runs whichever of these CI failed.
  */
+/** A resolved conflict changes how the code fits together, which typecheck catches; the rest passed on this diff minutes before. */
+export const GATES_AFTER_A_RESOLVED_REBASE: readonly Gate[] = GATES.filter(
+  ({ name }) => name === "typecheck",
+);
+
 export const GATES_LEFT_TO_CI: readonly Gate[] = [
   {
     name: "lint",

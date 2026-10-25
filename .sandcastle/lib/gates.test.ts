@@ -4,6 +4,7 @@ import type { Gate, GateResult } from "./gates.js";
 import {
   gateBehindCheck,
   GATES,
+  GATES_AFTER_A_RESOLVED_REBASE,
   GATES_LEFT_TO_CI,
   runGates,
   underAnOrphanReaper,
@@ -21,6 +22,14 @@ const sandboxWhereTheseCommandsFail = (failing: readonly string[]) => ({
 const gate = (name: string): Gate => ({ name, command: name });
 const THREE_GATES = [gate("typecheck"), gate("lint"), gate("knip")];
 const ignoreResults = () => {};
+
+describe("GATES_AFTER_A_RESOLVED_REBASE", () => {
+  test("only typecheck runs after a resolved conflict, since the other gates passed on the same diff minutes before", () => {
+    expect(GATES_AFTER_A_RESOLVED_REBASE.map(({ name }) => name)).toEqual([
+      "typecheck",
+    ]);
+  });
+});
 
 describe("runGates", () => {
   test("surveying reports every red gate, not only the first", async () => {

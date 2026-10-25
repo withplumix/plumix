@@ -15,7 +15,7 @@ import {
 } from "./agent.js";
 import { checkBrief } from "./brief-check.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
-import { GATES, runGates } from "./gates.js";
+import { GATES, GATES_AFTER_A_RESOLVED_REBASE, runGates } from "./gates.js";
 import {
   assignToSelf,
   openPullRequest,
@@ -522,6 +522,8 @@ export const shipTicket = async (
       implemented.iterations.at(-1)?.sessionId,
     );
 
+    say("--- mutation survey ---");
+    const mutation = await surveyMutants(sandbox);
     for (let pass = 1; ; pass += 1) {
       say(`--- review (pass ${pass}) ---`);
       const review = await reviewBranch(
@@ -530,7 +532,7 @@ export const shipTicket = async (
         ticket,
         pass,
         pullRequestCopy.body,
-        await surveyMutants(sandbox),
+        mutation,
       );
       if (!review) {
         return {
@@ -586,7 +588,7 @@ export const shipTicket = async (
     if (onMain === "resolved") {
       const regated = await gatesUntilGreen(
         sandbox,
-        GATES,
+        GATES_AFTER_A_RESOLVED_REBASE,
         journal,
         fixer,
         "resolved",
