@@ -96,27 +96,34 @@ export interface AppFilters {
   ): TSync extends true ? TValue : Promise<TValue>;
 }
 
-/** The id is `<owner>:<name>`; list the event in the declaring descriptor's `events`. */
-export function defineEvent<TPayload>(id: string): EventDefinition<TPayload> {
+/**
+ * `<owner>:<name>`, checked by the compiler only: the owner is the declaring
+ * plugin's id or core's subject.
+ */
+export type DeclarationId = `${string}:${string}`;
+
+/** List the event in the declaring descriptor's `events`. */
+export function defineEvent<TPayload>(
+  id: DeclarationId,
+): EventDefinition<TPayload> {
   return { kind: "event", id };
 }
 
 /**
- * The id is `<owner>:<name>`; list the filter in the declaring descriptor's
- * `filters`. A `sync` filter's handlers can't return a promise, and its value
- * is not copied between them.
+ * List the filter in the declaring descriptor's `filters`. A `sync` filter's
+ * handlers can't return a promise, and its value is not copied between them.
  */
 export function defineFilter<TValue, TInput = undefined>(
-  id: string,
+  id: DeclarationId,
   options: { readonly sync: true },
 ): FilterDefinition<TValue, TInput, true>;
 export function defineFilter<TValue, TInput = undefined>(
-  id: string,
-  options?: { readonly sync: false },
+  id: DeclarationId,
+  options: { readonly sync: false },
 ): FilterDefinition<TValue, TInput, false>;
 export function defineFilter(
-  id: string,
-  options?: { readonly sync: boolean },
+  id: DeclarationId,
+  options: { readonly sync: boolean },
 ): FilterDefinition<unknown, unknown, boolean> {
-  return { kind: "filter", id, sync: options?.sync ?? false };
+  return { kind: "filter", id, sync: options.sync };
 }

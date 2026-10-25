@@ -962,6 +962,20 @@ test("plumix/plugin offers core's page-data resolvers, not the row assembler", (
   expect("buildResolvedEntries" in plugin).toBe(false);
 });
 
+// ADR 0052: a plugin declares and subscribes through values, not strings.
+test("plumix/plugin offers the event and filter declarers and core's block subject", () => {
+  const plugin = loaded(facade, "./plugin");
+  expect({
+    defineEvent: typeof plugin.defineEvent,
+    defineFilter: typeof plugin.defineFilter,
+    block: Object.keys(plugin.block ?? {}).sort(),
+  }).toEqual({
+    defineEvent: "function",
+    defineFilter: "function",
+    block: ["afterRender", "beforeRender", "loaderFailed"],
+  });
+});
+
 // ADR 0025: a page kind is named by its subject, and a theme's generic tier
 // builders and guards are spelled with it.
 test("plumix/theme names its tier builders and guards by page kind", () => {

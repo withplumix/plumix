@@ -583,7 +583,7 @@ describe("ctx.filters.apply", () => {
 describe("a throwing filter handler", () => {
   test.each([
     ["sync", defineFilter<number>("test:sync-veto", { sync: true })],
-    ["async", defineFilter<number>("test:async-veto")],
+    ["async", defineFilter<number>("test:async-veto", { sync: false })],
   ] as const)(
     "reaches the caller of a %s filter unchanged",
     async (_kind, filter) => {
@@ -603,7 +603,9 @@ describe("a throwing filter handler", () => {
 
 describe("an async filter", () => {
   test("hands each handler its own copy, so a mutation can't reach the next", async () => {
-    const counter = defineFilter<{ count: number }>("test:counter");
+    const counter = defineFilter<{ count: number }>("test:counter", {
+      sync: false,
+    });
     const seen: number[] = [];
     const hooks = new HookRegistry();
     hooks.add(counter, (value) => {
@@ -630,6 +632,7 @@ describe("an async filter", () => {
   test("passes the input and the context to every handler", async () => {
     const titled = defineFilter<string, { readonly suffix: string }>(
       "test:titled",
+      { sync: false },
     );
     const hooks = new HookRegistry();
     hooks.add(
@@ -651,7 +654,7 @@ describe("an async filter", () => {
 
 describe("telemetry", () => {
   test("records one span per event and async filter handler, naming the id and the plugin", async () => {
-    const counted = defineFilter<number>("test:counted");
+    const counted = defineFilter<number>("test:counted", { sync: false });
     const hooks = new HookRegistry();
     const plugin = definePlugin("tracer", {
       setup: (ctx) => {

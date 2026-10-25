@@ -99,7 +99,9 @@ interface Review {
 
 export const review = {
   posted: defineEvent<{ readonly review: Review }>("reviews:posted"),
-  stars: defineFilter<number, { readonly review: Review }>("reviews:stars"),
+  stars: defineFilter<number, { readonly review: Review }>("reviews:stars", {
+    sync: false,
+  }),
 };
 
 export const reviews = definePlugin("reviews", {

@@ -2451,7 +2451,7 @@ describe("declared events and filters", () => {
   test("an event and a filter declaring one id fail boot", async () => {
     const plugin = definePlugin("acme", {
       events: [defineEvent<string>("acme:title")],
-      filters: [defineFilter<string>("acme:title")],
+      filters: [defineFilter<string>("acme:title", { sync: false })],
       setup: () => undefined,
     });
 

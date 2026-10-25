@@ -185,6 +185,7 @@ export type {
   DashboardWidgetManifestEntry,
   DashboardWidgetOptions,
   DateTargets,
+  DeclarationId,
   Db,
   DebugKVRow,
   DebugPanel,

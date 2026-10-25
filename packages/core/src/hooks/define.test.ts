@@ -9,7 +9,9 @@ import { defineEvent, defineFilter } from "./define.js";
 import { HookRegistry } from "./registry.js";
 
 const saved = defineEvent<{ readonly id: number }>("acme:saved");
-const title = defineFilter<string, { readonly locale: string }>("acme:title");
+const title = defineFilter<string, { readonly locale: string }>("acme:title", {
+  sync: false,
+});
 const label = defineFilter<string, { readonly locale: string }>("acme:label", {
   sync: true,
 });
@@ -23,6 +25,26 @@ const ctx = createPluginSetupContext({
 let appCtx: AppContext;
 beforeAll(async () => {
   appCtx = createTestContext({ db: await createTestDb() });
+});
+
+describe("declaring", () => {
+  test("an id without an owner is rejected", () => {
+    const declare = (): void => {
+      // @ts-expect-error an id is `<owner>:<name>`
+      defineEvent<string>("saved");
+      // @ts-expect-error an id is `<owner>:<name>`
+      defineFilter<string>("title", { sync: false });
+    };
+    expectTypeOf(declare).toBeFunction();
+  });
+
+  test("a filter states whether it is sync", () => {
+    const declare = (): void => {
+      // @ts-expect-error `{ sync }` is required
+      defineFilter<string>("acme:title");
+    };
+    expectTypeOf(declare).toBeFunction();
+  });
 });
 
 describe("subscribing", () => {
