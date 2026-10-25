@@ -1,16 +1,13 @@
+import type { AuthInfo } from "@modelcontextprotocol/server";
+
 import type { AppContext } from "../context/app-context.js";
 import { authenticateBearer } from "../auth/bearer.js";
-import { withBasePath } from "../base-path.js";
 import { loadOnce } from "../load-once.js";
-import {
-  forbidden,
-  methodNotAllowed,
-  unauthorized,
-} from "../runtime/contract/http.js";
+import { forbidden, methodNotAllowed } from "../runtime/contract/http.js";
 import { resolveMcpDevTrust } from "./dev-trust.js";
 import { buildMcpToolRegistry } from "./registry.js";
 
-const MCP_PATH = "/_plumix/mcp";
+const loadResourceMetadata = loadOnce(() => import("./resource-metadata.js"));
 
 const loadMcpServer = loadOnce(() => import("./server.js"));
 
@@ -30,12 +27,16 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
   if (trust === "rejected") return forbidden("mcp_cross_origin");
 
   let toolCtx: AppContext;
+  let authInfo: AuthInfo | undefined;
   if (trust === "trusted") {
     toolCtx = ctx;
   } else {
-    const authedCtx = await authenticateBearer(ctx, mcpUrl(ctx));
-    if (!authedCtx) return unauthorized();
+    const { mcpUrl, tokenAuthInfo, unauthorizedChallenge } =
+      await loadResourceMetadata();
+    const authedCtx = await authenticateBearer(ctx, mcpUrl(ctx).href);
+    if (!authedCtx) return unauthorizedChallenge(ctx);
     toolCtx = authedCtx;
+    authInfo = tokenAuthInfo(authedCtx);
   }
 
   const tools = buildMcpToolRegistry(toolCtx.plugins);
@@ -49,7 +50,7 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
 
   const newServer = () => buildMcpServer(toolCtx, tools);
   if (!(await isLegacyRequest(toolCtx.request))) {
-    return createMcpHandler(newServer).fetch(toolCtx.request);
+    return createMcpHandler(newServer).fetch(toolCtx.request, { authInfo });
   }
 
   // The SDK's own legacy serving answers over SSE; the stateless JSON
@@ -59,14 +60,5 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
     enableJsonResponse: true,
   });
   await newServer().connect(transport);
-  return transport.handleRequest(toolCtx.request);
-}
-
-/**
- * The audience a token bound to this endpoint names. The dispatcher has already
- * stripped `basePath` from the request, so it goes back on.
- */
-function mcpUrl(ctx: AppContext): string {
-  return new URL(withBasePath(MCP_PATH, ctx.config.basePath), ctx.request.url)
-    .href;
+  return transport.handleRequest(toolCtx.request, { authInfo });
 }

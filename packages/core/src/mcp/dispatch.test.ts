@@ -13,6 +13,7 @@ import corePackage from "../../package.json" with { type: "json" };
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
+import { trustRequest } from "../runtime/request-trust.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { defineTheme } from "../theme.js";
 
@@ -544,6 +545,177 @@ describe("MCP endpoint — transport guards", () => {
   });
 });
 
+describe("MCP endpoint — authorization challenges", () => {
+  afterEach(() => void vi.unstubAllEnvs());
+
+  const toolsList = { jsonrpc: "2.0", id: 1, method: "tools/list" };
+
+  function challengeParams(res: Response): Record<string, string> {
+    const header = res.headers.get("www-authenticate") ?? "";
+    expect(header).toMatch(/^Bearer /);
+    const params: Record<string, string> = {};
+    for (const [, key, value] of header.matchAll(/(\w+)="([^"]*)"/g)) {
+      if (key !== undefined && value !== undefined) params[key] = value;
+    }
+    return params;
+  }
+
+  test("a tokenless call points at the resource metadata and the scopes", async () => {
+    const h = await mcpHarness();
+
+    const res = await h.dispatch(mcpRequest(toolsList));
+
+    expect(res.status).toBe(401);
+    expect(challengeParams(res)).toMatchObject({
+      error: "invalid_token",
+      scope: "read draft full",
+      resource_metadata:
+        "https://cms.example/.well-known/oauth-protected-resource/_plumix/mcp",
+    });
+  });
+
+  test("under a base path the challenge names the mounted metadata URL", async () => {
+    const h = await mcpHarness({ config: { basePath: "/blog" } });
+
+    const res = await h.dispatch(
+      mcpRequest(toolsList, { url: "https://cms.example/blog/_plumix/mcp" }),
+    );
+
+    expect(challengeParams(res).resource_metadata).toBe(
+      "https://cms.example/.well-known/oauth-protected-resource/blog/_plumix/mcp",
+    );
+  });
+
+  const publisher = definePlugin("test-publisher", {
+    setup: (ctx) => {
+      ctx.registerMcpTool({
+        name: "publish_thing",
+        description: "Test-only: needs the publish capability.",
+        inputSchema: v.object({}),
+        capability: "entry:post:publish",
+        run: () => ({ published: true }),
+      });
+      ctx.registerMcpTool({
+        name: "draft_thing",
+        description: "Test-only: needs a draft capability.",
+        inputSchema: v.object({}),
+        capability: "entry:post:edit_own",
+        run: () => ({ drafted: true }),
+      });
+      ctx.registerMcpTool({
+        name: "read_thing",
+        description: "Test-only: needs a read capability.",
+        inputSchema: v.object({}),
+        capability: "entry:post:read",
+        run: () => ({ read: true }),
+      });
+    },
+  });
+
+  function toolCall(name: string): Record<string, unknown> {
+    return {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name, arguments: {} },
+    };
+  }
+
+  test("a tool call the token's capabilities don't cover asks for the scope that does", async () => {
+    const h = await mcpHarness({ config: { plugins: [blog, publisher] } });
+    const secret = await mintPat(h, { scopes: ["entry:post:read"] });
+
+    const publish = await h.dispatch(
+      mcpRequest(toolCall("publish_thing"), { secret }),
+    );
+    const draft = await h.dispatch(
+      mcpRequest(toolCall("draft_thing"), { secret }),
+    );
+
+    expect(publish.status).toBe(403);
+    expect(challengeParams(publish)).toMatchObject({
+      error: "insufficient_scope",
+      scope: "full",
+      resource_metadata:
+        "https://cms.example/.well-known/oauth-protected-resource/_plumix/mcp",
+    });
+    expect(draft.status).toBe(403);
+    expect(challengeParams(draft).scope).toBe("draft");
+  });
+
+  test("a read capability the token lacks asks for the read scope", async () => {
+    const h = await mcpHarness({ config: { plugins: [blog, publisher] } });
+    const secret = await mintPat(h, { scopes: ["entry:post:edit_own"] });
+
+    const res = await h.dispatch(
+      mcpRequest(toolCall("read_thing"), { secret }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(challengeParams(res).scope).toBe("read");
+  });
+
+  test("a dev-trusted call carries no token, so it is never challenged", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [blog, publisher] } });
+
+    const res = await h.dispatch(
+      mcpRequest(toolCall("publish_thing"), {
+        url: "http://localhost/_plumix/mcp",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  test("a 2026-07-28 tool call is challenged the same way", async () => {
+    const h = await mcpHarness({ config: { plugins: [blog, publisher] } });
+    const secret = await mintPat(h, { scopes: ["entry:post:read"] });
+
+    const res = await h.dispatch(
+      mcpRequest(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: {
+            name: "publish_thing",
+            arguments: {},
+            _meta: {
+              [PROTOCOL_VERSION_META_KEY]: "2026-07-28",
+              [CLIENT_CAPABILITIES_META_KEY]: {},
+            },
+          },
+        },
+        {
+          secret,
+          headers: {
+            "mcp-protocol-version": "2026-07-28",
+            "mcp-method": "tools/call",
+            "mcp-name": "publish_thing",
+          },
+        },
+      ),
+    );
+
+    expect(res.status).toBe(403);
+    expect(challengeParams(res)).toMatchObject({
+      error: "insufficient_scope",
+      scope: "full",
+    });
+  });
+
+  test("a token that holds the capability runs the tool", async () => {
+    const h = await mcpHarness({ config: { plugins: [blog, publisher] } });
+    const secret = await mintPat(h);
+
+    const { res, json } = await callTool(h, secret, 1, "publish_thing", {});
+
+    expect(res.status).toBe(200);
+    expect(parseToolResult(json)).toEqual({ published: true });
+  });
+});
+
 describe("MCP endpoint — audience-bound tokens", () => {
   async function mintBound(
     h: DispatcherHarness,
@@ -595,6 +767,106 @@ describe("MCP endpoint — audience-bound tokens", () => {
 
     expect(ok.status).toBe(200);
     expect(refused.status).toBe(401);
+  });
+});
+
+describe("MCP endpoint — protected-resource metadata", () => {
+  interface ProtectedResourceMetadata {
+    readonly resource: string;
+    readonly authorization_servers: readonly string[];
+    readonly scopes_supported: readonly string[];
+  }
+
+  async function metadataAt(
+    h: DispatcherHarness,
+    url: string,
+  ): Promise<{ status: number; body: ProtectedResourceMetadata }> {
+    const res = await h.dispatch(new Request(url));
+    return {
+      status: res.status,
+      body: (await res.json()) as ProtectedResourceMetadata,
+    };
+  }
+
+  test("the path-specific well-known URI names the MCP URL and the site as its issuer", async () => {
+    const h = await mcpHarness();
+
+    const { status, body } = await metadataAt(
+      h,
+      "https://cms.example/.well-known/oauth-protected-resource/_plumix/mcp",
+    );
+
+    expect(status).toBe(200);
+    expect(body).toMatchObject({
+      resource: "https://cms.example/_plumix/mcp",
+      authorization_servers: ["https://cms.example"],
+      scopes_supported: ["read", "draft", "full"],
+    });
+  });
+
+  test("the root well-known URI serves the same document", async () => {
+    const h = await mcpHarness();
+
+    const { status, body } = await metadataAt(
+      h,
+      "https://cms.example/.well-known/oauth-protected-resource",
+    );
+
+    expect(status).toBe(200);
+    expect(body.resource).toBe("https://cms.example/_plumix/mcp");
+  });
+
+  test.each([
+    "https://cms.example/.well-known/oauth-protected-resource/blog/_plumix/mcp",
+    "https://cms.example/.well-known/oauth-protected-resource",
+  ])("under a base path, %s names the mounted MCP URL", async (url) => {
+    const h = await mcpHarness({ config: { basePath: "/blog" } });
+
+    const { status, body } = await metadataAt(h, url);
+
+    expect(status).toBe(200);
+    expect(body).toMatchObject({
+      resource: "https://cms.example/blog/_plumix/mcp",
+      authorization_servers: ["https://cms.example/blog"],
+    });
+  });
+
+  test("behind a TLS-terminating proxy the issuer and resource are https", async () => {
+    const h = await mcpHarness();
+    const proxied = new Request(
+      "http://10.0.0.5:8080/.well-known/oauth-protected-resource/_plumix/mcp",
+      {
+        headers: {
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "cms.example",
+        },
+      },
+    );
+    const { url } = trustRequest(
+      proxied,
+      { scheme: "http", port: 8080 },
+      { trustProxy: true },
+    );
+
+    const { body } = await metadataAt(h, url.href);
+
+    expect(body).toMatchObject({
+      resource: "https://cms.example/_plumix/mcp",
+      authorization_servers: ["https://cms.example"],
+    });
+  });
+
+  test("a site with MCP off advertises no protected resource", async () => {
+    const h = await createDispatcherHarness();
+
+    const res = await h.dispatch(
+      new Request(
+        "https://cms.example/.well-known/oauth-protected-resource/_plumix/mcp",
+      ),
+    );
+
+    expect(res.status).toBe(404);
+    expect(res.headers.get("x-plumix-hint")).toBe("mcp-disabled");
   });
 });
 

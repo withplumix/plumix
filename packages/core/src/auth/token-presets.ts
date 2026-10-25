@@ -41,3 +41,15 @@ export function resolveApiTokenPreset(
         (capability) => !NON_DRAFT_ACTIONS.has(actionOf(capability)),
       );
 }
+
+/**
+ * The narrowest preset that holds `capability`; `null` when only "Same as me"
+ * does.
+ */
+export function narrowestPresetHolding(
+  capability: string,
+): ApiTokenPreset | null {
+  const action = actionOf(capability);
+  if (READ_ACTIONS.has(action)) return "read_only";
+  return NON_DRAFT_ACTIONS.has(action) ? null : "draft_only";
+}
