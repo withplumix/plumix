@@ -213,6 +213,7 @@ export const tableHeaderCellBlock = defineBlock({
     {
       name: "text",
       type: "text",
+      content: true,
       label: {
         id: "block.core.table-header-cell.input.text.label",
         message: "Text",
@@ -244,6 +245,7 @@ export const tableCellBlock = defineBlock({
     {
       name: "text",
       type: "text",
+      content: true,
       label: { id: "block.core.table-cell.input.text.label", message: "Text" },
     },
     ALIGN_INPUT,

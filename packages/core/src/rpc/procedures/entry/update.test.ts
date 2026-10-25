@@ -2431,3 +2431,264 @@ describe("entry.update — the theme's style policy", () => {
     expect(updated.content).toEqual(content);
   });
 });
+
+describe("entry.update — a writer without edit_layout", () => {
+  const text = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    name: "core/rich-text",
+    attrs: { body: "<p>Hello</p>" },
+    ...extra,
+  });
+  const group = (id: string, children: readonly unknown[]) => ({
+    id,
+    name: "core/group",
+    attrs: { content: children },
+  });
+  const button = (id: string, attrs: Record<string, unknown> = {}) => ({
+    id,
+    name: "core/button",
+    attrs: { label: "Buy", href: "/buy", ...attrs },
+  });
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+  const stored = () =>
+    v2([text("p1"), group("g1", [text("p2")]), button("b1")]);
+
+  // A contributor edits their own posts but holds no `entry:post:edit_layout`.
+  async function contentOnlyWriter(
+    authAs: "contributor" | "author" = "contributor",
+  ) {
+    const h = await createRpcHarness({ authAs });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      slug: "content-only",
+      content: stored(),
+    });
+    return { h, own };
+  }
+
+  const layoutChanges: readonly [string, ReturnType<typeof v2>, string][] = [
+    [
+      "an inserted node",
+      v2([text("p1"), group("g1", [text("p2")]), button("b1"), text("p3")]),
+      "blocks[3]",
+    ],
+    [
+      "a removed node",
+      v2([text("p1"), group("g1", []), button("b1")]),
+      "blocks[1].content[0]",
+    ],
+    [
+      "a moved node",
+      v2([group("g1", [text("p2"), text("p1")]), button("b1")]),
+      "blocks[0].content[1]",
+    ],
+    [
+      "a reordered sibling",
+      v2([group("g1", [text("p2")]), text("p1"), button("b1")]),
+      "blocks[1]",
+    ],
+    [
+      "a changed style",
+      v2([
+        text("p1", { style: { large: { color: "#e11" } } }),
+        group("g1", [text("p2")]),
+        button("b1"),
+      ]),
+      "blocks[0]",
+    ],
+    [
+      "a changed hidden flag",
+      v2([
+        text("p1", { hidden: { small: true } }),
+        group("g1", [text("p2")]),
+        button("b1"),
+      ]),
+      "blocks[0]",
+    ],
+    [
+      "changed HTML attributes",
+      v2([
+        text("p1"),
+        group("g1", [text("p2", { htmlAttrs: { id: "x" } })]),
+        button("b1"),
+      ]),
+      "blocks[1].content[0]",
+    ],
+    [
+      "a changed class name",
+      v2([
+        text("p1", { className: "lead" }),
+        group("g1", [text("p2")]),
+        button("b1"),
+      ]),
+      "blocks[0]",
+    ],
+    [
+      "a changed tag name",
+      v2([
+        text("p1"),
+        { ...group("g1", [text("p2")]), tagName: "aside" },
+        button("b1"),
+      ]),
+      "blocks[1]",
+    ],
+    [
+      "a changed settings input",
+      v2([
+        text("p1"),
+        group("g1", [text("p2")]),
+        button("b1", { openInNewTab: true }),
+      ]),
+      "blocks[2]",
+    ],
+    [
+      "a renamed node",
+      v2([
+        { id: "p1", name: "core/code", attrs: { text: "Hello" } },
+        group("g1", [text("p2")]),
+        button("b1"),
+      ]),
+      "blocks[0]",
+    ],
+    [
+      "a node copied under its own id",
+      v2([text("p1"), text("p1"), group("g1", [text("p2")]), button("b1")]),
+      "blocks[1]",
+    ],
+  ];
+
+  test.each(layoutChanges)("refuses %s", async (_, content, path) => {
+    const { h, own } = await contentOnlyWriter();
+
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        content,
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        // A reorder moves two siblings, so the change can name more than one.
+        issues: expect.arrayContaining([
+          expect.objectContaining({ code: "layout_change", path }),
+        ]) as unknown,
+      },
+    });
+  });
+
+  test.each([
+    [
+      "a changed content input",
+      v2([
+        text("p1", { attrs: { body: "<p>Fixed</p>" } }),
+        group("g1", [text("p2")]),
+        button("b1", { label: "Order", href: "/order" }),
+      ]),
+    ],
+    [
+      "a changed label",
+      v2([
+        text("p1", { label: "Intro" }),
+        group("g1", [text("p2")]),
+        button("b1"),
+      ]),
+    ],
+  ])("accepts %s", async (_, content) => {
+    const { h, own } = await contentOnlyWriter();
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
+  });
+
+  test.each(layoutChanges)(
+    "a writer with edit_layout saves %s",
+    async (_, content) => {
+      const { h, own } = await contentOnlyWriter("author");
+
+      const updated = await h.client.entry.update({
+        id: own.id,
+        content,
+        ifMatch: await currentEtag(h.db, own.id),
+      });
+
+      expect(updated.content).toEqual(content);
+    },
+  );
+});
+
+describe("entry.update — a block's capability", () => {
+  // Inserting `test/script` takes `settings:manage`, an admin's.
+  function scriptRegistry() {
+    const plugins = createPluginRegistry();
+    plugins.blockSpecs.set("test/script", {
+      spec: {
+        name: "test/script",
+        render: () => null,
+        capability: "settings:manage",
+      },
+      registeredBy: "test",
+    });
+    return plugins;
+  }
+  const script = (id: string) => ({ id, name: "test/script", attrs: {} });
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+
+  async function holdingScript() {
+    const h = await createRpcHarness({
+      authAs: "author",
+      plugins: scriptRegistry(),
+    });
+    const own = await h.factory.draft.create({
+      authorId: h.user.id,
+      content: v2([script("s1")]),
+    });
+    return { h, own };
+  }
+
+  test("refuses a new node of a block whose capability the writer lacks", async () => {
+    const { h, own } = await holdingScript();
+
+    await expect(
+      h.client.entry.update({
+        id: own.id,
+        content: v2([script("s1"), script("s2")]),
+        ifMatch: await currentEtag(h.db, own.id),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({
+            code: "block_not_allowed",
+            path: "blocks[1]",
+          }),
+        ],
+      },
+    });
+  });
+
+  test("keeps a stored node of that block", async () => {
+    const { h, own } = await holdingScript();
+    const content = v2([script("s1")]);
+
+    const updated = await h.client.entry.update({
+      id: own.id,
+      content,
+      ifMatch: await currentEtag(h.db, own.id),
+    });
+
+    expect(updated.content).toEqual(content);
+  });
+});

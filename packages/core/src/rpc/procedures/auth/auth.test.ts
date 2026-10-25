@@ -809,6 +809,7 @@ describe("auth.apiTokens.create — presets", () => {
         "admin:access",
         "entry:post:create",
         "entry:post:edit_any",
+        "entry:post:edit_layout",
         "entry:post:edit_own",
         "entry:post:read",
         "entry:post:read_revisions",

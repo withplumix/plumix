@@ -4,6 +4,8 @@ import type { BlockNode } from "./render-block-tree.js";
 import type { ForbiddenStyle, StylePolicy } from "./styles/style-policy.js";
 import type { BlockContentValidationIssue } from "./validation-errors.js";
 import { blockSlotKeys } from "./block-slots.js";
+import { defineEntryContent } from "./entry-content.js";
+import { layoutChanges } from "./layout-changes.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 import { forbiddenStyles } from "./styles/style-policy.js";
 
@@ -18,6 +20,17 @@ interface SpecLookup {
   get(name: string): BlockSpec | undefined;
 }
 
+/** Who saves the content, for the checks that depend on their rights. */
+export interface ContentWriter {
+  /** Whether the writer holds a block's `capability`; unset holds them all. */
+  readonly can?: (capability: string) => boolean;
+  /**
+   * Set when the writer lacks `edit_layout`: the contents whose layout the
+   * save must keep. Matching any one of them is enough; none is an empty tree.
+   */
+  readonly layoutFrom?: readonly EntryContent[];
+}
+
 /**
  * Issues use the path grammar `blocks[i]` at the root and
  * `blocks[i].<slotKey>[j]` for nested slot children.
@@ -28,19 +41,51 @@ export function validateEntryContent(
   starting: readonly EntryContent[] = [],
   allowed?: ReadonlySet<string>,
   stylePolicy?: StylePolicy,
+  writer: ContentWriter = {},
 ): BlockContentValidationResult {
-  const offered = (name: string): boolean =>
-    Boolean(registry.get(name)) && (!allowed || allowed.has(name));
+  const themeOffers = (name: string): boolean => !allowed || allowed.has(name);
+  const offered = (name: string): boolean => {
+    const spec = registry.get(name);
+    if (!spec || !themeOffers(name)) return false;
+    return !spec.capability || (writer.can?.(spec.capability) ?? true);
+  };
   const kept = keptAsStored(content.blocks, starting, registry, offered);
   const errors: BlockContentValidationIssue[] = [];
-  walk(content.blocks, "blocks", null, errors, registry, offered, kept);
+  walk(
+    content.blocks,
+    "blocks",
+    null,
+    errors,
+    registry,
+    offered,
+    kept,
+    themeOffers,
+  );
   if (stylePolicy) {
     errors.push(
       ...refusedStyles(content.blocks, starting, registry, stylePolicy),
     );
   }
+  if (writer.layoutFrom) {
+    errors.push(...fewestLayoutChanges(content, writer.layoutFrom, registry));
+  }
   if (errors.length === 0) return { ok: true };
   return { ok: false, errors };
+}
+
+/** Against whichever of `from` the save keeps closest to. */
+function fewestLayoutChanges(
+  content: EntryContent,
+  from: readonly EntryContent[],
+  registry: SpecLookup,
+): readonly BlockContentValidationIssue[] {
+  const candidates = from.length > 0 ? from : [defineEntryContent([])];
+  let fewest: readonly BlockContentValidationIssue[] | undefined;
+  for (const start of candidates) {
+    const issues = layoutChanges(content, start, registry);
+    if (!fewest || issues.length < fewest.length) fewest = issues;
+  }
+  return fewest ?? [];
 }
 
 const identityOf = (node: BlockNode): string => `${node.id}\u0000${node.name}`;
@@ -183,6 +228,7 @@ function walk(
   registry: SpecLookup,
   offered: (name: string) => boolean,
   kept: ReadonlySet<string>,
+  themeOffers: (name: string) => boolean,
 ): void {
   nodes.forEach((node, i) => {
     const path = `${basePath}[${i}]`;
@@ -200,7 +246,9 @@ function walk(
     if (!offered(node.name) && !kept.has(path)) {
       out.push({
         code: "block_not_allowed",
-        message: `Block "${node.name}" is not allowed by the theme at ${path}.`,
+        message: themeOffers(node.name)
+          ? `Block "${node.name}" needs the "${String(spec.capability)}" capability at ${path}.`
+          : `Block "${node.name}" is not allowed by the theme at ${path}.`,
         path,
         nodeName: node.name,
       });
@@ -241,7 +289,16 @@ function walk(
           });
         });
       }
-      walk(value, `${path}.${key}`, node.name, out, registry, offered, kept);
+      walk(
+        value,
+        `${path}.${key}`,
+        node.name,
+        out,
+        registry,
+        offered,
+        kept,
+        themeOffers,
+      );
     }
   });
 }

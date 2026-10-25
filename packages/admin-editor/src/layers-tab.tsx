@@ -45,7 +45,7 @@ import {
   rowAfterRemoving,
 } from "./block-tree-ops.js";
 import { createClipboardOps, pasteableAtRoot } from "./clipboard-ops.js";
-import { useEditorConfig } from "./editor-config-context.js";
+import { useEditorConfig, useLayoutGate } from "./editor-config-context.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 import { matchesShortcut } from "./shortcuts.js";
 
@@ -55,6 +55,7 @@ type RowAction = "copy" | "paste" | "duplicate" | "delete";
 
 export function LayersTab(): ReactElement {
   const { registry, allowedBlocks } = useEditorConfig();
+  const { editsLayout } = useLayoutGate();
   const { i18n } = useLingui();
   const storeApi = useEditorStoreApi();
   const tree = useEditorStore((s) => s.tree);
@@ -192,6 +193,7 @@ export function LayersTab(): ReactElement {
               active={item.id === activeId}
               keptAsSaved={keptAsSaved(item.id)}
               copyable={copyable(item.id)}
+              editsLayout={editsLayout}
               onSelect={() => select(item.id)}
               onRename={(value) => setBlockLabel(item.id, value)}
               onAction={(action) => runRowAction(item.id, action)}
@@ -214,6 +216,8 @@ interface LayerRowProps {
   /** False when it holds a block the site doesn't offer: no copy, paste or
    *  duplicate. */
   readonly copyable: boolean;
+  /** False without `edit_layout`: no drag, copy, paste, duplicate or delete. */
+  readonly editsLayout: boolean;
   readonly onSelect: () => void;
   readonly onRename: (label: string) => void;
   readonly onAction: (action: RowAction) => void;
@@ -227,13 +231,14 @@ function LayerRow({
   active,
   keptAsSaved,
   copyable,
+  editsLayout,
   onSelect,
   onRename,
   onAction,
 }: LayerRowProps): ReactElement {
   const { i18n } = useLingui();
   const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: item.id });
+    useSortable({ id: item.id, disabled: !editsLayout });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(label);
   // Ending a rename hands focus back to the row it renamed.
@@ -267,7 +272,7 @@ function LayerRow({
   // Delete/Backspace removes the focused row, matching the canvas; F2 renames
   // it. The handler sits after the drag listeners spread so it owns these keys.
   const onRowKeyDown = (event: KeyboardEvent<HTMLButtonElement>): void => {
-    if (matchesShortcut("selection.delete", event)) {
+    if (editsLayout && matchesShortcut("selection.delete", event)) {
       event.preventDefault();
       onAction("delete");
     } else if (!keptAsSaved && matchesShortcut("layers.rename", event)) {
@@ -309,7 +314,9 @@ function LayerRow({
             onClick={onSelect}
             onDoubleClick={keptAsSaved ? undefined : startEditing}
             className="hover:bg-accent aria-[current]:bg-accent flex min-w-0 flex-1 items-center gap-1.5 rounded p-1.5 text-start text-sm"
-            {...attributes}
+            // A disabled sortable marks the row aria-disabled, which would
+            // stop it selecting too.
+            {...(editsLayout ? attributes : {})}
             {...listeners}
             onKeyDown={onRowKeyDown}
           >
@@ -324,79 +331,85 @@ function LayerRow({
             </span>
             {detail ? <span className="truncate">{detail}</span> : null}
           </button>
-          <DropdownMenu>
-            <span className="shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-data-[state=open]:opacity-100">
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  data-testid={`layer-menu-${item.id}`}
-                  aria-label={i18n._({
-                    id: "editor.layers.actions",
-                    message: "Block actions",
-                  })}
-                >
-                  <MoreVertical className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-            </span>
-            <DropdownMenuContent
-              align="end"
-              onCloseAutoFocus={(event) => {
-                if (!renamingFromMenu.current) return;
-                renamingFromMenu.current = false;
-                event.preventDefault();
-              }}
-            >
-              {keptAsSaved ? null : (
-                <DropdownMenuItem
-                  data-testid={`layer-rename-action-${item.id}`}
-                  onSelect={() => {
-                    renamingFromMenu.current = true;
-                    startEditing();
-                  }}
-                >
-                  <Pencil />
-                  <Trans id="editor.layers.rename" message="Rename" />
-                </DropdownMenuItem>
-              )}
-              {copyable ? (
-                <>
-                  <DropdownMenuItem
-                    data-testid={`layer-copy-${item.id}`}
-                    onSelect={() => onAction("copy")}
+          {keptAsSaved && !editsLayout ? null : (
+            <DropdownMenu>
+              <span className="shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-data-[state=open]:opacity-100">
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    data-testid={`layer-menu-${item.id}`}
+                    aria-label={i18n._({
+                      id: "editor.layers.actions",
+                      message: "Block actions",
+                    })}
                   >
-                    <Copy />
-                    <Trans id="editor.layers.copy" message="Copy" />
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    data-testid={`layer-paste-${item.id}`}
-                    onSelect={() => onAction("paste")}
-                  >
-                    <ClipboardPaste />
-                    <Trans id="editor.layers.paste" message="Paste" />
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    data-testid={`layer-duplicate-${item.id}`}
-                    onSelect={() => onAction("duplicate")}
-                  >
-                    <CopyPlus />
-                    <Trans id="editor.layers.duplicate" message="Duplicate" />
-                  </DropdownMenuItem>
-                </>
-              ) : null}
-              {keptAsSaved ? null : <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                data-testid={`layer-delete-${item.id}`}
-                onSelect={() => onAction("delete")}
-                variant="destructive"
+                    <MoreVertical className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+              </span>
+              <DropdownMenuContent
+                align="end"
+                onCloseAutoFocus={(event) => {
+                  if (!renamingFromMenu.current) return;
+                  renamingFromMenu.current = false;
+                  event.preventDefault();
+                }}
               >
-                <Trash2 />
-                <Trans id="editor.layers.delete" message="Delete" />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {keptAsSaved ? null : (
+                  <DropdownMenuItem
+                    data-testid={`layer-rename-action-${item.id}`}
+                    onSelect={() => {
+                      renamingFromMenu.current = true;
+                      startEditing();
+                    }}
+                  >
+                    <Pencil />
+                    <Trans id="editor.layers.rename" message="Rename" />
+                  </DropdownMenuItem>
+                )}
+                {copyable && editsLayout ? (
+                  <>
+                    <DropdownMenuItem
+                      data-testid={`layer-copy-${item.id}`}
+                      onSelect={() => onAction("copy")}
+                    >
+                      <Copy />
+                      <Trans id="editor.layers.copy" message="Copy" />
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid={`layer-paste-${item.id}`}
+                      onSelect={() => onAction("paste")}
+                    >
+                      <ClipboardPaste />
+                      <Trans id="editor.layers.paste" message="Paste" />
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid={`layer-duplicate-${item.id}`}
+                      onSelect={() => onAction("duplicate")}
+                    >
+                      <CopyPlus />
+                      <Trans id="editor.layers.duplicate" message="Duplicate" />
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+                {editsLayout ? (
+                  <>
+                    {keptAsSaved ? null : <DropdownMenuSeparator />}
+                    <DropdownMenuItem
+                      data-testid={`layer-delete-${item.id}`}
+                      onSelect={() => onAction("delete")}
+                      variant="destructive"
+                    >
+                      <Trash2 />
+                      <Trans id="editor.layers.delete" message="Delete" />
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </>
       )}
     </div>

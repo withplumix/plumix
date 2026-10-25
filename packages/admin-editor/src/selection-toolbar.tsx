@@ -27,7 +27,7 @@ import {
   findParentId,
   holdsBlockOutside,
 } from "./block-tree-ops.js";
-import { useEditorConfig } from "./editor-config-context.js";
+import { useEditorConfig, useLayoutGate } from "./editor-config-context.js";
 import { px } from "./overlay.js";
 import { useEditorStore, useEditorStoreApi } from "./provider.js";
 
@@ -46,6 +46,7 @@ export function SelectionToolbar({
 }): ReactElement | null {
   const { i18n } = useLingui();
   const { registry, allowedBlocks } = useEditorConfig();
+  const { editsLayout } = useLayoutGate();
   const store = useEditorStoreApi();
   const activeId = useEditorStore((s) => s.activeId);
   const selectedCount = useEditorStore((s) => s.selectedIds.size);
@@ -89,35 +90,37 @@ export function SelectionToolbar({
           } as CSSProperties
         }
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              data-testid="selection-toolbar-drag"
-              aria-label={i18n._({
-                id: "editor.selection.drag",
-                message: "Drag to move",
-              })}
-              disabled={multi}
-              // Pointerdown (not click) starts the move; preventDefault stops
-              // a text-selection drag, but leaves focus in the canvas iframe,
-              // where Escape never reaches the host's cancel.
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.currentTarget.focus();
-                state.startMove(activeId);
-              }}
-              className="cursor-grab active:cursor-grabbing"
-            >
-              <GripVertical className="size-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <Trans id="editor.selection.drag" message="Drag to move" />
-          </TooltipContent>
-        </Tooltip>
+        {editsLayout ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                data-testid="selection-toolbar-drag"
+                aria-label={i18n._({
+                  id: "editor.selection.drag",
+                  message: "Drag to move",
+                })}
+                disabled={multi}
+                // Pointerdown (not click) starts the move; preventDefault stops
+                // a text-selection drag, but leaves focus in the canvas iframe,
+                // where Escape never reaches the host's cancel.
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.focus();
+                  state.startMove(activeId);
+                }}
+                className="cursor-grab active:cursor-grabbing"
+              >
+                <GripVertical className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <Trans id="editor.selection.drag" message="Drag to move" />
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
         {selectedCount > 1 ? (
           <span
             data-testid="selection-toolbar-count"
@@ -140,59 +143,69 @@ export function SelectionToolbar({
             message: "Select parent",
           })}
         />
-        <IconAction
-          testId="selection-toolbar-move-up"
-          icon={<ArrowUp className="size-4" />}
-          disabled={multi}
-          onClick={act(() => state.moveSelectedBy(-1))}
-          label={i18n._({ id: "editor.selection.moveUp", message: "Move up" })}
-        />
-        <IconAction
-          testId="selection-toolbar-move-down"
-          icon={<ArrowDown className="size-4" />}
-          disabled={multi}
-          onClick={act(() => state.moveSelectedBy(1))}
-          label={i18n._({
-            id: "editor.selection.moveDown",
-            message: "Move down",
-          })}
-        />
-        <IconAction
-          testId="selection-toolbar-group"
-          icon={<Group className="size-4" />}
-          disabled={!canGroup}
-          onClick={act(() => state.groupSelected())}
-          label={i18n._({ id: "editor.selection.group", message: "Group" })}
-        />
-        {canUngroup ? (
-          <IconAction
-            testId="selection-toolbar-ungroup"
-            icon={<Ungroup className="size-4" />}
-            onClick={act(() => state.ungroupSelected())}
-            label={i18n._({
-              id: "editor.selection.ungroup",
-              message: "Ungroup",
-            })}
-          />
+        {editsLayout ? (
+          <>
+            <IconAction
+              testId="selection-toolbar-move-up"
+              icon={<ArrowUp className="size-4" />}
+              disabled={multi}
+              onClick={act(() => state.moveSelectedBy(-1))}
+              label={i18n._({
+                id: "editor.selection.moveUp",
+                message: "Move up",
+              })}
+            />
+            <IconAction
+              testId="selection-toolbar-move-down"
+              icon={<ArrowDown className="size-4" />}
+              disabled={multi}
+              onClick={act(() => state.moveSelectedBy(1))}
+              label={i18n._({
+                id: "editor.selection.moveDown",
+                message: "Move down",
+              })}
+            />
+            <IconAction
+              testId="selection-toolbar-group"
+              icon={<Group className="size-4" />}
+              disabled={!canGroup}
+              onClick={act(() => state.groupSelected())}
+              label={i18n._({ id: "editor.selection.group", message: "Group" })}
+            />
+            {canUngroup ? (
+              <IconAction
+                testId="selection-toolbar-ungroup"
+                icon={<Ungroup className="size-4" />}
+                onClick={act(() => state.ungroupSelected())}
+                label={i18n._({
+                  id: "editor.selection.ungroup",
+                  message: "Ungroup",
+                })}
+              />
+            ) : null}
+            {canDuplicate ? (
+              <IconAction
+                testId="selection-toolbar-duplicate"
+                icon={<Copy className="size-4" />}
+                onClick={act(() => state.duplicateSelected())}
+                label={i18n._({
+                  id: "editor.selection.duplicate",
+                  message: "Duplicate",
+                })}
+              />
+            ) : null}
+            <IconAction
+              testId="selection-toolbar-delete"
+              icon={<Trash2 className="size-4" />}
+              onClick={act(() => state.removeSelected())}
+              label={i18n._({
+                id: "editor.selection.delete",
+                message: "Delete",
+              })}
+              variant="destructive-ghost"
+            />
+          </>
         ) : null}
-        {canDuplicate ? (
-          <IconAction
-            testId="selection-toolbar-duplicate"
-            icon={<Copy className="size-4" />}
-            onClick={act(() => state.duplicateSelected())}
-            label={i18n._({
-              id: "editor.selection.duplicate",
-              message: "Duplicate",
-            })}
-          />
-        ) : null}
-        <IconAction
-          testId="selection-toolbar-delete"
-          icon={<Trash2 className="size-4" />}
-          onClick={act(() => state.removeSelected())}
-          label={i18n._({ id: "editor.selection.delete", message: "Delete" })}
-          variant="destructive-ghost"
-        />
       </div>
     </TooltipProvider>
   );

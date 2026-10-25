@@ -8,6 +8,7 @@ import {
   buildEditorCommands,
   selectEditorCommands,
 } from "./editor-commands.js";
+import { layoutGate } from "./layout-gate.js";
 import { createEditorStore } from "./store.js";
 
 const spec = (over: Partial<BlockSpec> & { name: string }): BlockSpec => ({
@@ -46,6 +47,60 @@ function byId(
 }
 
 describe("buildEditorCommands", () => {
+  test("a writer without edit_layout gets no ungroup command", () => {
+    const registry = createBlockRegistry([
+      spec({ name: "core/group", inputs: [{ name: "content", type: "slot" }] }),
+      spec({ name: "core/rich-text" }),
+    ]);
+    const tree: readonly BlockNode[] = [
+      {
+        id: "g",
+        name: "core/group",
+        attrs: { content: [{ id: "t", name: "core/rich-text" }] },
+      },
+    ];
+    const store = createEditorStore(registry, { tree, selection: ["g"] });
+    const build = (editsLayout: boolean) =>
+      buildEditorCommands({
+        ...context({ store, registry, tree }),
+        layout: layoutGate(editsLayout),
+      }).map((command) => command.id);
+
+    expect(
+      [build(true), build(false)].map((ids) =>
+        ids.includes("selection.ungroup"),
+      ),
+    ).toEqual([true, false]);
+  });
+
+  test("a writer without edit_layout gets no insert or group commands, and goes only to blocks they can select", () => {
+    const registry = createBlockRegistry([
+      spec({
+        name: "core/rich-text",
+        title: "Text",
+        inputs: [{ name: "body", type: "richtext", content: true }],
+      }),
+      spec({ name: "core/separator", title: "Separator" }),
+    ]);
+    const tree: readonly BlockNode[] = [
+      { id: "t", name: "core/rich-text" },
+      { id: "s", name: "core/separator" },
+    ];
+    const store = createEditorStore(registry, { tree });
+    store.getState().select("t");
+    store.getState().select("s", { additive: true });
+
+    const ids = buildEditorCommands({
+      ...context({ store, registry, tree }),
+      layout: layoutGate(false),
+    }).map((command) => command.id);
+
+    expect(ids.filter((id) => !id.startsWith("device."))).toEqual([
+      "canvas.xray",
+      "goto:t",
+    ]);
+  });
+
   test("covers the editor actions the palette promises", () => {
     const ids = buildEditorCommands(context()).map((command) => command.id);
     expect(ids).toEqual(

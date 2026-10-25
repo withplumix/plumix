@@ -123,6 +123,7 @@ export { resolveBlockScopeVariations } from "./block-scope-variations.js";
 export type { BlockVariationScope } from "./block-registry.js";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
+export { isContentInput } from "./layout-changes.js";
 export { validateEntryContent } from "./validate-content.js";
 export type { BlockContentValidationResult } from "./validate-content.js";
 export { BlockContentValidationError } from "./validation-errors.js";

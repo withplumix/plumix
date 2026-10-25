@@ -40,6 +40,7 @@ export const codeBlock = defineBlock({
     {
       name: "text",
       type: "textarea",
+      content: true,
       label: { id: "block.core.code.input.text.label", message: "Code" },
     },
     {

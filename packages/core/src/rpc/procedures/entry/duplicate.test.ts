@@ -78,6 +78,24 @@ describe("entry.duplicate", () => {
     expect(copy.content).toEqual(content);
   });
 
+  test("copies an entry holding blocks for a writer without edit_layout", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+    const content = {
+      version: "plumix.v2" as const,
+      blocks: [
+        { id: "p1", name: "core/rich-text", attrs: { body: "<p>Hi</p>" } },
+      ],
+    };
+    const source = await h.factory.draft.create({
+      authorId: h.user.id,
+      content,
+    });
+
+    const copy = await h.client.entry.duplicate({ id: source.id });
+
+    expect(copy.content).toEqual(content);
+  });
+
   test("copies an entry holding a block the theme no longer allows", async () => {
     const h = await createRpcHarness({
       authAs: "editor",

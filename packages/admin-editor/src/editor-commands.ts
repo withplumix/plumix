@@ -7,6 +7,7 @@ import type {
 } from "@plumix/core/blocks";
 import type { Label } from "@plumix/core/i18n";
 
+import type { LayoutGate } from "./layout-gate.js";
 import type { EditorDevice, EditorStoreApi } from "./store.js";
 import {
   createNodeFromEntry,
@@ -21,6 +22,7 @@ import {
   flattenTree,
   topLevelIndexAfter,
 } from "./block-tree-ops.js";
+import { layoutGate } from "./layout-gate.js";
 
 /** The palette's sections, in the order it renders them. */
 export const EDITOR_COMMAND_GROUP_IDS = ["actions", "insert", "goto"] as const;
@@ -60,6 +62,7 @@ export interface EditorCommandContext {
   readonly entryType?: string;
   /** Opens the host's revision history; the command is offered only with it. */
   readonly openRevisions?: () => void;
+  readonly layout?: LayoutGate;
 }
 
 /**
@@ -118,6 +121,7 @@ export function buildEditorCommands(
     tree,
     entryType,
     openRevisions,
+    layout = layoutGate(true),
   } = ctx;
   const { selectedIds, activeId } = store.getState();
   const commands: EditorCommand[] = [
@@ -129,7 +133,7 @@ export function buildEditorCommands(
     },
   ];
   // Dropped rather than inert: a palette row that does nothing reads as broken.
-  if (canGroupSelection(tree, selectedIds, registry)) {
+  if (layout.editsLayout && canGroupSelection(tree, selectedIds, registry)) {
     commands.push({
       id: "selection.group",
       group: "actions",
@@ -137,7 +141,11 @@ export function buildEditorCommands(
       run: () => store.getState().groupSelected(),
     });
   }
-  if (activeId !== null && canUngroupBlock(tree, activeId, registry)) {
+  if (
+    layout.editsLayout &&
+    activeId !== null &&
+    canUngroupBlock(tree, activeId, registry)
+  ) {
     commands.push({
       id: "selection.ungroup",
       group: "actions",
@@ -161,12 +169,15 @@ export function buildEditorCommands(
       run: openRevisions,
     });
   }
-  for (const { entries } of groupInsertables(registry, {
-    capabilities,
-    themeAllowed: allowedBlocks,
-    stylePolicy,
-    entryType,
-  })) {
+  const insertables = layout.editsLayout
+    ? groupInsertables(registry, {
+        capabilities,
+        themeAllowed: allowedBlocks,
+        stylePolicy,
+        entryType,
+      })
+    : [];
+  for (const { entries } of insertables) {
     for (const entry of entries) {
       commands.push({
         id: `insert:${entryKey(entry)}`,
@@ -190,6 +201,7 @@ export function buildEditorCommands(
   }
   for (const node of flattenTree(tree, registry)) {
     const spec = registry.get(node.name);
+    if (!layout.selects(spec)) continue;
     const block = findBlock(tree, node.id, registry);
     const detail = block ? blockExcerpt(block, spec) : null;
     commands.push({

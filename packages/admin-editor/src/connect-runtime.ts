@@ -108,7 +108,11 @@ export function connectRuntime({
         onDeps?.(message.deps);
         break;
       case "host:config":
-        onConfig?.({ locale: message.locale, catalog: message.catalog });
+        onConfig?.({
+          locale: message.locale,
+          catalog: message.catalog,
+          editsLayout: message.editsLayout,
+        });
         break;
       case "host:xray":
         onXray?.(message.enabled);

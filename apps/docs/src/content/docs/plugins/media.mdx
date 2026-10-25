@@ -173,7 +173,7 @@ SVG is not in the list. An SVG file is XML and can carry script, and checking th
 
 ## Capabilities
 
-Registering the `media` type derives the same eight capabilities as any entry type, with one default changed. `delete` starts at contributor rather than editor.
+Registering the `media` type derives the same nine capabilities as any entry type, with one default changed. `delete` starts at contributor rather than editor.
 
 | Capability                     | Minimum role |
 | ------------------------------ | ------------ |
@@ -185,6 +185,7 @@ Registering the `media` type derives the same eight capabilities as any entry ty
 | `entry:media:edit_any`         | editor       |
 | `entry:media:read_revisions`   | editor       |
 | `entry:media:restore_revision` | editor       |
+| `entry:media:edit_layout`      | author       |
 
 Here is what each operation asks for:
 

@@ -9,7 +9,7 @@ import { Minus, Plus, RefreshCw } from "@plumix/admin-ui/icons";
 
 import { createNodeFromEntry } from "./block-catalog.js";
 import { BlockInputControl } from "./block-input-control.js";
-import { useEditorConfig } from "./editor-config-context.js";
+import { useEditorConfig, useLayoutGate } from "./editor-config-context.js";
 import { inspectorView } from "./inspector-view.js";
 import { useEditorStore, useLoaderPushRef } from "./provider.js";
 import { deviceBucket } from "./store.js";
@@ -26,6 +26,7 @@ export function BlockInspector({
   onRefreshBlockLoader,
 }: BlockInspectorProps): ReactElement {
   const { registry, allowedBlocks, resolvePluginFieldType } = useEditorConfig();
+  const layout = useLayoutGate();
   const activeId = useEditorStore((s) => s.activeId);
   const tree = useEditorStore((s) => s.tree);
   const device = useEditorStore((s) => s.device);
@@ -49,8 +50,9 @@ export function BlockInspector({
         bucket,
         canRefresh,
         allowedBlocks,
+        layout,
       ),
-    [registry, tree, activeId, bucket, canRefresh, allowedBlocks],
+    [registry, tree, activeId, bucket, canRefresh, allowedBlocks, layout],
   );
   const block = view?.block;
   const tableId = view?.tableId ?? null;

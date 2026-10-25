@@ -754,7 +754,7 @@ describe("entry.create", () => {
 describe("entry.create — the blocks the theme allows", () => {
   test("refuses a node of a block outside the set", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       config: { theme: { ...defaultTestTheme, allowedBlocks: ["core/group"] } },
     });
 
@@ -781,7 +781,7 @@ describe("entry.create — the theme's style policy", () => {
 
   test("refuses a literal style value", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       config: { theme },
     });
 
@@ -816,7 +816,7 @@ describe("entry.create — the theme's style policy", () => {
 
   test("creates a block holding its own defaultStyles", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       config: { theme },
     });
     const content = {
@@ -838,5 +838,45 @@ describe("entry.create — the theme's style policy", () => {
     });
 
     expect(created.content).toEqual(content);
+  });
+});
+
+describe("entry.create — a writer without edit_layout", () => {
+  const v2 = (blocks: readonly unknown[]) => ({
+    version: "plumix.v2" as const,
+    blocks,
+  });
+
+  test("refuses content holding a block", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+
+    await expect(
+      h.client.entry.create({
+        title: "Hello",
+        slug: "hello",
+        content: v2([
+          { id: "p1", name: "core/rich-text", attrs: { body: "<p>Hi</p>" } },
+        ]),
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_BLOCK_CONTENT",
+      data: {
+        issues: [
+          expect.objectContaining({ code: "layout_change", path: "blocks[0]" }),
+        ],
+      },
+    });
+  });
+
+  test("creates an empty tree", async () => {
+    const h = await createRpcHarness({ authAs: "contributor" });
+
+    const created = await h.client.entry.create({
+      title: "Hello",
+      slug: "hello",
+      content: v2([]),
+    });
+
+    expect(created.content).toEqual(v2([]));
   });
 });

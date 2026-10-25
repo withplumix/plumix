@@ -473,6 +473,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "collectBlockDepKeys",
           "pickDeps",
           "findBlockNode",
+          "isContentInput",
           "isAllowedHtmlAttr",
           "safeHtmlAttrs",
           "ROOT_TAGS",

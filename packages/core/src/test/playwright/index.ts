@@ -263,6 +263,7 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
       "entry:post:create",
       "entry:post:delete",
       "entry:post:edit_any",
+      "entry:post:edit_layout",
       "entry:post:edit_own",
       "entry:post:publish",
       "entry:post:read",

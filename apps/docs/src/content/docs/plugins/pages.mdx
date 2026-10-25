@@ -190,7 +190,7 @@ With `hasArchive: false` on top of that, pages appear only where you link them. 
 
 ## Capabilities it mints
 
-Registering `page` derives eight capabilities under the `page` family, each mapped to a minimum role on the ladder from subscriber up to admin.
+Registering `page` derives nine capabilities under the `page` family, each mapped to a minimum role on the ladder from subscriber up to admin.
 
 | Capability                    | Minimum role |
 | ----------------------------- | ------------ |
@@ -202,6 +202,7 @@ Registering `page` derives eight capabilities under the `page` family, each mapp
 | `entry:page:delete`           | editor       |
 | `entry:page:read_revisions`   | editor       |
 | `entry:page:restore_revision` | editor       |
+| `entry:page:edit_layout`      | author       |
 
 The family name comes from the type name, `page`, since the registration sets no `capabilityType` override. [Entry Types](/content-modelling/entry-types/#capabilities) covers `capabilityType`, which points a second type's capabilities at this same family instead of minting its own.
 

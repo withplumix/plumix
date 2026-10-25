@@ -36,6 +36,7 @@ export const embedBlock = defineBlock({
     {
       name: "url",
       type: "url",
+      content: true,
       label: { id: "block.core.embed.input.url.label", message: "URL" },
     },
     {

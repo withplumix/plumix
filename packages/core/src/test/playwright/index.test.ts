@@ -106,6 +106,10 @@ describe("AUTHED_ADMIN", () => {
     );
   });
 
+  test("can change a post's layout, as the admin role can", () => {
+    expect(AUTHED_ADMIN.user?.capabilities).toContain("entry:post:edit_layout");
+  });
+
   test("needsBootstrap is false (the admin already exists)", () => {
     expect(AUTHED_ADMIN.needsBootstrap).toBe(false);
   });

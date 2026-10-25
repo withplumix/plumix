@@ -209,6 +209,11 @@ export const restore = base
       [revision.content, live.content],
       context,
       errors,
+      // Against live alone: the revision is what the restore changes live to.
+      {
+        capability: namespacedEntryCapability(namespace, "edit_layout"),
+        from: [live.content],
+      },
     );
 
     const typeSupportsAutosave =

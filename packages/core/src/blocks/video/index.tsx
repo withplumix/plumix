@@ -23,6 +23,7 @@ export const videoBlock = defineBlock({
     {
       name: "src",
       type: "url",
+      content: true,
       label: { id: "block.core.video.input.src.label", message: "Source URL" },
     },
     {

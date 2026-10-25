@@ -40,6 +40,8 @@ export interface SlotRect {
 export interface CanvasConfig {
   readonly locale: string;
   readonly catalog: CompiledCatalog;
+  /** Without `edit_layout` the canvas offers no "Add a block" affordance. */
+  readonly editsLayout?: boolean;
 }
 
 /** Parent (admin shell) → canvas (iframe). */

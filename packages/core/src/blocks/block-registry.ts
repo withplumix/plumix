@@ -49,6 +49,11 @@ export interface BlockInput {
    */
   readonly styleProperty?: string;
   /**
+   * Text, link or media a writer without `edit_layout` may change. A slot or
+   * `styleProperty` input is always layout.
+   */
+  readonly content?: boolean;
+  /**
    * Plugin reference inputs only. Opaque to core; the host forwards it to the
    * plugin field.
    */

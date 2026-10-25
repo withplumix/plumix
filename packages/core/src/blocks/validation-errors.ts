@@ -11,7 +11,8 @@ export type BlockContentValidationCode =
   | "block_not_allowed"
   | "disallowed_child"
   | "requires_parent"
-  | "style_not_allowed";
+  | "style_not_allowed"
+  | "layout_change";
 
 export interface BlockContentValidationIssue {
   readonly code: BlockContentValidationCode;
