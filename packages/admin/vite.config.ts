@@ -13,7 +13,6 @@ import type {
   AdminCatalogSet,
   AdminShippedCatalogs,
 } from "@plumix/core/manifest";
-import { ADMIN_SHIPPED_CATALOGS_FILE } from "@plumix/core/manifest";
 
 import { CATALOG_SET_PREFIXES } from "./src/lib/catalog-sets.js";
 import { ADMIN_BASE_PATH, SOURCE_LOCALE } from "./src/lib/constants.js";
@@ -55,7 +54,12 @@ function shipCatalogLocales(): Plugin {
   return {
     name: "plumix:ship-catalog-locales",
     apply: "build",
-    generateBundle(_options, bundle) {
+    async generateBundle(_options, bundle) {
+      // Loaded here, not at the top: tools that evaluate this config without a
+      // build (knip in CI) would otherwise need core's `dist`. A build runs
+      // after turbo's `^build`, so core is built by now.
+      const { ADMIN_SHIPPED_CATALOGS_FILE } =
+        await import("@plumix/core/manifest");
       const bundled = Object.values(bundle).flatMap((output) =>
         output.type === "chunk" ? output.moduleIds : [],
       );
