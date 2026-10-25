@@ -37,6 +37,19 @@ export const IMPLEMENTER: Thinker = {
   model: "claude-opus-5-5",
   effort: "medium",
 };
+/**
+ * Trial, started 2026-10-25: even tickets are implemented by Sonnet to compare
+ * review gaps, fix rounds, CI repairs and time to merge against Opus. Fixes and
+ * conflict resolution stay on IMPLEMENTER.
+ */
+const TRIAL_IMPLEMENTER: Thinker = {
+  model: "claude-sonnet-5-5",
+  effort: "medium",
+};
+
+export const implementerFor = (ticket: Ticket): Thinker =>
+  ticket.number % 2 === 0 ? TRIAL_IMPLEMENTER : IMPLEMENTER;
+
 const REVIEWER: Thinker = { model: "claude-sonnet-5-5", effort: "high" };
 
 const MAX_GATE_FIX_ROUNDS = 4;
@@ -438,7 +451,8 @@ export const shipTicket = async (
       return { status: "blocked", reason: brief.reason, briefFails: true };
 
     say("\n--- implement ---");
-    const implemented = await runAgentPhase("implement", IMPLEMENTER, {
+    const implementer = implementerFor(ticket);
+    const implemented = await runAgentPhase("implement", implementer, {
       promptFile: join(PROMPT_DIR, "implement.md"),
       promptArgs: { TICKET: String(ticket.number), NEXT_ADR: nextAdr },
       maxIterations: 40,
@@ -460,7 +474,7 @@ export const shipTicket = async (
       (await readOrAskAgain(
         runAgentPhase,
         "implement",
-        IMPLEMENTER,
+        implementer,
         implemented,
         readTemplatedPullRequest,
         EMIT_THE_PULL_REQUEST,

@@ -13,6 +13,8 @@ import {
   commitsTheBranchCarries,
   fixerFor,
   gatesUntilGreen,
+  IMPLEMENTER,
+  implementerFor,
   readDeclinedTag,
   readFindingsTag,
   readPullRequestTag,
@@ -25,6 +27,15 @@ const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
 
 const findingsBlock = (json: string) =>
   `chatter before\n<findings>\n${json}\n</findings>\nchatter after`;
+
+describe("implementerFor", () => {
+  test("an even ticket is implemented by the trial model, an odd one by the incumbent, so the split survives a restart", () => {
+    expect(implementerFor({ number: 3360, title: "" }).model).toBe(
+      "claude-sonnet-5-5",
+    );
+    expect(implementerFor({ number: 3361, title: "" })).toBe(IMPLEMENTER);
+  });
+});
 
 describe("readFindingsTag", () => {
   test("reads why a finding matters", () => {
