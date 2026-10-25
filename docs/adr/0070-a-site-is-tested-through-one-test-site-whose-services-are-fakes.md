@@ -61,9 +61,9 @@ hand-kept port registry and seeded everything in `globalSetup`.
 - **Copy a template database before each test.** Rejected: libsql implements
   neither `serialize` nor `backup`, so there is nothing to copy from. Emptying
   the tables measured 0.15 ms with core and four plugins, against 4.6 ms for a
-  fresh migration.
-- **A fresh database per test.** Rejected: migrations were 80–90% of the old
-  harnesses' set-up cost, and emptying the tables is as correct.
+  fresh migration (the #3439 spike's per-test reset comparison).
+- **A fresh database per test.** Rejected: in the #3439 spike, migrations were
+  80–90% of the old harnesses' set-up cost, and emptying the tables is as correct.
 - **`node:test` in place of Vitest.** Rejected: it cannot transform JSX,
   resolve `.js` to `.ts` or run the Vite plugin pipeline a site's code needs,
   and it has no `expectTypeOf`. Mutation testing (ADR 0049) runs on Vitest too.

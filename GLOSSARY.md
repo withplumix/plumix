@@ -606,10 +606,9 @@ of the extractor over every block tree. Owned by `@plumix/plugin-search`.
 ## Testing
 
 **Test site**:
-A whole site booted for a test: the site's own config, or core plus the plugins
-a test names, with an empty database before each test and a fake in place of
-every service the site has, each recording what the site did. A feature test and
-an e2e test drive the same test site. See ADR 0070.
+A whole site built for a test, with a fake in place of every service it uses,
+each fake recording what the site did. A feature test and an e2e test drive the
+same test site. See ADR 0070.
 _Avoid_: harness, test app
 
 **Feature test**:

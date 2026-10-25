@@ -223,6 +223,9 @@ Every package and site lays its tests out the same way:
 
 A suite still under `e2e/` moves to `tests/e2e/` with the change that ports it to the test site.
 
+A test of a package as a whole, its configuration or its exports, stays in the package's `test/`
+folder (see Unit below).
+
 ### Unit
 
 A unit test checks one behaviour of the code's public API (an exported function, a procedure, a
