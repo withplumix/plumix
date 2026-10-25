@@ -20,6 +20,8 @@ import {
   installPlugins,
 } from "@plumix/core";
 
+import { discoverPluginCatalogLocales } from "./plugin-catalog-resolve.js";
+
 type PluginDescriptors = Parameters<typeof installPlugins>[0]["plugins"];
 
 export interface ManifestBuildOptions {
@@ -43,6 +45,8 @@ export interface ManifestBuildOptions {
    * `buildApp` seeds its own. Required for the same reason as `theme`.
    */
   readonly routes: PlumixConfig["routes"];
+  /** Where plugin packages resolve from, to find their compiled catalogs. */
+  readonly projectRoot: string;
 }
 
 /**
@@ -61,15 +65,19 @@ export async function computeManifestAndRegistry(
     registry: createPluginRegistry(options.routes),
     theme: options.theme,
   });
-  // Forward plugin descriptors so `buildManifest` can emit
-  // `pluginI18n` URL maps for plugins declaring an `i18n` slot
-  // (slice 17 #697 runtime catalog registry).
+  // Forward plugin descriptors and the locales their compiled catalogs ship
+  // so `buildManifest` can emit `pluginI18n` URL maps for plugins declaring
+  // an `i18n` slot (slice 17 #697 runtime catalog registry).
   return {
     manifest: buildManifest(registry, {
       ...options,
       allowedBlocks: options.theme.allowedBlocks,
       allowCustomStyles: options.theme.allowCustomStyles,
       plugins,
+      pluginCatalogLocales: await discoverPluginCatalogLocales(
+        plugins,
+        options.projectRoot,
+      ),
     }),
     registry,
   };

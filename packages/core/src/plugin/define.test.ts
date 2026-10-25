@@ -140,18 +140,21 @@ describe("definePlugin — dataMigrations", () => {
 });
 
 describe("PLUGIN_I18N_SLOT", () => {
-  test("declares the source locale and the locales core's catalog files ship", () => {
+  test("declares the source locale core's catalogs are authored in", () => {
     expect(PLUGIN_I18N_SLOT.sourceLocale).toBe(coreLingui.sourceLocale);
-    expect([...PLUGIN_I18N_SLOT.locales].sort()).toEqual(
-      [...coreLingui.locales].sort(),
-    );
   });
+});
 
-  test("is the shared five-locale catalog declaration every first-party plugin ships", () => {
-    expect(PLUGIN_I18N_SLOT).toEqual({
-      sourceLocale: "en",
-      locales: ["en", "uk", "ar", "de", "zh-CN"],
-      catalogPath: "./locales",
+describe("definePlugin — i18n slot", () => {
+  test("takes no locale list: the build discovers a plugin's catalogs", () => {
+    definePlugin("translated", {
+      i18n: {
+        sourceLocale: "en",
+        // @ts-expect-error — the build discovers locales from the catalogs.
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+      setup: noop,
     });
   });
 });

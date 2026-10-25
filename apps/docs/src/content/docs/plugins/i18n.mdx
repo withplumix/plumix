@@ -1,6 +1,6 @@
 ---
 title: Translation Catalogs
-description: The i18n slot on a plugin descriptor, the Lingui config the catalogs compile with, and why a shipped translation nobody declares is unreachable.
+description: The i18n slot on a plugin descriptor, the Lingui config the catalogs compile with, and how the build finds the catalogs a plugin ships.
 tier: P2
 roster: true
 sidebar:
@@ -37,19 +37,18 @@ import { definePlugin } from "plumix/plugin";
 export const recipes = definePlugin("recipes", {
   i18n: {
     sourceLocale: "en",
-    locales: ["en", "uk", "ar"],
     catalogPath: "./locales",
   },
   setup: () => {},
 });
 ```
 
-At build time the site's manifest is projected from every installed descriptor. A plugin carrying an `i18n` slot gets an entry under `pluginI18n`, mapping each locale to a URL under `/_plumix/admin/plugins/<id>/locales/<locale>.mjs` (behind the site's `basePath`, when it has one), and `plumix build` copies the matching `.mjs` out of the installed package to sit behind it. The admin fetches those URLs at boot and merges the messages into its active Lingui instance. A plugin with no `i18n` slot gets no entry, so nothing is copied, nothing is served, and the admin renders every one of its strings in the source locale.
+At build time the site's manifest is projected from every installed descriptor. A plugin carrying an `i18n` slot gets an entry under `pluginI18n`, built from the compiled `<locale>.mjs` files the build finds under its `catalogPath`, mapping each locale to a URL under `/_plumix/admin/plugins/<id>/locales/<locale>.mjs` (behind the site's `basePath`, when it has one), and `plumix build` copies the matching `.mjs` out of the installed package to sit behind it. The admin fetches those URLs at boot and merges the messages into its active Lingui instance. A plugin with no `i18n` slot gets no entry, so nothing is copied, nothing is served, and the admin renders every one of its strings in the source locale.
 
-<Aside type="caution" title="Files compile, the slot serves">
-  The `.po` files decide what gets **compiled**. The `locales` array in the
-  `i18n` slot decides what is **projected and served**. Add a `.po` and its slot
-  entry in the same commit, every time.
+<Aside type="tip" title="The files are the locale list">
+  The slot lists no locales. Compile writes one `<locale>.mjs` per `.po`, and
+  the build serves every `.mjs` it finds under `catalogPath`, so adding a `.po`
+  and compiling is all a new language takes.
 </Aside>
 
 ### Partial regional catalogs
@@ -77,22 +76,7 @@ Adding Ukrainian to a plugin whose strings are authored in English.
    pnpm i18n:check
    ```
 
-4. **Add the same locale to the `i18n` slot.** This is the step that is easy to skip and impossible to notice.
-
-   ```ts
-   import { definePlugin } from "plumix/plugin";
-
-   export const recipes = definePlugin("recipes", {
-     i18n: {
-       sourceLocale: "en",
-       locales: ["en", "uk"],
-       catalogPath: "./locales",
-     },
-     setup: () => {},
-   });
-   ```
-
-5. **Ship the compiled catalogs.** `files` decides what the npm tarball carries, and the directory has to be in it. Naming the compiled files rather than the directory keeps the `.po` sources out of the tarball, where nothing reads them.
+4. **Ship the compiled catalogs.** `files` decides what the npm tarball carries, and the directory has to be in it. Naming the compiled files rather than the directory keeps the `.po` sources out of the tarball, where nothing reads them.
 
    ```json
    {
@@ -112,7 +96,7 @@ Install the published package into a site with `uk` enabled, run `plumix build`,
 
 ## The slot
 
-Three keys, all required once the slot is present.
+Two keys, both required once the slot is present.
 
 ### sourceLocale
 
@@ -123,51 +107,21 @@ import type { PluginI18nSlot } from "plumix";
 
 export const slot: PluginI18nSlot = {
   sourceLocale: "en",
-  // Serves the English catalog only, which every locale falls back to.
-  locales: ["en"],
   catalogPath: "./locales",
 };
 ```
 
 **The projection always ships it.** The production admin can't compile a descriptor's `message` at run time, so without a compiled catalog a string with a placeholder renders raw: `Added {label} to the menu`. The source catalog is therefore always in the URL map, whatever the site enables, and the admin falls back to it for any locale the plugin doesn't translate. `plumix build` fails when a plugin's `locales/` lacks the compiled `.mjs` for its source locale.
 
-List it in `locales` too: it keeps that array a faithful description of the `.po` files beside it.
-
-### locales
-
-Every locale the plugin ships a catalog for. Intersect this array with the site's enabled locales, add the source locale, and that is the set of URLs the manifest emits.
-
-```ts
-import type { PluginI18nSlot } from "plumix";
-
-export const slot: PluginI18nSlot = {
-  sourceLocale: "en",
-  // Every locale with a compiled catalog beside it, not the subset a
-  // given site enables.
-  locales: ["en", "uk", "ar", "de", "zh-CN"],
-  catalogPath: "./locales",
-};
-```
-
-Both directions of disagreement with the files on disk are bugs, and they fail differently:
-
-| Situation                                    | What happens                                                              |
-| -------------------------------------------- | ------------------------------------------------------------------------- |
-| A `<locale>.mjs` exists, `locales` omits it  | Silent. The translation ships in the tarball and no site ever reaches it. |
-| `locales` names it, no `<locale>.mjs` exists | Loud. A consumer's `plumix build` throws `adminAssetNotFound`.            |
-
-The quiet one is the one that bites. Nothing at run time can tell an untranslated string from a translation that was never asked for, so declare every locale you ship — see [Site locales narrow it](#site-locales-narrow-it-nothing-widens-it) for why over-declaring is safe.
-
 ### catalogPath
 
-The directory holding the compiled `<locale>.mjs` files, **relative to the plugin's own package root** — not to the site installing it. `"./locales"` is what every first-party plugin carrying a slot declares, and it lines up with the `<rootDir>/locales/{locale}` path `plumix/lingui` compiles to by default.
+The directory holding the compiled `<locale>.mjs` files, **relative to the plugin's own package root** — not to the site installing it. The build serves each locale it finds a `<locale>.mjs` for here, so the published tarball has to carry them. `"./locales"` is what every first-party plugin carrying a slot declares, and it lines up with the `<rootDir>/locales/{locale}` path `plumix/lingui` compiles to by default.
 
 ```ts
 import type { PluginI18nSlot } from "plumix";
 
 export const slot: PluginI18nSlot = {
   sourceLocale: "en",
-  locales: ["en", "uk"],
   // Resolved inside the installed @plumix/plugin-recipes package,
   // never inside the site that installs it.
   catalogPath: "./locales",
@@ -185,9 +139,7 @@ An absolute `catalogPath` is honoured verbatim, skipping resolution entirely. It
 
 ## Site locales narrow it, nothing widens it
 
-The projection serves each locale the site has enabled in its own `i18n` config from the closest catalog the plugin ships: a plugin that ships `de` serves a `de-AT` site, and an enabled locale with no close catalog gets the source catalog. Naming a locale the site has not enabled emits no URL, adds no weight to the manifest and does not put a language in the admin's dropdown.
-
-The two mistakes are not symmetrical: over-declaring costs nothing, under-declaring costs the translation. Declare everything you ship.
+The projection serves each locale the site has enabled in its own `i18n` config from the closest catalog the plugin ships: a plugin that ships `de` serves a `de-AT` site, and an enabled locale with no close catalog gets the source catalog. Shipping a catalog for a locale the site has not enabled emits no URL, adds no weight to the manifest and does not put a language in the admin's dropdown.
 
 A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so the projection leaves only the source locale. Until a site enables a second locale, a plugin ships its source catalog alone, which is the state most sites installing your plugin are in.
 
@@ -200,8 +152,6 @@ A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so
 
 `plumix i18n verify` compares the descriptors in `src` against the msgids in `locales/*.po` and exits non-zero on drift in either direction, which catches a string added without an extract and a catalog entry left behind after a string was deleted. `plumix i18n init` wires it up as `i18n:check`; run it in CI.
 
-It does not compare the slot to the disk. A declared locale with no compiled catalog surfaces at `plumix build`; the reverse — a `.po` you translated and never declared in the slot — is visible to no tool at all, which is why the slot's `locales` is a review habit rather than a check.
-
 ## Related
 
 The slot sits on the descriptor object [Overview](/plugins/overview/) covers, and the strings it translates are the labels registered in [Content Modelling](/content-modelling/overview/) and [Entry Types](/content-modelling/entry-types/). The site-side half of the intersection — which locales a site enables, and the default one — is a slot in [Configuration](/getting-started/configuration/).
@@ -210,6 +160,6 @@ The slot sits on the descriptor object [Overview](/plugins/overview/) covers, an
 
 ## Next steps
 
-Every first-party plugin is a working reference for this. [Blog](/plugins/blog/) covers what one of them registers, and those labels are what its slot's five declared locales translate — four of them, once English drops out.
+Every first-party plugin is a working reference for this. [Blog](/plugins/blog/) covers what one of them registers, and those labels are what its five shipped catalogs translate — four of them, once English drops out.
 
 Two unwritten pages bear on this one. Publishing a Plugin, in this section, covers taking a local plugin to npm, where the `files` and `exports` fields above are half the work. Internationalization, under Going Further, covers the site-side surface — `Label`, the formatters, and the locales a site enables.

@@ -583,6 +583,7 @@ async function regenerate(
       refusedAdminAreas: config.runtime.refusedAdminAreas,
       theme: config.theme,
       routes: config.routes,
+      projectRoot: cwd,
     },
   );
 

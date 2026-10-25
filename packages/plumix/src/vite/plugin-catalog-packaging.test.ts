@@ -18,9 +18,7 @@ const PLUGINS_DIR = resolve(
  * drift.
  */
 const I18N_SLOT = /\bi18n:\s*(\{[^}]*\}|PLUGIN_I18N_SLOT)/g;
-const SLOT_LOCALES = /\blocales:\s*\[([^\]]*)\]/;
 const SLOT_CATALOG_PATH = /\bcatalogPath:\s*"([^"]+)"/;
-const QUOTED = /"([^"]+)"/g;
 
 /**
  * `files: ["dist"]` ships all of `dist/`, so `files` reaches a declared
@@ -31,7 +29,6 @@ function rootSegment(path: string): string {
 }
 
 interface CatalogSlot {
-  readonly locales: readonly string[];
   readonly catalogPath: string;
 }
 
@@ -44,12 +41,7 @@ function declaredSlots(srcDir: string): CatalogSlot[] {
     .map(([, body = ""]) =>
       body === "PLUGIN_I18N_SLOT"
         ? PLUGIN_I18N_SLOT
-        : {
-            locales: [
-              ...(SLOT_LOCALES.exec(body)?.[1] ?? "").matchAll(QUOTED),
-            ].map(([, locale = ""]) => locale),
-            catalogPath: SLOT_CATALOG_PATH.exec(body)?.[1] ?? "",
-          },
+        : { catalogPath: SLOT_CATALOG_PATH.exec(body)?.[1] ?? "" },
     );
 }
 
@@ -66,7 +58,6 @@ const plugins = readdirSync(PLUGINS_DIR, { withFileTypes: true })
     };
     return {
       name: pkg.name,
-      dir,
       slots: declaredSlots(resolve(dir, "src")),
       shipped: new Set((pkg.files ?? []).map(rootSegment)),
       compiles: pkg.scripts?.["i18n:compile"] !== undefined,
@@ -107,33 +98,5 @@ test("every declared i18n catalog directory is published", () => {
     `package.json#files does not reach these catalog directories, so the npm tarball ` +
       `ships no catalogs and every consumer's \`plumix build\` throws ` +
       `adminAssetNotFound. Add the directory to \`files\`.`,
-  ).toEqual([]);
-});
-
-// A slot naming only the source locale projects no catalogs, so shipped
-// translations go unstaged. Admin's glob bypasses the slot in this repo, so
-// only npm installs would notice.
-test("each plugin declares exactly the locales it ships catalogs for", () => {
-  const drifted = plugins.flatMap(({ name, dir, slots }) =>
-    slots.flatMap(({ locales, catalogPath }) => {
-      const catalogDir = resolve(dir, catalogPath);
-      if (!existsSync(catalogDir)) return [];
-      const shipped = readdirSync(catalogDir)
-        .filter((entry) => entry.endsWith(".po"))
-        .map((entry) => entry.replace(/\.po$/, ""))
-        .sort();
-      const declared = [...locales].sort();
-      if (shipped.join() === declared.join()) return [];
-      return [
-        `${name} declares [${declared.join(", ")}] but ${catalogPath} ships [${shipped.join(", ")}]`,
-      ];
-    }),
-  );
-  expect(
-    drifted,
-    `a plugin's \`i18n.locales\` is the only thing that reaches its translations: ` +
-      `a locale with a \`.po\` but no declaration is dead weight in the tarball, and ` +
-      `a declaration with no \`.po\` fails a consumer's \`plumix build\` with ` +
-      `adminAssetNotFound. Keep the two in step.`,
   ).toEqual([]);
 });
