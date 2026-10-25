@@ -26,11 +26,16 @@ that from what you write below.
 4. **Commit** by the rules in AGENTS.md's "Commits, branches, PRs". Use
    `Fixes #{{TICKET}}` when every criterion is met, otherwise `Refs #{{TICKET}}`.
 
-You prove your own change; there is no slower suite after you to catch it before CI. Before
-your last commit, for every package you changed:
+You prove your own change; there is no slower suite after you to catch it before CI. Run only
+what the change affects, never a whole suite or the whole workspace:
 
-- run its unit tests: `pnpm exec vitest run` inside the package, or the test files you touched
-  when the package's suite is large;
+- in each RED→GREEN cycle, run the one test file you are working in:
+  `pnpm exec vitest run <file>` inside the package;
+- before your last commit, run the tests the branch affects, in each package you changed:
+  `pnpm exec vitest run --changed origin/main` inside the package (Vitest follows the import
+  graph from the changed files);
+- type-check with `pnpm exec turbo run typecheck --filter=...[origin/main]`, never the root
+  `pnpm typecheck`;
 - lint the files you changed: `pnpm exec eslint <files>` inside the package;
 - run the e2e specs that cover a render or admin change you made: `pnpm test:e2e <spec>`
   inside the package, which passes the spec to Playwright with the package's own config.
