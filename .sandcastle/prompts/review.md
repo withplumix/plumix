@@ -10,6 +10,12 @@ its Standards and Spec reviews run as two sub-agents in parallel, so neither
 axis sees the other's reasoning, and you wait for both before reading the diff
 yourself. The skill only reports; its findings are your worklist.
 
+The Standards review judges the diff against `CODING_STANDARDS.md` and the
+"Architecture" section of `AGENTS.md` (core's layers, the umbrella rule, what
+request-path code may use, a contract change in every adapter): read both in
+full before you read the diff yourself, and name the rule each Standards finding
+breaks. A breach of a written rule is a finding even when the ticket is met.
+
 !`gh issue view {{TICKET}} --json number,title,body,comments`
 
 The PR description:
