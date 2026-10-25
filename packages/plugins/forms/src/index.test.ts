@@ -1,9 +1,10 @@
+import type { testSite } from "plumix/test";
 import { createElement as h } from "react";
 import { defineBlock } from "plumix/blocks";
 import { email, text } from "plumix/fields";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import * as adminEntry from "./admin/index.js";
 import {
@@ -286,5 +287,19 @@ describe("the submissions inbox", () => {
     const harness = await createFormsHarness([forms()]);
 
     expect(harness.app.plugins.rpcRouters.get("forms")).toBeDefined();
+  });
+});
+
+describe("the plugin's procedures on a test site", () => {
+  test("are typed on site.rpc where the plugin is installed", () => {
+    type Rpc = Awaited<
+      ReturnType<
+        typeof testSite<Record<never, never>, [ReturnType<typeof forms>]>
+      >
+    >["rpc"];
+
+    expectTypeOf<Rpc["forms"]["get"]>()
+      .parameter(0)
+      .toEqualTypeOf<{ id: number }>();
   });
 });

@@ -1,5 +1,6 @@
+import type { testSite } from "plumix/test";
 import { buildManifest, HookRegistry, installPlugins } from "plumix/plugin";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { menu } from "./index.js";
 
@@ -71,5 +72,19 @@ describe("@plumix/plugin-menu", () => {
 
   test("declares the adminEntry chunk path the plumix vite plugin loads", () => {
     expect(menu().adminEntry).toBe(ADMIN_ENTRY_PATH);
+  });
+});
+
+describe("the plugin's procedures on a test site", () => {
+  test("are typed on site.rpc where the plugin is installed", () => {
+    type Rpc = Awaited<
+      ReturnType<
+        typeof testSite<Record<never, never>, [ReturnType<typeof menu>]>
+      >
+    >["rpc"];
+
+    expectTypeOf<Rpc["menu"]["delete"]>()
+      .parameter(0)
+      .toEqualTypeOf<{ termId: number }>();
   });
 });

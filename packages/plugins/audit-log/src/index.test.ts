@@ -1,7 +1,8 @@
 import type { PlumixApp } from "plumix";
+import type { testSite } from "plumix/test";
 import { sqliteTable } from "drizzle-orm/sqlite-core";
 import { createDispatcherHarness, generateSchemaSource } from "plumix/test";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, expectTypeOf, test } from "vitest";
 
 import type { AuditLogStorage } from "./types.js";
 import { auditLog as auditLogTable } from "./db/schema.js";
@@ -71,5 +72,19 @@ describe("auditLog() — plumix migrate generate", () => {
   test("the default sqlite() storage emits and binds the audit_log table", () => {
     expect(emittedSchema()).toContain(DEFAULT_EXPORT);
     expect(app.schema.auditLog).toBe(auditLogTable);
+  });
+});
+
+describe("the plugin's procedures on a test site", () => {
+  test("are typed on site.rpc where the plugin is installed", () => {
+    type Rpc = Awaited<
+      ReturnType<
+        typeof testSite<Record<never, never>, [ReturnType<typeof auditLog>]>
+      >
+    >["rpc"];
+
+    expectTypeOf<
+      NonNullable<Parameters<Rpc["audit_log"]["list"]>[0]>
+    >().toHaveProperty("eventPrefix");
   });
 });
