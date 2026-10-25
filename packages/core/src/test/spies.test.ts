@@ -23,6 +23,27 @@ describe("spyEvent", () => {
     expect(spy.calls).toEqual([{ payload: { id: 1 } }, { payload: { id: 2 } }]);
   });
 
+  test("reads the most recent payload as lastPayload", async () => {
+    const hooks = new HookRegistry();
+    const spy = spyEvent(hooks, saved);
+    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    await ctx.events.emit(saved, { id: 1 });
+
+    await ctx.events.emit(saved, { id: 2 });
+
+    expect(spy.lastPayload).toEqual({ id: 2 });
+  });
+
+  test("passes an assertion an emitted payload matches", async () => {
+    const hooks = new HookRegistry();
+    const spy = spyEvent(hooks, saved);
+    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    await ctx.events.emit(saved, { id: 1 });
+    await ctx.events.emit(saved, { id: 2 });
+
+    expect(spy.assertCalledWith(({ id }) => id === 2)).toBe(spy);
+  });
+
   test("fails an assertion no emitted payload matches", async () => {
     const hooks = new HookRegistry();
     const spy = spyEvent(hooks, saved);
@@ -47,6 +68,29 @@ describe("spyFilter on a declared filter", () => {
       result: "Home",
       calls: [{ input: "Home", rest: [{ locale: "en" }] }],
     });
+  });
+
+  test("passes an assertion a call matches", async () => {
+    const hooks = new HookRegistry();
+    const spy = spyFilter(hooks, title);
+    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    ctx.filters.apply(title, "Home", { locale: "en" });
+    ctx.filters.apply(title, "About", { locale: "uk" });
+
+    expect(spy.assertCalledWith((_value, { locale }) => locale === "uk")).toBe(
+      spy,
+    );
+  });
+
+  test("fails an assertion no call matches, naming the filter", async () => {
+    const hooks = new HookRegistry();
+    const spy = spyFilter(hooks, title);
+    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    ctx.filters.apply(title, "Home", { locale: "en" });
+
+    expect(() =>
+      spy.assertCalledWith((_value, { locale }) => locale === "uk"),
+    ).toThrow("spyFilter(acme:title): no call matched the supplied matcher");
   });
 
   test("returns what an override returns", async () => {
