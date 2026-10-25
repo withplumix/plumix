@@ -79,6 +79,8 @@ const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
+/** RFC 9728's well-known prefix, inlined so the eager graph skips the SDK. */
+const PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource";
 const API_PREFIX = "/_plumix/api";
 /** Inlined, not imported, so the eager graph skips the routes. */
 const SYNC_PREFIX = "/_plumix/api/v1/system/sync/";
@@ -97,6 +99,9 @@ function coreAnswersPlumixPath(pathname: string): boolean {
   );
 }
 
+const loadResourceMetadata = loadOnce(
+  () => import("../mcp/resource-metadata.js"),
+);
 const loadSyncSettle = loadOnce(() => import("./sync-settle.js"));
 const loadSyncTransfer = loadOnce(() => import("./sync-transfer.js"));
 
@@ -288,14 +293,16 @@ async function tryColdInterfaces(
   return null;
 }
 
+/** Auto-enabled in dev so a coding agent reaches it with no config flag. */
+function mcpServed(app: PlumixApp): boolean {
+  return (
+    interfaceEnabled(app.config.mcp) ||
+    (!!process.env.PLUMIX_DEV && app.dev !== undefined)
+  );
+}
+
 async function dispatchMcp(app: PlumixApp, ctx: AppContext): Promise<Response> {
-  // Auto-enabled in dev so a coding agent reaches it with no config flag.
-  if (
-    !interfaceEnabled(app.config.mcp) &&
-    (!process.env.PLUMIX_DEV || app.dev === undefined)
-  ) {
-    return notFound("mcp-disabled");
-  }
+  if (!mcpServed(app)) return notFound("mcp-disabled");
   const handleMcpRequest = await app.loadMcpHandler();
   return handleMcpRequest(ctx);
 }
@@ -389,7 +396,32 @@ async function tryPlumixRoutes(
   return null;
 }
 
+/**
+ * Matched before `basePath` is stripped: RFC 9728 puts the prefix at the
+ * origin root, ahead of the mounted path. The bare prefix answers for clients
+ * that probe only the root.
+ */
+async function tryMcpMetadata(
+  app: PlumixApp,
+  ctx: AppContext,
+): Promise<Response | null> {
+  const { pathname } = new URL(ctx.request.url);
+  if (
+    pathname !== PROTECTED_RESOURCE_PREFIX &&
+    pathname !==
+      `${PROTECTED_RESOURCE_PREFIX}${withBasePath(MCP_PATH, app.config.basePath)}`
+  ) {
+    return null;
+  }
+  if (!mcpServed(app)) return notFound("mcp-disabled");
+  const { handleProtectedResourceMetadata } = await loadResourceMetadata();
+  return withNoStore(handleProtectedResourceMetadata(ctx));
+}
+
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {
+  const metadata = await tryMcpMetadata(app, ctx);
+  if (metadata) return metadata;
+
   const rebased = stripBasePathOrReject(app, ctx);
   if (rebased instanceof Response) return rebased;
   ctx = rebased;

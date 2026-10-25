@@ -9,6 +9,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import corePackage from "../../package.json" with { type: "json" };
 import { McpToolError, toToolErrorResult } from "./errors.js";
+import { capabilityChallenge } from "./resource-metadata.js";
 import { toToolInputJsonSchema } from "./schema-projection.js";
 
 const SERVER_INFO = { name: "plumix", version: corePackage.version } as const;
@@ -28,6 +29,10 @@ export function buildMcpServer(
         description: tool.description,
         inputSchema: toolInput(tool),
         annotations: tool.annotations ?? READ_ONLY,
+        scopeChallenge:
+          tool.capability === undefined
+            ? undefined
+            : capabilityChallenge(ctx, tool.capability),
       },
       (input): Promise<CallToolResult> =>
         // The SDK refuses an unknown tool or a bad input before this runs, so
