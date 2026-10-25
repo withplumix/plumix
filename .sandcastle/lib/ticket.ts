@@ -50,7 +50,8 @@ const TRIAL_IMPLEMENTER: Thinker = {
 export const implementerFor = (ticket: Ticket): Thinker =>
   ticket.number % 2 === 0 ? TRIAL_IMPLEMENTER : IMPLEMENTER;
 
-const REVIEWER: Thinker = { model: "claude-sonnet-5-5", effort: "high" };
+/** Opus, so the review is never weaker than the code it checks, whichever model implemented it. */
+const REVIEWER: Thinker = { model: "claude-opus-5-5", effort: "high" };
 
 const MAX_GATE_FIX_ROUNDS = 4;
 const MAX_REVIEW_FIX_ROUNDS = 3;
