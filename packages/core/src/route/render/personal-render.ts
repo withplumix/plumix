@@ -4,6 +4,7 @@ import type {
 } from "../../context/app-context.js";
 import type { RequestMemo } from "../../context/memo.js";
 import { getCapabilityResolver } from "../../auth/rbac.js";
+import { rebindDispatch } from "../../hooks/dispatch.js";
 import { resolveLocale } from "../../i18n/resolve-locale.js";
 
 /**
@@ -34,10 +35,12 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
   const mark = () => {
     verdict.personal = true;
   };
-  return {
+  const tracked: AppContext = {
     // `settings` stays bound to `ctx`: the same principal and request, but a
     // write's subscriber reading its actor does not change this response.
     ...ctx,
+    // A block handler the render fires reads the principal through `tracked`.
+    ...rebindDispatch(ctx, () => tracked),
     get user() {
       mark();
       return user;
@@ -57,6 +60,7 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
       },
     },
   };
+  return tracked;
 }
 
 /** The bar has nothing to offer a user who cannot open the admin. */

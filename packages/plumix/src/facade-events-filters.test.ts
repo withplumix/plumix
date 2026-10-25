@@ -1,5 +1,4 @@
-// Resolves core's built `dist/`, so `pnpm typecheck` enforces that a plugin
-// reaches the declaring API and core's `block` subject from `plumix/plugin`.
+// Resolves core's built `dist/`, so `pnpm typecheck` is what fails.
 
 import type { ReactNode } from "react";
 import { describe, expectTypeOf, test } from "vitest";

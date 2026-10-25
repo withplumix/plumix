@@ -124,7 +124,7 @@ First-party plugins declare their own the same way: `comment:*` (`plugins/commen
 
 ## How it works
 
-`HookRegistry` holds one sorted-on-read list per name. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from entry, term and user actions). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
+`HookRegistry` holds one sorted-on-read list per string name, and one per declared event or filter id. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from entry, term and user actions). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
 
 The admin bar takes no hook. Its nodes, core's included, are registrations made with `registerAdminBarNode` and held in the plugin registry's `adminBarNodes` (see [Plugin system](./plugin-system.md)), so no handler can remove another plugin's node ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)).
 
