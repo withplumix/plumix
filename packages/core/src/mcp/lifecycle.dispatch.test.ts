@@ -7,6 +7,7 @@ import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { definePlugin } from "../plugin/define.js";
+import { getAutosaveEdits } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 
 const blog = definePlugin("test-blog", {
@@ -391,16 +392,46 @@ describe("MCP content_duplicate", () => {
 });
 
 describe("MCP content_discard_draft", () => {
-  test("drops the caller's pending draft and leaves the live entry", async () => {
+  test("drops the caller's pending draft and leaves the live entry as it was", async () => {
     const h = await mcpHarness();
-    const secret = await mintPat(h);
-    const { id, etag } = await draftOf(h, secret);
-
-    const result = parsed<Written>(
-      await callTool(h, secret, "content_discard_draft", { type: "post", id }),
+    const author = await h.factory.user.create({ role: "editor" });
+    const secret = await mintPat(h, { userId: author.id });
+    const created = parsed<Written>(
+      await callTool(h, secret, "content_create", {
+        type: "article",
+        slug: "piece",
+        title: "Live",
+        excerpt: "Live excerpt",
+      }),
+    );
+    const { id, etag } = parsed<Written>(
+      await callTool(h, secret, "content_publish", {
+        type: "article",
+        id: created.id,
+        ifMatch: created.etag,
+      }),
+    );
+    await callTool(h, secret, "content_update", {
+      type: "article",
+      id,
+      ifMatch: etag,
+      excerpt: "Pending excerpt",
+    });
+    const pending = { entryId: id, authorId: author.id };
+    expect((await getAutosaveEdits(h.db, pending))?.excerpt).toBe(
+      "Pending excerpt",
     );
 
-    expect(result).toEqual({ id, etag, status: "draft" });
+    const result = parsed<Written>(
+      await callTool(h, secret, "content_discard_draft", {
+        type: "article",
+        id,
+      }),
+    );
+
+    expect(result).toEqual({ id, etag, status: "published" });
+    expect(await getAutosaveEdits(h.db, pending)).toBeUndefined();
+    expect((await rowOf(h, id))?.excerpt).toBe("Live excerpt");
   });
 
   test("an id of another entry type is not found", async () => {
