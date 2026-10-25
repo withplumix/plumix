@@ -171,6 +171,29 @@ describe("acting as a role", () => {
   });
 });
 
+describe("a site bound to a role and kept across tests", () => {
+  const editor = calling.actingAs("editor");
+
+  test("signs in as a user created in the first test", async () => {
+    const session = await editor.rpc.auth.session();
+
+    expect(session.user).toMatchObject({ id: 1, role: "editor" });
+  });
+
+  test("signs in as a user created again in the next test", async () => {
+    const session = await editor.rpc.auth.session();
+
+    expect(session.user).toMatchObject({ id: 1, role: "editor" });
+  });
+
+  test("calls as one user for as long as a test lasts", async () => {
+    const first = await editor.rpc.auth.session();
+    const second = await editor.rpc.auth.session();
+
+    expect(second.user?.id).toBe(first.user?.id);
+  });
+});
+
 describe("a role without the capability", () => {
   test("is refused, as it is over the wire", async () => {
     const creating = calling.actingAs("subscriber").rpc.entry.create({

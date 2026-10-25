@@ -88,7 +88,6 @@ export interface TestSite<
   readonly actingAs: (principal: User | UserRole) => TestSite<TFactories, TRpc>;
 }
 
-/** Every router the plugins declare, so a plugin not installed has none. */
 type InstalledRpc<TPlugins extends readonly AnyPluginDescriptor[]> =
   TPlugins extends readonly [
     Pick<PluginDescriptor<never, infer TRpc>, "~rpc">,
