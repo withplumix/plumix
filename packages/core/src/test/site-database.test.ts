@@ -35,6 +35,30 @@ describe("resetting the site database", () => {
     expect(await db.all(sql`SELECT * FROM note_log`)).toEqual([]);
   });
 
+  test("leaves no rows a trigger wrote with INSERT OR IGNORE", async () => {
+    const { db, reset } = await createSiteDatabase([
+      CORE_MIGRATIONS,
+      TRIGGER_WRITTEN,
+    ]);
+    await db.run(sql`INSERT INTO things (id) VALUES (1), (2)`);
+
+    await reset();
+
+    expect(await db.all(sql`SELECT * FROM audit`)).toEqual([]);
+  });
+
+  test("empties a plain table named after a full-text table", async () => {
+    const { db, reset } = await createSiteDatabase([
+      CORE_MIGRATIONS,
+      TRIGGER_WRITTEN,
+    ]);
+    await db.run(sql`INSERT INTO docs_log (note) VALUES ('kept')`);
+
+    await reset();
+
+    expect(await db.all(sql`SELECT * FROM docs_log`)).toEqual([]);
+  });
+
   test("leaves db.transaction and db.batch working", async () => {
     const { db, reset } = await createSiteDatabase([CORE_MIGRATIONS]);
     await factoriesFor(db).admin.create();

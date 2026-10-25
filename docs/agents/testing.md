@@ -5,7 +5,8 @@ How the test suites run and where their shared helpers live. The rules for writi
 
 ## The test kits
 
-A consumer package imports its unit-test kit from `plumix/test`: the harnesses
+A consumer package imports its unit-test kit from `plumix/test`: `testSite`, which boots a whole site
+for a test, the older harnesses
 (`createRpcHarness`, the dispatcher), the fishery factories, `stubPluginRpc`, the block render
 helpers, the `fakeFile`/`fakeImage` upload fakes, the mail kit: `fakeMail`, which both harnesses
 install as `h.mail`, and `renderMail`, and `fakeCdn`, which a test hands the dispatcher harness as

@@ -85,7 +85,6 @@ export async function testSite<
     migrationFolders(siteRootOf(cwd), config.plugins),
   );
   let fakes = freshFakes();
-  // Booted once per file; only the data and the fakes reset between its tests.
   beforeEach(async () => {
     await reset();
     fakes = freshFakes();

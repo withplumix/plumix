@@ -36,17 +36,27 @@ const probe = definePlugin("probe", {
 const site = await testSite({ plugins: [probe] });
 
 describe("a page's status assertions", () => {
-  test("assertOk passes on 200 and names the status it got", async () => {
-    (await site.visit("/_plumix/probe/json")).assertOk();
-    const missing = await site.visit("/nowhere");
+  test("assertOk passes on 200", async () => {
+    const page = await site.visit("/_plumix/probe/json");
 
-    expect(() => missing.assertOk()).toThrow(
+    expect(() => page.assertOk()).not.toThrow();
+  });
+
+  test("assertOk names the status it got", async () => {
+    const page = await site.visit("/nowhere");
+
+    expect(() => page.assertOk()).toThrow(
       "assertOk: expected status 200, got 404.",
     );
   });
 
-  test("assertNotFound passes on 404 and names the status it got", async () => {
-    (await site.visit("/nowhere")).assertNotFound();
+  test("assertNotFound passes on 404", async () => {
+    const page = await site.visit("/nowhere");
+
+    expect(() => page.assertNotFound()).not.toThrow();
+  });
+
+  test("assertNotFound names the status it got", async () => {
     const page = await site.visit("/_plumix/probe/json");
 
     expect(() => page.assertNotFound()).toThrow(
@@ -54,8 +64,13 @@ describe("a page's status assertions", () => {
     );
   });
 
-  test("assertForbidden passes on 403 and names the status it got", async () => {
-    (await site.visit("/_plumix/probe/forbidden")).assertForbidden();
+  test("assertForbidden passes on 403", async () => {
+    const page = await site.visit("/_plumix/probe/forbidden");
+
+    expect(() => page.assertForbidden()).not.toThrow();
+  });
+
+  test("assertForbidden names the status it got", async () => {
     const page = await site.visit("/_plumix/probe/json");
 
     expect(() => page.assertForbidden()).toThrow(
@@ -65,11 +80,14 @@ describe("a page's status assertions", () => {
 });
 
 describe("assertRedirect", () => {
-  test("passes on a redirect to the path, absolute or not", async () => {
-    const page = await site.visit("/_plumix/probe/moved");
+  test.each(["/there", "https://cms.example/there"])(
+    "passes on a redirect to %s",
+    async (to) => {
+      const page = await site.visit("/_plumix/probe/moved");
 
-    page.assertRedirect("/there").assertRedirect("https://cms.example/there");
-  });
+      expect(() => page.assertRedirect(to)).not.toThrow();
+    },
+  );
 
   test("names where the redirect went instead", async () => {
     const page = await site.visit("/_plumix/probe/moved");
@@ -89,20 +107,34 @@ describe("assertRedirect", () => {
 });
 
 describe("a page's text assertions", () => {
-  test("assertSee passes on text as written or escaped, and shows the page it missed", async () => {
+  test.each(["Fish & Chips", "<ul>"])(
+    "assertSee passes on %s, as written or escaped",
+    async (text) => {
+      await site.factory.published.create({ title: "Fish & Chips" });
+      const page = await site.visit("/");
+
+      expect(() => page.assertSee(text)).not.toThrow();
+    },
+  );
+
+  test("assertSee names the text it missed and shows the page", async () => {
     await site.factory.published.create({ title: "Fish & Chips" });
     const page = await site.visit("/");
 
-    page.assertSee("Fish & Chips").assertSee("<ul>");
     expect(() => page.assertSee("Mushy peas")).toThrow(
       /^assertSee: expected the page to contain "Mushy peas", but it does not\.\n.*Fish &amp; Chips/s,
     );
   });
 
-  test("assertDontSee passes on absent text and names the text it found", async () => {
+  test("assertDontSee passes on absent text", async () => {
     const page = await site.visit("/_plumix/probe/json");
 
-    page.assertDontSee("bye");
+    expect(() => page.assertDontSee("bye")).not.toThrow();
+  });
+
+  test("assertDontSee names the text it found", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
     expect(() => page.assertDontSee("hi")).toThrow(
       'assertDontSee: expected the page not to contain "hi", but it does.',
     );
@@ -110,10 +142,15 @@ describe("a page's text assertions", () => {
 });
 
 describe("a page's routing assertions", () => {
-  test("assertTemplate names the template that rendered", async () => {
+  test("assertTemplate passes on the template that rendered", async () => {
     const page = await site.visit("/");
 
-    page.assertTemplate("fallback");
+    expect(() => page.assertTemplate("fallback")).not.toThrow();
+  });
+
+  test("assertTemplate names the template that rendered instead", async () => {
+    const page = await site.visit("/");
+
     expect(() => page.assertTemplate("front-page")).toThrow(
       'assertTemplate: expected "front-page", got "fallback".',
     );
@@ -127,10 +164,15 @@ describe("a page's routing assertions", () => {
     );
   });
 
-  test("assertRoute names the route pattern that matched", async () => {
+  test("assertRoute passes on the route pattern that matched", async () => {
     const page = await site.visit("/");
 
-    page.assertRoute("/");
+    expect(() => page.assertRoute("/")).not.toThrow();
+  });
+
+  test("assertRoute names the route pattern that matched instead", async () => {
+    const page = await site.visit("/");
+
     expect(() => page.assertRoute("/:slug")).toThrow(
       'assertRoute: expected route "/:slug", got "/".',
     );
@@ -146,22 +188,40 @@ describe("a page's routing assertions", () => {
 });
 
 describe("a page's header and body assertions", () => {
-  test("assertHeader passes on presence or value and names what it found", async () => {
+  test.each([[undefined], ["yes"]])(
+    "assertHeader passes on a header with the value %s",
+    async (value) => {
+      const page = await site.visit("/_plumix/probe/json");
+
+      expect(() => page.assertHeader("X-Probe", value)).not.toThrow();
+    },
+  );
+
+  test("assertHeader names the value it found", async () => {
     const page = await site.visit("/_plumix/probe/json");
 
-    page.assertHeader("x-probe").assertHeader("X-Probe", "yes");
     expect(() => page.assertHeader("x-probe", "no")).toThrow(
       'assertHeader: expected "x-probe" to be "no", got "yes".',
     );
+  });
+
+  test("assertHeader says when the header is missing", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
     expect(() => page.assertHeader("x-missing")).toThrow(
       'assertHeader: expected a "x-missing" header, but there is none.',
     );
   });
 
-  test("assertJson passes on a subset of the body and shows the body it got", async () => {
+  test("assertJson passes on a subset of the body", async () => {
     const page = await site.visit("/_plumix/probe/json");
 
-    page.assertJson({ greeting: "hi" });
+    expect(() => page.assertJson({ greeting: "hi" })).not.toThrow();
+  });
+
+  test("assertJson shows the body it got", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
     expect(() => page.assertJson({ greeting: "bye" })).toThrow(
       'assertJson: expected the body to match {"greeting":"bye"}, got {"greeting":"hi","count":1}.',
     );

@@ -1,5 +1,3 @@
-// A project's config as `testSite()` finds it in the working directory. Every
-// slot the kit fakes throws when used, so a test that touches one fails.
 import { auth } from "../../../auth/config.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { plumix } from "../../../runtime/define-config.js";
@@ -11,7 +9,7 @@ const notes = definePlugin("notes", {
   },
 });
 
-function opened(slot: string): () => never {
+function throwsWhenConnected(slot: string): () => never {
   return () => {
     throw new Error(`The project's ${slot} was connected.`);
   };
@@ -25,9 +23,9 @@ export default plumix({
       throw new Error("The project's file database was opened.");
     },
   },
-  cdn: { kind: "project", connect: opened("cdn") },
-  storage: { kind: "project", connect: opened("storage") },
-  kv: { kind: "project", connect: opened("kv") },
+  cdn: { kind: "project", connect: throwsWhenConnected("cdn") },
+  storage: { kind: "project", connect: throwsWhenConnected("storage") },
+  kv: { kind: "project", connect: throwsWhenConnected("kv") },
   mailer: {
     send: () => {
       throw new Error("The project's mailer was used.");

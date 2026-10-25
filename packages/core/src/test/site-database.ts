@@ -47,9 +47,8 @@ export async function createSiteDatabase(
   };
 }
 
-interface TableRow {
+interface Named {
   readonly name: string;
-  readonly sql: string;
 }
 
 /**
@@ -58,29 +57,29 @@ interface TableRow {
  * the others fires the trigger.
  */
 async function resetScript(client: Client): Promise<string> {
+  const { virtual, shadow } = await fullTextTables(client);
   const tables = (
-    await client.execute(
-      "SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle_migrations%'",
-    )
-  ).rows as unknown as readonly TableRow[];
-  // A full-text index is cleared by its own command; its shadow tables are its.
-  const virtual = tables
-    .filter((table) => /^CREATE VIRTUAL TABLE/i.test(table.sql))
-    .map((table) => table.name);
-  const plain = tables
-    .map((table) => table.name)
-    .filter(
-      (name) =>
-        !virtual.some(
-          (index) => name === index || name.startsWith(`${index}_`),
-        ),
-    );
+    (
+      await client.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__drizzle_migrations%'",
+      )
+    ).rows as unknown as readonly Named[]
+  ).map((row) => row.name);
+  const plain = tables.filter(
+    (name) => !virtual.includes(name) && !shadow.includes(name),
+  );
   const triggers = (
-    await client.execute("SELECT sql FROM sqlite_master WHERE type = 'trigger'")
-  ).rows as unknown as readonly { readonly sql: string }[];
+    (
+      await client.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'trigger'",
+      )
+    ).rows as unknown as readonly { readonly sql: string }[]
+  ).map((row) => row.sql);
   const written = new Set(
-    triggers.flatMap(({ sql }) =>
-      [...sql.matchAll(/INSERT\s+INTO\s+["`]?(\w+)/gi)].map(([, name]) => name),
+    triggers.flatMap((sql) =>
+      [...sql.matchAll(/INSERT\s+(?:OR\s+\w+\s+)?INTO\s+["`]?(\w+)/gi)].map(
+        ([, name]) => name,
+      ),
     ),
   );
   const hasSequence = (
@@ -100,4 +99,15 @@ async function resetScript(client: Client): Promise<string> {
     ...(hasSequence ? ["DELETE FROM sqlite_sequence"] : []),
     "PRAGMA foreign_keys = ON",
   ].join(";\n");
+}
+
+/** A full-text table is cleared by its own command, which empties its shadows. */
+async function fullTextTables(
+  client: Client,
+): Promise<{ virtual: string[]; shadow: string[] }> {
+  const listed = (await client.execute("PRAGMA table_list"))
+    .rows as unknown as readonly (Named & { readonly type: string })[];
+  const named = (type: string): string[] =>
+    listed.filter((row) => row.type === type).map((row) => row.name);
+  return { virtual: named("virtual"), shadow: named("shadow") };
 }

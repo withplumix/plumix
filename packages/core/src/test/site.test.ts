@@ -35,8 +35,9 @@ const counted = definePlugin("counted", {
 const resetting = await testSite({ plugins: [posts, counted] });
 
 describe("before each test", () => {
-  for (const name of ["the first test", "the second test"]) {
-    test(`${name} sees an empty database whose ids restart at 1`, async () => {
+  test.each(["the first test", "the second test"])(
+    "%s sees an empty database whose ids restart at 1",
+    async () => {
       expect(await resetting.context.db.query.entries.findMany()).toEqual([]);
       expect(await resetting.context.db.query.users.findMany()).toEqual([]);
 
@@ -44,8 +45,8 @@ describe("before each test", () => {
 
       expect([post.authorId, post.id]).toEqual([1, 1]);
       expect(boots).toBe(1);
-    });
-  }
+    },
+  );
 });
 
 /** Shaped as a plugin's factory is: bound to the site's db through `transient`. */
