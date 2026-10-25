@@ -13,6 +13,7 @@ import {
   commitsTheBranchCarries,
   fixerFor,
   gatesUntilGreen,
+  IMPLEMENTER,
   readDeclinedTag,
   readFindingsTag,
   readGuidanceTag,
@@ -20,7 +21,6 @@ import {
   readReviewTag,
   readTemplatedPullRequest,
   reviewBranch,
-  reviewerFor,
 } from "./ticket.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
@@ -28,11 +28,9 @@ const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
 const findingsBlock = (json: string) =>
   `chatter before\n<findings>\n${json}\n</findings>\nchatter after`;
 
-describe("reviewerFor", () => {
-  test("the lead reads the branch first, and the senior checks the fixes on later passes", () => {
-    expect(reviewerFor(1).model).toBe("claude-opus-5-5");
-    expect(reviewerFor(2).model).toBe("claude-sonnet-5-5");
-    expect(reviewerFor(3).model).toBe("claude-sonnet-5-5");
+describe("IMPLEMENTER", () => {
+  test("implementation runs on Opus", () => {
+    expect(IMPLEMENTER.model).toBe("claude-opus-5-5");
   });
 });
 

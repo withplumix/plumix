@@ -34,24 +34,18 @@ import {
 } from "./sandbox.js";
 
 /**
- * Sonnet is the senior engineer: it implements, fixes review gaps and gate
- * failures, resolves conflicts and repairs red CI. Opus is the lead: it reviews
- * every ticket, decides parks from the documents, and unblocks the senior with
- * guidance when an implementation comes back empty.
+ * Opus implements, fixes, resolves conflicts and repairs; Sonnet reviews. On
+ * 2026-10-25 the reverse cost five times the usage per ticket ($34.5 against
+ * $6.9 median): an Opus reviewer sent Sonnet's work round 2.8 review passes
+ * instead of 1.3, and the subscription ran dry twice. Opus as the lead still
+ * decides parks and unblocks an empty implementation.
  */
 export const IMPLEMENTER: Thinker = {
-  model: "claude-sonnet-5-5",
+  model: "claude-opus-5-5",
   effort: "medium",
 };
 const LEAD: Thinker = { model: "claude-opus-5-5", effort: "high" };
-const FOLLOW_UP_REVIEWER: Thinker = {
-  model: "claude-sonnet-5-5",
-  effort: "high",
-};
-
-/** A later pass mostly checks that the first pass's gaps were fixed, so the senior runs it; Opus review was half the loop's usage. */
-export const reviewerFor = (pass: number): Thinker =>
-  pass === 1 ? LEAD : FOLLOW_UP_REVIEWER;
+const REVIEWER: Thinker = { model: "claude-sonnet-5-5", effort: "high" };
 
 export const afterImplementing = ({
   commits,
@@ -248,7 +242,7 @@ export const reviewBranch = async (
   mutation: string,
 ): Promise<Review | null> => {
   const phase = `review#${round}`;
-  const reviewer = reviewerFor(round);
+  const reviewer = REVIEWER;
   const reviewed = await runAgentPhase(phase, reviewer, {
     promptFile: join(PROMPT_DIR, "review.md"),
     promptArgs: {
