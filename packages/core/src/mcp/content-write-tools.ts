@@ -1,7 +1,9 @@
 import { ORPCError } from "@orpc/server";
 import * as v from "valibot";
 
+import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
+import type { LeaseResource } from "../db/edit-lease.js";
 import { lapseEditLease } from "../db/edit-lease.js";
 import { idParam } from "../rpc/contract/validation.js";
 import {
@@ -53,14 +55,46 @@ interface IssueData {
   }[];
 }
 
-function asWriteToolError(error: unknown, retryTool: string): McpToolError {
+const SUBJECTS = {
+  entry: { noun: "entry", getTool: "content_get", listTool: "content_list" },
+  term: { noun: "term", getTool: "term_get", listTool: "term_list" },
+} as const;
+
+interface RefusalWording {
+  readonly subject?: keyof typeof SUBJECTS;
+  /** False for a tool that takes no content, so the agent has no node to fix. */
+  readonly contentFixable?: boolean;
+}
+
+/**
+ * A procedure's refusal as the tool answer that names the next call.
+ * `retryTool` is the tool whose input the agent changes or retries.
+ */
+export function asWriteToolError(
+  error: unknown,
+  retryTool: string,
+  { subject = "entry", contentFixable = true }: RefusalWording = {},
+): McpToolError {
   if (!(error instanceof ORPCError)) throw error;
   const data: unknown = error.data;
+  const { noun, getTool, listTool } = SUBJECTS[subject];
   switch (error.code) {
-    case "NOT_FOUND":
+    case "NOT_FOUND": {
+      const kind = (data as { kind?: string } | undefined)?.kind;
+      if (kind === "revision") {
+        return McpToolError.notFound(
+          "No such revision. Call revision_list to find one.",
+        );
+      }
+      if (kind === "taxonomy") {
+        return McpToolError.notFound(
+          "No such taxonomy. Call taxonomy_list to find one.",
+        );
+      }
       return McpToolError.notFound(
-        "No such entry. Call content_list to find one.",
+        `No such ${noun}. Call ${listTool} to find one.`,
       );
+    }
     case "FORBIDDEN":
       return McpToolError.forbidden(
         `Your token may not do this${capabilityOf(data)}.`,
@@ -71,7 +105,7 @@ function asWriteToolError(error: unknown, retryTool: string): McpToolError {
         since: Date;
       };
       return McpToolError.locked(
-        `${holder.name} has been editing this entry since ${since.toISOString()}. Report this to the user and stop; do not retry.`,
+        `${holder.name} has been editing this ${noun} since ${since.toISOString()}. Report this to the user and stop; do not retry.`,
       );
     }
     case "INVALID_BLOCK_CONTENT": {
@@ -80,14 +114,16 @@ function asWriteToolError(error: unknown, retryTool: string): McpToolError {
         .map((issue) => `${issue.path}: ${issue.message}`)
         .join("; ");
       return McpToolError.invalidContent(
-        `${failing}. Fix these nodes and call ${retryTool} again.`,
+        contentFixable
+          ? `${failing}. Fix these nodes and call ${retryTool} again.`
+          : `${failing}. Report this to the user and stop; ${retryTool} takes no content you could fix.`,
       );
     }
     case "CONFLICT": {
       const { reason, etag } = data as { reason: string; etag?: string };
       if (reason === "etag_mismatch") {
         return McpToolError.conflict(
-          `The entry changed since you read it; its current etag is ${etag ?? "unknown"}. Call content_get, reapply your change to what it returns, and retry content_update with the new etag as ifMatch.`,
+          `The ${noun} changed since you read it; its current etag is ${etag ?? "unknown"}. Call ${getTool}, reapply your change to what it returns, and retry ${retryTool} with the new etag as ifMatch.`,
         );
       }
       return McpToolError.conflict(
@@ -122,6 +158,40 @@ export const contentCreateTool: McpTool<typeof createInputSchema> = {
   },
 };
 
+/** The entry, read as the token's principal; a type mismatch stays hidden as not-found. */
+export async function entryOfType(
+  client: ReturnType<typeof mcpRouterClient>,
+  type: string,
+  id: number,
+) {
+  const existing = await client.entry.get({ id });
+  if (existing.type !== type) {
+    throw new ORPCError("NOT_FOUND", { data: { kind: "entry", id } });
+  }
+  return existing;
+}
+
+/**
+ * Held for this call only: the write is checked against the lease, and the
+ * agent never keeps one between calls.
+ */
+export async function holdingLease<T>(
+  ctx: AppContext,
+  resource: LeaseResource,
+  acquire: () => Promise<{ readonly holder: { readonly id: number } }>,
+  write: () => Promise<T>,
+): Promise<T> {
+  let holderId: number | undefined;
+  try {
+    holderId = (await acquire()).holder.id;
+    return await write();
+  } finally {
+    if (holderId !== undefined) {
+      await lapseEditLease(ctx.db, resource, holderId);
+    }
+  }
+}
+
 export const contentUpdateTool: McpTool<typeof updateInputSchema> = {
   name: "content_update",
   description:
@@ -130,27 +200,17 @@ export const contentUpdateTool: McpTool<typeof updateInputSchema> = {
   annotations: WRITE,
   async run(ctx, { type, ...input }) {
     const client = mcpRouterClient(ctx);
-    let holderId: number | undefined;
     try {
-      const existing = await client.entry.get({ id: input.id });
-      // A type mismatch stays hidden as not-found.
-      if (existing.type !== type) {
-        throw new ORPCError("NOT_FOUND", {
-          data: { kind: "entry", id: input.id },
-        });
-      }
-      // Held for this call only: the write is checked against the lease, and
-      // the agent never keeps one between calls.
-      const lease = await client.entry.lease.acquire({ id: input.id });
-      holderId = lease.holder.id;
-      const written = await client.entry.update(input);
+      await entryOfType(client, type, input.id);
+      const written = await holdingLease(
+        ctx,
+        { kind: "entry", id: input.id },
+        () => client.entry.lease.acquire({ id: input.id }),
+        () => client.entry.update(input),
+      );
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
       throw asWriteToolError(error, "content_update");
-    } finally {
-      if (holderId !== undefined) {
-        await lapseEditLease(ctx.db, { kind: "entry", id: input.id }, holderId);
-      }
     }
   },
 };

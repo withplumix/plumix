@@ -1,11 +1,20 @@
 import type { McpTool } from "../context/mcp-tool.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import {
+  contentDiscardDraftTool,
+  contentDuplicateTool,
+  contentPublishTool,
+  contentRestoreTool,
+  contentTrashTool,
+} from "./content-lifecycle-tools.js";
 import { contentGetTool, contentListTool } from "./content-tools.js";
 import { contentCreateTool, contentUpdateTool } from "./content-write-tools.js";
 import { errorMcpTools } from "./error-tools.js";
+import { revisionListTool, revisionRestoreTool } from "./revision-tools.js";
 import { schemaDescribeTool } from "./schema-describe.js";
 import { telemetryMcpTools } from "./telemetry-tools.js";
 import { taxonomyListTool, termGetTool, termListTool } from "./term-tools.js";
+import { termCreateTool, termUpdateTool } from "./term-write-tools.js";
 
 /**
  * Tools core contributes unconditionally — the MCP analogue of `appRouter`.
@@ -18,8 +27,17 @@ export const coreMcpTools: readonly McpTool[] = [
   contentGetTool,
   contentCreateTool,
   contentUpdateTool,
+  contentPublishTool,
+  contentDiscardDraftTool,
+  contentDuplicateTool,
+  contentTrashTool,
+  contentRestoreTool,
+  revisionListTool,
+  revisionRestoreTool,
   termListTool,
   termGetTool,
+  termCreateTool,
+  termUpdateTool,
   taxonomyListTool,
 ];
 
