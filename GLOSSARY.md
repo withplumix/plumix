@@ -356,6 +356,10 @@ _Avoid_: guard
 A credential for non-browser clients, whose scopes are capabilities, intersected with its owner's.
 _Avoid_: PAT, personal access token, bearer token
 
+**OAuth client**:
+An MCP client that connects to a site through OAuth, identified by the URL of its Client ID Metadata Document. The document must name that URL as its `client_id` and lists the redirect URIs the client may receive codes at. Distinct from the OAuth providers (`github()`, `google()`) a person signs in with.
+_Avoid_: app, registered client
+
 **Access policy**:
 A developer-supplied rule pairing an arbitrary resolve step with a closed, declarable set of audience segments.
 
