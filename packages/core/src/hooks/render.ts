@@ -27,8 +27,8 @@ export interface ArchiveEntriesInput {
 export const render = {
   /**
    * The assembled document, so theme tags are already present. Also runs on
-   * an error render (`data.kind === "error"`), where a throwing handler is
-   * logged and skipped.
+   * an error render (`data.kind === "error"`), where a throw is logged and the
+   * page renders its unfiltered document.
    */
   document: defineFilter<DocumentManifest, RenderDocumentInput>(
     "render:document",

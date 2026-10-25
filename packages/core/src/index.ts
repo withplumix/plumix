@@ -1,7 +1,7 @@
 // Side-effect: exposes core's `TemplateDepRegistry` augmentation.
 import "./template-deps-core.js";
 // Side-effect: anchors public core hook augmentations (entry:*, term:*, user:*,
-// …) into the published declaration graph (#1698).
+// …) into the published declaration graph.
 import "./hooks/public-hooks.js";
 // Side-effect: anchors core's `ctx.entries` augmentation the same way.
 import "./rpc/procedures/entry/writes-shared.js";

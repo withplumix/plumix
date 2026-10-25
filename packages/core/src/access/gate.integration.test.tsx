@@ -1141,7 +1141,7 @@ describe("access gate — a render that reads the principal is personal (#2915)"
     },
   );
 
-  test("a render:document filter calling ctx.auth.can() keeps the render out of the shared entry", async () => {
+  test("a render.document handler calling ctx.auth.can() keeps the render out of the shared entry", async () => {
     const { cdn, store, put } = memoryCdn();
     const can = vi.fn((ctx: AppContext) => ctx.auth.can("entry:article:read"));
     const headWriter = definePlugin("head-writer", {

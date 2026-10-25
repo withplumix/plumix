@@ -321,7 +321,7 @@ describe("resolvePublicRoute — single", () => {
     expect(await response.text()).toContain("<h1>About Acme</h1>");
   });
 
-  test("expands a title a resolve:single:data subscriber rewrote", async () => {
+  test("expands a title a render.single handler rewrote", async () => {
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin] },
     });

@@ -148,7 +148,7 @@ export function seo(
         type: SERP_PREVIEW_INPUT_TYPE,
         component: "SerpPreviewField",
       });
-      // Last on the chain: a gap-filler mid-chain would fill a key a later
+      // Late on the chain: a gap-filler mid-chain would fill a key a later
       // subscriber then appends again, putting two of the same tag on the page.
       ctx.filters.add(
         render.document,

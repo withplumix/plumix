@@ -17,7 +17,7 @@ declare module "../../context/dev-runtime.js" {
 }
 
 /**
- * `render:document` fires during a real page render, before the bar, so the
+ * `render.document` runs during a real page render, before the bar, so the
  * recorded entry is present by panel time.
  */
 const demoPlugin = definePlugin("debug-demo", {

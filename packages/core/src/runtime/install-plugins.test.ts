@@ -2482,16 +2482,32 @@ describe("declared events and filters", () => {
   });
 
   test.each([
-    ["filter", "render:document"],
-    ["filter", "render:archiveEntries"],
-    ["event", "sync:after"],
-  ] as const)(
-    "a plugin declaring core's %s %s fails boot naming core",
-    async (kind, id) => {
+    {
+      declares: {
+        filters: [defineFilter<string>("render:document", { sync: false })],
+      },
+      message:
+        'Plugin "acme" registers filter "render:document" already registered by core.',
+    },
+    {
+      declares: {
+        filters: [
+          defineFilter<string>("render:archiveEntries", { sync: false }),
+        ],
+      },
+      message:
+        'Plugin "acme" registers filter "render:archiveEntries" already registered by core.',
+    },
+    {
+      declares: { events: [defineEvent<string>("sync:after")] },
+      message:
+        'Plugin "acme" registers event "sync:after" already registered by core.',
+    },
+  ])(
+    "a plugin declaring one of core's ids fails boot: $message",
+    async ({ declares, message }) => {
       const plugin = definePlugin("acme", {
-        ...(kind === "event"
-          ? { events: [defineEvent<string>(id)] }
-          : { filters: [defineFilter<string>(id, { sync: false })] }),
+        ...declares,
         setup: () => undefined,
       });
 
@@ -2500,9 +2516,7 @@ describe("declared events and filters", () => {
         plugins: [plugin],
       });
 
-      await expect(install).rejects.toThrow(
-        `Plugin "acme" registers ${kind} "${id}" already registered by core.`,
-      );
+      await expect(install).rejects.toThrow(message);
     },
   );
 });

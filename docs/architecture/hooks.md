@@ -75,7 +75,7 @@ Core's subjects are exported from `plumix/plugin`. `block` (`packages/core/src/h
 | `render.search`         | async filter | `SearchData`                                       | `route/resolve.ts`                                |
 | `render.archiveEntries` | sync filter  | the archive's `EntryQuery` / `{ archive, params }` | `archiveEntries` in `route/archive-entries.ts`    |
 
-`render.document` also runs on an error page (`data.kind === "error"`), where a throwing handler is logged through `ctx.logger` and skipped, so the error page still renders. `render.archiveEntries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
+`render.document` also runs on an error page (`data.kind === "error"`), where a throwing handler is logged through `ctx.logger` and the page renders its unfiltered document, so the error page still renders. `render.archiveEntries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
 
 `sync` (`packages/core/src/hooks/sync.ts`) holds `sync.after`, an event with the `SyncAfterEvent` (`{ scopes, direction }`) as its payload, emitted by `settleSync` in `context/settle-sync.ts` once per sync, on a pull and a push alike.
 

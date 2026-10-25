@@ -363,7 +363,7 @@ describe("feed routes", () => {
   });
 
   // The per-scope hrefs are unit-tested in `discovery.test.ts`; this is the
-  // end-to-end proof that the `render:document` subscriber is installed.
+  // end-to-end proof that the `render.document` handler is installed.
   test("feed discovery <link rel=alternate> tags appear in the head", async () => {
     const h = await harness(blogPlugin);
     await seedPost(h, "hello", "Hello World");
