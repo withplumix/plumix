@@ -6,14 +6,10 @@ import {
   asWriteToolError,
   entryOfType,
   holdingLease,
+  typeParam,
   WRITE,
 } from "./content-write-tools.js";
 import { mcpRouterClient } from "./router-client.js";
-
-export const typeParam = v.pipe(
-  v.string(),
-  v.description("Entry type the id must belong to."),
-);
 
 export const ifMatchParam = v.pipe(
   v.string(),
@@ -70,7 +66,7 @@ export const contentDiscardDraftTool: McpTool<typeof entryRefInputSchema> = {
     try {
       const existing = await entryOfType(client, type, id);
       await client.entry.discardDraft({ id });
-      // The live entry is untouched, so the token read above still stands.
+      // The live entry is untouched, so the etag read above still stands.
       return { id, etag: existing.etag, status: existing.status };
     } catch (error) {
       throw asWriteToolError(error, "content_discard_draft");

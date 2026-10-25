@@ -9,6 +9,7 @@ import { terms } from "../db/schema/terms.js";
 import { definePlugin } from "../plugin/define.js";
 import { getAutosaveEdits } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { currentEtag } from "../test/entry-etag.js";
 
 const blog = definePlugin("test-blog", {
   setup: (ctx) => {
@@ -366,16 +367,13 @@ describe("MCP content_duplicate", () => {
   test("content the site's rules refuse is invalid_content that says to report and stop", async () => {
     const h = await mcpHarness();
     const secret = await mintPat(h);
-    const { id } = await draftOf(h, secret);
-    await h.db
-      .update(entries)
-      .set({
-        content: {
-          version: "plumix.v2",
-          blocks: [{ id: "col1", name: "core/column", attrs: { content: [] } }],
-        },
-      })
-      .where(eq(entries.id, id));
+    const { id } = await h.factory.draft.create({
+      type: "post",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "col1", name: "core/column", attrs: { content: [] } }],
+      },
+    });
 
     const result = await callTool(h, secret, "content_duplicate", {
       type: "post",
@@ -461,20 +459,18 @@ describe("MCP tools/list hints", () => {
     expect(
       written.filter((t) => t.annotations?.destructiveHint).map((t) => t.name),
     ).toEqual(["content_trash"]);
-    expect(written.map((t) => t.name).sort()).toEqual(
-      [
-        "content_create",
-        "content_discard_draft",
-        "content_duplicate",
-        "content_publish",
-        "content_restore",
-        "content_trash",
-        "content_update",
-        "revision_restore",
-        "term_create",
-        "term_update",
-      ].sort(),
-    );
+    expect(written.map((t) => t.name).sort()).toEqual([
+      "content_create",
+      "content_discard_draft",
+      "content_duplicate",
+      "content_publish",
+      "content_restore",
+      "content_trash",
+      "content_update",
+      "revision_restore",
+      "term_create",
+      "term_update",
+    ]);
   });
 });
 
@@ -680,23 +676,21 @@ describe("MCP revision_restore", () => {
   test("a revision the site's rules refuse returns invalid_content with the path and says to report and stop", async () => {
     const h = await mcpHarness();
     const secret = await mintPat(h);
-    const { id, etag } = await editedTwice(h, secret);
-    const first = (await revisionsOf(h, secret, id)).find(
-      (r) => r.title === "First",
-    );
-    await h.db
-      .update(entries)
-      .set({
-        content: {
-          version: "plumix.v2",
-          blocks: [{ id: "col1", name: "core/column", attrs: { content: [] } }],
-        },
-      })
-      .where(eq(entries.id, first?.id ?? 0));
+    const entry = await h.factory.draft.create({
+      type: "post",
+      title: "Second",
+    });
+    const revision = await h.factory.revision.transient({ of: entry }).create({
+      title: "First",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "col1", name: "core/column", attrs: { content: [] } }],
+      },
+    });
 
     const result = await callTool(h, secret, "revision_restore", {
-      revisionId: first?.id,
-      ifMatch: etag,
+      revisionId: revision.id,
+      ifMatch: await currentEtag(h.db, entry.id),
     });
 
     expect(result._meta?.code).toBe("invalid_content");
@@ -705,7 +699,7 @@ describe("MCP revision_restore", () => {
       "Report this to the user and stop",
     );
     expect(result.content[0]?.text).not.toContain("Fix these nodes");
-    expect((await rowOf(h, id))?.title).toBe("Second");
+    expect((await rowOf(h, entry.id))?.title).toBe("Second");
   });
 
   test("an unknown revision is not found", async () => {

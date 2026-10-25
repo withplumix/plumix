@@ -4,11 +4,12 @@ import * as v from "valibot";
 import type { McpTool } from "../context/mcp-tool.js";
 import { decodeRevisionSlug } from "../revisions/slug-codec.js";
 import { idParam } from "../rpc/contract/validation.js";
-import { ifMatchParam, typeParam } from "./content-lifecycle-tools.js";
+import { ifMatchParam } from "./content-lifecycle-tools.js";
 import {
   asWriteToolError,
   entryOfType,
   holdingLease,
+  typeParam,
   WRITE,
 } from "./content-write-tools.js";
 import { mcpRouterClient } from "./router-client.js";

@@ -34,9 +34,14 @@ const updatedFields = v.pick(entryUpdateInputSchema, [
   "terms",
 ]);
 
+export const typeParam = v.pipe(
+  v.string(),
+  v.description("Entry type the id must belong to."),
+);
+
 const updateInputSchema = v.object({
   ...updatedFields.entries,
-  type: v.pipe(v.string(), v.description("Entry type the id must belong to.")),
+  type: typeParam,
   id: idParam,
   ifMatch: v.pipe(
     v.string(),
@@ -65,13 +70,9 @@ interface RefusalWording {
   readonly takesContent?: boolean;
 }
 
-/**
- * A procedure's refusal as the tool answer that names the next call.
- * `retryTool` is the tool whose input the agent changes or retries.
- */
 export function asWriteToolError(
   error: unknown,
-  retryTool: string,
+  tool: string,
   { subject = "entry", takesContent = true }: RefusalWording = {},
 ): McpToolError {
   if (!(error instanceof ORPCError)) throw error;
@@ -114,19 +115,19 @@ export function asWriteToolError(
         .join("; ");
       return McpToolError.invalidContent(
         takesContent
-          ? `${failing}. Fix these nodes and call ${retryTool} again.`
-          : `${failing}. Report this to the user and stop; ${retryTool} takes no content you could fix.`,
+          ? `${failing}. Fix these nodes and call ${tool} again.`
+          : `${failing}. Report this to the user and stop; ${tool} takes no content you could fix.`,
       );
     }
     case "CONFLICT": {
       const { reason, etag } = data as { reason: string; etag?: string };
       if (reason === "etag_mismatch") {
         return McpToolError.conflict(
-          `The ${noun} changed since you read it; its current etag is ${etag ?? "unknown"}. Call ${getTool}, reapply your change to what it returns, and retry ${retryTool} with the new etag as ifMatch.`,
+          `The ${noun} changed since you read it; its current etag is ${etag ?? "unknown"}. Call ${getTool}, reapply your change to what it returns, and retry ${tool} with the new etag as ifMatch.`,
         );
       }
       return McpToolError.conflict(
-        `${reason}. Change the input and call ${retryTool} again.`,
+        `${reason}. Change the input and call ${tool} again.`,
       );
     }
     case "BAD_REQUEST":
@@ -159,7 +160,7 @@ export const contentCreateTool: McpTool<typeof createInputSchema> = {
 
 type RouterClient = ReturnType<typeof mcpRouterClient>;
 
-/** The entry, read as the token's principal; a type mismatch stays hidden as not-found. */
+/** A type mismatch stays hidden as not-found. */
 export async function entryOfType(
   client: RouterClient,
   type: string,
