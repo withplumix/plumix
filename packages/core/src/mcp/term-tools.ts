@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import type { McpTool } from "../context/mcp-tool.js";
+import { etagOf } from "../db/concurrency.js";
 import { labelSourceText } from "../i18n/label.js";
 import { idParam } from "../rpc/contract/validation.js";
 import { termListInputSchema } from "../rpc/procedures/term/schemas.js";
@@ -56,7 +57,8 @@ export const termListTool: McpTool<typeof termListInput> = {
 
 export const termGetTool: McpTool<typeof termGetInput> = {
   name: "term_get",
-  description: "Read a single term in full by its taxonomy and id.",
+  description:
+    "Read a single term in full by its taxonomy and id. Its `etag` is what `term_update` takes as `ifMatch`.",
   inputSchema: termGetInput,
   async run(ctx, input) {
     try {
@@ -66,7 +68,7 @@ export const termGetTool: McpTool<typeof termGetInput> = {
       if (term.taxonomy !== input.taxonomy) {
         throw TermReadError.termNotFound(input.id);
       }
-      return term;
+      return { ...term, etag: etagOf(term.version) };
     } catch (error) {
       throw asMcpToolError(error);
     }

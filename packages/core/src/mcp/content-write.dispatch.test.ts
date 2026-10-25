@@ -264,6 +264,26 @@ describe("MCP content_create and content_update", () => {
     expect(result.content[0]?.text).toContain("content_update");
   });
 
+  test("invalid content on update tells the agent to fix the nodes and call content_update again", async () => {
+    const h = await mcpHarness();
+    const secret = await mintPat(h);
+    const { id, etag } = await draftOf(h, secret);
+
+    const result = await callTool(h, secret, "content_update", {
+      type: "post",
+      id,
+      ifMatch: etag,
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "x1", name: "made-up/block", attrs: {} }],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      "Fix these nodes and call content_update again.",
+    );
+  });
+
   test("invalid content on create tells the agent to call content_create again", async () => {
     const h = await mcpHarness();
     const secret = await mintPat(h);
