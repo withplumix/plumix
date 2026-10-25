@@ -44,6 +44,14 @@ export const IMPLEMENTER: Thinker = {
   effort: "medium",
 };
 const LEAD: Thinker = { model: "claude-opus-5-5", effort: "high" };
+const FOLLOW_UP_REVIEWER: Thinker = {
+  model: "claude-sonnet-5-5",
+  effort: "high",
+};
+
+/** A later pass mostly checks that the first pass's gaps were fixed, so the senior runs it; Opus review was half the loop's usage. */
+export const reviewerFor = (pass: number): Thinker =>
+  pass === 1 ? LEAD : FOLLOW_UP_REVIEWER;
 
 export const afterImplementing = ({
   commits,
@@ -240,7 +248,8 @@ export const reviewBranch = async (
   mutation: string,
 ): Promise<Review | null> => {
   const phase = `review#${round}`;
-  const reviewed = await runAgentPhase(phase, LEAD, {
+  const reviewer = reviewerFor(round);
+  const reviewed = await runAgentPhase(phase, reviewer, {
     promptFile: join(PROMPT_DIR, "review.md"),
     promptArgs: {
       TICKET: String(ticket.number),
@@ -254,7 +263,7 @@ export const reviewBranch = async (
   const review = await readOrAskAgain(
     runAgentPhase,
     phase,
-    LEAD,
+    reviewer,
     reviewed,
     readReviewTag,
     EMIT_THE_REVIEW,
@@ -265,7 +274,7 @@ export const reviewBranch = async (
   journal.record({
     phase: `${phase}:findings`,
     kind: "review",
-    model: LEAD.model,
+    model: reviewer.model,
     startedAt: new Date().toISOString(),
     durationMs: 0,
     outcome: review ? "ok" : "fail",
