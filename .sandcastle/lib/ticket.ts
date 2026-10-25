@@ -409,34 +409,6 @@ export const gatesUntilGreen = async (
   }
 };
 
-export const asReviewNote = (
-  summaries: readonly string[],
-  notes: readonly ReviewItem[],
-): string => {
-  const changed = summaries.filter((summary) => summary.length > 0);
-  if (changed.length === 0 && notes.length === 0) return "";
-  const lines = [
-    ...changed.map((summary) => `- ${summary}`),
-    ...notes.map(
-      (note) =>
-        `- Left \`${asLocation(note)}\` — ${note.summary}${note.why ? `: ${note.why}` : ""}`,
-    ),
-  ];
-  return `\n\n---\n\n### Review\n\n${lines.join("\n")}`;
-};
-
-export const asWaivedGatesNote = (waived: readonly WaivedGate[]): string =>
-  waived.length === 0
-    ? ""
-    : `\n\n---\n\n### Local gates the fixer did not attribute to this branch\n\n${waived
-        .map(
-          ({ command, reason }) =>
-            `<details><summary><code>${command}</code></summary>\n\n${reason}\n\n</details>`,
-        )
-        .join(
-          "\n\n",
-        )}\n\nCI runs them again; a real failure there goes through repair.`;
-
 const unblock = async (
   runAgentPhase: RunAgentPhase,
   ticket: Ticket,
@@ -549,8 +521,6 @@ export const shipTicket = async (
       runAgentPhase,
       implemented.iterations.at(-1)?.sessionId,
     );
-    const summaries: string[] = [];
-    let notes: readonly ReviewItem[] = [];
 
     for (let pass = 1; ; pass += 1) {
       say(`--- review (pass ${pass}) ---`);
@@ -568,8 +538,6 @@ export const shipTicket = async (
           reason: `review pass ${pass} ended without a readable <review> block, so the branch is unreviewed`,
         };
       }
-      summaries.push(review.summary);
-      notes = review.notes;
       const next = afterReview(review, pass);
       if (next.next === "gates") break;
       if (next.next === "park")
@@ -635,9 +603,7 @@ export const shipTicket = async (
     const pullRequest = openPullRequest(
       branch,
       pullRequestCopy.title,
-      pullRequestCopy.body +
-        asReviewNote(summaries, notes) +
-        asWaivedGatesNote(gates.waived),
+      pullRequestCopy.body,
     );
 
     queueForMerge(pullRequest.number);
