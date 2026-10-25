@@ -193,10 +193,12 @@ export async function testSite<
       let current = signedIn.get(principal);
       if (current === undefined) {
         const record: SignIn = {
-          session: sessionFor(db, principal).then((session) => {
-            record.settled = session;
-            return session;
-          }),
+          session: sessionFor(db, principal, contextFor(request)).then(
+            (session) => {
+              record.settled = session;
+              return session;
+            },
+          ),
         };
         current = record;
         signedIn.set(principal, current);
@@ -262,12 +264,16 @@ export async function testSite<
 async function sessionFor(
   db: Db,
   principal: NonNullable<Principal>,
+  ctx: AppContext,
 ): Promise<Session> {
   const user =
     "id" in principal
       ? principal
       : await userFactory.transient({ db }).create({ role: principal.role });
-  const { token } = await createSession(db, { userId: user.id });
+  // Inside the site's context, so the session's lifetime starts on its clock.
+  const { token } = await requestStore.run(ctx, () =>
+    createSession(db, { userId: user.id }),
+  );
   return { user, cookie: `${SESSION_COOKIE_NAME}=${token}` };
 }
 

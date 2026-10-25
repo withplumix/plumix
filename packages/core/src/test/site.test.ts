@@ -344,13 +344,24 @@ describe("the site's clock", () => {
     expect(now().getTime() - realBefore).toBeLessThan(60_000);
   });
 
+  test("signs in a principal who first appears after the site travelled", async () => {
+    travelling.travel({ days: 31 });
+
+    const editor = travelling.actingAs("editor");
+
+    expect((await editor.rpc.auth.session()).user).not.toBeNull();
+  });
+
   test("freezes for its own site only", async () => {
     const editor = travelling.actingAs("editor");
     await editor.rpc.auth.session();
 
     travelling.freezeTime("2100-01-01T00:00:00Z");
 
+    const stayer = staying.actingAs("editor");
+
     expect((await editor.rpc.auth.session()).user).toBeNull();
+    expect((await stayer.rpc.auth.session()).user).not.toBeNull();
     expect(now().getTime()).toBeLessThan(Date.parse("2100-01-01T00:00:00Z"));
   });
 

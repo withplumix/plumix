@@ -1,5 +1,12 @@
 import type { Clock } from "../clock.js";
 
+export interface SiteClock {
+  readonly clock: Clock;
+  readonly travel: (by: Travel) => void;
+  readonly freezeTime: (iso: string) => void;
+  readonly reset: () => void;
+}
+
 export interface Travel {
   readonly days?: number;
   readonly hours?: number;
@@ -12,7 +19,7 @@ const MS_PER_MINUTE = 60_000;
  * Real time shifted by every `travel`, until `freezeTime` stops it at an
  * instant that later travel moves.
  */
-export function siteClock() {
+export function siteClock(): SiteClock {
   let offset = 0;
   let frozenAt: number | null = null;
   const clock: Clock = { now: () => frozenAt ?? Date.now() + offset };
