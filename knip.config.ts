@@ -39,6 +39,12 @@ const coreBrowserEntries = Object.values(corePackage.browser).flatMap(
 // plugin declares it, and nothing imports it.
 const PLUGIN_LINGUI_CLI = "@lingui/cli";
 
+// A plugin whose descriptor names its router (`site.rpc` types it from there)
+// emits `.d.ts` that import `@orpc/server`, so a consumer resolving those types
+// needs it installed beside the plugin. Knip reads `src/`, and a plugin whose
+// source reaches oRPC only through `plumix/plugin` never imports it by name.
+const PLUGIN_ROUTER_TYPES = "@orpc/server";
+
 const config: KnipConfig = {
   // `exports` check disabled at the project level — admin's vendored
   // shadcn/ui primitives (sidebar, dropdown-menu, sheet, table, etc.)
@@ -330,7 +336,11 @@ const config: KnipConfig = {
       // (a sibling workspace), not by `src/`. Declared as a devDep so
       // turbo's `^build` pulls its dist into the cold-CI graph before
       // `test:e2e` runs.
-      ignoreDependencies: [PLUGIN_LINGUI_CLI, "@plumix/runtime-cloudflare"],
+      ignoreDependencies: [
+        PLUGIN_LINGUI_CLI,
+        PLUGIN_ROUTER_TYPES,
+        "@plumix/runtime-cloudflare",
+      ],
       // See packages/admin above for why the playwright plugin is off.
       playwright: false,
     },
@@ -439,6 +449,7 @@ const config: KnipConfig = {
       // here because the playground needs an entry type to hang a box off.
       ignoreDependencies: [
         PLUGIN_LINGUI_CLI,
+        PLUGIN_ROUTER_TYPES,
         "@plumix/runtime-cloudflare",
         "@plumix/plugin-blog",
       ],
@@ -476,6 +487,7 @@ const config: KnipConfig = {
       // here because the playground needs an entry type to hang a card off.
       ignoreDependencies: [
         PLUGIN_LINGUI_CLI,
+        PLUGIN_ROUTER_TYPES,
         "@plumix/runtime-cloudflare",
         "@plumix/plugin-blog",
       ],
