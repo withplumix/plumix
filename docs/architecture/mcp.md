@@ -9,7 +9,7 @@ sequenceDiagram
   participant A as Agent
   participant D as Dispatcher
   participant H as handleMcpRequest
-  participant S as SDK Server
+  participant S as SDK McpServer
   participant T as tool.run
   A->>D: POST /_plumix/mcp
   D->>D: mcp.enabled, or plumix dev, else 404
@@ -25,14 +25,14 @@ A write tool goes further: it checks the token's capabilities, the edit lease an
 
 ## Surface
 
-| Piece                                                          | Kind                                                         | Where                                                   | Public          |
-| -------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- | --------------- |
-| `/_plumix/mcp`                                                 | route, POST only, Streamable HTTP, stateless, JSON responses | `runtime/dispatcher.ts` (`MCP_PATH`), `mcp/dispatch.ts` | yes             |
-| `mcp: { enabled: true }`                                       | config slot (`InterfaceToggle`), default off                 | `config.ts`                                             | yes             |
-| `ctx.registerMcpTool(tool)`                                    | plugin setup registration                                    | `plugin/setup-context.ts`                               | `plumix/plugin` |
-| `McpTool { name, description, inputSchema, jsonSchema?, run }` | contract                                                     | `context/mcp-tool.ts`                                   | `plumix/plugin` |
-| `McpToolError` (`not_found`, `forbidden`, `bad_input`)         | error a tool throws                                          | `mcp/errors.ts`                                         | `plumix/plugin` |
-| `RegisteredMcpTool`                                            | registry entry type                                          | `plugin/registry.ts`                                    | `plumix/plugin` |
+| Piece                                                                        | Kind                                                         | Where                                                   | Public          |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- | --------------- |
+| `/_plumix/mcp`                                                               | route, POST only, Streamable HTTP, stateless, JSON responses | `runtime/dispatcher.ts` (`MCP_PATH`), `mcp/dispatch.ts` | yes             |
+| `mcp: { enabled: true }`                                                     | config slot (`InterfaceToggle`), default off                 | `config.ts`                                             | yes             |
+| `ctx.registerMcpTool(tool)`                                                  | plugin setup registration                                    | `plugin/setup-context.ts`                               | `plumix/plugin` |
+| `McpTool { name, description, inputSchema, jsonSchema?, annotations?, run }` | contract                                                     | `context/mcp-tool.ts`                                   | `plumix/plugin` |
+| `McpToolError` (`not_found`, `forbidden`, `bad_input`)                       | error a tool throws                                          | `mcp/errors.ts`                                         | `plumix/plugin` |
+| `RegisteredMcpTool`                                                          | registry entry type                                          | `plugin/registry.ts`                                    | `plumix/plugin` |
 
 Tools served:
 
@@ -58,7 +58,7 @@ The dispatcher checks `/_plumix/mcp` in `tryColdInterfaces`, before the CSRF gat
 - `"trusted"` passes the dispatcher's context through as it is. No authenticator has run on it, so the principal is anonymous and tools see only what an anonymous visitor may read.
 - `"token"` runs `authenticateBearer` with the endpoint's own URL (`basePath` included) as the audience, which accepts only an API token: one with no audience, or one bound to that URL. A token bound to another URL, or a session cookie, gets 401.
 
-Each request builds a fresh tool map with `buildMcpToolRegistry` and a fresh SDK `Server` with `buildMcpServer`. It connects a `WebStandardStreamableHTTPServerTransport` with `sessionIdGenerator: undefined` and `enableJsonResponse: true`. `tools/list` projects each tool's valibot schema to JSON Schema (`toToolInputJsonSchema`); `tool.jsonSchema` replaces that projection when set. A tool says whether it writes, and every read tool is listed with `annotations: { readOnlyHint: true }`. `tools/call` runs inside one `mcp: <name>` telemetry span. An unknown tool or a bad input becomes a JSON-RPC error, an `McpToolError` becomes an `isError` tool result, and anything else propagates.
+Each request builds a fresh tool map with `buildMcpToolRegistry`, and `buildMcpServer` registers each tool on a fresh `McpServer` from `@modelcontextprotocol/server` (SDK v2), with core's package version as its server info. A request on spec 2026-07-28 goes to the SDK's `createMcpHandler`, which answers in JSON while no tool sends a message before its result. Any older request goes to a `WebStandardStreamableHTTPServerTransport` with `sessionIdGenerator: undefined` and `enableJsonResponse: true`, because the SDK's own legacy serving answers over SSE. `tools/list` projects each tool's valibot schema to JSON Schema (`toToolInputJsonSchema`); `tool.jsonSchema` replaces that projection when set. A tool lists its `annotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`) as given, or `{ readOnlyHint: true }` when it sets none. They are hints for the client, and nothing authorizes on them. The SDK checks the input with the tool's valibot schema, and a bad input becomes an `isError` result whose text carries `bad_input`. `tools/call` then runs the tool inside one `mcp: <name>` telemetry span. An `McpToolError` becomes an `isError` result with its code, and the SDK turns any other error into an `isError` result with only its message. An unknown tool is a JSON-RPC error.
 
 Tools read through the same read services as RPC and REST (`getEntry` and `listEntries` in `entries/read-service.ts` for `content_*`). `ctx.auth.can` intersects the token's scopes with the capabilities its owner's role grants, whether that role is a default or one the site defines, so a tool sees only what that principal may read. See [auth and access](auth-and-access.md).
 

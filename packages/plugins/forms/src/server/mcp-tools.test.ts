@@ -77,7 +77,7 @@ async function rpc<T>(
   h: Harness,
   secret: string,
   body: unknown,
-): Promise<{ result: T; error?: { message: string } }> {
+): Promise<{ result: T }> {
   const res = await h.dispatch(
     new Request("https://cms.example/_plumix/mcp", {
       method: "POST",
@@ -89,7 +89,7 @@ async function rpc<T>(
       body: JSON.stringify(body),
     }),
   );
-  return (await res.json()) as { result: T; error?: { message: string } };
+  return (await res.json()) as { result: T };
 }
 
 function callTool(
@@ -310,14 +310,12 @@ describe("@plumix/plugin-forms — MCP tools", () => {
     const h = await setup();
     const secret = await mintPat(h);
 
-    const { error } = await rpc<never>(h, secret, {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "tools/call",
-      params: { name: "form_submission_list", arguments: { since } },
+    const { result } = await callTool(h, secret, "form_submission_list", {
+      since,
     });
 
-    expect(error?.message).toContain("date");
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("date");
   });
 
   test("form_submission_list reads an instant that carries its zone", async () => {

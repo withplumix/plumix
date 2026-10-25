@@ -1,81 +1,75 @@
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import {
-  CallToolRequestSchema,
-  ErrorCode,
-  ListToolsRequestSchema,
-  McpError,
-} from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CallToolResult,
+  StandardSchemaWithJSON,
+} from "@modelcontextprotocol/server";
+import { McpServer } from "@modelcontextprotocol/server";
 import * as v from "valibot";
 
 import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
+import corePackage from "../../package.json" with { type: "json" };
 import { McpToolError, toToolErrorResult } from "./errors.js";
 import { toToolInputJsonSchema } from "./schema-projection.js";
 
-const SERVER_INFO = { name: "plumix", version: "0.1.0" } as const;
+const SERVER_INFO = { name: "plumix", version: corePackage.version } as const;
 
-/**
- * `Server` is deprecated but exempt for advanced use: tools come from a
- * runtime registry and every call is wrapped in a telemetry span.
- */
+const READ_ONLY = { readOnlyHint: true } as const;
+
 export function buildMcpServer(
   ctx: AppContext,
   tools: ReadonlyMap<string, McpTool>,
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-): Server {
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
-  const server = new Server(SERVER_INFO, { capabilities: { tools: {} } });
+): McpServer {
+  const server = new McpServer(SERVER_INFO);
 
-  server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: [...tools.values()].map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: toToolInputJsonSchema(tool),
-      annotations: { readOnlyHint: true },
-    })),
-  }));
-
-  server.setRequestHandler(
-    CallToolRequestSchema,
-    (request): Promise<CallToolResult> =>
-      // One span per tool call — validation included, so an unknown tool or a
-      // bad argument shows up as an error span attributed to the tool name.
-      ctx.telemetry.span(
-        `mcp: ${request.params.name}`,
-        async (s): Promise<CallToolResult> => {
-          s.set("mcp.tool", request.params.name);
-          const tool = tools.get(request.params.name);
-          if (tool === undefined) {
-            throw new McpError(
-              ErrorCode.MethodNotFound,
-              `unknown tool: "${request.params.name}"`,
-            );
-          }
-
-          const parsed = v.safeParse(
-            tool.inputSchema,
-            request.params.arguments ?? {},
-          );
-          if (!parsed.success) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              v.summarize(parsed.issues),
-            );
-          }
-
-          try {
-            const result = await tool.run(ctx, parsed.output);
-            return {
-              content: [{ type: "text", text: JSON.stringify(result) }],
-            };
-          } catch (error) {
-            if (error instanceof McpToolError) return toToolErrorResult(error);
-            throw error;
-          }
-        },
-      ),
-  );
+  for (const tool of tools.values()) {
+    server.registerTool(
+      tool.name,
+      {
+        description: tool.description,
+        inputSchema: toolInput(tool),
+        annotations: tool.annotations ?? READ_ONLY,
+      },
+      (input): Promise<CallToolResult> =>
+        // The SDK refuses an unknown tool or a bad input before this runs, so
+        // neither opens a span.
+        ctx.telemetry.span(
+          `mcp: ${tool.name}`,
+          async (s): Promise<CallToolResult> => {
+            s.set("mcp.tool", tool.name);
+            try {
+              const result = await tool.run(ctx, input);
+              return {
+                content: [{ type: "text", text: JSON.stringify(result) }],
+              };
+            } catch (error) {
+              if (error instanceof McpToolError) {
+                return toToolErrorResult(error);
+              }
+              throw error;
+            }
+          },
+        ),
+    );
+  }
 
   return server;
+}
+
+/** The `bad_input` prefix gives a refusal the code an `McpToolError` would. */
+function toolInput(tool: McpTool): StandardSchemaWithJSON {
+  const jsonSchema = () => toToolInputJsonSchema(tool);
+  return {
+    "~standard": {
+      version: 1,
+      vendor: "plumix",
+      validate: (value) => {
+        const parsed = v.safeParse(tool.inputSchema, value);
+        if (parsed.success) return { value: parsed.output };
+        return {
+          issues: [{ message: `bad_input: ${v.summarize(parsed.issues)}` }],
+        };
+      },
+      jsonSchema: { input: jsonSchema, output: jsonSchema },
+    },
+  };
 }

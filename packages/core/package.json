@@ -186,7 +186,7 @@
     "@lingui/conf": "catalog:lingui",
     "@lingui/core": "catalog:lingui",
     "@lingui/format-po": "catalog:lingui",
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/server": "^2.3.1",
     "@orpc/client": "catalog:orpc",
     "@orpc/openapi": "catalog:orpc",
     "@orpc/server": "catalog:orpc",

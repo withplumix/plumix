@@ -1,3 +1,7 @@
+import {
+  CLIENT_CAPABILITIES_META_KEY,
+  PROTOCOL_VERSION_META_KEY,
+} from "@modelcontextprotocol/server";
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -5,6 +9,7 @@ import type { McpTool } from "../context/mcp-tool.js";
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import corePackage from "../../package.json" with { type: "json" };
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -66,7 +71,7 @@ interface ToolDescriptor {
   readonly name: string;
   readonly description: string;
   readonly inputSchema: { readonly type: string };
-  readonly annotations: { readonly readOnlyHint: boolean };
+  readonly annotations: Readonly<Record<string, boolean>>;
 }
 
 interface ToolCallResult {
@@ -101,11 +106,13 @@ function mcpRequest(
     method?: string;
     url?: string;
     origin?: string;
+    headers?: Record<string, string>;
   } = {},
 ): Request {
   const headers: Record<string, string> = {
     "content-type": "application/json",
     accept: "application/json, text/event-stream",
+    ...init.headers,
   };
   if (init.secret) headers.authorization = `Bearer ${init.secret}`;
   if (init.origin) headers.origin = init.origin;
@@ -166,6 +173,177 @@ describe("MCP endpoint — tools/list", () => {
     expect(tool).toBeDefined();
     expect(tool?.annotations.readOnlyHint).toBe(true);
     expect(tool?.inputSchema.type).toBe("object");
+  });
+});
+
+describe("MCP endpoint — the server", () => {
+  const countInput = v.object({ limit: v.number() });
+  const countThings: McpTool<typeof countInput> = {
+    name: "count_things",
+    description: "Test-only: declares nothing.",
+    inputSchema: countInput,
+    run: (_ctx, { limit }) => ({ count: limit }),
+  };
+  const annotated = definePlugin("test-annotated", {
+    setup: (ctx) => {
+      ctx.registerMcpTool({
+        name: "trash_thing",
+        description: "Test-only: declares a destructive write.",
+        inputSchema: v.object({}),
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+        },
+        run: () => ({ trashed: true }),
+      });
+      ctx.registerMcpTool({
+        name: "explode",
+        description: "Test-only: throws an error that is not an McpToolError.",
+        inputSchema: v.object({}),
+        run: () => {
+          throw new Error("kaboom");
+        },
+      });
+      ctx.registerMcpTool(countThings);
+    },
+  });
+
+  async function listTools(h: DispatcherHarness): Promise<ToolDescriptor[]> {
+    const secret = await mintPat(h);
+    const { json } = await callMcp<{ tools: ToolDescriptor[] }>(h, secret, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/list",
+    });
+    return json.result.tools;
+  }
+
+  test("initialize reports core's package version", async () => {
+    const h = await mcpHarness();
+    const secret = await mintPat(h);
+
+    const { json } = await callMcp<{
+      serverInfo: { name: string; version: string };
+    }>(h, secret, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-11-25",
+        capabilities: {},
+        clientInfo: { name: "test", version: "0" },
+      },
+    });
+
+    expect(json.result.serverInfo).toEqual({
+      name: "plumix",
+      version: corePackage.version,
+    });
+  });
+
+  test("a tool registered with annotations is listed with exactly those hints", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+
+    const tools = await listTools(h);
+
+    expect(tools.find((t) => t.name === "trash_thing")?.annotations).toEqual({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+    });
+  });
+
+  test("a tool registered without annotations is listed as read-only", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+
+    const tools = await listTools(h);
+
+    expect(tools.find((t) => t.name === "count_things")?.annotations).toEqual({
+      readOnlyHint: true,
+    });
+  });
+
+  test("a bad input comes back as a bad_input tool error, not a JSON-RPC error", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 1, "count_things", {
+      limit: "ten",
+    });
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain("bad_input");
+    expect(json.result.content[0]?.text).toContain("limit");
+  });
+
+  test("an error that is not an McpToolError comes back as an isError result carrying only its message", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 1, "explode", {});
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content).toEqual([{ type: "text", text: "kaboom" }]);
+  });
+
+  test("an unknown tool is a JSON-RPC error", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+    const secret = await mintPat(h);
+
+    const res = await h.dispatch(
+      mcpRequest(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "no_such_tool", arguments: {} },
+        },
+        { secret },
+      ),
+    );
+
+    const json = (await res.json()) as {
+      result?: unknown;
+      error?: { message: string };
+    };
+    expect(json.result).toBeUndefined();
+    expect(json.error?.message).toContain("no_such_tool");
+  });
+
+  test("a request on the 2026-07-28 spec is answered in JSON", async () => {
+    const h = await mcpHarness({ config: { plugins: [annotated] } });
+    const secret = await mintPat(h);
+
+    const res = await h.dispatch(
+      mcpRequest(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: {
+            name: "count_things",
+            arguments: { limit: 3 },
+            _meta: {
+              [PROTOCOL_VERSION_META_KEY]: "2026-07-28",
+              [CLIENT_CAPABILITIES_META_KEY]: {},
+            },
+          },
+        },
+        {
+          secret,
+          headers: {
+            "mcp-protocol-version": "2026-07-28",
+            "mcp-method": "tools/call",
+            "mcp-name": "count_things",
+          },
+        },
+      ),
+    );
+
+    expect(res.headers.get("content-type")).toContain("application/json");
+    const json = (await res.json()) as JsonRpcEnvelope<ToolCallResult>;
+    expect(parseToolResult(json)).toEqual({ count: 3 });
   });
 });
 
@@ -244,18 +422,10 @@ describe("MCP endpoint — a plugin write tool", () => {
       ifMatch: entry.updatedAt.toISOString(),
     });
 
-    expect(json).toMatchObject({
-      error: {
-        data: {
-          issues: [
-            expect.objectContaining({
-              code: "layout_change",
-              path: "blocks[1]",
-            }),
-          ],
-        },
-      },
-    });
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain(
+      "Block content failed registry validation",
+    );
     const row = await h.db.query.entries.findFirst({
       where: (entries, { eq }) => eq(entries.id, entry.id),
     });

@@ -17,6 +17,14 @@ export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
    */
   readonly jsonSchema?: JsonObject;
   /**
+   * Advisory only: nothing authorizes on them.
+   */
+  readonly annotations?: {
+    readonly readOnlyHint?: boolean;
+    readonly destructiveHint?: boolean;
+    readonly idempotentHint?: boolean;
+  };
+  /**
    * Not `JsonValue` though the transport stringifies it: read-service rows
    * carry `Date` fields and a `ResolvedMeta` bag still typed `Record<string,
    * unknown>`.

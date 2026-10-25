@@ -14,9 +14,7 @@ const MCP_PATH = "/_plumix/mcp";
 
 const loadMcpServer = loadOnce(() => import("./server.js"));
 
-const loadMcpTransport = loadOnce(
-  () => import("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"),
-);
+const loadMcpSdk = loadOnce(() => import("@modelcontextprotocol/server"));
 
 /** The MCP entry point, as `PlumixApp.loadMcpHandler` resolves it. */
 export type McpHandler = (ctx: AppContext) => Promise<Response>;
@@ -43,14 +41,24 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
   const tools = buildMcpToolRegistry(toolCtx.plugins);
 
   const { buildMcpServer } = await loadMcpServer();
-  const { WebStandardStreamableHTTPServerTransport } = await loadMcpTransport();
+  const {
+    createMcpHandler,
+    isLegacyRequest,
+    WebStandardStreamableHTTPServerTransport,
+  } = await loadMcpSdk();
 
-  const server = buildMcpServer(toolCtx, tools);
+  const newServer = () => buildMcpServer(toolCtx, tools);
+  if (!(await isLegacyRequest(toolCtx.request))) {
+    return createMcpHandler(newServer).fetch(toolCtx.request);
+  }
+
+  // The SDK's own legacy serving answers over SSE; the stateless JSON
+  // transport is what pre-2026-07-28 clients get.
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
-  await server.connect(transport);
+  await newServer().connect(transport);
   return transport.handleRequest(toolCtx.request);
 }
 
