@@ -215,7 +215,7 @@ The registered names — `post`, `category`, `tag` — are not overridable. They
 
 ## Capabilities it mints
 
-Registering `post` derives eight capabilities, each mapped to a minimum role on the ladder from subscriber up to admin.
+Registering `post` derives nine capabilities, each mapped to a minimum role on the ladder from subscriber up to admin.
 
 | Capability                    | Minimum role |
 | ----------------------------- | ------------ |
@@ -227,6 +227,7 @@ Registering `post` derives eight capabilities, each mapped to a minimum role on 
 | `entry:post:delete`           | editor       |
 | `entry:post:read_revisions`   | editor       |
 | `entry:post:restore_revision` | editor       |
+| `entry:post:edit_layout`      | author       |
 
 Each taxonomy derives five more, so `category` and `tag` each mint `read` at subscriber, `assign` at contributor, and `edit`, `delete` and `manage` at editor. A contributor can therefore tag a draft but cannot rename the tag.
 

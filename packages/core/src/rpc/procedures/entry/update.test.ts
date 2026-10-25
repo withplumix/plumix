@@ -2553,6 +2553,11 @@ describe("entry.update — a writer without edit_layout", () => {
       ]),
       "blocks[0]",
     ],
+    [
+      "a node copied under its own id",
+      v2([text("p1"), text("p1"), group("g1", [text("p2")]), button("b1")]),
+      "blocks[1]",
+    ],
   ];
 
   test.each(layoutChanges)("refuses %s", async (_, content, path) => {

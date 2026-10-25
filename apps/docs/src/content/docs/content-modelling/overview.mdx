@@ -96,7 +96,7 @@ Three parts of the site then read that one registration.
 
 The [router](/routing/overview/) compiles URLs from it. `rewrite.slug` fixes the prefix, so you get `/recipes` for the archive, `/recipes/page/:page` for its later pages, and `/recipes/:slug` for a single recipe. Drop `rewrite` and the prefix falls back to the type name, giving `/recipe/:slug`. Set `hasArchive: false` and the router compiles no archive route at all. Set `isHierarchical: true` and the single route becomes a nested catch-all, which is how `page` serves `/about/team`.
 
-The [access layer](/access/overview/) derives capabilities from it. Registering `recipe` mints eight, among them `entry:recipe:read`, `entry:recipe:create`, `entry:recipe:publish`, `entry:recipe:edit_any` and `entry:recipe:restore_revision`, each mapped to a minimum role. Nothing else in your code has to grant them.
+The [access layer](/access/overview/) derives capabilities from it. Registering `recipe` mints nine, among them `entry:recipe:read`, `entry:recipe:create`, `entry:recipe:publish`, `entry:recipe:edit_any` and `entry:recipe:restore_revision`, each mapped to a minimum role. Nothing else in your code has to grant them.
 
 The admin builds its chrome from it. It reads the registration through the plugin manifest and renders the sidebar entry, the list page, the editor and the command-palette result. `labels` is what stops that chrome saying "Add Post" over a recipe form.
 

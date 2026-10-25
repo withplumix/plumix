@@ -42,8 +42,10 @@ export function layoutChanges(
   from: EntryContent,
   registry: BlockSpecLookup,
 ): readonly BlockContentValidationIssue[] {
-  const before = placedById(from.blocks, registry);
-  const after = placedById(content.blocks, registry);
+  const placedBefore = placements(from.blocks, registry);
+  const placedAfter = placements(content.blocks, registry);
+  const before = firstById(placedBefore);
+  const after = firstById(placedAfter);
   const issues: BlockContentValidationIssue[] = [];
   for (const [id, { node, path, container }] of after) {
     const was = before.get(id);
@@ -67,6 +69,9 @@ export function layoutChanges(
     for (const key of changedLayoutAttrs(was.node, node, registry)) {
       issues.push(layoutIssue(node, path, `had its "${key}" input changed`));
     }
+  }
+  for (const { node, path } of copiesOfAnId(placedBefore, placedAfter)) {
+    issues.push(layoutIssue(node, path, "was inserted"));
   }
   for (const { node, path } of reordered(before, after)) {
     issues.push(layoutIssue(node, path, "was reordered"));
@@ -100,6 +105,31 @@ function changedLayoutAttrs(
     (key) =>
       !skipped.has(key) && !sameJson(was.attrs?.[key], node.attrs?.[key]),
   );
+}
+
+/** `firstById` keeps one node per id, so a copy under its source's id needs this. */
+function copiesOfAnId(
+  from: readonly Placed[],
+  content: readonly Placed[],
+): readonly Placed[] {
+  const allowed = new Map<string, number>();
+  for (const { node } of repeats(from)) {
+    allowed.set(node.id, (allowed.get(node.id) ?? 0) + 1);
+  }
+  return repeats(content).filter(({ node }) => {
+    const left = allowed.get(node.id) ?? 0;
+    allowed.set(node.id, left - 1);
+    return left <= 0;
+  });
+}
+
+function repeats(placed: readonly Placed[]): readonly Placed[] {
+  const seen = new Set<string>();
+  return placed.filter(({ node }) => {
+    const repeated = seen.has(node.id);
+    seen.add(node.id);
+    return repeated;
+  });
 }
 
 /**
@@ -148,11 +178,19 @@ function layoutIssue(
   };
 }
 
-function placedById(
+function firstById(placed: readonly Placed[]): Map<string, Placed> {
+  const byId = new Map<string, Placed>();
+  for (const one of placed) {
+    if (!byId.has(one.node.id)) byId.set(one.node.id, one);
+  }
+  return byId;
+}
+
+function placements(
   nodes: readonly BlockNode[],
   registry: BlockSpecLookup,
-): Map<string, Placed> {
-  const placed = new Map<string, Placed>();
+): readonly Placed[] {
+  const placed: Placed[] = [];
   const visit = (
     children: readonly BlockNode[],
     basePath: string,
@@ -160,7 +198,7 @@ function placedById(
   ): void => {
     children.forEach((node, i) => {
       const path = `${basePath}[${String(i)}]`;
-      placed.set(node.id, { node, path, container });
+      placed.push({ node, path, container });
       for (const key of blockSlotKeys(node, registry.get(node.name))) {
         const value = node.attrs?.[key];
         if (isBlockNodeArray(value)) {
