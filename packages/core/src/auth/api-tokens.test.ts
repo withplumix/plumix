@@ -171,6 +171,78 @@ describe("validateApiToken", () => {
 
     expect(await validateApiToken(db, secret)).toBeNull();
   });
+
+  describe("audience", () => {
+    const MCP = "https://cms.example/_plumix/mcp";
+
+    async function mint(audience: string | null) {
+      const db = await createTestDb();
+      const user = await userFactory.transient({ db }).create({});
+      const minted = await createApiToken(db, {
+        userId: user.id,
+        name: "t",
+        expiresAt: null,
+        audience,
+      });
+      return { db, ...minted };
+    }
+
+    test("a bound token is refused when no audience is asked for", async () => {
+      const { db, secret } = await mint(MCP);
+
+      expect(await validateApiToken(db, secret)).toBeNull();
+    });
+
+    test("a bound token is refused for another audience", async () => {
+      const { db, secret } = await mint(MCP);
+
+      const result = await validateApiToken(db, secret, {
+        audience: "https://other.example/_plumix/mcp",
+      });
+
+      expect(result).toBeNull();
+    });
+
+    test("a bound token is accepted for its own audience", async () => {
+      const { db, secret, row } = await mint(MCP);
+
+      const result = await validateApiToken(db, secret, { audience: MCP });
+
+      expect(result?.token.id).toBe(row.id);
+    });
+
+    test("an unbound token is accepted whatever audience is asked for", async () => {
+      const { db, secret, row } = await mint(null);
+
+      const result = await validateApiToken(db, secret, { audience: MCP });
+
+      expect(result?.token.id).toBe(row.id);
+    });
+
+    test("a refused bound token does not bump lastUsedAt", async () => {
+      const { db, secret, row } = await mint(MCP);
+
+      await validateApiToken(db, secret);
+
+      const stored = await db
+        .select()
+        .from(apiTokens)
+        .where(eq(apiTokens.id, row.id))
+        .get();
+      expect(stored?.lastUsedAt).toBeNull();
+    });
+
+    test("the column decides, not the secret's prefix", async () => {
+      const { db, secret, row } = await mint(null);
+      await db
+        .update(apiTokens)
+        .set({ audience: MCP })
+        .where(eq(apiTokens.id, row.id));
+
+      expect(secret.startsWith(API_TOKEN_PREFIX)).toBe(true);
+      expect(await validateApiToken(db, secret)).toBeNull();
+    });
+  });
 });
 
 describe("revokeApiToken", () => {
