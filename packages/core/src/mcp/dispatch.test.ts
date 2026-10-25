@@ -302,6 +302,60 @@ describe("MCP endpoint — transport guards", () => {
   });
 });
 
+describe("MCP endpoint — audience-bound tokens", () => {
+  async function mintBound(
+    h: DispatcherHarness,
+    audience: string,
+  ): Promise<string> {
+    const user = await h.factory.user.create({ role: "editor" });
+    const { secret } = await h.factory.apiToken.create({
+      userId: user.id,
+      audience,
+      clientId: "https://client.example/oauth/metadata.json",
+    });
+    return secret;
+  }
+
+  const toolsList = { jsonrpc: "2.0", id: 1, method: "tools/list" };
+
+  test("a token bound to this site's MCP URL authenticates", async () => {
+    const h = await mcpHarness({ config: { plugins: [blog] } });
+    const secret = await mintBound(h, "https://cms.example/_plumix/mcp");
+
+    const res = await h.dispatch(mcpRequest(toolsList, { secret }));
+
+    expect(res.status).toBe(200);
+  });
+
+  test("a token bound to another URL is refused with 401", async () => {
+    const h = await mcpHarness({ config: { plugins: [blog] } });
+    const secret = await mintBound(h, "https://other.example/_plumix/mcp");
+
+    const res = await h.dispatch(mcpRequest(toolsList, { secret }));
+
+    expect(res.status).toBe(401);
+  });
+
+  test("under a base path the audience is the mounted MCP URL", async () => {
+    const h = await mcpHarness({
+      config: { plugins: [blog], basePath: "/blog" },
+    });
+    const mounted = await mintBound(h, "https://cms.example/blog/_plumix/mcp");
+    const unmounted = await mintBound(h, "https://cms.example/_plumix/mcp");
+    const url = "https://cms.example/blog/_plumix/mcp";
+
+    const ok = await h.dispatch(
+      mcpRequest(toolsList, { secret: mounted, url }),
+    );
+    const refused = await h.dispatch(
+      mcpRequest(toolsList, { secret: unmounted, url }),
+    );
+
+    expect(ok.status).toBe(200);
+    expect(refused.status).toBe(401);
+  });
+});
+
 describe("MCP endpoint — dev trust", () => {
   afterEach(() => void vi.unstubAllEnvs());
 

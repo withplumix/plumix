@@ -89,14 +89,24 @@ export function requestHasSession(
   );
 }
 
+/** Refuses an audience-bound token, which works only on its own surface. */
 export function apiTokenAuthenticator(): RequestAuthenticator {
+  return audienceTokenAuthenticator(null);
+}
+
+/**
+ * Also accepts a token bound to `audience`; `null` refuses every bound token.
+ */
+export function audienceTokenAuthenticator(
+  audience: string | null,
+): RequestAuthenticator {
   return {
     async authenticate(request, db) {
       const header = request.headers.get("authorization");
       if (!header) return null;
       const match = /^Bearer\s+(\S+)$/i.exec(header);
       if (!match?.[1]) return null;
-      const validated = await validateApiToken(db, match[1]);
+      const validated = await validateApiToken(db, match[1], { audience });
       if (!validated) return null;
       return {
         user: validated.user,

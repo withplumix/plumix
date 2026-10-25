@@ -29,6 +29,13 @@
       "when": 1792358123238,
       "tag": "0003_edit_leases",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792887833365,
+      "tag": "0004_api_token_audience",
+      "breakpoints": true
     }
   ]
 }
