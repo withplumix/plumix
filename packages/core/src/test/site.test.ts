@@ -122,3 +122,11 @@ describe("the site's env", () => {
     );
   });
 });
+
+describe("the site's cdn", () => {
+  test("is the fake, though the config names none", async () => {
+    const post = await site.factory.published.create();
+
+    (await site.visit(post)).assertHeader("cache-tag");
+  });
+});

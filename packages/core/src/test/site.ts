@@ -195,19 +195,13 @@ function freshFakes(): Fakes {
   return { mail: fakeMail(), cdn: fakeCdn() };
 }
 
-/**
- * A cdn only where the config names one, since naming one turns page caching
- * on. Storage, kv and image delivery have no fake yet, so stay unbound.
- */
+/** Storage, kv and image delivery have no fake yet, so they stay unbound. */
 function withFakes(config: PlumixConfig, current: () => Fakes): PlumixConfig {
   return {
     ...config,
     database: { kind: "test", connect: () => ({ db: {} }) },
     mailer: { send: (message) => current().mail.send(message) },
-    cdn:
-      config.cdn === undefined
-        ? undefined
-        : { kind: "test", connect: () => current().cdn },
+    cdn: { kind: "test", connect: () => current().cdn },
     storage: undefined,
     kv: undefined,
     imageDelivery: undefined,
