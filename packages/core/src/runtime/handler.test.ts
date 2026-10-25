@@ -1750,19 +1750,24 @@ describe("createPlumixHandler — traced CDN purges", () => {
     return { handler, snapshots };
   }
 
-  test("a write's purge is a `cdn: purge` span carrying its tags, under its defer span", async () => {
-    const { handler, snapshots } = await purgingHandler(() =>
-      Promise.resolve(),
-    );
+  // The snapshot delivered once the request's deferred purge has settled.
+  async function settledPurgeSnapshot(
+    purgeTags: (tags: readonly string[]) => Promise<void>,
+  ) {
+    const { handler, snapshots } = await purgingHandler(purgeTags);
     const waited: Promise<unknown>[] = [];
-
     await handler.fetch(new Request("https://cms.example/work"), {
       env: {},
       waitUntil: (promise) => void waited.push(promise),
     });
     await Promise.all(waited);
+    return snapshots[0];
+  }
 
-    const defer = findSpan(snapshots[0]?.spans ?? [], "defer");
+  test("a write's purge is a `cdn: purge` span carrying its tags, under its defer span", async () => {
+    const snapshot = await settledPurgeSnapshot(() => Promise.resolve());
+
+    const defer = findSpan(snapshot?.spans ?? [], "defer");
     expect(defer?.status).toBe("ok");
     expect(defer?.children).toEqual([
       expect.objectContaining({
@@ -1774,18 +1779,11 @@ describe("createPlumixHandler — traced CDN purges", () => {
   });
 
   test("a failing purge is its span's error", async () => {
-    const { handler, snapshots } = await purgingHandler(() =>
+    const snapshot = await settledPurgeSnapshot(() =>
       Promise.reject(new Error("purge refused")),
     );
-    const waited: Promise<unknown>[] = [];
 
-    await handler.fetch(new Request("https://cms.example/work"), {
-      env: {},
-      waitUntil: (promise) => void waited.push(promise),
-    });
-    await Promise.all(waited);
-
-    expect(findSpan(snapshots[0]?.spans ?? [], "cdn: purge")).toMatchObject({
+    expect(findSpan(snapshot?.spans ?? [], "cdn: purge")).toMatchObject({
       status: "error",
       error: { message: "purge refused" },
     });
