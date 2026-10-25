@@ -78,6 +78,7 @@
   },
   "dependencies": {
     "@lingui/core": "catalog:lingui",
+    "@orpc/server": "catalog:orpc",
     "drizzle-orm": "catalog:drizzle",
     "valibot": "catalog:"
   },
@@ -93,7 +94,6 @@
     "@libsql/client": "catalog:",
     "@lingui/cli": "catalog:lingui",
     "@orpc/client": "catalog:orpc",
-    "@orpc/server": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/plugin-pages": "workspace:*",

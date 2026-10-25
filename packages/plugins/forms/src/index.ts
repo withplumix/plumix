@@ -3,6 +3,7 @@
 // target loaded — every registry seam merges through that one specifier.
 import type { PluginContextExtensions } from "plumix";
 import type { Label } from "plumix/i18n";
+import type { PluginDescriptor } from "plumix/plugin";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -14,7 +15,11 @@ import "./server/hooks.js";
 
 import type { FormDefinition } from "./define-form.js";
 import type { FormRegistry } from "./registry.js";
-import type { FormValidatorRegistration } from "./validators.js";
+import type { SubmissionsRouter } from "./rpc.js";
+import type {
+  FormValidatorRegistration,
+  FormValidatorRegistry,
+} from "./validators.js";
 import { createFormBlock } from "./block/form-block.js";
 import {
   EXPORT_ROUTE_PATH,
@@ -56,9 +61,6 @@ export { formatSubmission } from "./format.js";
 export { FormsError } from "./errors.js";
 export type { FormPageBreak, FormPageBreakEntry, FormStep } from "./steps.js";
 export { pageBreak } from "./steps.js";
-// Deliberately re-exported from `contract.ts`, not from the router it
-// guards: an oRPC router's inferred type names `@orpc/server` and core's
-// schema, and a consumer resolving this entry's `.d.ts` has neither.
 export { SUBMISSION_MODERATE_CAPABILITY } from "./contract.js";
 export type {
   BoundType,
@@ -140,7 +142,12 @@ declare module "plumix" {
 type RegisterForm = PluginContextExtensions["registerForm"];
 type RegisterFormValidator = PluginContextExtensions["registerFormValidator"];
 
-export function forms(options: FormsConfig = {}) {
+export function forms(
+  options: FormsConfig = {},
+): PluginDescriptor<
+  { registry: FormRegistry; validators: FormValidatorRegistry },
+  { readonly forms: SubmissionsRouter }
+> {
   const defaultRetentionDays = retentionDefault(options.retentionDays);
   return definePlugin("forms", {
     // The chunk the `tel` field renderer is resolved from. Resolved

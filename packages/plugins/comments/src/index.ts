@@ -1,4 +1,5 @@
 import type { Label } from "plumix/i18n";
+import type { PluginDescriptor } from "plumix/plugin";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -6,6 +7,7 @@ import {
 } from "plumix/plugin";
 
 import type { ResolvedCommentsConfig } from "./config.js";
+import type { CommentsRouter } from "./rpc.js";
 import type { CommentsConfig } from "./types.js";
 import { resolveConfig } from "./config.js";
 import { LIST_ROUTE_PATH, SUBMIT_ROUTE_PATH } from "./contract.js";
@@ -50,7 +52,9 @@ const COMMENT_LABELS = {
  * Commenting is enabled for a type listed in `entryTypes` or declaring
  * `supports: ['comments']`.
  */
-export function comments(options: CommentsConfig = {}) {
+export function comments(
+  options: CommentsConfig = {},
+): PluginDescriptor<undefined, { readonly comments: CommentsRouter }> {
   const config = resolveConfig(options);
   return definePlugin("comments", {
     schema,

@@ -1,16 +1,24 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { createORPCClient } from "@orpc/client";
+import { RPCLink } from "@orpc/client/fetch";
 import { beforeEach } from "vitest";
 
 import type { AnyPluginDescriptor, PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
+import type { User, UserRole } from "../db/schema/users.js";
+import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
+import type { PluginRpcClient } from "../plugin/registry.js";
+import type { AppRouterClient } from "../rpc/router.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
+import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
+import { createSession } from "../auth/sessions.js";
 import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { buildEntryPermalink } from "../route/permalink.js";
@@ -21,10 +29,10 @@ import { fakeCdn } from "./cdn-fake.js";
 import { testConfig } from "./config.js";
 import { silentLogger } from "./context.js";
 import { createDeferQueue } from "./defer.js";
-import { factoriesFor } from "./factories.js";
+import { factoriesFor, userFactory } from "./factories.js";
 import { fakeMail } from "./mail-fake.js";
 import { TestPage } from "./page.js";
-import { buildRequest } from "./request.js";
+import { appendCookie, buildRequest } from "./request.js";
 import { createSiteDatabase } from "./site-database.js";
 import { migrationFolders } from "./site-migrations.js";
 
@@ -41,9 +49,10 @@ type PluginFactories = Readonly<Record<string, PluginFactory>>;
 
 export interface TestSiteOptions<
   TFactories extends PluginFactories = Record<never, never>,
+  TPlugins extends readonly AnyPluginDescriptor[] = [],
 > {
   /** Installed on top of core, in this order. */
-  readonly plugins?: readonly AnyPluginDescriptor[];
+  readonly plugins?: TPlugins;
   /** Plugin factories, joining core's on `site.factory` under these names. */
   readonly factories?: TFactories;
   /** The site's own platform bindings, as `env.MY_BINDING` reads them. */
@@ -54,6 +63,7 @@ export interface TestSiteOptions<
 
 export interface TestSite<
   TFactories extends PluginFactories = Record<never, never>,
+  TRpc extends PluginRpcRouters = Record<never, never>,
 > {
   readonly factory: Factories & TFactories;
   /** Every mail the site sent; the site's mailer delivers nothing. */
@@ -64,9 +74,31 @@ export interface TestSite<
    * plugins and database.
    */
   readonly context: AppContext;
-  /** Request a path, or an entry at its permalink, as an anonymous visitor. */
+  /**
+   * Request a path, or an entry at its permalink, as a visitor or the user
+   * `actingAs` names.
+   */
   readonly visit: (target: string | Entry) => Promise<TestPage>;
+  /** Calls a procedure over the wire, through the site's own dispatcher. */
+  readonly rpc: AppRouterClient & PluginRpcClient<TRpc>;
+  /**
+   * This site, calling as the user, or as a user of the role created on its
+   * first call in each test.
+   */
+  readonly actingAs: (principal: User | UserRole) => TestSite<TFactories, TRpc>;
 }
+
+/** Every router the plugins declare, so a plugin not installed has none. */
+type InstalledRpc<TPlugins extends readonly AnyPluginDescriptor[]> =
+  TPlugins extends readonly [
+    Pick<PluginDescriptor<never, infer TRpc>, "~rpc">,
+    ...infer TRest extends readonly AnyPluginDescriptor[],
+  ]
+    ? TRpc & InstalledRpc<TRest>
+    : Record<never, never>;
+
+/** `null` is a visitor; a bare role is a user not created yet. */
+type Principal = User | { readonly role: UserRole } | null;
 
 /**
  * A whole site, faked wherever the kit has a fake. With no arguments it is the
@@ -75,7 +107,10 @@ export interface TestSite<
  */
 export async function testSite<
   TFactories extends PluginFactories = Record<never, never>,
->(options?: TestSiteOptions<TFactories>): Promise<TestSite<TFactories>> {
+  const TPlugins extends readonly AnyPluginDescriptor[] = [],
+>(
+  options?: TestSiteOptions<TFactories, TPlugins>,
+): Promise<TestSite<TFactories, InstalledRpc<TPlugins>>> {
   const cwd = process.cwd();
   const config =
     options === undefined
@@ -86,10 +121,12 @@ export async function testSite<
   );
   const { defer, drainDeferred } = createDeferQueue();
   let fakes = freshFakes();
+  let signedIn = new WeakMap<NonNullable<Principal>, Promise<string>>();
   beforeEach(async () => {
     await drainDeferred();
     await reset();
     fakes = freshFakes();
+    signedIn = new WeakMap();
   });
   const env = options?.env ?? {};
   const app = await buildApp(withFakes(config, () => fakes));
@@ -113,37 +150,64 @@ export async function testSite<
       },
     });
 
-  const site: TestSite<TFactories> = {
-    factory: {
-      ...factoriesFor(db),
-      ...(Object.fromEntries(
-        Object.entries(options?.factories ?? {}).map(([name, factory]) => [
-          name,
-          factory.transient({ db }),
-        ]),
-      ) as TFactories),
-    },
-    get mail() {
-      return fakes.mail;
-    },
-    env,
-    get context() {
-      return contextFor(new Request("https://cms.example/"));
-    },
-    visit: async (target) => {
-      const path =
-        typeof target === "string" ? target : await permalinkOf(target);
-      const ctx = contextFor(await buildRequest(db, path));
-      const response = await requestStore.run(ctx, () => dispatcher(ctx));
-      return new TestPage({
-        status: response.status,
-        headers: response.headers,
-        body: await response.text(),
-        template: ctx.resolvedTemplate,
-        route: ctx.resolvedRoute?.pattern ?? null,
-      });
-    },
+  async function dispatch(request: Request): Promise<Response> {
+    const ctx = contextFor(request);
+    return requestStore.run(ctx, () => dispatcher(ctx));
+  }
+
+  const factory = {
+    ...factoriesFor(db),
+    ...(Object.fromEntries(
+      Object.entries(options?.factories ?? {}).map(([name, factory]) => [
+        name,
+        factory.transient({ db }),
+      ]),
+    ) as TFactories),
   };
+
+  function siteActingAs(
+    principal: Principal,
+  ): TestSite<TFactories, InstalledRpc<TPlugins>> {
+    const signIn = async (request: Request): Promise<Request> => {
+      if (principal === null) return request;
+      let cookie = signedIn.get(principal);
+      if (cookie === undefined) {
+        cookie = sessionCookieFor(db, principal);
+        signedIn.set(principal, cookie);
+      }
+      const headers = new Headers(request.headers);
+      appendCookie(headers, await cookie);
+      return new Request(request, { headers });
+    };
+    return {
+      factory,
+      get mail() {
+        return fakes.mail;
+      },
+      env,
+      get context() {
+        return contextFor(new Request("https://cms.example/"));
+      },
+      visit: async (target) => {
+        const path =
+          typeof target === "string" ? target : await permalinkOf(target);
+        const ctx = contextFor(await signIn(await buildRequest(db, path)));
+        const response = await requestStore.run(ctx, () => dispatcher(ctx));
+        return new TestPage({
+          status: response.status,
+          headers: response.headers,
+          body: await response.text(),
+          template: ctx.resolvedTemplate,
+          route: ctx.resolvedRoute?.pattern ?? null,
+        });
+      },
+      rpc: rpcClient(async (request) => dispatch(await signIn(request))),
+      actingAs: (next) =>
+        siteActingAs(typeof next === "string" ? { role: next } : next),
+    };
+  }
+
+  const site = siteActingAs(null);
 
   async function permalinkOf(entry: Entry): Promise<string> {
     const path = await buildEntryPermalink(site.context, entry);
@@ -154,6 +218,29 @@ export async function testSite<
   }
 
   return site;
+}
+
+async function sessionCookieFor(
+  db: Db,
+  principal: NonNullable<Principal>,
+): Promise<string> {
+  const user =
+    "id" in principal
+      ? principal
+      : await userFactory.transient({ db }).create({ role: principal.role });
+  const { token } = await createSession(db, { userId: user.id });
+  return `${SESSION_COOKIE_NAME}=${token}`;
+}
+
+function rpcClient<TRpc extends PluginRpcRouters>(
+  dispatch: (request: Request) => Promise<Response>,
+): AppRouterClient & PluginRpcClient<TRpc> {
+  const link = new RPCLink({
+    url: "https://cms.example/_plumix/rpc",
+    headers: { "x-plumix-request": "1" },
+    fetch: (request) => dispatch(request),
+  });
+  return createORPCClient<AppRouterClient & PluginRpcClient<TRpc>>(link);
 }
 
 function siteRootOf(dir: string): string {

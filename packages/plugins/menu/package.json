@@ -61,6 +61,7 @@
     "@dnd-kit/core": "catalog:dnd-kit",
     "@dnd-kit/sortable": "catalog:dnd-kit",
     "@dnd-kit/utilities": "catalog:dnd-kit",
+    "@orpc/server": "catalog:orpc",
     "valibot": "catalog:"
   },
   "peerDependencies": {
@@ -72,7 +73,6 @@
     "@arethetypeswrong/cli": "catalog:",
     "@lingui/cli": "catalog:lingui",
     "@orpc/client": "catalog:orpc",
-    "@orpc/server": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/prettier-config": "workspace:*",

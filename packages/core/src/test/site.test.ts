@@ -1,11 +1,14 @@
 import { Factory } from "fishery";
+import * as v from "valibot";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { Db } from "../context/app-context.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
+import type { PluginDescriptor } from "../plugin/define.js";
 import { settings } from "../db/schema/settings.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
+import { base } from "../rpc/base.js";
 import { testSite } from "./site.js";
 
 const posts = definePlugin("posts", {
@@ -147,5 +150,121 @@ describe("work a test defers", () => {
     await new Promise((resolve) => setTimeout(resolve, 60));
 
     expect(await deferring.context.db.query.settings.findMany()).toEqual([]);
+  });
+});
+
+const calling = await testSite({ plugins: [posts] });
+
+describe("the site's rpc", () => {
+  test("calls a core procedure as a visitor when no one is signed in", async () => {
+    const session = await calling.rpc.auth.session();
+
+    expect(session).toEqual({ user: null, needsBootstrap: true });
+  });
+});
+
+describe("acting as a role", () => {
+  test("calls as a fresh user of that role", async () => {
+    const session = await calling.actingAs("editor").rpc.auth.session();
+
+    expect(session.user).toMatchObject({ id: 1, role: "editor" });
+  });
+});
+
+describe("a role without the capability", () => {
+  test("is refused, as it is over the wire", async () => {
+    const creating = calling.actingAs("subscriber").rpc.entry.create({
+      type: "post",
+      title: "Hello",
+      slug: "hello",
+    });
+
+    await expect(creating).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      status: 403,
+      data: { capability: "entry:post:create" },
+    });
+  });
+});
+
+describe("acting as a user", () => {
+  test("calls as that user", async () => {
+    await calling.factory.user.create({ role: "admin" });
+    const author = await calling.factory.user.create({ role: "author" });
+
+    const session = await calling.actingAs(author).rpc.auth.session();
+
+    expect(session.user).toMatchObject({ id: 2, role: "author" });
+  });
+
+  test("sees what an earlier principal wrote", async () => {
+    const author = await calling.factory.user.create({ role: "author" });
+    const draft = await calling
+      .actingAs(author)
+      .rpc.entry.create({ type: "post", title: "Hello", slug: "hello" });
+
+    const read = await calling
+      .actingAs("editor")
+      .rpc.entry.get({ id: draft.id });
+
+    expect(read).toMatchObject({ title: "Hello", authorId: 1 });
+  });
+});
+
+const greetingRouter = {
+  greet: base
+    .input(v.object({ name: v.string() }))
+    .handler(({ input }) => `Hello, ${input.name}`),
+};
+
+function greeting(): PluginDescriptor<
+  undefined,
+  { readonly greeting: typeof greetingRouter }
+> {
+  return definePlugin("greeting", {
+    setup: (ctx) => {
+      ctx.registerRpcRouter(greetingRouter);
+    },
+  });
+}
+
+const greeted = await testSite({ plugins: [posts, greeting()] });
+
+describe("an installed plugin's procedures", () => {
+  test("are called through the site's rpc", async () => {
+    const greetingText = await greeted.rpc.greeting.greet({ name: "Ann" });
+
+    expect(greetingText).toBe("Hello, Ann");
+  });
+
+  test("are on the rpc of a site that installs the plugin, and only there", () => {
+    expectTypeOf(greeted.rpc.greeting.greet)
+      .parameter(0)
+      .toEqualTypeOf<{ name: string }>();
+    expectTypeOf(calling.rpc).not.toHaveProperty("greeting");
+  });
+});
+
+const whoami = definePlugin("whoami", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/me",
+      auth: "authenticated",
+      handler: (_request, appCtx) => new Response(appCtx.user?.email),
+    });
+  },
+});
+const visiting = await testSite({ plugins: [whoami] });
+
+describe("visiting as a user", () => {
+  test("requests the page signed in as that user", async () => {
+    const ann = await visiting.factory.user.create({
+      email: "ann@example.test",
+    });
+
+    const page = await visiting.actingAs(ann).visit("/_plumix/whoami/me");
+
+    page.assertOk().assertSee("ann@example.test");
   });
 });

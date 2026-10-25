@@ -73,6 +73,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@orpc/server": "catalog:orpc",
     "drizzle-orm": "catalog:drizzle",
     "markdown-it": "^15.0.2",
     "valibot": "catalog:"
@@ -88,7 +89,6 @@
     "@libsql/client": "catalog:",
     "@lingui/cli": "catalog:lingui",
     "@orpc/client": "catalog:orpc",
-    "@orpc/server": "catalog:orpc",
     "@playwright/test": "catalog:",
     "@plumix/eslint-config": "workspace:*",
     "@plumix/plugin-blog": "workspace:*",
