@@ -1,17 +1,11 @@
 import type { AppContext } from "../context/app-context.js";
 import {
-  apiTokenAuthenticator,
   apiTokenOf,
+  audienceTokenAuthenticator,
   authenticateTraced,
   tokenScopesOf,
 } from "./authenticator.js";
 import { withUser } from "./with-user.js";
-
-/**
- * Not the configured authenticator: these endpoints sit ahead of the CSRF gate,
- * and only bearer auth is CSRF-immune.
- */
-const bearerAuthenticator = apiTokenAuthenticator();
 
 /**
  * Must stay a superset of what `apiTokenAuthenticator` parses, so an
@@ -23,10 +17,19 @@ export function hasBearerToken(request: Request): boolean {
   return BEARER.test(request.headers.get("authorization") ?? "");
 }
 
+/**
+ * Not the configured authenticator: these endpoints sit ahead of the CSRF gate,
+ * and only bearer auth is CSRF-immune. A token bound to an audience passes only
+ * where `audience` names it.
+ */
 export async function authenticateBearer(
   ctx: AppContext,
+  audience: string | null = null,
 ): Promise<AppContext | null> {
-  const result = await authenticateTraced(ctx, bearerAuthenticator);
+  const result = await authenticateTraced(
+    ctx,
+    audienceTokenAuthenticator(audience),
+  );
   if (!result) return null;
   const { id, email, role, meta } = result.user;
   return withUser(

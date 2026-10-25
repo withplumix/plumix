@@ -42,6 +42,24 @@ describe("createApiToken", () => {
     expect(stored?.id).toBe(row.id);
   });
 
+  test("an audience-bound token gets the `pl_aud_` prefix", async () => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({});
+
+    const { secret, row } = await createApiToken(db, {
+      userId: user.id,
+      name: "Claude",
+      expiresAt: null,
+      audience: "https://cms.example/_plumix/mcp",
+      clientId: "https://claude.ai/oauth/metadata.json",
+    });
+
+    expect(secret).toMatch(/^pl_aud_/);
+    expect(row.prefix).toMatch(/^pl_aud_.{4}$/);
+    expect(row.audience).toBe("https://cms.example/_plumix/mcp");
+    expect(row.clientId).toBe("https://claude.ai/oauth/metadata.json");
+  });
+
   test("two consecutive mints yield distinct secrets and rows", async () => {
     const db = await createTestDb();
     const user = await userFactory.transient({ db }).create({});

@@ -56,7 +56,7 @@ The dispatcher checks `/_plumix/mcp` in `tryColdInterfaces`, before the CSRF gat
 - In a production build it is always `"token"`, because `process.env.PLUMIX_DEV` folds to `""`.
 - Under dev, a cross-site `Origin` is `"rejected"` (403 `mcp_cross_origin`). A loopback host is `"trusted"`. Any other host is `"token"`.
 - `"trusted"` passes the dispatcher's context through as it is. No authenticator has run on it, so the principal is anonymous and tools see only what an anonymous visitor may read.
-- `"token"` runs `authenticateBearer`, which accepts only an API token (`apiTokenAuthenticator`). A session cookie gets 401.
+- `"token"` runs `authenticateBearer` with the endpoint's own URL (`basePath` included) as the audience, which accepts only an API token: one with no audience, or one bound to that URL. A token bound to another URL, or a session cookie, gets 401.
 
 Each request builds a fresh tool map with `buildMcpToolRegistry` and a fresh SDK `Server` with `buildMcpServer`. It connects a `WebStandardStreamableHTTPServerTransport` with `sessionIdGenerator: undefined` and `enableJsonResponse: true`. `tools/list` projects each tool's valibot schema to JSON Schema (`toToolInputJsonSchema`); `tool.jsonSchema` replaces that projection when set. A tool says whether it writes, and every read tool is listed with `annotations: { readOnlyHint: true }`. `tools/call` runs inside one `mcp: <name>` telemetry span. An unknown tool or a bad input becomes a JSON-RPC error, an `McpToolError` becomes an `isError` tool result, and anything else propagates.
 
@@ -77,6 +77,7 @@ The in-editor agent is not served over MCP. It is an RPC procedure behind an `ll
 
 - Production MCP needs an API token. Dev trust is statically off in a build. `packages/core/src/mcp/dispatch.test.ts` ("production (dev trust off) still requires a token over loopback"); `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`.
 - MCP authenticates by API token only, never by session cookie. `dispatch.test.ts` ("a session-cookie request is rejected").
+- MCP accepts an audience-bound token only when its audience is the endpoint's URL. `dispatch.test.ts` ("audience-bound tokens").
 - The endpoint is off unless configured, and the handler graph is not imported when it is off. `dispatchMcp` in `runtime/dispatcher.ts`; `dispatch.test.ts` ("dev auto-enables the endpoint with no config flag").
 - No tool drops tables or runs migrations. `dispatch.test.ts` ("no tool drops tables or migrates").
 - Telemetry and error tools are absent outside dev. `dispatch.test.ts` ("without the dev gate the tracing and error tools are not registered").

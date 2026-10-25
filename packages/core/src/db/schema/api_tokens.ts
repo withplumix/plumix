@@ -37,6 +37,13 @@ export const apiTokens = sqliteTable(
      * token never exceeds its user. `[]` grants nothing.
      */
     scopes: t.text({ mode: "json" }).$type<readonly string[]>(),
+    /**
+     * The one URL the token works on; null works on every surface but an
+     * audience-bound one. Only `/_plumix/mcp` accepts a bound token.
+     */
+    audience: t.text(),
+    /** The OAuth client's metadata document URL; null for a personal token. */
+    clientId: t.text(),
     /** Updated on every successful auth. Helps spot dead tokens for cleanup. */
     lastUsedAt: t.integer({ mode: "timestamp" }),
     /**

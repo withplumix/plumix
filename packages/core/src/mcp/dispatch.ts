@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import { authenticateBearer } from "../auth/bearer.js";
+import { withBasePath } from "../base-path.js";
 import { loadOnce } from "../load-once.js";
 import {
   forbidden,
@@ -8,6 +9,8 @@ import {
 } from "../runtime/contract/http.js";
 import { resolveMcpDevTrust } from "./dev-trust.js";
 import { buildMcpToolRegistry } from "./registry.js";
+
+const MCP_PATH = "/_plumix/mcp";
 
 const loadMcpServer = loadOnce(() => import("./server.js"));
 
@@ -32,7 +35,7 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
   if (trust === "trusted") {
     toolCtx = ctx;
   } else {
-    const authedCtx = await authenticateBearer(ctx);
+    const authedCtx = await authenticateBearer(ctx, mcpUrl(ctx));
     if (!authedCtx) return unauthorized();
     toolCtx = authedCtx;
   }
@@ -49,4 +52,13 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
   });
   await server.connect(transport);
   return transport.handleRequest(toolCtx.request);
+}
+
+/**
+ * The audience a token bound to this endpoint names. The dispatcher has already
+ * stripped `basePath` from the request, so it goes back on.
+ */
+function mcpUrl(ctx: AppContext): string {
+  return new URL(withBasePath(MCP_PATH, ctx.config.basePath), ctx.request.url)
+    .href;
 }

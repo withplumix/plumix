@@ -123,6 +123,42 @@ describe("RequestAuthenticator — dispatcher integration", () => {
   });
 });
 
+describe("API tokens on RPC", () => {
+  function listTokens(secret: string): Request {
+    return plumixRequest("/_plumix/rpc/auth/apiTokens/list", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify({ json: {} }),
+    });
+  }
+
+  test("a token without an audience authenticates", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.factory.user.create({ role: "editor" });
+    const { secret } = await h.factory.apiToken.create({ userId: user.id });
+
+    const res = await h.dispatch(listTokens(secret));
+
+    expect(res.status).toBe(200);
+  });
+
+  test("a token bound to the MCP audience is refused with 401", async () => {
+    const h = await createDispatcherHarness();
+    const user = await h.factory.user.create({ role: "editor" });
+    const { secret } = await h.factory.apiToken.create({
+      userId: user.id,
+      audience: "https://cms.example/_plumix/mcp",
+    });
+
+    const res = await h.dispatch(listTokens(secret));
+
+    expect(res.status).toBe(401);
+  });
+});
+
 /**
  * Test fixture — a minimal authenticator that resolves a user by an
  * `x-trusted-email` header. Stand-in for what `cfAccess()` will do in

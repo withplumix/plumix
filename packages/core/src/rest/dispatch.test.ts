@@ -728,6 +728,21 @@ describe("REST API — plugin resource seam", () => {
     expect(await authed.json()).toEqual({ id: userId });
   });
 
+  test("a token bound to the MCP audience is 401 on an `authenticated` resource", async () => {
+    const h = await restHarness({ config: { plugins: [apiPlugin] } });
+    const user = await h.factory.user.create({ role: "editor" });
+    const { secret } = await h.factory.apiToken.create({
+      userId: user.id,
+      audience: "https://cms.example/_plumix/mcp",
+    });
+
+    const res = await h.dispatch(
+      bearerGet("/_plumix/api/v1/system/diag/whoami", secret),
+    );
+
+    expect(res.status).toBe(401);
+  });
+
   test("a capability resource is 403 without the grant, 200 with it", async () => {
     const h = await restHarness({ config: { plugins: [apiPlugin] } });
     const { secret } = await mintPat(h, { role: "admin" });

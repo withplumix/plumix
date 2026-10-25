@@ -357,6 +357,8 @@ export const apiTokenFactory = Factory.define<
     // fishery's DeepPartial widens array elements to `T | undefined`; the
     // caller passes a real scope list (or null), so narrow it back.
     scopes: (params.scopes ?? null) as readonly string[] | null,
+    audience: params.audience ?? null,
+    clientId: params.clientId ?? null,
   };
 });
 

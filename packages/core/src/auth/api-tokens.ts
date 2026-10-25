@@ -12,6 +12,8 @@ import { hashToken } from "./tokens.js";
  * GitHub's `ghp_`.
  */
 export const API_TOKEN_PREFIX = "pl_pat_";
+/** Tells a leaked audience-bound token apart from a personal one. */
+const AUDIENCE_TOKEN_PREFIX = "pl_aud_";
 const API_TOKEN_BODY_BYTES = 32;
 /** Short enough for a list cell, long enough to tell a user's tokens apart. */
 const PREFIX_DISPLAY_BODY_CHARS = 4;
@@ -33,6 +35,10 @@ export interface CreateApiTokenInput {
    * intersection.
    */
   readonly scopes?: readonly string[] | null;
+  /** The one URL the token works on; `null` leaves it unbound. */
+  readonly audience?: string | null;
+  /** The OAuth client the token was issued to. */
+  readonly clientId?: string | null;
 }
 
 /**
@@ -42,11 +48,14 @@ export async function createApiToken(
   db: Db,
   input: CreateApiTokenInput,
 ): Promise<MintedApiToken> {
-  const secret = generateApiTokenSecret();
+  const audience = input.audience ?? null;
+  const secretPrefix =
+    audience === null ? API_TOKEN_PREFIX : AUDIENCE_TOKEN_PREFIX;
+  const secret = generateApiTokenSecret(secretPrefix);
   const id = await hashToken(secret);
   const prefix = secret.slice(
     0,
-    API_TOKEN_PREFIX.length + PREFIX_DISPLAY_BODY_CHARS,
+    secretPrefix.length + PREFIX_DISPLAY_BODY_CHARS,
   );
 
   const [row] = await db
@@ -58,6 +67,8 @@ export async function createApiToken(
       prefix,
       expiresAt: input.expiresAt,
       scopes: input.scopes ?? null,
+      audience,
+      clientId: input.clientId ?? null,
     })
     .returning();
   // eslint-disable-next-line no-restricted-syntax -- unreachable unless the driver returns no row from INSERT … RETURNING
@@ -73,13 +84,20 @@ interface ValidatedApiToken {
 
 /**
  * Returns null for every failure reason alike, so a token prober learns nothing
- * more. Writes `lastUsedAt` before returning.
+ * more. Writes `lastUsedAt` before returning. The default `null` audience
+ * refuses every audience-bound token.
  */
 export async function validateApiToken(
   db: Db,
   rawToken: string,
+  { audience = null }: { readonly audience?: string | null } = {},
 ): Promise<ValidatedApiToken | null> {
-  if (!rawToken.startsWith(API_TOKEN_PREFIX)) return null;
+  if (
+    !rawToken.startsWith(API_TOKEN_PREFIX) &&
+    !rawToken.startsWith(AUDIENCE_TOKEN_PREFIX)
+  ) {
+    return null;
+  }
 
   const id = await hashToken(rawToken);
   const now = new Date();
@@ -96,6 +114,9 @@ export async function validateApiToken(
         eq(apiTokens.id, id),
         isNull(apiTokens.revokedAt),
         or(isNull(apiTokens.expiresAt), gt(apiTokens.expiresAt, now)),
+        audience === null
+          ? isNull(apiTokens.audience)
+          : or(isNull(apiTokens.audience), eq(apiTokens.audience, audience)),
       ),
     )
     .get();
@@ -132,8 +153,8 @@ export async function revokeApiToken(
   return result.length > 0;
 }
 
-function generateApiTokenSecret(): string {
+function generateApiTokenSecret(prefix: string): string {
   const bytes = new Uint8Array(API_TOKEN_BODY_BYTES);
   crypto.getRandomValues(bytes);
-  return `${API_TOKEN_PREFIX}${encodeBase64url(bytes)}`;
+  return `${prefix}${encodeBase64url(bytes)}`;
 }
