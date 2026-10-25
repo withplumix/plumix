@@ -39,7 +39,8 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
     // `settings` stays bound to `ctx`: the same principal and request, but a
     // write's subscriber reading its actor does not change this response.
     ...ctx,
-    // A block handler the render fires reads the principal through `tracked`.
+    // Without this, a handler the render fires would read the principal off `ctx`
+    // and never mark the response personal.
     ...rebindDispatch(ctx, () => tracked),
     get user() {
       mark();

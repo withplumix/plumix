@@ -48,7 +48,7 @@ interface ActionEntry {
 interface Subscription {
   readonly plugin: string | null;
   readonly order: HandlerOrder | undefined;
-  /** The plugin's place in the site's `plugins` config; core's is -1. */
+  /** The plugin's place in the site's `plugins` config; core's is `CORE_RANK`. */
   readonly rank: number;
   readonly insertOrder: number;
   /**

@@ -390,7 +390,9 @@ async function prefetchEntryLoaders(
   const loaderData = await ctx.telemetry.span("render: loaders", (s) => {
     s.set("loaders.blocks", blocks.length);
     return resolveBlockLoaders(blocks, ctx.blocks, ctx, {
-      // Not awaited, so observability never back-pressures loaders.
+      // Not awaited, so observability never back-pressures loaders; `emit`
+      // never rejects, which an unhandled rejection would turn into a killed
+      // Workers request.
       onLoaderError: (event: LoaderErrorEvent) => {
         if (honoursOutcome && isPageOutcome(event.error)) {
           pageOutcome ??= event.error;

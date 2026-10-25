@@ -4,7 +4,7 @@ import { defineEvent, defineFilter } from "../hooks/define.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createTestContext } from "./context.js";
 import { createTestDb } from "./harness.js";
-import { spyEvent, spyFilter } from "./spies.js";
+import { bindFilterSpy, spyEvent, spyFilter } from "./spies.js";
 
 const saved = defineEvent<{ readonly id: number }>("acme:saved");
 const title = defineFilter<string, { readonly locale: string }>("acme:title", {
@@ -102,5 +102,25 @@ describe("spyFilter on a declared filter", () => {
     const result = ctx.filters.apply(title, "Home", { locale: "uk" });
 
     expect(result).toBe("Home (uk)");
+  });
+});
+
+describe("bindFilterSpy", () => {
+  test("spies a declared filter on the hooks it is bound to", async () => {
+    const hooks = new HookRegistry();
+    const spy = bindFilterSpy(hooks)(title);
+    const ctx = createTestContext({ db: await createTestDb(), hooks });
+
+    ctx.filters.apply(title, "Home", { locale: "uk" });
+
+    expect(spy.calls).toEqual([{ input: "Home", rest: [{ locale: "uk" }] }]);
+  });
+
+  test("spies a filter name on the hooks it is bound to", () => {
+    const hooks = new HookRegistry();
+    const spy = bindFilterSpy(hooks)("entry:before_save");
+
+    expect(spy.calls).toEqual([]);
+    expect(() => spy.assertCalled()).toThrow("spyFilter(entry:before_save)");
   });
 });
