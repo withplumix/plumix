@@ -5,11 +5,14 @@ import {
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AllowCustomStyles } from "../blocks/styles/style-policy.js";
+import type { ThemeTokens } from "../blocks/styles/types.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import corePackage from "../../package.json" with { type: "json" };
+import { defineBlock } from "../blocks/block-registry.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -47,6 +50,44 @@ const blog = definePlugin("test-blog", {
   },
 });
 
+const card = defineBlock({
+  name: "site/card",
+  title: "Card",
+  render: () => null,
+  inputs: [
+    { name: "heading", type: "text" },
+    {
+      name: "tone",
+      type: "select",
+      options: [
+        { label: "Plain", value: "plain" },
+        { label: "Loud", value: "loud" },
+      ],
+    },
+    { name: "body", type: "slot", allowedBlocks: ["core/rich-text"] },
+  ],
+  defaultStyles: { large: { padding: "var(--plumix-spacing-md, 16px)" } },
+});
+
+function themedMcpHarness(
+  theme: {
+    allowedBlocks?: readonly string[];
+    tokens?: ThemeTokens;
+    allowCustomStyles?: AllowCustomStyles;
+  } = {},
+): Promise<DispatcherHarness> {
+  return mcpHarness({
+    config: {
+      plugins: [blog],
+      theme: defineTheme({
+        templates: [fallback(() => null)],
+        blocks: [card],
+        ...theme,
+      }),
+    },
+  });
+}
+
 /**
  * Not itself a telemetry consumer, so it can't vote into existence the
  * collection it measures.
@@ -83,6 +124,18 @@ interface ToolCallResult {
 interface ContentModel {
   readonly entryTypes: readonly Record<string, unknown>[];
   readonly taxonomies: readonly Record<string, unknown>[];
+}
+
+interface BuildingModel {
+  readonly blocks: readonly {
+    readonly name: string;
+    readonly inputs: readonly Record<string, unknown>[];
+    readonly defaultStyles?: unknown;
+  }[];
+  readonly styles: {
+    readonly allowCustomStyles: AllowCustomStyles;
+    readonly tokens: Record<string, Record<string, unknown>>;
+  };
 }
 
 async function mintPat(
@@ -491,6 +544,103 @@ describe("MCP endpoint — schema_describe", () => {
     expect(json.result.isError).toBe(true);
     expect(json.result.content[0]?.text).toContain("not_found");
     expect(json.result.content[0]?.text).toContain("nope");
+  });
+
+  test("with no argument it lists only the blocks the theme allows, in registration order", async () => {
+    const h = await themedMcpHarness({
+      allowedBlocks: ["core/group", "core/rich-text"],
+    });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 5, "schema_describe", {});
+
+    const { blocks } = parseToolResult<BuildingModel>(json);
+    expect(blocks.map((block) => block.name)).toEqual([
+      "core/rich-text",
+      "core/group",
+      "site/card",
+    ]);
+  });
+
+  test("a block lists its inputs, with each slot's allowed children", async () => {
+    const h = await themedMcpHarness({
+      allowedBlocks: ["core/group", "core/rich-text"],
+    });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 6, "schema_describe", {});
+
+    const { blocks } = parseToolResult<BuildingModel>(json);
+    expect(blocks.find((b) => b.name === "site/card")?.inputs).toEqual([
+      { name: "heading", type: "text" },
+      { name: "tone", type: "select", options: ["plain", "loud"] },
+      { name: "body", type: "slot", allowedBlocks: ["core/rich-text"] },
+    ]);
+  });
+
+  test("a slot that lists no blocks offers every allowed block not bound to another parent", async () => {
+    const h = await themedMcpHarness({
+      allowedBlocks: ["core/group", "core/columns"],
+    });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 7, "schema_describe", {});
+
+    const { blocks } = parseToolResult<BuildingModel>(json);
+    expect(blocks.find((b) => b.name === "core/group")?.inputs).toEqual([
+      {
+        name: "content",
+        type: "slot",
+        label: "Content",
+        allowedBlocks: ["core/group", "core/columns", "site/card"],
+      },
+    ]);
+  });
+
+  test("with no argument it returns the style policy and the tokens by category", async () => {
+    const h = await themedMcpHarness({
+      allowCustomStyles: ["width"],
+      tokens: { color: { primary: { label: "Primary", value: "#06f" } } },
+    });
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 8, "schema_describe", {});
+
+    const { styles } = parseToolResult<BuildingModel>(json);
+    expect(styles.allowCustomStyles).toEqual(["width"]);
+    expect(styles.tokens).toEqual({
+      color: {
+        primary: {
+          label: "Primary",
+          value: "#06f",
+          use: "var(--plumix-color-primary)",
+        },
+      },
+    });
+  });
+
+  test("a block lists its default styles", async () => {
+    const h = await themedMcpHarness();
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 9, "schema_describe", {});
+
+    const { blocks } = parseToolResult<BuildingModel>(json);
+    expect(blocks.find((b) => b.name === "site/card")?.defaultStyles).toEqual({
+      large: { padding: "var(--plumix-spacing-md, 16px)" },
+    });
+  });
+
+  test("a token with only drafting capabilities reads the allowed blocks", async () => {
+    const h = await themedMcpHarness();
+    const secret = await mintPat(h, {
+      scopes: ["entry:post:create", "entry:post:edit_own"],
+    });
+
+    const { json } = await callTool(h, secret, 10, "schema_describe", {});
+
+    const { blocks } = parseToolResult<BuildingModel>(json);
+    expect(blocks.map((b) => b.name)).toContain("site/card");
   });
 });
 

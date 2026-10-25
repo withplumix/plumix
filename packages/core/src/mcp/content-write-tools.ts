@@ -1,6 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import * as v from "valibot";
 
+import type { BlockContentValidationIssue } from "../blocks/validation-errors.js";
 import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { LeaseResource } from "../db/edit-lease.js";
@@ -59,15 +60,7 @@ const updateInputSchema = v.object({
 export const WRITE = { readOnlyHint: false, destructiveHint: false } as const;
 
 interface IssueData {
-  readonly issues: readonly {
-    readonly path: string;
-    readonly message: string;
-    readonly code: string;
-    readonly nodeName?: string;
-    readonly slotName?: string;
-    readonly parentName?: string;
-    readonly property?: string;
-  }[];
+  readonly issues: readonly BlockContentValidationIssue[];
 }
 
 const SUBJECTS = {
@@ -126,7 +119,11 @@ export function asWriteToolError(
         .join("; ");
       return McpToolError.invalidContent(
         takesContent
-          ? `${failing}. ${alternativesFor(ctx, issues)}Fix these nodes and call ${tool} again.`
+          ? [
+              `${failing}.`,
+              ...alternativesFor(ctx, issues),
+              `Fix these nodes and call ${tool} again.`,
+            ].join(" ")
           : `${failing}. Report this to the user and stop; ${tool} takes no content you could fix.`,
       );
     }
@@ -148,8 +145,10 @@ export function asWriteToolError(
   }
 }
 
-/** What the refused nodes could have been, once each, so the agent can retry. */
-function alternativesFor(ctx: AppContext, issues: IssueData["issues"]): string {
+function alternativesFor(
+  ctx: AppContext,
+  issues: IssueData["issues"],
+): readonly string[] {
   const lines = new Set<string>();
   for (const issue of issues) {
     if (
@@ -159,7 +158,7 @@ function alternativesFor(ctx: AppContext, issues: IssueData["issues"]): string {
     ) {
       const allowed = allowedChildren(ctx, issue.parentName, issue.slotName);
       lines.add(
-        `Slot "${issue.slotName}" of "${issue.parentName}" allows: ${allowed.join(", ")}.`,
+        `Slot "${issue.slotName}" of "${issue.parentName}" allows: ${allowed.join(", ") || "none"}.`,
       );
     } else if (
       issue.code === "block_not_allowed" ||
@@ -178,7 +177,7 @@ function alternativesFor(ctx: AppContext, issues: IssueData["issues"]): string {
       lines.add(`Tokens for "${category}": ${uses.join(", ") || "none"}.`);
     }
   }
-  return [...lines].map((line) => `${line} `).join("");
+  return [...lines];
 }
 
 function capabilityOf(data: unknown): string {
