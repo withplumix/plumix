@@ -39,10 +39,19 @@ describe("virtual:plumix/catalog-locales in a build of a site enabling regional 
 
   beforeAll(async () => {
     undoSourceConfigs = loadConfigsFromSource();
+    // The admin shell as `@plumix/admin` builds it, down to the placeholder the
+    // staging fills in and the locales its catalogs ship.
     adminDir = mkdtempSync(join(tmpdir(), "plumix-catalog-locales-admin-"));
     writeFileSync(
       join(adminDir, "index.html"),
       '<!doctype html><title>admin</title><body><script id="plumix-manifest" type="application/json">{}</script></body>',
+    );
+    writeFileSync(
+      join(adminDir, "catalog-locales.json"),
+      JSON.stringify({
+        sourceLocale: "en",
+        catalogs: { admin: ["en"], editor: ["en"], blocks: ["en"] },
+      }),
     );
     dir = realpathSync(mkdtempSync(join(tmpdir(), "plumix-catalog-locales-")));
     writeFileSync(join(dir, "plumix.config.ts"), CONFIG);
