@@ -1,6 +1,7 @@
 import type { McpTool } from "../context/mcp-tool.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { contentGetTool, contentListTool } from "./content-tools.js";
+import { contentCreateTool, contentUpdateTool } from "./content-write-tools.js";
 import { errorMcpTools } from "./error-tools.js";
 import { schemaDescribeTool } from "./schema-describe.js";
 import { telemetryMcpTools } from "./telemetry-tools.js";
@@ -15,6 +16,8 @@ export const coreMcpTools: readonly McpTool[] = [
   schemaDescribeTool,
   contentListTool,
   contentGetTool,
+  contentCreateTool,
+  contentUpdateTool,
   termListTool,
   termGetTool,
   taxonomyListTool,

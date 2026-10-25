@@ -20,9 +20,14 @@ export function ifMatchMessage(kind: string): string {
   return `Send the ${kind}'s \`etag\` from \`${kind}.get\` as \`ifMatch\``;
 }
 
-/** A session is the admin's; an API token is a client calling RPC itself. */
+/**
+ * A session is the admin's; an API token is a client calling RPC itself, unless
+ * the context names the surface it calls through.
+ */
 export function rpcSurface(context: AuthenticatedAppContext): EditLeaseSurface {
-  return context.tokenScopes === null ? "admin" : "rpc";
+  return (
+    context.leaseSurface ?? (context.tokenScopes === null ? "admin" : "rpc")
+  );
 }
 
 /** Refuses a write from a copy while another user holds the resource's lease. */
