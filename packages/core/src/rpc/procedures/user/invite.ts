@@ -11,6 +11,7 @@ import { deriveUserSlug, MAX_SLUG_ATTEMPTS } from "../../../users/slug.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
+import { assertCanAssignRole, assertDeclaredRole } from "./helpers.js";
 import { userInviteInputSchema } from "./schemas.js";
 
 const CREATE_CAPABILITY = "user:create";
@@ -25,6 +26,12 @@ export const invite = base
       "rpc:user.invite:input",
       input,
     );
+    assertDeclaredRole(context, filtered.role, errors);
+    assertCanAssignRole(context, filtered.role, {
+      forbidden: (capability) => {
+        throw errors.FORBIDDEN({ data: { capability } });
+      },
+    });
 
     const token = generateToken();
     const tokenHash = await hashToken(token);

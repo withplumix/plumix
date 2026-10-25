@@ -5,9 +5,9 @@ import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
 import { copyText } from "@/lib/clipboard.js";
 import { ADMIN_BASE_PATH } from "@/lib/constants.js";
+import { getRoles } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useLabel } from "@/lib/use-label.js";
-import { ROLE_LABEL_LONG } from "@/lib/user-role-labels.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
@@ -21,7 +21,7 @@ import {
 import { useForm } from "react-hook-form";
 import * as v from "valibot";
 
-import type { User, UserRole } from "@plumix/core/schema";
+import type { User } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Button } from "@plumix/admin-ui/button";
 import {
@@ -49,10 +49,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-import { USER_ROLES } from "@plumix/core/manifest";
 import { vMessage } from "@plumix/core/validation";
 
-import { isUserRole, USERS_LIST_DEFAULT_SEARCH } from "./-constants.js";
+import { USERS_LIST_DEFAULT_SEARCH } from "./-constants.js";
 import { describeInviteError } from "./-invite-errors.js";
 
 /** Descriptors used outside JSX — error setters, copy-button aria label. */
@@ -82,7 +81,7 @@ const inviteFormSchema = v.object({
     v.maxLength(255),
   ),
   name: v.pipe(v.string(), v.trim(), v.maxLength(100)),
-  role: v.picklist(USER_ROLES),
+  role: v.pipe(v.string(), v.nonEmpty()),
 });
 
 export const Route = createFileRoute("/_authenticated/users/create")({
@@ -111,7 +110,7 @@ function InviteUserRoute(): ReactNode {
   );
 
   const inviteUser = useMutation({
-    mutationFn: (input: { email: string; name: string; role: UserRole }) =>
+    mutationFn: (input: { email: string; name: string; role: string }) =>
       orpc.user.invite.call({
         email: input.email,
         role: input.role,
@@ -134,7 +133,7 @@ function InviteUserRoute(): ReactNode {
 
   const form = useForm({
     resolver: valibotResolver(inviteFormSchema),
-    defaultValues: { email: "", name: "", role: "subscriber" as UserRole },
+    defaultValues: { email: "", name: "", role: "subscriber" },
     mode: "onBlur",
   });
 
@@ -242,11 +241,7 @@ function InviteUserRoute(): ReactNode {
                     </FormLabel>
                     <Select
                       value={field.value}
-                      onValueChange={(next) => {
-                        // Radix yields a bare string — narrow back to
-                        // `UserRole` before forwarding.
-                        if (isUserRole(next)) field.onChange(next);
-                      }}
+                      onValueChange={field.onChange}
                       disabled={inviteUser.isPending}
                     >
                       <FormControl>
@@ -259,13 +254,13 @@ function InviteUserRoute(): ReactNode {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {USER_ROLES.map((role) => (
+                        {getRoles().map((role) => (
                           <SelectItem
-                            key={role}
-                            value={role}
-                            data-testid={`invite-role-select-${role}`}
+                            key={role.name}
+                            value={role.name}
+                            data-testid={`invite-role-select-${role.name}`}
                           >
-                            {label(ROLE_LABEL_LONG[role])}
+                            {label(role.label)}
                           </SelectItem>
                         ))}
                       </SelectContent>

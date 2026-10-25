@@ -220,6 +220,7 @@ const everySlot: Required<PlumixConfigInput> = {
   mail: { overrides: {} },
   theme,
   plugins: [],
+  roles: { designer: { can: { admin: ["access"] } } },
   dataMigrations: "./data-migrations.ts",
   i18n: { defaultLocale: "en", locales: ["en", "fr"] },
   redirects: [],

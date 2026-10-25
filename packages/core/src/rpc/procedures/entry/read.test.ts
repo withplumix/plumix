@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
-import { anonymousPolicy, rolePolicy } from "../../../access/policy.js";
+import { anonymousPolicy, capabilityPolicy } from "../../../access/policy.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { definePlugin } from "../../../plugin/define.js";
@@ -669,7 +669,11 @@ describe("an entry type with an access policy", () => {
         access: {
           default: anonymousPolicy,
           policies: [
-            { key: "staff", label: "Staff", policy: rolePolicy("editor") },
+            {
+              key: "staff",
+              label: "Staff",
+              policy: capabilityPolicy("user:list"),
+            },
           ],
         },
       });

@@ -436,6 +436,31 @@ msgstr ""
 #~ msgstr "Inherit all your permissions"
 
 #. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.admin"
+#~ msgstr "Administrator — full control"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.author"
+#~ msgstr "Author — publish own entries"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.contributor"
+#~ msgstr "Contributor — draft, no publish"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.editor"
+#~ msgstr "Editor — publish + edit any post"
+
+#. js-lingui-explicit-id
+#: src/lib/user-role-labels.ts
+#~ msgid "userRole.long.subscriber"
+#~ msgstr "Subscriber — read only"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -823,14 +848,9 @@ msgid "breadcrumb.admin"
 msgstr "Admin"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.admin"
 msgstr "Administrator"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.admin"
-msgstr "Administrator — full control"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -878,14 +898,9 @@ msgid "auth.device.approve.pending"
 msgstr "Approving…"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.author"
 msgstr "Author"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.author"
-msgstr "Author — publish own entries"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1178,14 +1193,9 @@ msgid "login.oauth.continueWith"
 msgstr "Continue with {label}"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.contributor"
 msgstr "Contributor"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.contributor"
-msgstr "Contributor — draft, no publish"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1775,14 +1785,9 @@ msgid "breadcrumb.editUser"
 msgstr "Edit user"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.editor"
 msgstr "Editor"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.editor"
-msgstr "Editor — publish + edit any post"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -3452,14 +3457,9 @@ msgid "entries.list.column.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
+#: src/lib/core-role-labels-i18n.ts
 msgid "userRole.subscriber"
 msgstr "Subscriber"
-
-#. js-lingui-explicit-id
-#: src/lib/user-role-labels.ts
-msgid "userRole.long.subscriber"
-msgstr "Subscriber — read only"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts
@@ -3941,6 +3941,11 @@ msgstr "Unknown"
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.unknownDevice"
 msgstr "Unknown device"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/users/-role-name.tsx
+msgid "users.role.unknown"
+msgstr "Unknown role {role}"
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

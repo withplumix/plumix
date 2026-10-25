@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { UserRole } from "../../../db/schema/users.js";
+import { rolesFromRank } from "../../../access/contract/rbac.js";
 import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
@@ -18,7 +19,11 @@ function taxonomyRegistry() {
     "term:category:edit": "editor",
   };
   for (const [name, minRole] of Object.entries(caps)) {
-    registry.capabilities.set(name, { name, minRole, registeredBy: "test" });
+    registry.capabilities.set(name, {
+      name,
+      grantTo: rolesFromRank(minRole),
+      registeredBy: "test",
+    });
   }
   return registry;
 }

@@ -11,6 +11,7 @@ import type {
   TermTaxonomyCapabilityOverrides,
 } from "../access/contract/capability.js";
 import type { AccessPolicyFor } from "../access/contract/policy.js";
+import type { SiteRoles } from "../access/contract/roles.js";
 import type {
   BlockPattern,
   BlockSpec,
@@ -409,12 +410,8 @@ export interface RegisteredSettingsPage extends SettingsPageOptions {
 
 export interface RegisteredCapability {
   readonly name: string;
-  readonly minRole: UserRole;
-  /**
-   * Roles granted the capability regardless of hierarchy: a role qualifies if
-   * it meets `minRole` or appears here.
-   */
-  readonly defaultGrants?: readonly UserRole[];
+  /** The default roles that receive it, in ladder order, `admin` included. */
+  readonly grantTo: readonly UserRole[];
   readonly registeredBy: string | null;
 }
 
@@ -908,6 +905,8 @@ export interface PluginRegistry {
    * same answer.
    */
   readonly frameworkRoutes: FrameworkRoutes;
+  /** The config's role declarations, read when the role table resolves. */
+  readonly roles: SiteRoles;
 }
 
 export interface MutablePluginRegistry extends PluginRegistry {
@@ -948,6 +947,7 @@ export interface MutablePluginRegistry extends PluginRegistry {
 
 export function createPluginRegistry(
   frameworkRoutes: FrameworkRoutes = resolveFrameworkRoutes(),
+  roles: SiteRoles = {},
 ): MutablePluginRegistry {
   return {
     pluginIds: [],
@@ -988,6 +988,7 @@ export function createPluginRegistry(
     searchProviders: new Map(),
     documentManifests: [],
     frameworkRoutes,
+    roles,
   };
 }
 

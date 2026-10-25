@@ -68,7 +68,9 @@ export function comments(
       ctx.extendAppContext("comments", { requireEmail: config.requireEmail });
     },
     setup: (ctx) => {
-      ctx.registerCapability(COMMENT_MODERATE_CAPABILITY, "editor");
+      ctx.registerCapability(COMMENT_MODERATE_CAPABILITY, {
+        grantTo: ["editor"],
+      });
       ctx.registerRpcRouter(createCommentsRouter());
       ctx.registerAdminPage({
         path: "/comments",

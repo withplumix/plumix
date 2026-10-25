@@ -4,7 +4,8 @@ type VitePluginErrorCode =
   | "admin_entry_outside_project_root"
   | "admin_entry_not_found"
   | "block_module_unresolvable"
-  | "island_export_is_hook";
+  | "island_export_is_hook"
+  | "unknown_role_grants";
 
 interface VitePluginErrorFields {
   pluginId?: string;
@@ -58,6 +59,17 @@ export class VitePluginError extends Error {
         `the file was not found at ${ctx.resolved}. Build the plugin's admin ` +
         `assets before running \`plumix build\`.`,
       ctx,
+    );
+  }
+
+  static unknownRoleGrants(ctx: {
+    messages: readonly string[];
+  }): VitePluginError {
+    return new VitePluginError(
+      "unknown_role_grants",
+      `[plumix] the config's roles name what nothing registered:\n` +
+        ctx.messages.map((message) => `  - ${message}`).join("\n"),
+      {},
     );
   }
 

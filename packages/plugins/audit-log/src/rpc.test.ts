@@ -57,7 +57,7 @@ function buildContext(role: UserRole): AppContext {
   // the role-based resolver knows admin → audit_log:read.
   registry.capabilities.set("audit_log:read", {
     name: "audit_log:read",
-    minRole: "admin",
+    grantTo: ["admin"],
     registeredBy: "audit_log",
   });
   const user: User = {

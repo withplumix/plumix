@@ -348,6 +348,7 @@ export type {
   RestResourceMethod,
   RestResourceOptions,
   RoleImages,
+  RoleManifestEntry,
   RouteIntent,
   RouteRule,
   ScheduledTask,

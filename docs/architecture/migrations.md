@@ -22,7 +22,6 @@ flowchart LR
   owners["resolveOwners<br/>core, then plugins in config order, then the site"] --> schema["Each migration history,<br/>one tracking table per owner"]
   schema --> data["Every data migration,<br/>in the same owner order"]
   data --> track[("__plumix_data_migrations")]
-  roles["Core's roles data migration"] --> data
 ```
 
 ## Surface
@@ -69,11 +68,9 @@ the runtime's `legacyTable`. Hand-written DDL is an ordinary custom migration in
 history, such as the search plugin's FTS5 table in
 `packages/plugins/search/migrations/0001_search_index.sql`.
 
-Core and the audit-log, comments, forms and search plugins ship histories. Site-defined roles are
-stored in the database: core's history builds a `roles` table (name, capabilities), declared in
-`packages/core/src/db/schema/`. Core's first data migration in `CORE_DATA_MIGRATIONS` is the roles
-data migration: it runs after core's history wherever migrations run and moves every user onto a
-stored role with the same capabilities, so nobody gains or loses rights.
+Core and the audit-log, comments, forms and search plugins ship histories. Roles live in config,
+not the database ([ADR 0055](../adr/0055-a-role-is-a-set-of-capabilities-declared-in-code.md)): the
+users table's role column and the invite token's role are free text naming one.
 
 - `packages/plumix/src/cli/migrate/owners.ts`: `resolveOwners`, `TRACKING_TABLE_PREFIX`, `sitePlugins`.
 - `packages/plumix/src/cli/migrate/apply.ts`: `applyOwners`, `adoptLegacyDatabase`, `reportStatus`.

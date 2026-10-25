@@ -1,3 +1,4 @@
+import type { RoleName, SiteRoles } from "../access/contract/roles.js";
 import type { PlumixConfig, PlumixConfigInput } from "../config.js";
 import type { PlumixAuthConfig } from "../context/auth-config.js";
 import { normalizeBasePath } from "../base-path.js";
@@ -11,9 +12,23 @@ import { welcomeTheme } from "../welcome-theme.js";
  * `OAuthProvidersOf`. Here because the default theme is a surface, which no
  * contract may import.
  */
-export function plumix<TAuth extends PlumixAuthConfig>(
-  config: PlumixConfigInput & { readonly auth: TAuth },
-): PlumixConfig & { readonly auth: TAuth } {
+export function plumix<
+  const TRoles extends SiteRoles<Extract<keyof TRoles, string>> = Record<
+    never,
+    never
+  >,
+  TAuth extends PlumixAuthConfig<RoleName<TRoles>> = PlumixAuthConfig<
+    RoleName<TRoles>
+  >,
+>(
+  config: PlumixConfigInput & {
+    readonly auth: TAuth;
+    readonly roles?: TRoles;
+  },
+): Omit<PlumixConfig, "auth" | "roles"> & {
+  readonly auth: TAuth;
+  readonly roles?: TRoles;
+} {
   // Fail at build time rather than crash on the first request. `plumix dev`
   // catches mail when no mailer is configured, so the pairing holds only
   // outside it.

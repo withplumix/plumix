@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import { rolesFromRank } from "../../../access/contract/rbac.js";
 import { verifyPreviewToken } from "../../../auth/preview-token.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
@@ -61,7 +62,7 @@ describe("entry.createPreviewLink", () => {
     ] as const) {
       registry.capabilities.set(`entry:page:${action}`, {
         name: `entry:page:${action}`,
-        minRole,
+        grantTo: rolesFromRank(minRole),
         registeredBy: "test",
       });
     }

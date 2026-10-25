@@ -89,7 +89,8 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
   {
     reason:
       "the root's own role: the site config's shape and what fills its " +
-      "slots — the mailer, telemetry, locales and the dev request history",
+      "slots — the mailer, telemetry, locales, roles and the dev request " +
+      "history",
     names: [
       "AnyDatabaseAdapter",
       "AnyPluginDescriptor",
@@ -117,6 +118,10 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "PlumixConfigIssue",
       "ResolvedI18n",
       "ResolvedLocale",
+      "RoleDeclaration",
+      "RoleGrants",
+      "RoleNameOf",
+      "SiteRoles",
       "TelemetryCollector",
       "TelemetryConfig",
       "TelemetryConsumer",

@@ -17,7 +17,11 @@ import { entryFactory, userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
 import { gateToResponse, policyForMatch, selectEntryPolicy } from "./gate.js";
-import { anonymousPolicy, authenticatedPolicy, rolePolicy } from "./policy.js";
+import {
+  anonymousPolicy,
+  authenticatedPolicy,
+  capabilityPolicy,
+} from "./policy.js";
 
 /**
  * Seeded with `single-entry:*` rows keyed exactly as `resolveSingleEntry`
@@ -130,7 +134,7 @@ function must(response: Response | null): Response {
 }
 
 describe("selectEntryPolicy", () => {
-  const editors = rolePolicy("editor");
+  const editors = capabilityPolicy("user:list");
   const access: EntryTypeAccess = {
     default: anonymousPolicy,
     policies: [
@@ -180,7 +184,7 @@ describe("policyForMatch", () => {
   });
 
   it("resolves an entry intent's per-entry choice over the type default", async () => {
-    const editors = rolePolicy("editor");
+    const editors = capabilityPolicy("user:list");
     const c = await ctx({
       entryTypes: {
         post: {
@@ -204,7 +208,7 @@ describe("policyForMatch", () => {
   });
 
   it("reads the per-entry choice of the entry a fixed-slug intent names", async () => {
-    const editors = rolePolicy("editor");
+    const editors = capabilityPolicy("user:list");
     const c = await ctx({
       entryTypes: {
         post: {
@@ -231,7 +235,7 @@ describe("policyForMatch", () => {
   });
 
   it("chooses a fixed-slug policy from the one lookup the renderer reuses", async () => {
-    const editors = rolePolicy("editor");
+    const editors = capabilityPolicy("user:list");
     const { memo, loads } = recordingMemo();
     const c = await ctx({
       entryTypes: {
@@ -280,7 +284,11 @@ describe("policyForMatch", () => {
         post: {
           default: authenticatedPolicy,
           policies: [
-            { key: "staff", label: "Staff", policy: rolePolicy("editor") },
+            {
+              key: "staff",
+              label: "Staff",
+              policy: capabilityPolicy("user:list"),
+            },
           ],
         },
       },
@@ -300,7 +308,11 @@ describe("policyForMatch", () => {
         post: {
           default: authenticatedPolicy,
           policies: [
-            { key: "staff", label: "Staff", policy: rolePolicy("editor") },
+            {
+              key: "staff",
+              label: "Staff",
+              policy: capabilityPolicy("user:list"),
+            },
           ],
         },
       },

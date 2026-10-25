@@ -1,7 +1,6 @@
 import * as v from "valibot";
 
 import { ifMatchObject } from "../../../db/concurrency.js";
-import { USER_ROLES } from "../../../db/schema/users.js";
 import {
   emailField,
   idParam,
@@ -18,7 +17,7 @@ const avatarUrlSchema = v.pipe(
   v.url(),
 );
 
-const roleSchema = v.picklist(USER_ROLES);
+const roleSchema = v.pipe(v.string(), v.nonEmpty());
 
 const searchSchema = v.pipe(v.string(), v.trim(), v.maxLength(200));
 

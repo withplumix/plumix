@@ -281,7 +281,7 @@ export async function buildApp(
   // not a cdn is configured, and without one the purge half accumulates
   // nothing.
   registerCorePurgeInvalidator(hooks);
-  const seededRegistry = createPluginRegistry(config.routes);
+  const seededRegistry = createPluginRegistry(config.routes, config.roles);
   const bar = barCatalogs(runtime.catalogLocales?.["admin-bar"]);
   registerCoreAdminBarNodes(seededRegistry, bar);
   registerCoreLookupAdapters(seededRegistry);

@@ -1,15 +1,13 @@
-import type { UserRole } from "../db/schema/users.js";
-
 interface SignupRoleInput {
   readonly email: string;
   /** `auth.allowedDomains`: a lowercase domain → its role. */
-  readonly allowedDomains?: Readonly<Record<string, UserRole>>;
+  readonly allowedDomains?: Readonly<Record<string, string>>;
   /** The role every unlisted domain gets; omit it to refuse them. */
-  readonly defaultRole?: UserRole;
+  readonly defaultRole?: string;
 }
 
 /** `undefined` when the email may not sign up. */
-export function signupRole(input: SignupRoleInput): UserRole | undefined {
+export function signupRole(input: SignupRoleInput): string | undefined {
   const domain = extractDomain(input.email);
   if (domain === null) return undefined;
   const { allowedDomains } = input;

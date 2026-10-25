@@ -8,10 +8,10 @@ import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { isSurfaceOffered } from "@/lib/admin-areas.js";
 import { hasCap } from "@/lib/caps.js";
 import { toDate } from "@/lib/dates.js";
+import { getRoles } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
-import { ROLE_LABEL } from "@/lib/user-role-labels.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
 import { useQuery } from "@tanstack/react-query";
@@ -19,7 +19,6 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import * as v from "valibot";
 
 import type { Label } from "@plumix/core/i18n";
-import type { UserRole } from "@plumix/core/schema";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import { Badge } from "@plumix/admin-ui/badge";
 import { Button } from "@plumix/admin-ui/button";
@@ -38,19 +37,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
-import { USER_ROLES } from "@plumix/core/manifest";
+
+import { RoleName } from "./-role-name.js";
 
 const PAGE_SIZE = 20;
 
-const ROLE_FILTER_VALUES = ["all", ...USER_ROLES] as const;
-type RoleFilter = (typeof ROLE_FILTER_VALUES)[number];
+/** `all`, or the name of a role. */
+type RoleFilter = string;
 
 const searchSchema = v.object({
   page: v.optional(
     v.fallback(v.pipe(v.number(), v.integer(), v.minValue(1)), 1),
     1,
   ),
-  role: v.optional(v.fallback(v.picklist(ROLE_FILTER_VALUES), "all"), "all"),
+  role: v.optional(v.fallback(v.pipe(v.string(), v.nonEmpty()), "all"), "all"),
   // Empty string coerces to `undefined` so `?q=` doesn't linger in the URL.
   q: v.optional(
     v.fallback(
@@ -66,12 +66,13 @@ const searchSchema = v.object({
 });
 
 /**
- * Admin / editor = strong; author / contributor = neutral; subscriber =
- * muted; disabled overrides everything to destructive to signal the
- * blocked state at a glance (matches WordPress's greyed-out disabled
- * user row).
+ * Admin / editor = strong; author / contributor = neutral; subscriber and any
+ * other role = muted; disabled overrides everything to destructive to signal
+ * the blocked state (matches WordPress's greyed-out disabled user row).
  */
-const ROLE_VARIANT: Record<UserRole, "default" | "secondary" | "outline"> = {
+const ROLE_VARIANT: Readonly<
+  Partial<Record<string, "default" | "secondary" | "outline">>
+> = {
   admin: "default",
   editor: "default",
   author: "secondary",
@@ -313,11 +314,17 @@ function buildColumns({
     {
       accessorKey: "role",
       header: label(M.columnRole),
-      cell: ({ row }) => (
-        <Badge variant={ROLE_VARIANT[row.original.role]}>
-          {label(ROLE_LABEL[row.original.role])}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const { id, role } = row.original;
+        return (
+          <Badge
+            variant={ROLE_VARIANT[role] ?? "outline"}
+            data-testid={`users-list-role-${String(id)}`}
+          >
+            <RoleName role={role} roles={getRoles()} />
+          </Badge>
+        );
+      },
     },
     {
       accessorKey: "disabledAt",
@@ -377,12 +384,7 @@ function RoleFilter({
 }): ReactNode {
   const label = useLabel();
   return (
-    <Select
-      value={value}
-      onValueChange={(next) => {
-        onChange(next as RoleFilter);
-      }}
-    >
+    <Select value={value} onValueChange={onChange}>
       <SelectTrigger
         size="sm"
         aria-label={label(M.roleFilterAria)}
@@ -395,13 +397,13 @@ function RoleFilter({
         <SelectItem value="all" data-testid="users-role-filter-all">
           {label(M.roleFilterAll)}
         </SelectItem>
-        {USER_ROLES.map((role) => (
+        {getRoles().map((role) => (
           <SelectItem
-            key={role}
-            value={role}
-            data-testid={`users-role-filter-${role}`}
+            key={role.name}
+            value={role.name}
+            data-testid={`users-role-filter-${role.name}`}
           >
-            {label(ROLE_LABEL[role])}
+            {label(role.label)}
           </SelectItem>
         ))}
       </SelectContent>

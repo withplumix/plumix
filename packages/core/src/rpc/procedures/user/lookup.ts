@@ -116,7 +116,7 @@ function toLookupResult(row: {
   readonly id: number;
   readonly email: string;
   readonly name: string | null;
-  readonly role: UserRole;
+  readonly role: string;
 }): LookupResult {
   return {
     id: String(row.id),

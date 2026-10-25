@@ -47,6 +47,8 @@ export interface ManifestBuildOptions {
   readonly routes: PlumixConfig["routes"];
   /** Where plugin packages resolve from, to find their compiled catalogs. */
   readonly projectRoot: string;
+  /** The config's roles, seeded the way `buildApp` seeds them. */
+  readonly roles?: PlumixConfig["roles"];
 }
 
 /**
@@ -62,7 +64,7 @@ export async function computeManifestAndRegistry(
   const { registry } = await installPlugins({
     hooks,
     plugins,
-    registry: createPluginRegistry(options.routes),
+    registry: createPluginRegistry(options.routes, options.roles),
     theme: options.theme,
   });
   return {

@@ -5,6 +5,7 @@ import type {
   AuthenticatedUser,
   Db,
 } from "../../context/app-context.js";
+import type { UserRole } from "../../db/schema/users.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import { block } from "../../hooks/block-render.js";
 import { HookRegistry } from "../../hooks/registry.js";
@@ -31,9 +32,7 @@ function contextFor(
   return createTestContext({ db: {} as Db, user, plugins });
 }
 
-async function adminAccessFrom(
-  minRole: AuthenticatedUser["role"],
-): Promise<PluginRegistry> {
+async function adminAccessFrom(minRole: UserRole): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins: [

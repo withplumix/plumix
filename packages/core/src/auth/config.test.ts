@@ -428,11 +428,10 @@ describe("auth() — selfSignup", () => {
     expect(config.selfSignup?.defaultRole).toBe("editor");
   });
 
-  test("rejects an unknown default role with a pathed issue", () => {
+  test("rejects an empty default role with a pathed issue", () => {
     const error = rejected({
       passkey: validPasskey,
-      // @ts-expect-error — exercising runtime validation
-      selfSignup: { defaultRole: "superadmin" },
+      selfSignup: { defaultRole: "" },
     });
     expect(error.issues[0]?.path).toBe("selfSignup.defaultRole");
   });
@@ -448,6 +447,16 @@ describe("auth() — selfSignup", () => {
 });
 
 describe("auth() — allowedDomains", () => {
+  test("accepts a role the site's config declares", () => {
+    const config = auth({
+      passkey: validPasskey,
+      selfSignup: { defaultRole: "designer" },
+      allowedDomains: { "example.com": "designer" },
+    });
+    expect(config.allowedDomains).toEqual({ "example.com": "designer" });
+    expect(config.selfSignup?.defaultRole).toBe("designer");
+  });
+
   test("accepts lowercase domains mapped to roles", () => {
     const config = auth({
       passkey: validPasskey,
@@ -475,11 +484,10 @@ describe("auth() — allowedDomains", () => {
     expect(error.message).toContain('allowedDomains key ""');
   });
 
-  test("rejects an unknown role, naming the domain", () => {
+  test("rejects an empty role, naming the domain", () => {
     const error = rejected({
       passkey: validPasskey,
-      // @ts-expect-error — exercising runtime validation
-      allowedDomains: { "example.com": "superadmin" },
+      allowedDomains: { "example.com": "" },
     });
     expect(error.message).toContain("example.com");
     expect(error.issues[0]?.path).toBe("allowedDomains.example.com");

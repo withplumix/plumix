@@ -334,7 +334,7 @@ _Avoid_: visitor, actor, audience
 A person with a persisted account row (email, slug, role, meta). The request-time projection carried on context is the authenticated user; the full row is the user.
 
 **Role**:
-A named set of capabilities, stored in the database and declarable in config. The defaults are `member`, `author`, `editor` and `admin`; a site defines more. Roles are never ranked or compared.
+A named set of capabilities, declared in the site's config under `roles` (ADR 0055). The defaults are `member`, `author`, `editor` and `admin`; a site redefines all but `admin` and defines more. `admin` always holds every capability. Roles are never ranked or compared.
 _Avoid_: tier, level
 
 **Capability**:

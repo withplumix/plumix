@@ -1,4 +1,3 @@
-import type { UserRole } from "../db/schema/users.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { capabilitiesForRole } from "./rbac.js";
 
@@ -9,7 +8,7 @@ export function sessionUserOf(
     readonly email: string;
     readonly name?: string | null;
     readonly avatarUrl?: string | null;
-    readonly role: UserRole;
+    readonly role: string;
   },
   plugins: PluginRegistry,
 ) {

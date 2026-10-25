@@ -5,6 +5,7 @@ import type {
   PostCapabilityAction,
   TermTaxonomyCapabilityAction,
 } from "../access/contract/capability.js";
+import type { SiteRoles } from "../access/contract/roles.js";
 import type {
   AllowCustomStyles,
   BlockNode,
@@ -34,7 +35,9 @@ import {
   spellEntryCapability,
   spellTermCapability,
 } from "../access/contract/capability.js";
+import { DEFAULT_ROLE_LABELS } from "../access/contract/roles.js";
 import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
+import { USER_ROLES } from "../users/contract/roles.js";
 
 export { startingMeta } from "./fields/starting-meta.js";
 export type { StartingMetaField } from "./fields/starting-meta.js";
@@ -389,6 +392,34 @@ export interface PlumixManifest {
    * no admin surface reads them.
    */
   readonly frameworkRoutes?: Pick<FrameworkRoutes, "author">;
+  /**
+   * The roles a user can hold, so the admin's pickers offer what the config
+   * declares. A reader treats a missing field as the defaults.
+   */
+  readonly roles?: readonly RoleManifestEntry[];
+}
+
+export interface RoleManifestEntry {
+  readonly name: string;
+  readonly label: Label;
+}
+
+/**
+ * The defaults in core's order, then the config's roles in theirs. A redefined
+ * default keeps its label unless given one; an unlabelled site role shows its
+ * name.
+ */
+export function roleEntries(
+  roles: SiteRoles = {},
+): readonly RoleManifestEntry[] {
+  const defaults = USER_ROLES.map((name) => ({
+    name,
+    label: roles[name]?.label ?? DEFAULT_ROLE_LABELS[name],
+  }));
+  const declared = Object.entries(roles)
+    .filter(([name]) => !(USER_ROLES as readonly string[]).includes(name))
+    .map(([name, role]) => ({ name, label: role.label ?? name }));
+  return [...defaults, ...declared];
 }
 
 /** Constrains each slot name to a key of the config it is read off. */
@@ -511,6 +542,7 @@ export function emptyManifest(): PlumixManifest {
     configuredSlots: configuredSlotsOf({}),
     refusedAdminAreas: [],
     frameworkRoutes: { author: true },
+    roles: roleEntries(),
   };
 }
 

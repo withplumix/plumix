@@ -149,7 +149,9 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     expect(registry.termTaxonomies.get("hello_menu")?.isPublic).toBe(false);
     expect(registry.rpcRouters.has("hello-world")).toBe(true);
     expect(registry.rawRoutes).toHaveLength(3);
-    expect(registry.capabilities.get("hello:manage")?.minRole).toBe("admin");
+    expect(registry.capabilities.get("hello:manage")?.grantTo).toEqual([
+      "admin",
+    ]);
     expect(registry.adminPages.get("/hello")?.capability).toBe("hello:manage");
     expect(registry.adminPages.get("/hello")?.nav?.label).toBe("Hello");
     expect(registry.fieldTypes.get("hello_picker")).toBeDefined();
@@ -158,17 +160,17 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
 
     // Cap override reaches the derived cap: admin-level.
     const editAnyCap = registry.capabilities.get("entry:hello_item:edit_any");
-    expect(editAnyCap?.minRole).toBe("admin");
+    expect(editAnyCap?.grantTo).toEqual(["admin"]);
 
     // Targeted cap override leaves siblings at their defaults.
     const attachmentCreate = registry.capabilities.get(
       "entry:hello_attachment:create",
     );
-    expect(attachmentCreate?.minRole).toBe("author");
+    expect(attachmentCreate?.grantTo).toEqual(["author", "editor", "admin"]);
     const attachmentPublish = registry.capabilities.get(
       "entry:hello_attachment:publish",
     );
-    expect(attachmentPublish?.minRole).toBe("author"); // default remains
+    expect(attachmentPublish?.grantTo).toEqual(["author", "editor", "admin"]); // default remains
 
     // Manifest serialisation is JSON-round-trippable and carries every
     // admin-relevant slice.

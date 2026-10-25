@@ -421,7 +421,7 @@ describe("provides phase", () => {
       hooks: new HookRegistry(),
       plugins: [plain],
     });
-    expect(registry.capabilities.get("plain:cap")?.minRole).toBe("admin");
+    expect(registry.capabilities.get("plain:cap")?.grantTo).toEqual(["admin"]);
   });
 
   test("async provides callback is awaited before any setup runs", async () => {

@@ -182,6 +182,8 @@ export const authenticator = chainAuthenticators(
 
 Opening the admin is the `admin:access` capability. Serving the admin shell and showing the admin bar on a public page both check that the principal's role holds it, and token scopes do not narrow either check. One role check still sits outside `ctx.auth.can`: `rolePolicy(required)` compares the role's level against a tier on the ladder for an access policy, so a scoped credential whose owner holds the tier still passes it.
 
+Gate content on a capability instead. `capabilityPolicy(capability)` reads through `ctx.auth.can`, so token scopes narrow it too. It grants a viewer who holds the capability the `capability:<name>` segment, answers 403 to a signed-in viewer without it, and sends an anonymous visitor to sign-in. Everyone holding the capability shares one cached copy of the page, whatever role grants it.
+
 Not every signed-in principal is staff. Core grants `admin:access` to `contributor` and up, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
 
 ## Gated entries on every surface

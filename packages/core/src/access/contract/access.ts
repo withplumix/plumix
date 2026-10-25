@@ -1,12 +1,19 @@
 import type { UserRole } from "../../db/schema/users.js";
 import type { PRIVATE_SEGMENT } from "./segments.js";
 
+/** The audience holding one capability, spelled as its resolved string. */
+export type CapabilitySegment = `capability:${string}`;
+
 /**
  * Segments derived from the loaded principal with no extra lookup. Custom
  * labels come only from `grant()`. `private` is never cached.
  */
 export type BuiltinSegment =
-  "anonymous" | "authenticated" | typeof PRIVATE_SEGMENT | `role:${UserRole}`;
+  | "anonymous"
+  | "authenticated"
+  | typeof PRIVATE_SEGMENT
+  | `role:${UserRole}`
+  | CapabilitySegment;
 
 /**
  * A membership or paywall label. Open-ended, unlike `role:`, so each label must
