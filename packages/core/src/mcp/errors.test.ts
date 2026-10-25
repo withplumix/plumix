@@ -13,6 +13,7 @@ describe("toToolErrorResult", () => {
       content: [
         { type: "text", text: 'not_found: unknown entry type: "nope"' },
       ],
+      _meta: { code: "not_found" },
     });
   });
 });

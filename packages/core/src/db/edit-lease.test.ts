@@ -6,6 +6,7 @@ import { createTestDb } from "../test/harness.js";
 import {
   acquireEditLease,
   assertWritable,
+  lapseEditLease,
   LockedError,
   readEditLease,
   releaseEditLease,
@@ -365,5 +366,19 @@ describe("assertWritable", () => {
       surface: "rpc",
       since: at(5),
     });
+  });
+});
+
+describe("lapseEditLease", () => {
+  test("frees the holder's lease at once, and only theirs", async () => {
+    const db = await createTestDb();
+    const { ada, bo } = await editors(db);
+    await acquireEditLease(db, ENTRY, { userId: ada.id, surface: "mcp" }, T0);
+
+    await lapseEditLease(db, ENTRY, bo.id, at(5));
+    expect(await readEditLease(db, ENTRY, at(6))).toBeDefined();
+
+    await lapseEditLease(db, ENTRY, ada.id, at(7));
+    expect(await readEditLease(db, ENTRY, at(7))).toBeUndefined();
   });
 });

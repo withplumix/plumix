@@ -256,6 +256,25 @@ export async function releaseEditLease(
 }
 
 /**
+ * Frees the user's lease at once, for a caller that held it only for one call.
+ * An editor's tabs use {@link releaseEditLease}, which keeps it a renewal
+ * interval longer.
+ */
+export async function lapseEditLease(
+  db: Db,
+  resource: LeaseResource,
+  userId: number,
+  now: Date = new Date(),
+): Promise<void> {
+  await db
+    .update(editLeases)
+    .set({ expiresAt: now })
+    .where(
+      and(isResource(resource), eq(editLeases.userId, userId), isLive(now)),
+    );
+}
+
+/**
  * Refuses a write from a copy with `LockedError` while another user holds a
  * live lease on `resource`; with `takeOver`, takes the lease over instead. A
  * system write never calls it.

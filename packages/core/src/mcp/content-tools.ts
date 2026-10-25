@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import type { McpTool } from "../context/mcp-tool.js";
+import { etagOf } from "../db/concurrency.js";
 import { EntryReadError } from "../entries/errors.js";
 import { getEntry, listEntries } from "../entries/read-service.js";
 import { idParam } from "../rpc/contract/validation.js";
@@ -55,7 +56,8 @@ export const contentListTool: McpTool<typeof contentListInputSchema> = {
 
 export const contentGetTool: McpTool<typeof contentGetInputSchema> = {
   name: "content_get",
-  description: "Read a single entry in full by its type and id.",
+  description:
+    "Read a single entry in full by its type and id. Its `etag` is what `content_update` takes as `ifMatch`.",
   inputSchema: contentGetInputSchema,
   async run(ctx, input) {
     try {
@@ -65,7 +67,7 @@ export const contentGetTool: McpTool<typeof contentGetInputSchema> = {
       if (entry.type !== input.type) {
         throw EntryReadError.notFound(input.id);
       }
-      return entry;
+      return { ...entry, etag: etagOf(entry.updatedAt) };
     } catch (error) {
       throw asMcpToolError(error);
     }

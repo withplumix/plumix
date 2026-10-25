@@ -197,6 +197,11 @@ export interface AppContextBase<
   /** The API token the request authenticated with; null for any other caller. */
   readonly apiToken: ApiTokenRef | null;
   /**
+   * The surface an edit lease taken on this context's behalf records, when it
+   * is not the one the credential implies. Internal to the MCP server.
+   */
+  readonly leaseSurface?: EditLeaseSurface;
+  /**
    * The address the runtime's trusted proxy reported; core reads no forwarding
    * header itself. Advisory: a fact about the network path, not a principal.
    */
