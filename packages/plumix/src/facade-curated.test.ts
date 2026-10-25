@@ -242,6 +242,8 @@ const CORE_WITHHELD: readonly Withholding[] = [
     names: [
       "pluginCatalogUrl",
       "pluginCatalogStagedPath",
+      "ADMIN_SHIPPED_CATALOGS_FILE",
+      "projectCatalogLocales",
       "collectContributedBlocks",
       "byPriorityThen",
       "seedFromMetaBoxes",

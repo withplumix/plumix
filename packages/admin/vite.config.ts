@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { lingui } from "@lingui/vite-plugin";
@@ -6,9 +7,16 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import license from "rollup-plugin-license";
-import { defineConfig } from "vite";
+import { defineConfig, normalizePath } from "vite";
 
-import { ADMIN_BASE_PATH } from "./src/lib/constants.js";
+import type {
+  AdminCatalogSet,
+  AdminShippedCatalogs,
+} from "@plumix/core/manifest";
+
+import { CATALOG_SET_PREFIXES } from "./src/lib/catalog-sets.js";
+import { ADMIN_BASE_PATH, SOURCE_LOCALE } from "./src/lib/constants.js";
+import { shippedLocales } from "./src/lib/shipped-catalogs.js";
 
 // `plumix dev` runs on Vite's default port 5173, so the admin moves to 5174
 // to avoid a conflict. Admin proxies /_plumix/{rpc,auth} back to the plumix
@@ -21,6 +29,7 @@ const BACKEND_URL = process.env.PLUMIX_BACKEND_URL ?? "http://localhost:5173";
 // Explicit cwd so tools evaluating this config from the repo root
 // (knip) still find `packages/admin/lingui.config.ts`.
 const PACKAGE_DIR = fileURLToPath(new URL(".", import.meta.url));
+const LIB_DIR = join(PACKAGE_DIR, "src/lib");
 
 // globals.css inlines `theme.css` via `@import`, so nothing leaves a
 // standalone copy in dist. Emit one for plumix's per-plugin sidecar to
@@ -35,6 +44,42 @@ function shipThemeTokens(): Plugin {
         type: "asset",
         fileName: "theme.css",
         source: await readFile(src, "utf8"),
+      });
+    },
+  };
+}
+
+// The admin ships prebuilt, before any site enables a locale.
+function shipCatalogLocales(): Plugin {
+  return {
+    name: "plumix:ship-catalog-locales",
+    apply: "build",
+    async generateBundle(_options, bundle) {
+      // Loaded here, not at the top: tools that evaluate this config without a
+      // build (knip in CI) would otherwise need core's `dist`. A build runs
+      // after turbo's `^build`, so core is built by now.
+      const { ADMIN_SHIPPED_CATALOGS_FILE } =
+        await import("@plumix/core/manifest");
+      const bundled = Object.values(bundle).flatMap((output) =>
+        output.type === "chunk" ? output.moduleIds : [],
+      );
+      const shipped = (set: AdminCatalogSet): string[] => {
+        // Module ids are POSIX paths, on Windows too.
+        const prefix = normalizePath(join(LIB_DIR, CATALOG_SET_PREFIXES[set]));
+        return shippedLocales(bundled, prefix);
+      };
+      const source: AdminShippedCatalogs = {
+        sourceLocale: SOURCE_LOCALE,
+        catalogs: {
+          admin: shipped("admin"),
+          editor: shipped("editor"),
+          blocks: shipped("blocks"),
+        },
+      };
+      this.emitFile({
+        type: "asset",
+        fileName: ADMIN_SHIPPED_CATALOGS_FILE,
+        source: JSON.stringify(source),
       });
     },
   };
@@ -92,6 +137,7 @@ export default defineConfig(({ command }) => ({
       macroTransform: { parser: { syntax: "typescript", tsx: true } },
     }),
     shipThemeTokens(),
+    shipCatalogLocales(),
     shipAssetLicenses(),
     // Copyleft in a bundle we publish as MIT is a licensing conflict, not a
     // paperwork gap, so it fails the build. Source-copied code is invisible to

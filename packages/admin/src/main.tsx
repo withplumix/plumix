@@ -32,9 +32,11 @@ if (!rootElement) throw new Error("Missing #root element");
  * Can't gate the mount: a network blip on a catalog would leave the admin
  * blank.
  */
+const manifest = readManifest();
 const i18nReady = bootI18n({
   lang: document.documentElement.lang,
-  pluginI18n: readManifest().pluginI18n,
+  pluginI18n: manifest.pluginI18n,
+  catalogLocales: manifest.catalogLocales,
 }).catch((error: unknown) => {
   console.error("plumix i18n boot failed; rendering with source locale", error);
 });

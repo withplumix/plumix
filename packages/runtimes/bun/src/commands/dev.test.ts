@@ -85,11 +85,18 @@ beforeAll(async () => {
   vi.stubEnv("PLUMIX_DEV_ALLOW_REMOTE", undefined);
   vi.spyOn(console, "log").mockImplementation(() => undefined);
   // The admin shell as `@plumix/admin` builds it, down to the placeholder the
-  // staging fills in.
+  // staging fills in and the locales its catalogs ship.
   adminDir = mkdtempSync(join(tmpdir(), "plumix-bun-dev-admin-"));
   writeFileSync(
     join(adminDir, "index.html"),
     '<!doctype html><title>admin</title><body><script id="plumix-manifest" type="application/json">{}</script></body>',
+  );
+  writeFileSync(
+    join(adminDir, "catalog-locales.json"),
+    JSON.stringify({
+      sourceLocale: "en",
+      catalogs: { admin: ["en"], editor: ["en"], blocks: ["en"] },
+    }),
   );
 
   mkdirSync(SITES, { recursive: true });
