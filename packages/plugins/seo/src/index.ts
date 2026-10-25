@@ -7,6 +7,7 @@ import {
 
 import type { ContributedSitemap } from "./contributed.js";
 import type { SeoMetaBoxOptions } from "./meta-box.js";
+import type { SeoRouter } from "./rpc.js";
 import type { SeoSitemapsOptions } from "./sitemap.js";
 // Also anchors the `registerSitemap` augmentation, as the imports below do
 // theirs.
@@ -118,7 +119,10 @@ export interface SeoOptions {
  */
 export function seo(
   options: SeoOptions = {},
-): PluginDescriptor<{ contributed: ContributedSitemap[] }> {
+): PluginDescriptor<
+  { contributed: ContributedSitemap[] },
+  { readonly seo: SeoRouter }
+> {
   const headOptions = {
     articleTags: options.articleTags ?? true,
     structuredData: options.structuredData ?? true,

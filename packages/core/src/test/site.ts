@@ -19,6 +19,7 @@ import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
+import { withUser } from "../auth/with-user.js";
 import { createAppContext } from "../context/app.js";
 import { requestStore } from "../context/stores.js";
 import { buildEntryPermalink } from "../route/permalink.js";
@@ -70,8 +71,8 @@ export interface TestSite<
   readonly mail: MailFake;
   readonly env: PlumixEnv;
   /**
-   * A fresh context for calling a service directly, with the site's config,
-   * plugins and database.
+   * A fresh context for calling a service directly, as the user `actingAs`
+   * names. Throws for a role whose user no call has created yet.
    */
   readonly context: AppContext;
   /**
@@ -99,6 +100,17 @@ type InstalledRpc<TPlugins extends readonly AnyPluginDescriptor[]> =
 /** `null` is a visitor; a bare role is a user not created yet. */
 type Principal = User | { readonly role: UserRole } | null;
 
+interface Session {
+  readonly user: User;
+  readonly cookie: string;
+}
+
+/** One principal's sign-in within a test; `settled` is set once it resolves. */
+interface SignIn {
+  readonly session: Promise<Session>;
+  settled?: Session;
+}
+
 /**
  * A whole site, faked wherever the kit has a fake. With no arguments it is the
  * working directory's `plumix.config.ts`; with options, core plus what they
@@ -120,7 +132,7 @@ export async function testSite<
   );
   const { defer, drainDeferred } = createDeferQueue();
   let fakes = freshFakes();
-  let signedIn = new WeakMap<NonNullable<Principal>, Promise<string>>();
+  let signedIn = new WeakMap<NonNullable<Principal>, SignIn>();
   beforeEach(async () => {
     await drainDeferred();
     await reset();
@@ -169,14 +181,28 @@ export async function testSite<
   ): TestSite<TFactories, InstalledRpc<TPlugins>> {
     const signIn = async (request: Request): Promise<Request> => {
       if (principal === null) return request;
-      let cookie = signedIn.get(principal);
-      if (cookie === undefined) {
-        cookie = sessionCookieFor(db, principal);
-        signedIn.set(principal, cookie);
+      let current = signedIn.get(principal);
+      if (current === undefined) {
+        const record: SignIn = {
+          session: sessionFor(db, principal).then((session) => {
+            record.settled = session;
+            return session;
+          }),
+        };
+        current = record;
+        signedIn.set(principal, current);
       }
       const headers = new Headers(request.headers);
-      appendCookie(headers, await cookie);
+      appendCookie(headers, (await current.session).cookie);
       return new Request(request, { headers });
+    };
+    const userOf = (bound: NonNullable<Principal>): User => {
+      if ("id" in bound) return bound;
+      const user = signedIn.get(bound)?.settled?.user;
+      if (user !== undefined) return user;
+      throw new Error(
+        `context: the "${bound.role}" user is created by this site's first rpc or visit call. Make one first, or pass a user to actingAs.`,
+      );
     };
     return {
       factory,
@@ -185,7 +211,10 @@ export async function testSite<
       },
       env,
       get context() {
-        return contextFor(new Request("https://cms.example/"));
+        const ctx = contextFor(new Request("https://cms.example/"));
+        if (principal === null) return ctx;
+        const { id, email, role, meta } = userOf(principal);
+        return withUser(ctx, { id, email, role, meta });
       },
       visit: async (target) => {
         const path =
@@ -219,16 +248,16 @@ export async function testSite<
   return site;
 }
 
-async function sessionCookieFor(
+async function sessionFor(
   db: Db,
   principal: NonNullable<Principal>,
-): Promise<string> {
+): Promise<Session> {
   const user =
     "id" in principal
       ? principal
       : await userFactory.transient({ db }).create({ role: principal.role });
   const { token } = await createSession(db, { userId: user.id });
-  return `${SESSION_COOKIE_NAME}=${token}`;
+  return { user, cookie: `${SESSION_COOKIE_NAME}=${token}` };
 }
 
 function rpcClient<TRpc extends PluginRpcRouters>(

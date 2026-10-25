@@ -59,6 +59,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@orpc/server": "catalog:orpc",
     "@takumi-rs/wasm": "2.12.0",
     "valibot": "catalog:"
   },

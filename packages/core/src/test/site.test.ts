@@ -291,3 +291,30 @@ describe("visiting as a user", () => {
     page.assertOk().assertSee("ann@example.test");
   });
 });
+
+describe("a bound site's context", () => {
+  test("carries the user it acts as", async () => {
+    const ann = await calling.factory.user.create({ role: "editor" });
+
+    const { user } = calling.actingAs(ann).context;
+
+    expect(user).toMatchObject({ id: 1, role: "editor" });
+  });
+
+  test("carries a role's user once its first call created it", async () => {
+    const editor = calling.actingAs("editor");
+    await editor.rpc.auth.session();
+
+    const { user } = editor.context;
+
+    expect(user).toMatchObject({ id: 1, role: "editor" });
+  });
+
+  test("fails before a role's user exists, naming how to get one", () => {
+    const editor = calling.actingAs("editor");
+
+    expect(() => editor.context).toThrow(
+      'context: the "editor" user is created by this site\'s first rpc or visit call. Make one first, or pass a user to actingAs.',
+    );
+  });
+});

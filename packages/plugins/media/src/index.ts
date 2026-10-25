@@ -6,6 +6,7 @@ import {
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
+import type { MediaRouter } from "./rpc.js";
 import { MEDIA_FIELD_TYPES } from "./field-types.js";
 import { mediaLookupAdapter } from "./lookup.js";
 import { mediaGetTool, mediaListTool } from "./mcp-tools.js";
@@ -132,7 +133,9 @@ const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-media");
  * });
  * ```
  */
-export function media(options: MediaPluginOptions = {}): PluginDescriptor {
+export function media(
+  options: MediaPluginOptions = {},
+): PluginDescriptor<undefined, { readonly media: MediaRouter }> {
   const acceptedTypes = options.acceptedTypes ?? DEFAULT_ACCEPTED_TYPES;
   const maxUploadSize = options.maxUploadSize ?? DEFAULT_MAX_UPLOAD_SIZE;
 

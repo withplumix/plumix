@@ -1,9 +1,9 @@
 import type { DocumentManifest, JsonValue } from "plumix";
-import type { DispatcherHarness } from "plumix/test";
+import type { DispatcherHarness, testSite } from "plumix/test";
 import { definePlugin } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { SeoOptions } from "./index.js";
 import { seo } from "./index.js";
@@ -1078,5 +1078,19 @@ describe("views", () => {
     await expect(viewHarness({ indexViews: ["nope"] })).rejects.toThrow(
       /indexViews.*"nope"/,
     );
+  });
+});
+
+describe("the plugin's procedures on a test site", () => {
+  test("are typed on site.rpc where the plugin is installed", () => {
+    type Rpc = Awaited<
+      ReturnType<
+        typeof testSite<Record<never, never>, [ReturnType<typeof seo>]>
+      >
+    >["rpc"];
+
+    expectTypeOf<Rpc["seo"]["preview"]>()
+      .parameter(0)
+      .toEqualTypeOf<{ entryId: number }>();
   });
 });

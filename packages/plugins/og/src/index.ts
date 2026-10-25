@@ -14,6 +14,7 @@ import "./chain-trace.js";
 import type { CardInputs } from "./card-identity.js";
 import type { CardPalette } from "./default-card.js";
 import type { CardRenderer } from "./renderer.js";
+import type { OgRouter } from "./rpc.js";
 import { planCardFonts } from "./card-fonts.js";
 import { createCardRegistry } from "./card-registry.js";
 import { CARD_ROUTE_PATH, createCardRoute } from "./card-route.js";
@@ -109,7 +110,9 @@ export interface OgPluginOptions {
  * });
  * ```
  */
-export function og(options: OgPluginOptions = {}): PluginDescriptor {
+export function og(
+  options: OgPluginOptions = {},
+): PluginDescriptor<undefined, { readonly og: OgRouter }> {
   const renderer = options.renderer ?? bundledRenderer();
   const cards = createCardRegistry(defaultCards);
   const fonts = options.fonts ?? [];

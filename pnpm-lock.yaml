@@ -1873,6 +1873,9 @@ importers:
 
   packages/plugins/media:
     dependencies:
+      '@orpc/server':
+        specifier: catalog:orpc
+        version: 1.15.6(crossws@0.3.5)(ws@8.22.0)
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
@@ -2093,6 +2096,9 @@ importers:
 
   packages/plugins/og:
     dependencies:
+      '@orpc/server':
+        specifier: catalog:orpc
+        version: 1.15.6(crossws@0.3.5)(ws@8.22.0)
       '@takumi-rs/wasm':
         specifier: 2.12.0
         version: 2.12.0(csstype@3.2.3)(react@19.3.0)
@@ -2352,6 +2358,9 @@ importers:
 
   packages/plugins/seo:
     dependencies:
+      '@orpc/server':
+        specifier: catalog:orpc
+        version: 1.15.6(crossws@0.3.5)(ws@8.22.0)
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
