@@ -20,6 +20,17 @@ function serving(body: unknown) {
   return vi.fn(() => Promise.resolve(documentResponse(body)));
 }
 
+/** A valid document whose JSON is exactly `bytes` long. */
+function documentOfSize(bytes: number) {
+  const document = {
+    client_id: CLIENT_ID,
+    client_name: "",
+    redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+  };
+  const padding = bytes - JSON.stringify(document).length;
+  return { ...document, client_name: "x".repeat(padding) };
+}
+
 /**
  * A fetch over `routes` that follows a redirect itself unless the caller asks
  * for `redirect: "manual"`, as the platform's does.
@@ -159,6 +170,64 @@ describe("resolving an OAuth client from its metadata document", () => {
     );
   });
 
+  test("a document of exactly 5 KiB is accepted", async () => {
+    const fetch = serving(documentOfSize(5 * 1024));
+    const resolver = createClientMetadataResolver({ fetch });
+
+    const client = await resolver.resolve(CLIENT_ID);
+
+    expect(client.clientId).toBe(CLIENT_ID);
+  });
+
+  test("a document one byte over 5 KiB is refused", async () => {
+    const fetch = serving(documentOfSize(5 * 1024 + 1));
+    const resolver = createClientMetadataResolver({ fetch });
+
+    const resolving = resolver.resolve(CLIENT_ID);
+
+    await expect(resolving).rejects.toEqual(
+      new ClientMetadataError("too_large"),
+    );
+  });
+
+  test("a document without a name is named after its host", async () => {
+    const fetch = serving({
+      client_id: CLIENT_ID,
+      redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+    });
+    const resolver = createClientMetadataResolver({ fetch });
+
+    const client = await resolver.resolve(CLIENT_ID);
+
+    expect(client.name).toBe("claude.ai");
+  });
+
+  test("a body that stalls past 5 seconds is refused", async () => {
+    vi.useFakeTimers();
+    const fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              init?.signal?.addEventListener("abort", () => {
+                controller.error(new DOMException("aborted", "AbortError"));
+              });
+            },
+          }),
+        ),
+      ),
+    );
+    const resolver = createClientMetadataResolver({ fetch });
+
+    const resolving = resolver.resolve(CLIENT_ID);
+    const refused = expect(resolving).rejects.toEqual(
+      new ClientMetadataError("timeout"),
+    );
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    await refused;
+  });
+
   test("a document that takes over 5 seconds is refused", async () => {
     vi.useFakeTimers();
     const fetch = vi.fn(
@@ -216,6 +285,27 @@ describe("resolving an OAuth client from its metadata document", () => {
       [CLIENT_ID]: () =>
         Response.redirect("https://cdn.claude.ai/mcp-client.json", 301),
       "https://cdn.claude.ai/mcp-client.json": () =>
+        documentResponse({
+          client_id: CLIENT_ID,
+          client_name: "Claude",
+          redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+        }),
+    });
+    const resolver = createClientMetadataResolver({ fetch });
+
+    const client = await resolver.resolve(CLIENT_ID);
+
+    expect(client.name).toBe("Claude");
+  });
+
+  test("a redirect to a relative path stays on https and is followed", async () => {
+    const fetch = fakeWeb({
+      [CLIENT_ID]: () =>
+        new Response(null, {
+          status: 302,
+          headers: { location: "/moved/mcp-client.json" },
+        }),
+      "https://claude.ai/moved/mcp-client.json": () =>
         documentResponse({
           client_id: CLIENT_ID,
           client_name: "Claude",

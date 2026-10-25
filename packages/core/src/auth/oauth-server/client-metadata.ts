@@ -2,7 +2,6 @@ import * as v from "valibot";
 
 import type { PlumixFetch } from "../../context/app-context.js";
 
-/** An MCP client as its Client ID Metadata Document describes it. */
 export interface OAuthClient {
   /** The document's URL, which is also its `client_id`. */
   readonly clientId: string;
@@ -41,20 +40,16 @@ export class ClientMetadataError extends Error {
 /** The cap the CIMD draft suggests; a client's document is a few hundred bytes. */
 const MAX_DOCUMENT_BYTES = 5 * 1024;
 
-/** How long an accepted document is reused before it's fetched again. */
 const CACHE_TTL_MS = 5 * 60_000;
 
-/** Hops followed before the fetch gives up; every hop must stay on HTTPS. */
 const MAX_REDIRECTS = 3;
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
-/** Covers the fetch and reading its body. */
 const FETCH_TIMEOUT_MS = 5_000;
 
 const DECODER = new TextDecoder();
 
-/** Reads at most `MAX_DOCUMENT_BYTES`, so a huge body is never buffered whole. */
 async function readCappedText(response: Response): Promise<string> {
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -133,6 +128,23 @@ function parseDocument(text: string): v.InferOutput<typeof documentSchema> {
   return parsed.output;
 }
 
+function toOAuthClient(
+  clientId: string,
+  document: v.InferOutput<typeof documentSchema>,
+): OAuthClient {
+  const host = new URL(clientId).host;
+  return {
+    clientId,
+    name: document.client_name ?? host,
+    host,
+    logoUri: document.logo_uri,
+    redirectUris: document.redirect_uris,
+    loopbackOnly: document.redirect_uris.every(
+      (uri) => loopbackForm(uri) !== undefined,
+    ),
+  };
+}
+
 export function createClientMetadataResolver(deps: {
   readonly fetch: PlumixFetch;
 }): { resolve(clientId: string): Promise<OAuthClient> } {
@@ -148,17 +160,7 @@ export function createClientMetadataResolver(deps: {
       if (document.client_id !== clientId) {
         throw new ClientMetadataError("client_id_mismatch");
       }
-      const host = new URL(clientId).host;
-      const client: OAuthClient = {
-        clientId,
-        name: document.client_name ?? host,
-        host,
-        logoUri: document.logo_uri,
-        redirectUris: document.redirect_uris,
-        loopbackOnly: document.redirect_uris.every(
-          (uri) => loopbackForm(uri) !== undefined,
-        ),
-      };
+      const client = toOAuthClient(clientId, document);
       cache.set(clientId, { client, expiresAt: Date.now() + CACHE_TTL_MS });
       return client;
     },
@@ -167,11 +169,7 @@ export function createClientMetadataResolver(deps: {
 
 const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1"]);
 
-/**
- * A loopback URI with its host name and port erased, so `localhost` and
- * `127.0.0.1` on any port compare equal (RFC 8252 §7.3); `undefined` for any
- * other URI.
- */
+/** RFC 8252 §7.3: a loopback client picks its port at run time, on either host name. */
 function loopbackForm(uri: string): string | undefined {
   const url = URL.parse(uri);
   if (url === null || !LOOPBACK_HOSTNAMES.has(url.hostname)) return undefined;
@@ -180,10 +178,7 @@ function loopbackForm(uri: string): string | undefined {
   return url.href;
 }
 
-/**
- * Whether `client` may receive an authorization code at `redirectUri`: one its
- * document lists exactly, or a loopback one on either host name and any port.
- */
+/** A loopback `redirectUri` matches a listed one on either host name and any port. */
 export function acceptsRedirectUri(
   client: OAuthClient,
   redirectUri: string,
