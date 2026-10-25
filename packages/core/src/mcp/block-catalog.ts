@@ -15,7 +15,7 @@ import {
 import { STYLE_KEYWORDS } from "../blocks/styles/style-policy.js";
 import { labelSourceText } from "../i18n/label.js";
 
-type BlockCatalog = Pick<AppContext, "blocks" | "allowedBlocks">;
+type BlockCatalog = Pick<AppContext, "blocks" | "allowedBlocks" | "auth">;
 
 interface DescribedInput {
   readonly name: string;
@@ -23,6 +23,11 @@ interface DescribedInput {
   readonly label: string | undefined;
   readonly options: readonly BlockInputOption["value"][] | undefined;
   readonly allowedBlocks: readonly string[] | undefined;
+  readonly styleProperty: string | undefined;
+  readonly content: boolean | undefined;
+  readonly accept: BlockInput["accept"];
+  readonly rawSlot: boolean | undefined;
+  readonly defaultChildren: BlockInput["defaultChildren"];
 }
 
 interface DescribedBlock {
@@ -49,8 +54,13 @@ interface DescribedStyles {
 function themeAllowedSpecs({
   blocks,
   allowedBlocks,
+  auth,
 }: BlockCatalog): BlockSpec[] {
-  return [...blocks].filter((spec) => allowedBlocks?.has(spec.name) ?? true);
+  return [...blocks].filter(
+    (spec) =>
+      (allowedBlocks?.has(spec.name) ?? true) &&
+      (spec.capability === undefined || auth.can(spec.capability)),
+  );
 }
 
 /** A slot whose input lists no `allowedBlocks` accepts any block. */
@@ -86,6 +96,11 @@ function describeInput(
       input.type === "slot"
         ? allowedChildren(ctx, spec.name, input.name)
         : undefined,
+    styleProperty: input.styleProperty,
+    content: input.content,
+    accept: input.accept,
+    rawSlot: input.rawSlot,
+    defaultChildren: input.defaultChildren,
   };
 }
 

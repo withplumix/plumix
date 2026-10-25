@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { BlockSpec } from "../blocks/block-registry.js";
 import type { AllowCustomStyles } from "../blocks/styles/style-policy.js";
 import type { ThemeTokens } from "../blocks/styles/types.js";
 import type { UserRole } from "../db/schema/users.js";
@@ -49,7 +50,26 @@ const card = defineBlock({
   inputs: [{ name: "body", type: "slot", allowedBlocks: ["core/rich-text"] }],
 });
 
+const tabs = defineBlock({
+  name: "site/tabs",
+  render: () => null,
+  inputs: [{ name: "items", type: "slot" }],
+});
+
+const tab = defineBlock({
+  name: "site/tab",
+  render: () => null,
+  requiresParent: ["site/tabs"],
+});
+
+const gated = defineBlock({
+  name: "site/gated",
+  render: () => null,
+  capability: "entry:post:publish",
+});
+
 function themedMcpHarness(theme: {
+  blocks?: readonly BlockSpec[];
   allowedBlocks?: readonly string[];
   tokens?: ThemeTokens;
   allowCustomStyles?: AllowCustomStyles;
@@ -60,8 +80,8 @@ function themedMcpHarness(theme: {
       plugins: [blog],
       theme: defineTheme({
         templates: [fallback(() => null)],
-        blocks: [card],
         ...theme,
+        blocks: theme.blocks ?? [card],
       }),
     },
   });
@@ -395,6 +415,74 @@ describe("MCP content_create and content_update", () => {
 
     expect(result.content[0]?.text).toContain(
       "Allowed blocks: core/group, site/card.",
+    );
+  });
+
+  test("a nested block the theme drops lists that slot's blocks, requires-parent children included", async () => {
+    const h = await themedMcpHarness({
+      blocks: [tabs, tab],
+      allowedBlocks: ["core/group"],
+    });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "t1",
+            name: "site/tabs",
+            attrs: { items: [{ id: "v1", name: "core/video", attrs: {} }] },
+          },
+        ],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      'Slot "items" of "site/tabs" allows: core/group, site/tabs, site/tab.',
+    );
+    expect(result.content[0]?.text).not.toContain("Allowed blocks:");
+  });
+
+  test("a requires-parent block at the top level lists the top-level blocks", async () => {
+    const h = await themedMcpHarness({
+      blocks: [tabs, tab],
+      allowedBlocks: ["core/group"],
+    });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "t1", name: "site/tab", attrs: {} }],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      "Allowed blocks: core/group, site/tabs.",
+    );
+  });
+
+  test("a block refused for a missing capability is not offered back", async () => {
+    const h = await themedMcpHarness({ blocks: [gated] });
+    const secret = await mintPat(h, { scopes: ["entry:post:create"] });
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "g1", name: "site/gated", attrs: {} }],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain("needs the");
+    expect(result.content[0]?.text).not.toMatch(
+      /Allowed blocks:[^.]*site\/gated/,
     );
   });
 

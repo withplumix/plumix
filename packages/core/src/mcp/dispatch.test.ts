@@ -69,6 +69,26 @@ const card = defineBlock({
   defaultStyles: { large: { padding: "var(--plumix-spacing-md, 16px)" } },
 });
 
+const hero = defineBlock({
+  name: "site/hero",
+  render: () => null,
+  inputs: [
+    {
+      name: "align",
+      type: "select",
+      styleProperty: "textAlign",
+      content: true,
+    },
+    { name: "photo", type: "media", accept: ["image/*"] },
+    {
+      name: "items",
+      type: "slot",
+      rawSlot: true,
+      defaultChildren: [{ id: "d1", name: "core/rich-text", attrs: {} }],
+    },
+  ],
+});
+
 function themedMcpHarness(
   theme: {
     allowedBlocks?: readonly string[];
@@ -81,7 +101,7 @@ function themedMcpHarness(
       plugins: [blog],
       theme: defineTheme({
         templates: [fallback(() => null)],
-        blocks: [card],
+        blocks: [card, hero],
         ...theme,
       }),
     },
@@ -559,6 +579,7 @@ describe("MCP endpoint — schema_describe", () => {
       "core/rich-text",
       "core/group",
       "site/card",
+      "site/hero",
     ]);
   });
 
@@ -592,7 +613,7 @@ describe("MCP endpoint — schema_describe", () => {
         name: "content",
         type: "slot",
         label: "Content",
-        allowedBlocks: ["core/group", "core/columns", "site/card"],
+        allowedBlocks: ["core/group", "core/columns", "site/card", "site/hero"],
       },
     ]);
   });
@@ -617,6 +638,24 @@ describe("MCP endpoint — schema_describe", () => {
         },
       },
     });
+  });
+
+  test("an input keeps the fields an agent needs to write it", async () => {
+    const h = await themedMcpHarness();
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 11, "schema_describe", {});
+
+    const { blocks } = parseToolResult<BuildingModel>(json);
+    expect(blocks.find((b) => b.name === "site/hero")?.inputs).toMatchObject([
+      { name: "align", styleProperty: "textAlign", content: true },
+      { name: "photo", accept: ["image/*"] },
+      {
+        name: "items",
+        rawSlot: true,
+        defaultChildren: [{ id: "d1", name: "core/rich-text", attrs: {} }],
+      },
+    ]);
   });
 
   test("a block lists its default styles", async () => {
