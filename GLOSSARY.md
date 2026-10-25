@@ -603,6 +603,25 @@ expressions, so the plain text has to be extracted in JavaScript once and stored
 — which also makes rebuilding the index one SQL statement rather than a re-run
 of the extractor over every block tree. Owned by `@plumix/plugin-search`.
 
+## Testing
+
+**Test site**:
+A whole site built for a test, with a fake in place of every service it uses.
+A feature test and an e2e test drive the same test site. See ADR 0070.
+_Avoid_: harness, test app
+
+**Feature test**:
+A test of what a site does, driven through one of its entry points (a request,
+a remote call, a scheduled firing) against a test site, named for the
+capability it checks rather than a source file. The unit test, by contrast,
+calls code directly.
+_Avoid_: integration test
+
+**Playground**:
+The site a package keeps to run by hand and to drive its e2e tests. A site has
+none, since it is its own.
+_Avoid_: fixture site
+
 ## Disambiguation — one word, several meanings
 
 These words each carry more than one meaning in the code. The glossary keeps
