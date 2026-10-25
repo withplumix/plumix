@@ -17,6 +17,7 @@ import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
+import type { Travel } from "./site-clock.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
@@ -34,6 +35,7 @@ import { factoriesFor, userFactory } from "./factories.js";
 import { fakeMail } from "./mail-fake.js";
 import { TestPage } from "./page.js";
 import { appendCookie, buildRequest } from "./request.js";
+import { siteClock } from "./site-clock.js";
 import { createSiteDatabase } from "./site-database.js";
 import { migrationFolders } from "./site-migrations.js";
 
@@ -87,6 +89,10 @@ export interface TestSite<
    * first call in each test.
    */
   readonly actingAs: (principal: User | UserRole) => TestSite<TFactories, TRpc>;
+  /** Moves this site's clock forward, and no other site's. */
+  readonly travel: (by: Travel) => void;
+  /** Stops this site's clock at an instant, which `travel` then moves. */
+  readonly freezeTime: (iso: string) => void;
 }
 
 type InstalledRpc<TPlugins extends readonly AnyPluginDescriptor[]> =
@@ -131,12 +137,14 @@ export async function testSite<
     migrationFolders(siteRootOf(cwd), config.plugins),
   );
   const { defer, drainDeferred } = createDeferQueue();
+  const time = siteClock();
   let fakes = freshFakes();
   let signedIn = new WeakMap<NonNullable<Principal>, SignIn>();
   beforeEach(async () => {
     await drainDeferred();
     await reset();
     fakes = freshFakes();
+    time.reset();
     signedIn = new WeakMap();
   });
   const env = options?.env ?? {};
@@ -155,6 +163,7 @@ export async function testSite<
         assets: undefined,
         slots: bindSlots(app, env),
       }),
+      clock: time.clock,
       logger: silentLogger,
       onMailSent: (sent) => {
         fakes.mail.record(sent);
@@ -184,10 +193,12 @@ export async function testSite<
       let current = signedIn.get(principal);
       if (current === undefined) {
         const record: SignIn = {
-          session: sessionFor(db, principal).then((session) => {
-            record.settled = session;
-            return session;
-          }),
+          session: sessionFor(db, principal, contextFor(request)).then(
+            (session) => {
+              record.settled = session;
+              return session;
+            },
+          ),
         };
         current = record;
         signedIn.set(principal, current);
@@ -232,6 +243,8 @@ export async function testSite<
       rpc: rpcClient(async (request) => dispatch(await signIn(request))),
       actingAs: (next) =>
         siteActingAs(typeof next === "string" ? { role: next } : next),
+      travel: time.travel,
+      freezeTime: time.freezeTime,
     };
   }
 
@@ -251,12 +264,16 @@ export async function testSite<
 async function sessionFor(
   db: Db,
   principal: NonNullable<Principal>,
+  ctx: AppContext,
 ): Promise<Session> {
   const user =
     "id" in principal
       ? principal
       : await userFactory.transient({ db }).create({ role: principal.role });
-  const { token } = await createSession(db, { userId: user.id });
+  // Inside the site's context, so the session's lifetime starts on its clock.
+  const { token } = await requestStore.run(ctx, () =>
+    createSession(db, { userId: user.id }),
+  );
   return { user, cookie: `${SESSION_COOKIE_NAME}=${token}` };
 }
 

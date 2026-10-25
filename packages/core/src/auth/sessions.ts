@@ -4,6 +4,7 @@ import type { AppContext, Db } from "../context/app-context.js";
 import type { Session } from "../db/schema/sessions.js";
 import type { User } from "../db/schema/users.js";
 import type { SessionPolicy } from "./contract/sessions.js";
+import { now } from "../clock.js";
 import { rowsAffected } from "../db/rows-affected.js";
 import { sessions } from "../db/schema/sessions.js";
 import { users } from "../db/schema/users.js";
@@ -70,7 +71,7 @@ export async function createSession(
 ): Promise<CreatedSession> {
   const token = generateToken();
   const id = await hashToken(token);
-  const expiresAt = new Date(Date.now() + policy.maxAgeSeconds * 1000);
+  const expiresAt = new Date(now().getTime() + policy.maxAgeSeconds * 1000);
 
   const [session] = await db
     .insert(sessions)
@@ -109,13 +110,13 @@ export async function validateSession(
 
   if (!row) return null;
 
-  const now = Date.now();
+  const nowMs = now().getTime();
   const expiresAtMs = row.session.expiresAt.getTime();
   const createdAtMs = row.session.createdAt.getTime();
 
   if (
-    now >= expiresAtMs ||
-    now >= createdAtMs + policy.absoluteMaxAgeSeconds * 1000
+    nowMs >= expiresAtMs ||
+    nowMs >= createdAtMs + policy.absoluteMaxAgeSeconds * 1000
   ) {
     await db.delete(sessions).where(eq(sessions.id, id));
     return null;
@@ -126,13 +127,13 @@ export async function validateSession(
     return null;
   }
 
-  const elapsedFraction = (now - createdAtMs) / (policy.maxAgeSeconds * 1000);
+  const elapsedFraction = (nowMs - createdAtMs) / (policy.maxAgeSeconds * 1000);
   if (elapsedFraction < policy.refreshThreshold) {
     return { session: row.session, user: row.user, refreshed: false };
   }
 
   const newExpiryMs = Math.min(
-    now + policy.maxAgeSeconds * 1000,
+    nowMs + policy.maxAgeSeconds * 1000,
     createdAtMs + policy.absoluteMaxAgeSeconds * 1000,
   );
   if (newExpiryMs === expiresAtMs) {
@@ -174,6 +175,6 @@ export async function invalidateAllSessionsForUser(
  */
 export async function pruneExpiredSessions(db: Db): Promise<number> {
   return rowsAffected(
-    await db.delete(sessions).where(lt(sessions.expiresAt, new Date())),
+    await db.delete(sessions).where(lt(sessions.expiresAt, now())),
   );
 }

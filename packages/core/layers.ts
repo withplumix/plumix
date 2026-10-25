@@ -49,6 +49,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "css-tag": client("foundation"),
   "non-empty": client("foundation"),
   "load-once": client("foundation"),
+  clock: client("foundation"),
   "return-url": client("foundation"),
   "read-cookie": client("foundation"),
   "document-manifest": client("foundation"),

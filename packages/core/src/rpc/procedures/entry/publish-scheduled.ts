@@ -1,4 +1,5 @@
 import type { AppContext } from "../../../context/app-context.js";
+import { now } from "../../../clock.js";
 import { and, eq, isNotNull, lte } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { entryRows } from "./concurrency.js";
@@ -18,7 +19,7 @@ export function scheduledDateInvalid(
 ): boolean {
   return (
     status === "scheduled" &&
-    (publishedAt === undefined || publishedAt.getTime() <= Date.now())
+    (publishedAt === undefined || publishedAt.getTime() <= now().getTime())
   );
 }
 
@@ -30,7 +31,7 @@ export function scheduledDateInvalid(
 export async function publishDueScheduledEntries(
   ctx: AppContext,
 ): Promise<number> {
-  const now = new Date();
+  const dueBy = now();
   const due = await ctx.db
     .select()
     .from(entries)
@@ -38,7 +39,7 @@ export async function publishDueScheduledEntries(
       and(
         eq(entries.status, "scheduled"),
         isNotNull(entries.publishedAt),
-        lte(entries.publishedAt, now),
+        lte(entries.publishedAt, dueBy),
       ),
     );
 
@@ -49,7 +50,7 @@ export async function publishDueScheduledEntries(
     const result = await entryRows(ctx.db).writeAsSystem(entry, (row) =>
       row.status === "scheduled" &&
       row.publishedAt !== null &&
-      row.publishedAt <= now
+      row.publishedAt <= dueBy
         ? { status: "published" }
         : undefined,
     );

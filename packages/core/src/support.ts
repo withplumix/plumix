@@ -1,6 +1,7 @@
 // Small helpers, one leaf module each, so a browser bundle can take them
 // without the root barrel's `node:async_hooks` import.
 export { normalizeBasePath, withBasePath } from "./base-path.js";
+export { now } from "./clock.js";
 export { escapeHtml } from "./escape-html.js";
 export { nonEmpty } from "./non-empty.js";
 export { isJsonArray, isJsonObject } from "./json.js";
