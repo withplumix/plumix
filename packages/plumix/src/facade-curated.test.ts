@@ -97,6 +97,13 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "the bearer authenticator that also admits a token bound to one " +
+      "audience, which only core's MCP endpoint composes. A site composes " +
+      "`apiTokenAuthenticator`, which refuses every bound token.",
+    names: ["audienceTokenAuthenticator"],
+  },
+  {
+    reason:
       "the runtime-key half of the shim roster, which admin's runtime " +
       "object and `PlumixAdminRuntime` are typed against. A plugin " +
       "chunk reads those keys through `getRuntime`, not this map.",
