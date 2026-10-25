@@ -49,7 +49,7 @@ const stars = await ctx.filters.apply(review.stars, 5, { review });
 | `ctx.events.emit(event, payload)`             | Starts every handler in order, awaits all of them, and resolves to the failures as `{ plugin, error }` (`plugin` is `null` for core). Traced as one `event: <id>` span per handler.                     |
 | `ctx.filters.apply(filter, value, input)`     | Runs the handlers in sequence. A sync filter returns the value; an async one returns a promise, gives each step a `structuredClone` of the value, and is traced as one `filter: <id>` span per handler. |
 
-`ctx` in a handler is the `AppContext` that fired it, including one derived by spreading another (`withUser`, `withSignal`), which rebinds through `rebindDispatch`.
+`ctx` in a handler is the `AppContext` that fired it. Core's contexts that change what a handler reads (`withUser`, `withSignal`, the dispatcher's rooted and sessionless contexts, REST's anonymous one) rebind through `rebindDispatch`, as they rebind `settings`. A context spread without rebinding hands handlers the one it was spread from: `asAuthenticated` in `rpc/procedures/entry/writes.ts` changes only the type, so nothing differs; a plugin can't reach `rebindDispatch`, so the og plugin's locale-pinned card context fires with the request's locale.
 
 Handlers run `early`, then unset, then `late`. Within each band core's own handlers run first, then the plugins' in the site's `plugins` config order, then in registration order, so a plugin's `afterSetup` handler still runs before a later plugin's `setup` one.
 
