@@ -10,6 +10,11 @@ import {
   entryCreateInputSchema,
   entryUpdateInputSchema,
 } from "../rpc/procedures/entry/schemas.js";
+import {
+  allowedChildren,
+  allowedTopLevel,
+  tokensForProperty,
+} from "./block-catalog.js";
 import { McpToolError } from "./errors.js";
 import { mcpRouterClient } from "./router-client.js";
 
@@ -57,6 +62,11 @@ interface IssueData {
   readonly issues: readonly {
     readonly path: string;
     readonly message: string;
+    readonly code: string;
+    readonly nodeName?: string;
+    readonly slotName?: string;
+    readonly parentName?: string;
+    readonly property?: string;
   }[];
 }
 
@@ -71,6 +81,7 @@ interface RefusalWording {
 }
 
 export function asWriteToolError(
+  ctx: AppContext,
   error: unknown,
   tool: string,
   { subject = "entry", takesContent = true }: RefusalWording = {},
@@ -115,7 +126,7 @@ export function asWriteToolError(
         .join("; ");
       return McpToolError.invalidContent(
         takesContent
-          ? `${failing}. Fix these nodes and call ${tool} again.`
+          ? `${failing}. ${alternativesFor(ctx, issues)}Fix these nodes and call ${tool} again.`
           : `${failing}. Report this to the user and stop; ${tool} takes no content you could fix.`,
       );
     }
@@ -137,6 +148,39 @@ export function asWriteToolError(
   }
 }
 
+/** What the refused nodes could have been, once each, so the agent can retry. */
+function alternativesFor(ctx: AppContext, issues: IssueData["issues"]): string {
+  const lines = new Set<string>();
+  for (const issue of issues) {
+    if (
+      issue.code === "disallowed_child" &&
+      issue.slotName !== undefined &&
+      issue.parentName !== undefined
+    ) {
+      const allowed = allowedChildren(ctx, issue.parentName, issue.slotName);
+      lines.add(
+        `Slot "${issue.slotName}" of "${issue.parentName}" allows: ${allowed.join(", ")}.`,
+      );
+    } else if (
+      issue.code === "block_not_allowed" ||
+      issue.code === "unknown_block_type"
+    ) {
+      lines.add(`Allowed blocks: ${allowedTopLevel(ctx).join(", ")}.`);
+    } else if (
+      issue.code === "style_not_allowed" &&
+      issue.property !== undefined &&
+      issue.property !== "className"
+    ) {
+      const { category, uses } = tokensForProperty(
+        ctx.stylePolicy,
+        issue.property,
+      );
+      lines.add(`Tokens for "${category}": ${uses.join(", ") || "none"}.`);
+    }
+  }
+  return [...lines].map((line) => `${line} `).join("");
+}
+
 function capabilityOf(data: unknown): string {
   const capability = (data as { capability?: string } | undefined)?.capability;
   return capability === undefined ? "" : ` (needs ${capability})`;
@@ -153,7 +197,7 @@ export const contentCreateTool: McpTool<typeof createInputSchema> = {
       const written = await mcpRouterClient(ctx).entry.create(input);
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_create");
+      throw asWriteToolError(ctx, error, "content_create");
     }
   },
 };
@@ -212,7 +256,7 @@ export const contentUpdateTool: McpTool<typeof updateInputSchema> = {
       );
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_update");
+      throw asWriteToolError(ctx, error, "content_update");
     }
   },
 };

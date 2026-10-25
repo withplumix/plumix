@@ -46,7 +46,7 @@ export const contentPublishTool: McpTool<typeof publishInputSchema> = {
       );
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_publish");
+      throw asWriteToolError(ctx, error, "content_publish");
     }
   },
 };
@@ -69,7 +69,7 @@ export const contentDiscardDraftTool: McpTool<typeof entryRefInputSchema> = {
       // The live entry is untouched, so the etag read above still stands.
       return { id, etag: existing.etag, status: existing.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_discard_draft");
+      throw asWriteToolError(ctx, error, "content_discard_draft");
     }
   },
 };
@@ -87,7 +87,7 @@ export const contentDuplicateTool: McpTool<typeof entryRefInputSchema> = {
       const copy = await client.entry.duplicate({ id });
       return { id: copy.id, etag: copy.etag, status: copy.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_duplicate", {
+      throw asWriteToolError(ctx, error, "content_duplicate", {
         takesContent: false,
       });
     }
@@ -107,7 +107,7 @@ export const contentTrashTool: McpTool<typeof entryRefInputSchema> = {
       const trashed = await client.entry.trash({ id });
       return { id: trashed.id, etag: trashed.etag, status: trashed.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_trash");
+      throw asWriteToolError(ctx, error, "content_trash");
     }
   },
 };
@@ -125,7 +125,7 @@ export const contentRestoreTool: McpTool<typeof entryRefInputSchema> = {
       const restored = await client.entry.restore({ id });
       return { id: restored.id, etag: restored.etag, status: restored.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_restore");
+      throw asWriteToolError(ctx, error, "content_restore");
     }
   },
 };

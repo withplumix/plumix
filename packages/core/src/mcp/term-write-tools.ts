@@ -48,7 +48,7 @@ export const termCreateTool: McpTool<typeof createInputSchema> = {
       const created = await mcpRouterClient(ctx).term.create(input);
       return { id: created.id, etag: created.etag };
     } catch (error) {
-      throw asWriteToolError(error, "term_create", { subject: "term" });
+      throw asWriteToolError(ctx, error, "term_create", { subject: "term" });
     }
   },
 };
@@ -77,7 +77,7 @@ export const termUpdateTool: McpTool<typeof updateInputSchema> = {
       );
       return { id: updated.id, etag: updated.etag };
     } catch (error) {
-      throw asWriteToolError(error, "term_update", { subject: "term" });
+      throw asWriteToolError(ctx, error, "term_update", { subject: "term" });
     }
   },
 };

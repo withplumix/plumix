@@ -3,6 +3,7 @@ import * as v from "valibot";
 import type { McpTool } from "../context/mcp-tool.js";
 import { ENTRY_STATUSES } from "../db/schema/entries.js";
 import { labelSourceText } from "../i18n/label.js";
+import { describeBlocks, describeStyles } from "./block-catalog.js";
 import { McpToolError } from "./errors.js";
 
 const inputSchema = v.object({
@@ -20,7 +21,7 @@ const inputSchema = v.object({
 export const schemaDescribeTool: McpTool<typeof inputSchema> = {
   name: "schema_describe",
   description:
-    "Describe the content model — entry types, statuses, supports, and taxonomies. Call with no argument to list everything, or with `type` to inspect one entry type.",
+    "Describe the content model — entry types, statuses, supports, and taxonomies. Call with no argument to list everything, including the blocks you may write and the style tokens you may use, or with `type` to inspect one entry type.",
   inputSchema,
   run(ctx, input) {
     const { entryTypes, termTaxonomies } = ctx.plugins;
@@ -39,6 +40,8 @@ export const schemaDescribeTool: McpTool<typeof inputSchema> = {
           label: labelSourceText(taxonomy.label),
           isHierarchical: taxonomy.isHierarchical ?? false,
         })),
+        blocks: describeBlocks(ctx),
+        styles: describeStyles(ctx.stylePolicy),
       };
     }
 

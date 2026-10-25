@@ -22,6 +22,8 @@ export interface BlockContentValidationIssue {
   readonly attributeName?: string;
   /** For `disallowed_child`: the slot key the offending child landed in. */
   readonly slotName?: string;
+  /** For `disallowed_child`: the block owning that slot. */
+  readonly parentName?: string;
   /** For `style_not_allowed`: the CSS property, or `className`. */
   readonly property?: string;
   /** For `style_not_allowed` on a CSS property: the bucket holding it. */

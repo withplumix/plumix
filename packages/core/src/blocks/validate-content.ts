@@ -286,6 +286,7 @@ function walk(
             path: childPath,
             nodeName: child.name,
             slotName: key,
+            parentName: node.name,
           });
         });
       }
