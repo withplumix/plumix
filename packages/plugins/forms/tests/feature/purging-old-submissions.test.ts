@@ -1,13 +1,13 @@
 import { text } from "plumix/fields";
 import { testSite } from "plumix/test";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { defineForm } from "../../src/define-form.js";
 import { forms } from "../../src/index.js";
 import { listAllSubmissions } from "../../src/server/repository.js";
-import { RETENTION_CRON } from "../../src/server/retention.js";
 import { submissionFactory } from "../../src/test/factories.js";
 
+const NOW = new Date("2026-06-01T00:00:00.000Z");
 const DAY = 24 * 60 * 60 * 1000;
 
 const site = await testSite({
@@ -22,12 +22,21 @@ const site = await testSite({
 });
 
 function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * DAY);
+  return new Date(NOW.getTime() - days * DAY);
 }
 
 describe("the nightly purge", () => {
+  // Only `Date` is faked: the database still needs its timers.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test("is scheduled on the nightly cron", () => {
-    site.schedule.assertScheduled("forms:retention-purge", RETENTION_CRON);
+    site.schedule.assertScheduled("forms:retention-purge", "0 3 * * *");
   });
 
   test("deletes the submissions a form has kept past its retention period", async () => {

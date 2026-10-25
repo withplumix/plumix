@@ -1,6 +1,6 @@
 import { Factory } from "fishery";
 import * as v from "valibot";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, test } from "vitest";
 
 import type { Db } from "../context/app-context.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
@@ -422,9 +422,15 @@ const failing = definePlugin("failing", {
 const scheduling = await testSite({ plugins: [sweeper, weekly, failing] });
 
 describe("the site's scheduled tasks", () => {
-  test("are registered on their cron and run one by its id", async () => {
-    scheduling.schedule.assertScheduled("sweeper:sweep", "0 3 * * *");
+  beforeEach(() => {
+    swept = 0;
+  });
 
+  test("are registered on their cron", () => {
+    scheduling.schedule.assertScheduled("sweeper:sweep", "0 3 * * *");
+  });
+
+  test("run one by its id", async () => {
     const report = await scheduling.runTask("sweeper:sweep");
 
     report.assertRan("sweeper:sweep");
@@ -445,5 +451,18 @@ describe("the site's scheduled tasks", () => {
 
     report.assertFailed("failing:throws").assertTimedOut("failing:stalls");
     expect(report.ran).toEqual([]);
+  });
+});
+
+const heartbeat = definePlugin("heartbeat", {
+  setup: (ctx) => {
+    ctx.registerScheduledTask({ id: "beat", handler: () => undefined });
+  },
+});
+const beating = await testSite({ plugins: [heartbeat] });
+
+describe("a scheduled task that declares no cron", () => {
+  test("runs on a firing of any cron", async () => {
+    (await beating.runSchedule("0 0 * * SUN")).assertRan("heartbeat:beat");
   });
 });
