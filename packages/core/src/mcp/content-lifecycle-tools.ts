@@ -6,15 +6,16 @@ import {
   asWriteToolError,
   entryOfType,
   holdingLease,
+  WRITE,
 } from "./content-write-tools.js";
 import { mcpRouterClient } from "./router-client.js";
 
-const typeParam = v.pipe(
+export const typeParam = v.pipe(
   v.string(),
   v.description("Entry type the id must belong to."),
 );
 
-const ifMatchParam = v.pipe(
+export const ifMatchParam = v.pipe(
   v.string(),
   v.description(
     "The entry's `etag` from `content_get`, or from your last write. After a `conflict`, call `content_get` again and retry with the new etag.",
@@ -26,8 +27,6 @@ const publishInputSchema = v.object({
   id: idParam,
   ifMatch: ifMatchParam,
 });
-
-const WRITE = { readOnlyHint: false, destructiveHint: false } as const;
 
 export const contentPublishTool: McpTool<typeof publishInputSchema> = {
   name: "content_publish",
@@ -44,7 +43,7 @@ export const contentPublishTool: McpTool<typeof publishInputSchema> = {
         { kind: "entry", id },
         () => client.entry.lease.acquire({ id }),
         () =>
-          // A published entry publishes its pending draft; any other goes live.
+          // entry.publish only promotes a pending draft, so a draft goes live through update.
           existing.status === "published"
             ? client.entry.publish({ id, ifMatch })
             : client.entry.update({ id, ifMatch, status: "published" }),
@@ -93,7 +92,7 @@ export const contentDuplicateTool: McpTool<typeof entryRefInputSchema> = {
       return { id: copy.id, etag: copy.etag, status: copy.status };
     } catch (error) {
       throw asWriteToolError(error, "content_duplicate", {
-        contentFixable: false,
+        takesContent: false,
       });
     }
   },

@@ -46,7 +46,7 @@ const updateInputSchema = v.object({
   ),
 });
 
-const WRITE = { readOnlyHint: false, destructiveHint: false } as const;
+export const WRITE = { readOnlyHint: false, destructiveHint: false } as const;
 
 interface IssueData {
   readonly issues: readonly {
@@ -62,8 +62,7 @@ const SUBJECTS = {
 
 interface RefusalWording {
   readonly subject?: keyof typeof SUBJECTS;
-  /** False for a tool that takes no content, so the agent has no node to fix. */
-  readonly contentFixable?: boolean;
+  readonly takesContent?: boolean;
 }
 
 /**
@@ -73,7 +72,7 @@ interface RefusalWording {
 export function asWriteToolError(
   error: unknown,
   retryTool: string,
-  { subject = "entry", contentFixable = true }: RefusalWording = {},
+  { subject = "entry", takesContent = true }: RefusalWording = {},
 ): McpToolError {
   if (!(error instanceof ORPCError)) throw error;
   const data: unknown = error.data;
@@ -114,7 +113,7 @@ export function asWriteToolError(
         .map((issue) => `${issue.path}: ${issue.message}`)
         .join("; ");
       return McpToolError.invalidContent(
-        contentFixable
+        takesContent
           ? `${failing}. Fix these nodes and call ${retryTool} again.`
           : `${failing}. Report this to the user and stop; ${retryTool} takes no content you could fix.`,
       );
@@ -158,12 +157,14 @@ export const contentCreateTool: McpTool<typeof createInputSchema> = {
   },
 };
 
+type RouterClient = ReturnType<typeof mcpRouterClient>;
+
 /** The entry, read as the token's principal; a type mismatch stays hidden as not-found. */
 export async function entryOfType(
-  client: ReturnType<typeof mcpRouterClient>,
+  client: RouterClient,
   type: string,
   id: number,
-) {
+): Promise<Awaited<ReturnType<RouterClient["entry"]["get"]>>> {
   const existing = await client.entry.get({ id });
   if (existing.type !== type) {
     throw new ORPCError("NOT_FOUND", { data: { kind: "entry", id } });

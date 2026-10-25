@@ -18,6 +18,12 @@ const blog = definePlugin("test-blog", {
       supports: ["title", "editor", "excerpt", "revisions"],
       termTaxonomies: ["category"],
     });
+    ctx.registerEntryType("article", {
+      label: "Articles",
+      isPublic: true,
+      isHierarchical: false,
+      supports: ["title", "editor", "excerpt", "revisions", "autosave"],
+    });
     ctx.registerTermTaxonomy("category", {
       label: "Categories",
       isHierarchical: true,
@@ -129,6 +135,40 @@ describe("MCP content_publish", () => {
     expect((await rowOf(h, id))?.status).toBe("published");
   });
 
+  test("publishes a published entry's pending draft, which the admin then sees live", async () => {
+    const h = await mcpHarness();
+    const secret = await mintPat(h);
+    const draft = parsed<Written>(
+      await callTool(h, secret, "content_create", {
+        type: "article",
+        slug: "live",
+        title: "Live",
+      }),
+    );
+    const { etag } = parsed<Written>(
+      await callTool(h, secret, "content_publish", {
+        type: "article",
+        id: draft.id,
+        ifMatch: draft.etag,
+      }),
+    );
+    await callTool(h, secret, "content_update", {
+      type: "article",
+      id: draft.id,
+      ifMatch: etag,
+      excerpt: "Pending",
+    });
+
+    const result = await callTool(h, secret, "content_publish", {
+      type: "article",
+      id: draft.id,
+      ifMatch: etag,
+    });
+
+    expect(parsed<Written>(result).status).toBe("published");
+    expect((await rowOf(h, draft.id))?.excerpt).toBe("Pending");
+  });
+
   test("a token without the publish capability is refused as forbidden", async () => {
     const h = await mcpHarness();
     const secret = await mintPat(h, {
@@ -226,12 +266,13 @@ describe("MCP content_publish", () => {
     });
 
     expect(result._meta?.code).toBe("not_found");
+    expect(result.content[0]?.text).toContain("content_list");
     expect((await rowOf(h, id))?.status).toBe("draft");
   });
 });
 
 describe("MCP content_trash and content_restore", () => {
-  test("trash moves an entry to the trash and restore brings it back as a draft", async () => {
+  test("trash moves an entry to the trash", async () => {
     const h = await mcpHarness();
     const secret = await mintPat(h);
     const { id } = await draftOf(h, secret);
@@ -239,12 +280,21 @@ describe("MCP content_trash and content_restore", () => {
     const trashed = parsed<Written>(
       await callTool(h, secret, "content_trash", { type: "post", id }),
     );
+
     expect(trashed.status).toBe("trash");
     expect((await rowOf(h, id))?.status).toBe("trash");
+  });
+
+  test("restore brings a trashed entry back as a draft", async () => {
+    const h = await mcpHarness();
+    const secret = await mintPat(h);
+    const { id } = await draftOf(h, secret);
+    await callTool(h, secret, "content_trash", { type: "post", id });
 
     const restored = parsed<Written>(
       await callTool(h, secret, "content_restore", { type: "post", id }),
     );
+
     expect(restored.status).toBe("draft");
     expect(Object.keys(restored).sort()).toEqual(["etag", "id", "status"]);
     expect((await rowOf(h, id))?.status).toBe("draft");
@@ -278,6 +328,7 @@ describe("MCP content_trash and content_restore", () => {
 
     expect(result._meta?.code).toBe("conflict");
     expect(result.content[0]?.text).toContain("not_trashed");
+    expect(result.content[0]?.text).toContain("content_restore");
   });
 
   test("an id of another entry type is not found", async () => {
@@ -367,7 +418,7 @@ describe("MCP content_discard_draft", () => {
 });
 
 describe("MCP tools/list hints", () => {
-  test("only content_trash is destructive and none is read-only", async () => {
+  test("lists the write tools, of which only content_trash is destructive", async () => {
     const h = await mcpHarness();
     const secret = await mintPat(h);
 
@@ -437,6 +488,47 @@ describe("MCP revision_list", () => {
     const revisions = await revisionsOf(h, secret, id);
 
     expect(revisions.map((r) => r.title)).toEqual(["Second", "First"]);
+  });
+
+  test("a limit caps the page and returns a cursor for the next", async () => {
+    const h = await mcpHarness();
+    const secret = await mintPat(h);
+    const { id } = await editedTwice(h, secret);
+
+    const page = parsed<{ revisions: RevisionItem[]; nextCursor?: string }>(
+      await callTool(h, secret, "revision_list", {
+        type: "post",
+        id,
+        limit: 1,
+      }),
+    );
+
+    expect(page.revisions.map((r) => r.title)).toEqual(["Second"]);
+    expect(page.nextCursor).toEqual(expect.any(String));
+  });
+
+  test("a cursor continues from the previous page", async () => {
+    const h = await mcpHarness();
+    const secret = await mintPat(h);
+    const { id } = await editedTwice(h, secret);
+    const { nextCursor } = parsed<{ nextCursor: string }>(
+      await callTool(h, secret, "revision_list", {
+        type: "post",
+        id,
+        limit: 1,
+      }),
+    );
+
+    const page = parsed<{ revisions: RevisionItem[] }>(
+      await callTool(h, secret, "revision_list", {
+        type: "post",
+        id,
+        limit: 1,
+        cursor: nextCursor,
+      }),
+    );
+
+    expect(page.revisions.map((r) => r.title)).toEqual(["First"]);
   });
 
   test("a token without read_revisions is refused as forbidden", async () => {

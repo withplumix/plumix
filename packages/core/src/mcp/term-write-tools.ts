@@ -7,7 +7,11 @@ import {
   termCreateInputSchema,
   termUpdateInputSchema,
 } from "../rpc/procedures/term/schemas.js";
-import { asWriteToolError, holdingLease } from "./content-write-tools.js";
+import {
+  asWriteToolError,
+  holdingLease,
+  WRITE,
+} from "./content-write-tools.js";
 import { mcpRouterClient } from "./router-client.js";
 
 const createInputSchema = termCreateInputSchema;
@@ -32,8 +36,6 @@ const updateInputSchema = v.object({
     ),
   ),
 });
-
-const WRITE = { readOnlyHint: false, destructiveHint: false } as const;
 
 export const termCreateTool: McpTool<typeof createInputSchema> = {
   name: "term_create",

@@ -4,15 +4,17 @@ import * as v from "valibot";
 import type { McpTool } from "../context/mcp-tool.js";
 import { decodeRevisionSlug } from "../revisions/slug-codec.js";
 import { idParam } from "../rpc/contract/validation.js";
+import { ifMatchParam, typeParam } from "./content-lifecycle-tools.js";
 import {
   asWriteToolError,
   entryOfType,
   holdingLease,
+  WRITE,
 } from "./content-write-tools.js";
 import { mcpRouterClient } from "./router-client.js";
 
 const listInputSchema = v.object({
-  type: v.pipe(v.string(), v.description("Entry type the id must belong to.")),
+  type: typeParam,
   id: idParam,
   limit: v.optional(
     v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(50)),
@@ -28,12 +30,7 @@ const listInputSchema = v.object({
 
 const restoreInputSchema = v.object({
   revisionId: idParam,
-  ifMatch: v.pipe(
-    v.string(),
-    v.description(
-      "The entry's `etag` from `content_get`, or from your last write. After a `conflict`, call `content_get` again and retry with the new etag.",
-    ),
-  ),
+  ifMatch: ifMatchParam,
 });
 
 export const revisionListTool: McpTool<typeof listInputSchema> = {
@@ -62,7 +59,7 @@ export const revisionRestoreTool: McpTool<typeof restoreInputSchema> = {
   description:
     "Restore a revision onto its entry, replacing its title, content and meta with the revision's. Needs `ifMatch`. Returns id, etag and status.",
   inputSchema: restoreInputSchema,
-  annotations: { readOnlyHint: false, destructiveHint: false },
+  annotations: WRITE,
   async run(ctx, { revisionId, ifMatch }) {
     const client = mcpRouterClient(ctx);
     try {
@@ -82,7 +79,7 @@ export const revisionRestoreTool: McpTool<typeof restoreInputSchema> = {
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
       throw asWriteToolError(error, "revision_restore", {
-        contentFixable: false,
+        takesContent: false,
       });
     }
   },
