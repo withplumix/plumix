@@ -414,6 +414,8 @@ export function requestContextArgs({
     kv: slots.kv,
     imageDelivery: slots.imageDelivery,
     dev: app.dev,
+    // A deployed site reads real time; a test site sets its own clock.
+    clock: undefined,
     authMethods: app.authMethods,
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,

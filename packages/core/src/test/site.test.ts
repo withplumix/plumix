@@ -5,6 +5,7 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 import type { Db } from "../context/app-context.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { PluginDescriptor } from "../plugin/define.js";
+import { now } from "../clock.js";
 import { settings } from "../db/schema/settings.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
@@ -317,4 +318,50 @@ describe("a bound site's context", () => {
       'context: the "editor" user is created by this site\'s first rpc or visit call. Make one first, or pass a user to actingAs.',
     );
   });
+});
+
+const travelling = await testSite({ plugins: [posts] });
+const staying = await testSite({ plugins: [posts] });
+
+describe("the site's clock", () => {
+  test("moves for its own site only, while real time stays put", async () => {
+    const realBefore = Date.now();
+    const traveller = travelling.actingAs("editor");
+    const stayer = staying.actingAs("editor");
+    await Promise.all([
+      traveller.rpc.auth.session(),
+      stayer.rpc.auth.session(),
+    ]);
+
+    travelling.travel({ days: 31 });
+    const [travelled, stayed] = await Promise.all([
+      traveller.rpc.auth.session(),
+      stayer.rpc.auth.session(),
+    ]);
+
+    expect(travelled.user).toBeNull();
+    expect(stayed.user).toMatchObject({ role: "editor" });
+    expect(now().getTime() - realBefore).toBeLessThan(60_000);
+  });
+
+  test("freezes for its own site only", async () => {
+    const editor = travelling.actingAs("editor");
+    await editor.rpc.auth.session();
+
+    travelling.freezeTime("2100-01-01T00:00:00Z");
+
+    expect((await editor.rpc.auth.session()).user).toBeNull();
+    expect(now().getTime()).toBeLessThan(Date.parse("2100-01-01T00:00:00Z"));
+  });
+
+  test.each(["the first test", "the second test"])(
+    "%s starts on real time, whatever an earlier test moved",
+    async () => {
+      const editor = travelling.actingAs("editor");
+
+      expect((await editor.rpc.auth.session()).user).not.toBeNull();
+
+      travelling.travel({ days: 31 });
+    },
+  );
 });

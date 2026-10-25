@@ -11,6 +11,7 @@ import type {
 } from "../blocks/index.js";
 import type { RendererUser } from "../blocks/renderer/context.js";
 import type { StylePolicy } from "../blocks/styles/style-policy.js";
+import type { Clock } from "../clock.js";
 import type { PlumixConfig } from "../config.js";
 import type { EditLeaseSurface } from "../db/schema/edit_leases.js";
 import type * as coreSchema from "../db/schema/index.js";
@@ -286,6 +287,8 @@ export interface AppContextBase<
   readonly origin: string;
   /** Undefined outside the dev gate. */
   readonly dev?: DevRuntime;
+  /** A test site's own clock, which `now()` reads; unset reads real time. */
+  readonly clock?: Clock;
   readonly locale: ResolvedLocale;
   /** Set only on the RPC path, by oRPC's `ResponseHeadersPlugin`. */
   readonly resHeaders?: Headers;

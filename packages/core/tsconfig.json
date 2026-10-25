@@ -17,5 +17,5 @@
       "@plumix/core/test/playwright": ["./src/test/playwright/index.ts"]
     }
   },
-  "include": ["src", "e2e", "scripts", "layers.ts"]
+  "include": ["src", "tests", "e2e", "scripts", "layers.ts"]
 }

@@ -8,6 +8,7 @@ export {
   loadOnce,
   nonEmpty,
   normalizeBasePath,
+  now,
   pageNotFound,
   redirectTo,
   slugify,

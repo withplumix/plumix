@@ -6,6 +6,7 @@ import type {
   ShortcodeRegistry,
 } from "../blocks/index.js";
 import type { StylePolicy } from "../blocks/styles/style-policy.js";
+import type { Clock } from "../clock.js";
 import type { PlumixConfig } from "../config.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { MailCatalogs } from "../mail/catalogs.js";
@@ -41,6 +42,7 @@ import { resolveMailer } from "../auth/mailer/resolve.js";
 import { makeAuthCan } from "../auth/with-user.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { createPluginCache } from "../cdn/plugin-cache.js";
+import { installClockSource } from "../clock.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { devMail } from "../dev/mail/catcher.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
@@ -57,6 +59,7 @@ import { ContextError } from "./errors.js";
 import { logErrorSafely } from "./log.js";
 import { createRequestMemo } from "./memo.js";
 import { bindSettings, rebindSettings } from "./settings-namespace.js";
+import { tryGetContext } from "./stores.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
 import { createTracedFetch } from "./traced-fetch.js";
 import {
@@ -102,6 +105,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly tokenScopes?: readonly string[] | null;
   readonly origin?: EnvInput<string>;
   readonly dev?: DevRuntime;
+  readonly clock?: Clock;
   readonly logger?: Logger;
   readonly defer?: DeferFn;
   /**
@@ -197,6 +201,11 @@ function wrapLogger(
 export function createAppContext<TSchema extends Record<string, unknown>>(
   args: CreateAppContextArgs<TSchema>,
 ): AppContext<TSchema> {
+  // Read from the request's async context, so a test site's clock follows
+  // its own requests and no other site's.
+  if (args.clock !== undefined) {
+    installClockSource(() => tryGetContext()?.clock);
+  }
   const user = args.user ?? null;
   const tokenScopes = args.tokenScopes ?? null;
   const locale = resolveLocale({
@@ -300,6 +309,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     access: null,
     origin,
     dev: args.dev,
+    clock: args.clock,
     // Consumers vote on the assembled context, so `telemetry` must exist
     // before the vote; the real collector replaces it below.
     telemetry: NOOP_TELEMETRY,
