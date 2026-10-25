@@ -185,11 +185,11 @@ An absolute `catalogPath` is honoured verbatim, skipping resolution entirely. It
 
 ## Site locales narrow it, nothing widens it
 
-The projection intersects the plugin's `locales` with the locales the site has enabled in its own `i18n` config. Naming a locale the site has not enabled emits no URL, adds no weight to the manifest and does not put a language in the admin's dropdown.
+The projection serves each locale the site has enabled in its own `i18n` config from the closest catalog the plugin ships: a plugin that ships `de` serves a `de-AT` site, and an enabled locale with no close catalog gets the source catalog. Naming a locale the site has not enabled emits no URL, adds no weight to the manifest and does not put a language in the admin's dropdown.
 
 The two mistakes are not symmetrical: over-declaring costs nothing, under-declaring costs the translation. Declare everything you ship.
 
-A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so the intersection leaves only the source locale. Until a site enables a second locale, a plugin ships its source catalog alone, which is the state most sites installing your plugin are in.
+A site that configures no `i18n` resolves to `["en"]` rather than to nothing, so the projection leaves only the source locale. Until a site enables a second locale, a plugin ships its source catalog alone, which is the state most sites installing your plugin are in.
 
 <Aside type="tip" title="Test the install, not the workspace">
   Verify a plugin's i18n by installing the built tarball into a site with a

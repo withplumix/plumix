@@ -188,6 +188,24 @@ describe("buildManifest", () => {
     );
   });
 
+  test("buildManifest keeps a plugin's declared locales when the site configures no i18n", () => {
+    const plugin = definePlugin("translated", {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+      setup: () => undefined,
+    });
+    const manifest = buildManifest(createPluginRegistry(), {
+      plugins: [plugin],
+    });
+    expect(manifest.pluginI18n.translated?.catalogs).toEqual({
+      en: "/_plumix/admin/plugins/translated/locales/en.mjs",
+      de: "/_plumix/admin/plugins/translated/locales/de.mjs",
+    });
+  });
+
   test("buildManifest omits pluginI18n when no plugin declares an i18n slot", () => {
     const plugin = definePlugin("untranslated", { setup: () => undefined });
     const manifest = buildManifest(createPluginRegistry(), {

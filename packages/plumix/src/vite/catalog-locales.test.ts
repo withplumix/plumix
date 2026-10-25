@@ -47,7 +47,7 @@ export default plumix({
       setup: () => undefined,
     }),
   ],
-  i18n: { defaultLocale: "en", locales: ["en", "de-AT", "zh-SG", "fr"] },
+  i18n: { defaultLocale: "en", locales: ["en", "de-AT", "zh-SG", "fr", { code: "de", enabled: false }] },
 });
 `;
 
@@ -150,6 +150,16 @@ describe("virtual:plumix/catalog-locales in a build of a site enabling regional 
     expect(modules.map((module) => module.messages)).toEqual([
       { "vendor.hello": "de" },
     ]);
+  });
+
+  test("a disabled locale is projected for neither core nor a plugin", () => {
+    expect(Object.keys(pluginCatalogs).sort()).toEqual([
+      "de-AT",
+      "en",
+      "fr",
+      "zh-SG",
+    ]);
+    expect(projection.blocks).not.toHaveProperty("de");
   });
 
   test("an enabled locale with no catalog builds without a warning", () => {

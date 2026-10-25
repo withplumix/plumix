@@ -9,6 +9,5 @@ test("the admin opens in an enabled zh-CN, under its lang and in Chinese, the pl
 
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
   await expect(page.getByTestId("status-view-all")).toHaveText("全部");
-  // The blog plugin's own catalog, through the manifest's plugin catalogs.
   await expect(page.getByTestId("content-list-heading")).toHaveText("文章");
 });
