@@ -3,7 +3,11 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, resolve } from "node:path";
 
 import type { AnyPluginDescriptor, PlumixManifest } from "@plumix/core";
-import { pluginCatalogStagedPath } from "@plumix/core";
+import {
+  pluginCatalogStagedPath,
+  pluginCatalogUrl,
+  projectCatalogLocales,
+} from "@plumix/core";
 
 import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
 import { VitePluginError } from "./errors.js";
@@ -77,8 +81,15 @@ export async function stagePluginCatalogs(
           resolved: catalogPath,
         });
       }
+      // Keyed by enabled locale, so several keys may share one catalog.
+      const urls = new Set(Object.values(entry.catalogs));
+      const staged = new Set(
+        [plugin.i18n.sourceLocale, ...plugin.i18n.locales].filter((locale) =>
+          urls.has(pluginCatalogUrl(plugin.id, locale)),
+        ),
+      );
       return Promise.all(
-        Object.keys(entry.catalogs).map(async (locale) => {
+        [...staged].map(async (locale) => {
           const sourceFile = resolve(candidate, `${locale}.mjs`);
           try {
             await stat(sourceFile);
@@ -110,31 +121,42 @@ export async function stagePluginCatalogs(
 }
 
 /**
- * A declared locale with no compiled file is skipped: SSR falls back to each
- * descriptor's English source.
+ * Keyed by the source and enabled locales, each at its catalog locale's file.
+ * A declared locale with no compiled file ships nothing: SSR falls back to
+ * each descriptor's English source.
  */
 export async function collectPluginCatalogFiles(
   plugins: readonly AnyPluginDescriptor[],
+  enabled: readonly string[],
   projectRoot: string,
 ): Promise<Map<string, PluginCatalogFile[]>> {
   const files = new Map<string, PluginCatalogFile[]>();
   for (const plugin of plugins) {
     if (!plugin.i18n) continue;
-    const dir = await resolveCatalogDir(
-      plugin.id,
-      plugin.i18n.catalogPath,
-      projectRoot,
-    );
+    const { sourceLocale, catalogPath } = plugin.i18n;
+    const dir = await resolveCatalogDir(plugin.id, catalogPath, projectRoot);
     if (dir === null) continue;
+    const compiled = new Set<string>();
     for (const locale of plugin.i18n.locales) {
-      const file = resolve(dir, `${locale}.mjs`);
       try {
-        await stat(file);
+        await stat(resolve(dir, `${locale}.mjs`));
+        compiled.add(locale);
       } catch {
         continue;
       }
-      const source = locale === plugin.i18n.sourceLocale;
-      files.set(locale, [...(files.get(locale) ?? []), { path: file, source }]);
+    }
+    const projected = projectCatalogLocales(
+      [sourceLocale, ...enabled],
+      [...compiled],
+      sourceLocale,
+    );
+    for (const [locale, catalog] of Object.entries(projected)) {
+      if (!compiled.has(catalog)) continue;
+      const file = {
+        path: resolve(dir, `${catalog}.mjs`),
+        source: catalog === sourceLocale,
+      };
+      files.set(locale, [...(files.get(locale) ?? []), file]);
     }
   }
   return files;

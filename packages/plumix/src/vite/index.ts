@@ -110,12 +110,14 @@ const CATALOG_LOCALES_RESOLVED_ID = "\0" + CATALOG_LOCALES_VIRTUAL_ID;
 
 type CoreCatalogLocales = ReturnType<typeof projectCoreCatalogLocales>;
 
+function enabledLocaleCodes(i18n: PlumixConfig["i18n"]): string[] {
+  return i18n.locales
+    .filter((locale) => locale.enabled)
+    .map((locale) => locale.code);
+}
+
 function projectEnabledLocales(i18n: PlumixConfig["i18n"]): CoreCatalogLocales {
-  return projectCoreCatalogLocales(
-    i18n.locales
-      .filter((locale) => locale.enabled)
-      .map((locale) => locale.code),
-  );
+  return projectCoreCatalogLocales(enabledLocaleCodes(i18n));
 }
 
 export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
@@ -591,7 +593,11 @@ async function regenerate(
     registry,
     plugins: config.plugins,
     workerExports: config.runtime.workerExports ?? [],
-    pluginCatalogFiles: await collectPluginCatalogFiles(config.plugins, cwd),
+    pluginCatalogFiles: await collectPluginCatalogFiles(
+      config.plugins,
+      enabledLocaleCodes(config.i18n),
+      cwd,
+    ),
     i18n: config.i18n,
     editorBlockModules,
   };

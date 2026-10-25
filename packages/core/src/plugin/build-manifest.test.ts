@@ -146,6 +146,48 @@ describe("buildManifest", () => {
     });
   });
 
+  test("buildManifest keys a plugin's catalogs by enabled locale, each at its catalog locale's URL", () => {
+    const plugin = definePlugin("translated", {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+      setup: () => undefined,
+    });
+    const i18n = resolveLocales({
+      defaultLocale: "de-AT",
+      locales: ["de-AT"],
+    });
+    const manifest = buildManifest(createPluginRegistry(), {
+      i18n,
+      plugins: [plugin],
+    });
+    expect(manifest.pluginI18n.translated?.catalogs).toEqual({
+      en: "/_plumix/admin/plugins/translated/locales/en.mjs",
+      "de-AT": "/_plumix/admin/plugins/translated/locales/de.mjs",
+    });
+  });
+
+  test("buildManifest maps an enabled locale no plugin catalog serves to the source catalog", () => {
+    const plugin = definePlugin("translated", {
+      i18n: {
+        sourceLocale: "en",
+        locales: ["en", "de"],
+        catalogPath: "./locales",
+      },
+      setup: () => undefined,
+    });
+    const i18n = resolveLocales({ defaultLocale: "en", locales: ["en", "fr"] });
+    const manifest = buildManifest(createPluginRegistry(), {
+      i18n,
+      plugins: [plugin],
+    });
+    expect(manifest.pluginI18n.translated?.catalogs.fr).toBe(
+      "/_plumix/admin/plugins/translated/locales/en.mjs",
+    );
+  });
+
   test("buildManifest omits pluginI18n when no plugin declares an i18n slot", () => {
     const plugin = definePlugin("untranslated", { setup: () => undefined });
     const manifest = buildManifest(createPluginRegistry(), {

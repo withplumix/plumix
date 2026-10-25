@@ -30,6 +30,7 @@ describe("emitPlumixSources — the entry comes from the config's runtime adapte
         auth: { passkey: {} },
         theme: { templates: () => null },
         plugins: [],
+        i18n: { defaultLocale: { code: 'en' }, locales: [] },
       };`,
       "utf8",
     );
@@ -84,6 +85,7 @@ describe("emitPlumixSources — what a runtime command reads back", () => {
         auth: { passkey: {} },
         theme: { templates: () => null },
         plugins: [],
+        i18n: { defaultLocale: { code: 'en' }, locales: [] },
       };`,
       "utf8",
     );
@@ -111,6 +113,7 @@ describe("emitPlumixSources — what a runtime command reads back", () => {
         auth: { passkey: {} },
         theme: { templates: () => null },
         plugins: [],
+        i18n: { defaultLocale: { code: 'en' }, locales: [] },
       };`;
     writeFileSync(configPath, config("first"), "utf8");
     await emitPlumixSources(dir, configPath);
