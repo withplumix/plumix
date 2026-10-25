@@ -161,8 +161,8 @@ neither: it reviews the unit tier.
 
 | Tier  | Proves                                               | Lives in                                                                                      | Runs with             | CI job             |
 | ----- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------- | ------------------ |
-| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`                                                         | `pnpm test:unit`      | `Test`             |
-| E2E   | what a consumer sees and does on a running site      | the package's `e2e/*.spec.ts`                                                                 | `pnpm test:e2e`       | `Test (e2e)`       |
+| Unit  | the logic behind a behaviour, through its public API | `src/foo.test.ts` beside `src/foo.ts`; a feature test in `tests/feature/`                     | `pnpm test:unit`      | `Test`             |
+| E2E   | what a consumer sees and does on a running site      | the package's `tests/e2e/*.spec.ts`, against its `playground/`                                | `pnpm test:e2e`       | `Test (e2e)`       |
 | Smoke | a project scaffolded from the packed tarballs works  | `packages/create-plumix-app/scripts/smoke.mjs`, and the editor spec under `smoke/dev-editor/` | `pnpm smoke:scaffold` | `Smoke (scaffold)` |
 
 ### Where a test goes
@@ -172,7 +172,9 @@ Ask in order, and stop at the first yes:
 1. **Can it be observed by calling code in one process, on source?** It's a unit test. This covers
    almost everything: business rules, RPC procedures, plugin hooks and filters, routing, rendering
    to a string, schema and query behaviour against the in-memory database, CLI argument handling,
-   a Vite plugin's config. When in doubt, it's a unit test.
+   a Vite plugin's config. When in doubt, it's a unit test. When the behaviour is what a site does
+   through one of its entry points (a request, an RPC call, a scheduled firing), it's the feature
+   kind of unit test, driven through a test site.
 2. **Does it need a browser, or a site a user drives?** It's an e2e test: a page that renders and
    reacts, a form that posts, an upload through the UI, the editor under the keyboard and pointer,
    layout, focus.
@@ -204,6 +206,22 @@ behaviour the code no longer has, is deleted.
 A change that adds or edits a test case brings that case in line with this section: a case in the
 wrong tier moves to the right one, and a case that breaks a rule below is rewritten. The rest of its
 file moves with the change that next edits it. Review holds every added or edited case to it.
+
+### Where a file goes
+
+The unit tier holds two kinds of test, a unit test and a feature test
+([ADR 0070](docs/adr/0070-a-site-is-tested-through-one-test-site-whose-services-are-fakes.md)).
+Every package and site lays its tests out the same way:
+
+| Path             | Holds                                                                                                       |
+| ---------------- | ----------------------------------------------------------------------------------------------------------- |
+| `src/`           | unit tests, `foo.test.ts` beside `foo.ts`                                                                   |
+| `tests/feature/` | feature tests, one file per capability, named for it (`submitting-a-form.test.ts`), never for a source file |
+| `tests/e2e/`     | e2e specs                                                                                                   |
+| `tests/support/` | helpers the feature tests and e2e specs share                                                               |
+| `playground/`    | a package's site, run by hand and driven by its e2e; a site has none, since it is its own                   |
+
+A suite still under `e2e/` moves to `tests/e2e/` with the change that ports it to the test site.
 
 ### Unit
 
@@ -255,7 +273,8 @@ test("clamps a subscriber to published entries by default", async () => {
 
 An e2e test drives a running Plumix site in Chromium with Playwright, the way a visitor or an
 editor does. Each package with a user-facing surface (the admin, the editor, a plugin, a runtime's
-playground) owns one suite in its `e2e/` folder, against a site on its own ports.
+playground) owns one suite in its `tests/e2e/` folder (`e2e/` until the suite is ported), against
+a site on its own ports.
 
 - **It proves a journey, or a behaviour only a browser has**: the page renders, the control
   reacts, the request lands, the result shows. The rules behind it are already unit tests; e2e

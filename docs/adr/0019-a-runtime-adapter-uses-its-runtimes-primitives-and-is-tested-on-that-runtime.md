@@ -65,6 +65,11 @@ within the deadline on `SIGTERM` are smoke steps; the smoke stops its server wit
 and #3036 adds the `SIGTERM` step. Opening one listener is a unit test of what the adapter's entry
 hands the runtime. The other layers stand.
 
+Amended by [ADR 0070](0070-a-site-is-tested-through-one-test-site-whose-services-are-fakes.md):
+playgrounds run on Node, except the runtime adapters' own. A core or plugin playground serves on
+Node with an in-memory database, and its e2e serves it inside the Playwright worker. Layer 1 below
+is unchanged: each runtime adapter's playground stays on its runtime and runs the shared spec.
+
 A fake built-in shares the assumption under test and cannot fail. So
 runtime-touching code is tested on the runtime, and nothing substitutes the
 runtime's API. There are four layers, highest first.

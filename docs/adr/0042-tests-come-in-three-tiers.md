@@ -30,6 +30,13 @@ the reasons.
   no blocking I/O, real collaborators. A Plumix rule is mostly logic over data,
   so the in-memory database and the owning package's fakes reach almost every
   behaviour from Node, fast and without a build.
+- **Unit and feature tests are two kinds within the unit tier.** Amended by
+  [ADR 0070](0070-a-site-is-tested-through-one-test-site-whose-services-are-fakes.md).
+  A unit test calls code directly. A feature test drives a test site through a
+  request, an RPC call or a scheduled firing. Both run in one process on Vitest,
+  in the tier's one job. The layout is fixed: unit tests sit beside their source
+  in `src/`, feature tests in `tests/feature/`, e2e specs in `tests/e2e/`, the
+  helpers they share in `tests/support/`, and a package's site in `playground/`.
 - **E2E is the only place a browser runs**, because a real page is the only
   thing faithful to a browser. A rendered component is tested where a user meets
   it, and its logic is tested where it lives. Amended by
