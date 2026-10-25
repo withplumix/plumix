@@ -284,6 +284,43 @@ describe("stagePluginCatalogs — real FS", () => {
       existsSync(join(dest, pluginCatalogStagedPath("vendor", "uk"))),
     ).toBe(false);
   });
+
+  describe("discoverPluginCatalogLocales", () => {
+    const vendor = definePlugin("vendor", {
+      setup: () => undefined,
+      i18n: { sourceLocale: "en", catalogPath: "./locales" },
+    });
+
+    test("lists the top-level compiled catalogs sorted, ignoring every other entry", async () => {
+      await installPlugin(["uk", "en", "pt-BR"]);
+      const localesDir = join(
+        projectRoot,
+        "node_modules/@plumix/plugin-vendor/locales",
+      );
+      await writeFile(join(localesDir, "de.po"), "");
+      await mkdir(join(localesDir, "index.mjs"));
+      await mkdir(join(localesDir, "index"));
+      await writeFile(join(localesDir, "index", "fr.mjs"), "");
+
+      expect(await discoverPluginCatalogLocales([vendor], projectRoot)).toEqual(
+        { vendor: ["en", "pt-BR", "uk"] },
+      );
+    });
+
+    test("finds no locales for a plugin whose catalog directory does not resolve", async () => {
+      expect(await discoverPluginCatalogLocales([vendor], projectRoot)).toEqual(
+        { vendor: [] },
+      );
+    });
+
+    test("omits a plugin with no i18n slot", async () => {
+      const bare = definePlugin("bare", { setup: () => undefined });
+
+      expect(await discoverPluginCatalogLocales([bare], projectRoot)).toEqual(
+        {},
+      );
+    });
+  });
 });
 
 /**

@@ -65,9 +65,6 @@ export async function computeManifestAndRegistry(
     registry: createPluginRegistry(options.routes),
     theme: options.theme,
   });
-  // Forward plugin descriptors and the locales their compiled catalogs ship
-  // so `buildManifest` can emit `pluginI18n` URL maps for plugins declaring
-  // an `i18n` slot (slice 17 #697 runtime catalog registry).
   return {
     manifest: buildManifest(registry, {
       ...options,

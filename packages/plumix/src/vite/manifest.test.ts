@@ -1,7 +1,7 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test } from "vitest";
 
 import { definePlugin, defineTheme, resolveLocales } from "@plumix/core";
 
@@ -128,6 +128,7 @@ describe("computeManifestAndRegistry", () => {
 
   test("publishes the catalogs a plugin compiled under its catalogPath, with no declared locales", async () => {
     const catalogPath = await mkdtemp(join(tmpdir(), "plumix-catalogs-"));
+    onTestFinished(() => rm(catalogPath, { recursive: true, force: true }));
     for (const locale of ["en", "pt-BR"]) {
       await writeFile(
         join(catalogPath, `${locale}.mjs`),
@@ -143,7 +144,6 @@ describe("computeManifestAndRegistry", () => {
       ...OPTIONS,
       i18n: resolveLocales({ defaultLocale: "en", locales: ["en", "pt-BR"] }),
     });
-    await rm(catalogPath, { recursive: true, force: true });
 
     expect(manifest.pluginI18n).toEqual({
       translated: {
