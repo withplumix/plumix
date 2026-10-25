@@ -20,7 +20,6 @@ export interface SiteDatabase {
 export async function createSiteDatabase(
   migrationFolders: readonly string[],
 ): Promise<SiteDatabase> {
-  // Mirror the real adapter: unconditional per-query span tracing.
   const handle = forwardingHandle(
     traceSqlClient(createClient({ url: ":memory:" })),
   );

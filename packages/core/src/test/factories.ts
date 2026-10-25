@@ -87,10 +87,7 @@ export const authorUser = userFactory.params({ role: "author" });
 export const contributorUser = userFactory.params({ role: "contributor" });
 export const subscriberUser = userFactory.params({ role: "subscriber" });
 
-/**
- * No user has id 0, so an entry built with it has no author yet; `create`
- * seeds one, so a test needn't seed a user only to own an entry.
- */
+/** No user has id 0, so `create` swaps it for a seeded author. */
 const NO_AUTHOR = 0;
 
 export const entryFactory = Factory.define<

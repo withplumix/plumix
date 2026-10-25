@@ -78,13 +78,18 @@ describe("resetting the site database", () => {
   test("fails, naming how many transactions are open", async () => {
     const { db, reset } = await createSiteDatabase([CORE_MIGRATIONS]);
     let finish = (): void => undefined;
+    let opened = (): void => undefined;
+    const isOpen = new Promise<void>((resolve) => {
+      opened = resolve;
+    });
     const open = db.transaction(async (tx) => {
       await tx.run(sql`SELECT 1`);
+      opened();
       await new Promise<void>((resolve) => {
         finish = resolve;
       });
     });
-    await new Promise((resolve) => setImmediate(resolve));
+    await isOpen;
 
     await expect(reset()).rejects.toThrow(
       "1 transaction is still open, so the test database cannot be reset. Commit or roll back every transaction a test opens before it ends.",

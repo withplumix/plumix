@@ -9,8 +9,9 @@ A consumer package imports its unit-test kit from `plumix/test`: `testSite`, whi
 for a test, the older harnesses
 (`createRpcHarness`, the dispatcher), the fishery factories, `stubPluginRpc`, the block render
 helpers, the `fakeFile`/`fakeImage` upload fakes, the mail kit: `fakeMail`, which both harnesses
-install as `h.mail`, and `renderMail`, and `fakeCdn`, which a test hands the dispatcher harness as
-`cdn` to render, write and assert a page is no longer stored. `plumix/test/conformance` holds the contract suites a
+and `testSite` install as `h.mail` and `site.mail`, and `renderMail`, and `fakeCdn`, which a test
+hands the dispatcher harness as `cdn` to render, write and assert a page is no longer stored, and
+which `testSite` always swaps in. `plumix/test/conformance` holds the contract suites a
 runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`editor`, `mailbox`, `passkey`, `PNG_1X1`,
 the shared `runtimeSpec`) from `plumix/test/playwright`.
 

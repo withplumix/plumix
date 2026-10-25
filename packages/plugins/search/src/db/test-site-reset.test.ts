@@ -26,7 +26,6 @@ async function matches(word: string): Promise<unknown[]> {
 describe("a test site with the search plugin", () => {
   test("indexes what the first test writes", async () => {
     await index("first");
-    // Straight into the index, as a rebuild writes, with no document behind it.
     await site.context.db.run(
       sql`INSERT INTO search_index (rowid, title, body) VALUES (7, 'stray', '')`,
     );

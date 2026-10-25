@@ -29,7 +29,6 @@ export function migrationFolders(
   return [CORE_MIGRATIONS, ...owners.map(historyOf)];
 }
 
-/** `@scope/name/schema` → `@scope/name`; `name/schema` → `name`. */
 function packageName(spec: string): string {
   const parts = spec.split("/");
   return (spec.startsWith("@") ? parts.slice(0, 2) : parts.slice(0, 1)).join(

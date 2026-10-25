@@ -84,15 +84,16 @@ export async function testSite<
   const { db, reset } = await createSiteDatabase(
     migrationFolders(siteRootOf(cwd), config.plugins),
   );
+  const { defer, drainDeferred } = createDeferQueue();
   let fakes = freshFakes();
   beforeEach(async () => {
+    await drainDeferred();
     await reset();
     fakes = freshFakes();
   });
   const env = options?.env ?? {};
   const app = await buildApp(withFakes(config, () => fakes));
   const dispatcher = createPlumixDispatcher(app);
-  const { defer } = createDeferQueue();
 
   const contextFor = (request: Request): AppContext =>
     createAppContext({
@@ -155,7 +156,6 @@ export async function testSite<
   return site;
 }
 
-/** The package a folder sits in, which is where its site's migrations live. */
 function siteRootOf(dir: string): string {
   for (let current = dir; ; current = dirname(current)) {
     if (existsSync(join(current, "package.json"))) return current;

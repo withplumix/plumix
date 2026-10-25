@@ -130,3 +130,22 @@ describe("the site's cdn", () => {
     (await site.visit(post)).assertHeader("cache-tag");
   });
 });
+
+const deferring = await testSite({});
+
+describe("work a test defers", () => {
+  test("settles before the next test's data is reset", () => {
+    const { db, defer } = deferring.context;
+    defer(
+      new Promise<void>((resolve) => setTimeout(resolve, 20)).then(() =>
+        db.insert(settings).values({ group: "late", key: "late", value: "" }),
+      ),
+    );
+  });
+
+  test("leaves nothing behind in the next test", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
+    expect(await deferring.context.db.query.settings.findMany()).toEqual([]);
+  });
+});
