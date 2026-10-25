@@ -1728,3 +1728,82 @@ describe("createPlumixHandler — deferred work in the snapshot", () => {
     expect(findSpan(task?.children ?? [], "send digest")).toBeDefined();
   });
 });
+
+describe("createPlumixHandler — traced CDN purges", () => {
+  // `/work` enqueues `t:post`, purged through `purgeTags`.
+  async function purgingHandler(
+    purgeTags: (tags: readonly string[]) => Promise<void>,
+  ) {
+    const snapshots: TelemetrySnapshot[] = [];
+    const handler = await handlerFor({
+      plugins: [working((appCtx) => enqueuePurgeTags(appCtx, ["t:post"]))],
+      cdn: {
+        kind: "recording",
+        connect: () => ({ decorate: (response) => response, purgeTags }),
+      },
+      telemetry: {
+        consumers: [
+          { id: "in-test", onRequestEnd: (s) => void snapshots.push(s) },
+        ],
+      },
+    });
+    return { handler, snapshots };
+  }
+
+  // The snapshot delivered once the request's deferred purge has settled.
+  async function settledPurgeSnapshot(
+    purgeTags: (tags: readonly string[]) => Promise<void>,
+  ) {
+    const { handler, snapshots } = await purgingHandler(purgeTags);
+    const waited: Promise<unknown>[] = [];
+    await handler.fetch(new Request("https://cms.example/work"), {
+      env: {},
+      waitUntil: (promise) => void waited.push(promise),
+    });
+    await Promise.all(waited);
+    return snapshots[0];
+  }
+
+  test("a write's purge is a `cdn: purge` span carrying its tags, under its defer span", async () => {
+    const snapshot = await settledPurgeSnapshot(() => Promise.resolve());
+
+    const defer = findSpan(snapshot?.spans ?? [], "defer");
+    expect(defer?.status).toBe("ok");
+    expect(defer?.children).toEqual([
+      expect.objectContaining({
+        name: "cdn: purge",
+        status: "ok",
+        attributes: { "cdn.tags": ["t:post"] },
+      }),
+    ]);
+  });
+
+  test("a failing purge is its span's error", async () => {
+    const snapshot = await settledPurgeSnapshot(() =>
+      Promise.reject(new Error("purge refused")),
+    );
+
+    expect(findSpan(snapshot?.spans ?? [], "cdn: purge")).toMatchObject({
+      status: "error",
+      error: { message: "purge refused" },
+    });
+  });
+
+  test("a purge still running at the 10s deadline is unfinished", async () => {
+    const { handler, snapshots } = await purgingHandler(
+      () => new Promise(() => undefined),
+    );
+    vi.useFakeTimers();
+    onTestFinished(() => void vi.useRealTimers());
+
+    await handler.fetch(new Request("https://cms.example/work"), {
+      env: {},
+      waitUntil: () => undefined,
+    });
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(findSpan(snapshots[0]?.spans ?? [], "cdn: purge")?.status).toBe(
+      "unfinished",
+    );
+  });
+});

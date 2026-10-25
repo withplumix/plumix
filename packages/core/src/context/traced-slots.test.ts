@@ -64,7 +64,7 @@ describe("traceCdn", () => {
     expect(span?.attributes["cdn.tags"]).toEqual(["t:post", "e:1"]);
   });
 
-  test("purgeTags passes through unspanned — it runs post-response, outside the snapshot", async () => {
+  test("purgeTags produces a `cdn: purge` span carrying the purged tags", async () => {
     const telemetry = createTelemetryCollector();
     const purged: (readonly string[])[] = [];
     const cdn = traceCdn(
@@ -75,13 +75,31 @@ describe("traceCdn", () => {
       () => telemetry,
     );
 
-    await cdn.purgeTags?.(["t:post"]);
+    await cdn.purgeTags?.(["t:post", "e:1"]);
 
-    expect(purged).toEqual([["t:post"]]);
-    expect(telemetry.getSpans()).toEqual([]);
+    expect(purged).toEqual([["t:post", "e:1"]]);
+    const [span] = telemetry.getSpans();
+    expect(span?.name).toBe("cdn: purge");
+    expect(span?.attributes["cdn.tags"]).toEqual(["t:post", "e:1"]);
   });
 
-  test("purgeAll passes through unspanned, like purgeTags", async () => {
+  test("a failing purge marks its span as an error and rethrows", async () => {
+    const telemetry = createTelemetryCollector();
+    const cdn = traceCdn(
+      {
+        ...stub(),
+        purgeTags: () => Promise.reject(new Error("purge refused")),
+      },
+      () => telemetry,
+    );
+
+    await expect(cdn.purgeTags?.(["t:post"])).rejects.toThrow("purge refused");
+    const [span] = telemetry.getSpans();
+    expect(span?.status).toBe("error");
+    expect(span?.error?.message).toBe("purge refused");
+  });
+
+  test("purgeAll produces a `cdn: purge all` span", async () => {
     const telemetry = createTelemetryCollector();
     let purged = 0;
     const cdn = traceCdn(
@@ -95,7 +113,7 @@ describe("traceCdn", () => {
     await cdn.purgeAll?.();
 
     expect(purged).toBe(1);
-    expect(telemetry.getSpans()).toEqual([]);
+    expect(telemetry.getSpans().map((s) => s.name)).toEqual(["cdn: purge all"]);
   });
 
   test("decorate passes through unspanned — it is header math, not I/O", () => {
