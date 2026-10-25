@@ -1,6 +1,6 @@
-import type { Client } from "@libsql/client";
+import type { Client, Transaction } from "@libsql/client";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { createClient, LibsqlError } from "@libsql/client";
+import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
 import * as schema from "../db/schema/index.js";
@@ -21,30 +21,74 @@ export async function createSiteDatabase(
   migrationFolders: readonly string[],
 ): Promise<SiteDatabase> {
   // Mirror the real adapter: unconditional per-query span tracing.
-  const client = traceSqlClient(createClient({ url: ":memory:" }));
-  const db = drizzle(client, { schema, casing: "snake_case" });
+  const handle = forwardingHandle(
+    traceSqlClient(createClient({ url: ":memory:" })),
+  );
+  const db = drizzle(handle.client, { schema, casing: "snake_case" });
   for (const folder of migrationFolders) await applyTestSchema(db, folder);
-  const script = await resetScript(client);
+  const script = await resetScript(handle.client);
   return {
     db,
     reset: async () => {
-      try {
-        await client.executeMultiple(script);
-      } catch (error) {
-        // The database's one connection is held until the transaction settles.
-        if (
-          error instanceof LibsqlError &&
-          error.code === "TRANSACTION_ACTIVE"
-        ) {
-          throw new Error(
-            "A transaction is still open, so the test database cannot be reset. Commit or roll back every transaction a test opens before it ends.",
-            { cause: error },
-          );
-        }
-        throw error;
+      const open = handle.openTransactions();
+      if (open > 0) {
+        throw new Error(
+          `${String(open)} transaction${open === 1 ? " is" : "s are"} still open, so the test database cannot be reset. Commit or roll back every transaction a test opens before it ends.`,
+        );
       }
+      await handle.client.executeMultiple(script);
     },
   };
+}
+
+interface ForwardingHandle {
+  readonly client: Client;
+  readonly openTransactions: () => number;
+}
+
+/**
+ * The client the site holds for the file's lifetime. It forwards every call,
+ * and counts the transactions opened through it until each settles.
+ */
+function forwardingHandle(target: Client): ForwardingHandle {
+  let open = 0;
+  const transaction = async (
+    ...args: Parameters<Client["transaction"]>
+  ): Promise<Transaction> => {
+    const tx = await target.transaction(...args);
+    open += 1;
+    let settled = false;
+    const settle = <T>(run: () => T): T => {
+      if (!settled) {
+        settled = true;
+        open -= 1;
+      }
+      return run();
+    };
+    return new Proxy(tx, {
+      get(on, key) {
+        if (key === "commit") return () => settle(() => on.commit());
+        if (key === "rollback") return () => settle(() => on.rollback());
+        if (key === "close") return () => settle(() => on.close());
+        return forwarded(on, key);
+      },
+    });
+  };
+  const client = new Proxy(target, {
+    get(on, key) {
+      if (key === "transaction") return transaction;
+      return forwarded(on, key);
+    },
+  });
+  return { client, openTransactions: () => open };
+}
+
+/** Bound to the target, since libsql's methods read its private fields. */
+function forwarded(on: object, key: string | symbol): unknown {
+  const value: unknown = Reflect.get(on, key, on);
+  return typeof value === "function"
+    ? (value as (...args: unknown[]) => unknown).bind(on)
+    : value;
 }
 
 interface Named {

@@ -75,7 +75,7 @@ describe("resetting the site database", () => {
     ]);
   });
 
-  test("fails, naming the cause, while a transaction is open", async () => {
+  test("fails, naming how many transactions are open", async () => {
     const { db, reset } = await createSiteDatabase([CORE_MIGRATIONS]);
     let finish = (): void => undefined;
     const open = db.transaction(async (tx) => {
@@ -87,9 +87,23 @@ describe("resetting the site database", () => {
     await new Promise((resolve) => setImmediate(resolve));
 
     await expect(reset()).rejects.toThrow(
-      "A transaction is still open, so the test database cannot be reset. Commit or roll back every transaction a test opens before it ends.",
+      "1 transaction is still open, so the test database cannot be reset. Commit or roll back every transaction a test opens before it ends.",
     );
     finish();
     await open;
+  });
+
+  test("resets once every open transaction has settled", async () => {
+    const { db, reset } = await createSiteDatabase([CORE_MIGRATIONS]);
+    await db.transaction(async (tx) => {
+      await tx.insert(users).values({ email: "a@example.test", slug: "a" });
+    });
+    await expect(
+      db.transaction(() => Promise.reject(new Error("rolled back"))),
+    ).rejects.toThrow("rolled back");
+
+    await reset();
+
+    expect(await db.select().from(users)).toEqual([]);
   });
 });
