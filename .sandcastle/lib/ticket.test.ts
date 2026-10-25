@@ -8,15 +8,15 @@ import {
   testWorkersEachTaskGets,
 } from "./sandbox.js";
 import {
+  afterImplementing,
   afterReview,
   asReviewNote,
   commitsTheBranchCarries,
   fixerFor,
   gatesUntilGreen,
-  IMPLEMENTER,
-  implementerFor,
   readDeclinedTag,
   readFindingsTag,
+  readGuidanceTag,
   readPullRequestTag,
   readReviewTag,
   readTemplatedPullRequest,
@@ -28,12 +28,45 @@ const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
 const findingsBlock = (json: string) =>
   `chatter before\n<findings>\n${json}\n</findings>\nchatter after`;
 
-describe("implementerFor", () => {
-  test("an even ticket is implemented by the trial model, an odd one by the incumbent, so the split survives a restart", () => {
-    expect(implementerFor({ number: 3360, title: "" }).model).toBe(
-      "claude-sonnet-5-5",
-    );
-    expect(implementerFor({ number: 3361, title: "" })).toBe(IMPLEMENTER);
+describe("afterImplementing", () => {
+  test("work with commits goes on to review", () => {
+    expect(
+      afterImplementing({ commits: 2, declined: null, unblocked: false }),
+    ).toBe("review");
+  });
+
+  test("an implementation that commits nothing and says nothing goes to the lead to unblock", () => {
+    expect(
+      afterImplementing({ commits: 0, declined: null, unblocked: false }),
+    ).toBe("unblock");
+  });
+
+  test("a stated reason to decline is about the brief, so it goes to the decider rather than the lead", () => {
+    expect(
+      afterImplementing({
+        commits: 0,
+        declined: "the brief contradicts main",
+        unblocked: false,
+      }),
+    ).toBe("block");
+  });
+
+  test("committing nothing even with the lead's guidance blocks the ticket", () => {
+    expect(
+      afterImplementing({ commits: 0, declined: null, unblocked: true }),
+    ).toBe("block");
+  });
+});
+
+describe("readGuidanceTag", () => {
+  test("reads the lead's guidance", () => {
+    expect(
+      readGuidanceTag("…\n<guidance>\nStart from define.ts:41\n</guidance>"),
+    ).toBe("Start from define.ts:41");
+  });
+
+  test("no guidance is null, so an empty answer never counts as unblocking", () => {
+    expect(readGuidanceTag("<guidance>\n\n</guidance>")).toBeNull();
   });
 });
 

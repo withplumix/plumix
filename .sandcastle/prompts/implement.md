@@ -4,6 +4,7 @@ Issue **#{{TICKET}}** in `withplumix/plumix`:
 
 !`gh issue view {{TICKET}} --json number,title,body,labels,comments`
 
+{{GUIDANCE}}
 # Task
 
 Implement it and commit. You do not push, open a PR, or merge — the harness does

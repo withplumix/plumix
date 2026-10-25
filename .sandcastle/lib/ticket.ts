@@ -33,25 +33,37 @@ import {
   createPlumixSandbox,
 } from "./sandbox.js";
 
-export const IMPLEMENTER: Thinker = {
-  model: "claude-opus-5-5",
-  effort: "medium",
-};
 /**
- * Trial, started 2026-10-25: even tickets are implemented by Sonnet to compare
- * review gaps, fix rounds, CI repairs and time to merge against Opus. Fixes and
- * conflict resolution stay on IMPLEMENTER.
+ * Sonnet is the senior engineer: it implements, fixes review gaps and gate
+ * failures, resolves conflicts and repairs red CI. Opus is the lead: it reviews
+ * every ticket, decides parks from the documents, and unblocks the senior with
+ * guidance when an implementation comes back empty.
  */
-const TRIAL_IMPLEMENTER: Thinker = {
+export const IMPLEMENTER: Thinker = {
   model: "claude-sonnet-5-5",
   effort: "medium",
 };
+const LEAD: Thinker = { model: "claude-opus-5-5", effort: "high" };
 
-export const implementerFor = (ticket: Ticket): Thinker =>
-  ticket.number % 2 === 0 ? TRIAL_IMPLEMENTER : IMPLEMENTER;
+export const afterImplementing = ({
+  commits,
+  declined,
+  unblocked,
+}: {
+  readonly commits: number;
+  readonly declined: string | null;
+  readonly unblocked: boolean;
+}): "review" | "unblock" | "block" => {
+  if (commits > 0) return "review";
+  return declined === null && !unblocked ? "unblock" : "block";
+};
 
-/** Opus, so the review is never weaker than the code it checks, whichever model implemented it. */
-const REVIEWER: Thinker = { model: "claude-opus-5-5", effort: "high" };
+export const readGuidanceTag = (stdout: string): string | null =>
+  taggedBlock(stdout, "guidance") || null;
+
+const LAST_OUTPUT_THE_LEAD_READS = 8_000;
+const EMIT_THE_GUIDANCE =
+  "End with the <guidance> block the prompt describes: what the implementer should do next.";
 
 const MAX_GATE_FIX_ROUNDS = 4;
 const MAX_REVIEW_FIX_ROUNDS = 3;
@@ -228,7 +240,7 @@ export const reviewBranch = async (
   mutation: string,
 ): Promise<Review | null> => {
   const phase = `review#${round}`;
-  const reviewed = await runAgentPhase(phase, REVIEWER, {
+  const reviewed = await runAgentPhase(phase, LEAD, {
     promptFile: join(PROMPT_DIR, "review.md"),
     promptArgs: {
       TICKET: String(ticket.number),
@@ -242,7 +254,7 @@ export const reviewBranch = async (
   const review = await readOrAskAgain(
     runAgentPhase,
     phase,
-    REVIEWER,
+    LEAD,
     reviewed,
     readReviewTag,
     EMIT_THE_REVIEW,
@@ -253,7 +265,7 @@ export const reviewBranch = async (
   journal.record({
     phase: `${phase}:findings`,
     kind: "review",
-    model: REVIEWER.model,
+    model: LEAD.model,
     startedAt: new Date().toISOString(),
     durationMs: 0,
     outcome: review ? "ok" : "fail",
@@ -425,6 +437,31 @@ export const asWaivedGatesNote = (waived: readonly WaivedGate[]): string =>
           "\n\n",
         )}\n\nCI runs them again; a real failure there goes through repair.`;
 
+const unblock = async (
+  runAgentPhase: RunAgentPhase,
+  ticket: Ticket,
+  stuckOutput: string,
+): Promise<string | null> => {
+  say("\n--- unblock (lead) ---");
+  const read = await runAgentPhase("unblock", LEAD, {
+    promptFile: join(PROMPT_DIR, "unblock.md"),
+    promptArgs: {
+      TICKET: String(ticket.number),
+      LAST_OUTPUT: stuckOutput.slice(-LAST_OUTPUT_THE_LEAD_READS),
+    },
+    maxIterations: 1,
+    idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
+  });
+  return readOrAskAgain(
+    runAgentPhase,
+    "unblock",
+    LEAD,
+    read,
+    readGuidanceTag,
+    EMIT_THE_GUIDANCE,
+  );
+};
+
 export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
@@ -451,31 +488,57 @@ export const shipTicket = async (
     if (brief.next === "park")
       return { status: "blocked", reason: brief.reason, briefFails: true };
 
-    say("\n--- implement ---");
-    const implementer = implementerFor(ticket);
-    const implemented = await runAgentPhase("implement", implementer, {
-      promptFile: join(PROMPT_DIR, "implement.md"),
-      promptArgs: { TICKET: String(ticket.number), NEXT_ADR: nextAdr },
-      maxIterations: 40,
-      idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
-    });
-    if (
-      !implemented.commits.length &&
-      (await commitsTheBranchCarries(sandbox)) === 0
-    ) {
-      return {
-        status: "blocked",
-        reason:
-          readDeclinedTag(implemented.stdout) ??
-          "the implementer produced no commits and gave no reason",
-      };
+    let guidance = "";
+    let implemented: Awaited<ReturnType<RunAgentPhase>>;
+    for (let unblocked = false; ; unblocked = true) {
+      say(
+        unblocked
+          ? "\n--- implement (with the lead's guidance) ---"
+          : "\n--- implement ---",
+      );
+      implemented = await runAgentPhase(
+        unblocked ? "implement:unblocked" : "implement",
+        IMPLEMENTER,
+        {
+          promptFile: join(PROMPT_DIR, "implement.md"),
+          promptArgs: {
+            TICKET: String(ticket.number),
+            NEXT_ADR: nextAdr,
+            GUIDANCE: guidance,
+          },
+          maxIterations: 40,
+          idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
+        },
+      );
+      const declined = readDeclinedTag(implemented.stdout);
+      const next = afterImplementing({
+        commits:
+          implemented.commits.length ||
+          (await commitsTheBranchCarries(sandbox)),
+        declined,
+        unblocked,
+      });
+      if (next === "review") break;
+      const lead =
+        next === "unblock"
+          ? await unblock(runAgentPhase, ticket, implemented.stdout)
+          : null;
+      if (!lead) {
+        return {
+          status: "blocked",
+          reason:
+            declined ??
+            "the implementer produced no commits and gave no reason",
+        };
+      }
+      guidance = `\n# The lead's guidance\n\nYour first attempt ended with no commits. The lead read it and the code:\n\n${lead}\n`;
     }
 
     let pullRequestCopy =
       (await readOrAskAgain(
         runAgentPhase,
         "implement",
-        implementer,
+        IMPLEMENTER,
         implemented,
         readTemplatedPullRequest,
         EMIT_THE_PULL_REQUEST,
