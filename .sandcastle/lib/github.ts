@@ -283,6 +283,34 @@ export const releaseClaim = (ticketNumber: number): void => {
   ]);
 };
 
+export const issueBody = (ticketNumber: number): string =>
+  ghJson<{ body: string }>([
+    "issue",
+    "view",
+    String(ticketNumber),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "body",
+  ]).body;
+
+export const amendIssue = (
+  ticketNumber: number,
+  body: string,
+  comment: string,
+): void => {
+  gh(["issue", "edit", String(ticketNumber), "-R", REPO_SLUG, "--body", body]);
+  gh([
+    "issue",
+    "comment",
+    String(ticketNumber),
+    "-R",
+    REPO_SLUG,
+    "--body",
+    comment,
+  ]);
+};
+
 export const parkTicket = (
   ticketNumber: number,
   reason: string,

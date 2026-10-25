@@ -34,6 +34,9 @@ export interface ShipPorts {
   readonly ticketClosed: (ticket: Ticket) => boolean;
   readonly brokenCheckout: () => string | undefined;
   readonly aBlockerIsMoving: () => boolean;
+  /** True when it amended the brief, so the ticket can be taken again. */
+  readonly decide: (ticket: Ticket, reason: string) => Promise<boolean>;
+  readonly retake: (ticket: Ticket) => void;
   readonly pause: (ms: number, signal: AbortSignal) => Promise<void>;
   readonly say: (line: string) => void;
 }
@@ -90,6 +93,21 @@ export const runShipLoop = async (
     heldForFirst: SANDBOXES_HELD_FOR_REPAIRS,
   });
   let stoppedBecause: string | undefined;
+  const decidedOnce = new Set<number>();
+
+  const settledByTheDecider = async (
+    ticket: Ticket,
+    reason: string,
+  ): Promise<boolean> => {
+    if (decidedOnce.has(ticket.number)) return false;
+    decidedOnce.add(ticket.number);
+    try {
+      return await sandboxes.run(() => ports.decide(ticket, reason));
+    } catch (error) {
+      ports.say(`  #${ticket.number} decide: ${asReason(error)}`);
+      return false;
+    }
+  };
 
   const noteFailure = (reason: string): void => {
     failuresInARow += 1;
@@ -271,6 +289,14 @@ export const runShipLoop = async (
 
       if (outcome.status === "blocked") {
         if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
+        if (await settledByTheDecider(ticket, outcome.reason)) {
+          ports.releaseClaim(ticket);
+          ports.retake(ticket);
+          ports.say(
+            `  #${ticket.number} decided from the documents and back in the queue`,
+          );
+          return;
+        }
         ports.park(
           ticket,
           outcome.reason,
