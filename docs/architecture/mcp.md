@@ -25,14 +25,14 @@ A write tool goes further: it checks the token's capabilities, the edit lease an
 
 ## Surface
 
-| Piece                                                                        | Kind                                                         | Where                                                   | Public          |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- | --------------- |
-| `/_plumix/mcp`                                                               | route, POST only, Streamable HTTP, stateless, JSON responses | `runtime/dispatcher.ts` (`MCP_PATH`), `mcp/dispatch.ts` | yes             |
-| `mcp: { enabled: true }`                                                     | config slot (`InterfaceToggle`), default off                 | `config.ts`                                             | yes             |
-| `ctx.registerMcpTool(tool)`                                                  | plugin setup registration                                    | `plugin/setup-context.ts`                               | `plumix/plugin` |
-| `McpTool { name, description, inputSchema, jsonSchema?, annotations?, run }` | contract                                                     | `context/mcp-tool.ts`                                   | `plumix/plugin` |
-| `McpToolError` (`not_found`, `forbidden`, `bad_input`)                       | error a tool throws                                          | `mcp/errors.ts`                                         | `plumix/plugin` |
-| `RegisteredMcpTool`                                                          | registry entry type                                          | `plugin/registry.ts`                                    | `plumix/plugin` |
+| Piece                                                                                           | Kind                                                         | Where                                                   | Public          |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------- | --------------- |
+| `/_plumix/mcp`                                                                                  | route, POST only, Streamable HTTP, stateless, JSON responses | `runtime/dispatcher.ts` (`MCP_PATH`), `mcp/dispatch.ts` | yes             |
+| `mcp: { enabled: true }`                                                                        | config slot (`InterfaceToggle`), default off                 | `config.ts`                                             | yes             |
+| `ctx.registerMcpTool(tool)`                                                                     | plugin setup registration                                    | `plugin/setup-context.ts`                               | `plumix/plugin` |
+| `McpTool { name, description, inputSchema, jsonSchema?, annotations?, run }`                    | contract                                                     | `context/mcp-tool.ts`                                   | `plumix/plugin` |
+| `McpToolError` (`not_found`, `forbidden`, `bad_input`, `conflict`, `locked`, `invalid_content`) | error a tool throws                                          | `mcp/errors.ts`                                         | `plumix/plugin` |
+| `RegisteredMcpTool`                                                                             | registry entry type                                          | `plugin/registry.ts`                                    | `plumix/plugin` |
 
 Tools served:
 
@@ -43,7 +43,7 @@ Tools served:
 | `error_list`                                                                                                                   | core `mcp/error-tools.ts`                        | `PLUMIX_DEV` only                                             |
 | `media_list`, `media_get`                                                                                                      | `packages/plugins/media/src/mcp-tools.ts`        | plugin installed                                              |
 | `form_list`, `form_describe`, `form_submission_list`                                                                           | `packages/plugins/forms/src/server/mcp-tools.ts` | plugin installed; submissions need `form_submission:moderate` |
-| Write tools: create, update and publish entries, compose pages                                                                 | core                                             | the token holds the capability                                |
+| Write tools: publish entries, compose pages                                                                                    | core                                             | the token holds the capability                                |
 
 The endpoint has no stdio transport, no resources, no prompts and no SSE (`GET` answers 405).
 
@@ -63,6 +63,7 @@ Each request builds a fresh tool map with `buildMcpToolRegistry`, and `buildMcpS
 Tools read through the same read services as RPC and REST (`getEntry` and `listEntries` in `entries/read-service.ts` for `content_*`). `ctx.auth.can` intersects the token's scopes with the capabilities its owner's role grants, whether that role is a default or one the site defines, so a tool sees only what that principal may read. See [auth and access](auth-and-access.md).
 
 **Writes.** A write tool is a thin adapter over the procedures the admin calls (`entry.create`, `entry.update`, `entry.publish`, `entry.lease.*`; for example `rpc/procedures/entry/update.ts`), so it inherits the whole write lifecycle described in [RPC and editing](rpc-and-editing.md). The agent's token must hold the capability. The tool takes `ifMatch` as a required field and holds an edit lease with surface `mcp` (`EDIT_LEASE_SURFACES` in `db/schema/edit_leases.ts`), so a write over someone else's live lease is `LOCKED`, which an agent never takes over, and a write from a stale copy is `CONFLICT` ([ADR 0048](../adr/0048-core-guards-every-edit-with-a-required-token-and-an-enforced-lease.md)). Content passes the allowed blocks and style policy in `assertContentValidAgainstRegistries` (`rpc/procedures/entry/content.ts`), so an agent cannot add a new instance of a block outside the theme's `allowedBlocks`, and with design tokens only it cannot store a new literal style value. Every change is captured as a revision that names the agent and the person whose token it used, and the hooks and purges fire as for an editor's save. What an agent may do is what its token may do; a person steers it by choosing that token.
+`content_create` and `content_update` call the `entry.create`, `entry.get`, `entry.lease.acquire` and `entry.update` procedures through `mcpRouterClient` (`packages/core/src/mcp/router-client.ts`), an in-process oRPC client on the request's principal and token scopes whose leases record surface `mcp`. Capabilities, `ifMatch`, leases, revisions and block validation stay in the procedures. `content_update` takes the lease for the call and lapses it with `lapseEditLease` before returning, never accepts `takeOver`, and no lease tool is exposed. A procedure's refusal becomes `conflict` (with the current etag), `locked` (with the holder's name) or `invalid_content` (with the failing node paths), each with the next tool to call.
 
 The in-editor agent is not served over MCP. It is an RPC procedure behind an `llm` config slot; see [RPC and editing](rpc-and-editing.md).
 
@@ -85,5 +86,5 @@ The in-editor agent is not served over MCP. It is an RPC procedure behind an `ll
 - Every MCP response is `no-store`. `dispatch.test.ts` ("freshness" block).
 - `mcp/` sits in core's `surfaces` layer. [ADR 0010](../adr/0010-core-is-one-package-of-enforced-layers.md); `packages/core/src/layers.test.ts`.
 - Dev trust follows the dev layers, not a config flag. [ADR 0003](../adr/0003-dev-config-mirrors-the-dev-layers.md).
-
-`content_create` and `content_update` call the `entry.create`, `entry.get`, `entry.lease.acquire` and `entry.update` procedures through `mcpRouterClient` (`packages/core/src/mcp/router-client.ts`), an in-process oRPC client on the request's principal and token scopes whose leases record surface `mcp`. Capabilities, `ifMatch`, leases, revisions and block validation stay in the procedures. `content_update` takes the lease for the call and lapses it with `lapseEditLease` before returning, never accepts `takeOver`, and no lease tool is exposed. A procedure's refusal becomes `conflict` (with the current etag), `locked` (with the holder's name) or `invalid_content` (with the failing node paths), each with the next tool to call.
+- An MCP write holds no lease once the call returns, and `takeOver` is never accepted. `packages/core/src/mcp/content-write.dispatch.test.ts` ("a write leaves no lease held", "takeOver is not accepted").
+- An MCP write takes its lease on surface `mcp`. `packages/core/src/mcp/router-client.test.ts`.

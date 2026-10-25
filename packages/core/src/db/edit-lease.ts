@@ -256,9 +256,8 @@ export async function releaseEditLease(
 }
 
 /**
- * Frees the user's lease at once, for a caller that held it only for one call.
- * An editor's tabs use {@link releaseEditLease}, which keeps it a renewal
- * interval longer.
+ * Unlike {@link releaseEditLease}, which keeps the lease a renewal interval
+ * longer for an editor's tabs, frees it at once.
  */
 export async function lapseEditLease(
   db: Db,

@@ -198,7 +198,7 @@ export interface AppContextBase<
   readonly apiToken: ApiTokenRef | null;
   /**
    * The surface an edit lease taken on this context's behalf records, when it
-   * is not the one the credential implies. Internal to the MCP server.
+   * is not the one the credential implies.
    */
   readonly leaseSurface?: EditLeaseSurface;
   /**

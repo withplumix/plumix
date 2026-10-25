@@ -53,8 +53,7 @@ interface IssueData {
   }[];
 }
 
-/** What an agent should do next, per the procedure's refusal. */
-function asMcpToolError(error: unknown): McpToolError {
+function asWriteToolError(error: unknown, retryTool: string): McpToolError {
   if (!(error instanceof ORPCError)) throw error;
   const data: unknown = error.data;
   switch (error.code) {
@@ -81,7 +80,7 @@ function asMcpToolError(error: unknown): McpToolError {
         .map((issue) => `${issue.path}: ${issue.message}`)
         .join("; ");
       return McpToolError.invalidContent(
-        `${failing}. Fix these nodes and call content_update again.`,
+        `${failing}. Fix these nodes and call ${retryTool} again.`,
       );
     }
     case "CONFLICT": {
@@ -92,7 +91,7 @@ function asMcpToolError(error: unknown): McpToolError {
         );
       }
       return McpToolError.conflict(
-        `${reason}. Change the input, or call content_get to see the entry.`,
+        `${reason}. Change the input and call ${retryTool} again.`,
       );
     }
     case "BAD_REQUEST":
@@ -118,7 +117,7 @@ export const contentCreateTool: McpTool<typeof createInputSchema> = {
       const written = await mcpRouterClient(ctx).entry.create(input);
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asMcpToolError(error);
+      throw asWriteToolError(error, "content_create");
     }
   },
 };
@@ -134,7 +133,7 @@ export const contentUpdateTool: McpTool<typeof updateInputSchema> = {
     let holderId: number | undefined;
     try {
       const existing = await client.entry.get({ id: input.id });
-      // A mismatch stays hidden as not-found, as in `content_get`.
+      // A type mismatch stays hidden as not-found.
       if (existing.type !== type) {
         throw new ORPCError("NOT_FOUND", {
           data: { kind: "entry", id: input.id },
@@ -147,7 +146,7 @@ export const contentUpdateTool: McpTool<typeof updateInputSchema> = {
       const written = await client.entry.update(input);
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asMcpToolError(error);
+      throw asWriteToolError(error, "content_update");
     } finally {
       if (holderId !== undefined) {
         await lapseEditLease(ctx.db, { kind: "entry", id: input.id }, holderId);
