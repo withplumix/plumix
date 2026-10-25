@@ -87,6 +87,9 @@ export const authorUser = userFactory.params({ role: "author" });
 export const contributorUser = userFactory.params({ role: "contributor" });
 export const subscriberUser = userFactory.params({ role: "subscriber" });
 
+/** No user has id 0, so `create` swaps it for a seeded author. */
+const NO_AUTHOR = 0;
+
 export const entryFactory = Factory.define<
   NewEntry,
   DbTransient,
@@ -95,16 +98,19 @@ export const entryFactory = Factory.define<
 >(({ sequence, transientParams, onCreate, params }) => {
   onCreate(async (attrs) => {
     const db = requireDb(transientParams);
-    const [row] = await db.insert(entries).values(attrs).returning();
+    const authorId =
+      attrs.authorId === NO_AUTHOR
+        ? (await authorUser.transient({ db }).create()).id
+        : attrs.authorId;
+    const [row] = await db
+      .insert(entries)
+      .values({ ...attrs, authorId })
+      .returning();
     if (!row) throw new Error("entryFactory: insert returned no row");
     return row;
   });
 
   const status = params.status ?? "draft";
-  const authorId = params.authorId;
-  if (authorId === undefined) {
-    throw new Error("entryFactory: authorId is required");
-  }
   return {
     type: params.type ?? "post",
     title: params.title ?? `Entry ${sequence}`,
@@ -116,7 +122,7 @@ export const entryFactory = Factory.define<
     sortOrder: params.sortOrder ?? 0,
     publishedAt:
       params.publishedAt ?? (status === "published" ? new Date() : null),
-    authorId,
+    authorId: params.authorId ?? NO_AUTHOR,
   };
 });
 

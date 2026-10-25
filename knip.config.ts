@@ -351,6 +351,9 @@ const config: KnipConfig = {
         ...coreBrowserEntries,
         "e2e/globalSetup.ts",
         "e2e/*.spec.ts",
+        // A project's config, which `testSite()` imports by path from the
+        // working directory a test points it at.
+        "src/test/fixtures/project/plumix.config.ts",
       ],
       playwright: false,
     },

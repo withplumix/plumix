@@ -28,6 +28,9 @@ export {
   userFactory,
 } from "@plumix/core/test";
 
+// A whole site booted for a test, with a fake in every slot the kit has one for.
+export { testSite } from "@plumix/core/test";
+
 // Databases, harnesses, contexts and requests.
 export {
   applyCoreTestSchema,

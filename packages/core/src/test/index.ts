@@ -53,6 +53,10 @@ export {
   toRegisteredTermTaxonomy,
 } from "../plugin/registry.js";
 
+export { testSite } from "./site.js";
+export type { TestSite, TestSiteOptions } from "./site.js";
+export type { TestPage } from "./page.js";
+
 export { createTestContext } from "./context.js";
 export type { CreateTestContextOptions } from "./context.js";
 

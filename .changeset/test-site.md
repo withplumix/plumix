@@ -1,0 +1,5 @@
+---
+"plumix": minor
+---
+
+Adds `testSite()` to `plumix/test`, which boots a whole site for a test in one call. Called with no arguments it boots the project's own `plumix.config.ts`. Called with `{ plugins, factories, env, config }` it boots core plus what you pass. Either way the site runs on an in-memory SQLite database migrated with core's and every installed plugin's migrations, once per test file. Before each test every table is emptied, ids restart and the search index is cleared. The site's mailer is swapped for `site.mail`, a cdn for an in-memory one, and storage, kv and image delivery are left unbound. `site.factory` holds core's factories plus the plugin factories you pass, typed. `site.visit(pathOrEntry)` returns a page with `assertOk`, `assertNotFound`, `assertForbidden`, `assertRedirect`, `assertSee`, `assertDontSee`, `assertTemplate`, `assertRoute`, `assertHeader` and `assertJson`. `site.context` gives you a context for calling a service directly. An entry created with `entryFactory` and no `authorId` now gets an author of its own instead of throwing.

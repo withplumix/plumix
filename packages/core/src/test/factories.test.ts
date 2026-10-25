@@ -373,3 +373,32 @@ describe("revisionFactory", () => {
     expect(seeded.authorId).toBe(entry.authorId);
   });
 });
+
+describe("entryFactory author", () => {
+  test("create without an authorId seeds an author-role user to own the entry", async () => {
+    const db = await createTestDb();
+
+    const entry = await entryFactory.transient({ db }).create({});
+
+    const owner = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, entry.authorId),
+    });
+    expect(owner?.role).toBe("author");
+  });
+
+  test("create keeps an authorId it is given and seeds no user", async () => {
+    const db = await createTestDb();
+    const user = await userFactory.transient({ db }).create({});
+
+    const entry = await entryFactory
+      .transient({ db })
+      .create({ authorId: user.id });
+
+    expect(entry.authorId).toBe(user.id);
+    expect(await db.query.users.findMany()).toHaveLength(1);
+  });
+
+  test("build without an authorId has no author yet", () => {
+    expect(entryFactory.build().authorId).toBe(0);
+  });
+});
