@@ -41,7 +41,6 @@ export default plumix({
     definePlugin("vendor", {
       i18n: {
         sourceLocale: "en",
-        locales: ["en", "de"],
         catalogPath: ${JSON.stringify(pluginLocales)},
       },
       setup: () => undefined,

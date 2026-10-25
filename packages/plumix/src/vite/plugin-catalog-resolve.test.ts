@@ -21,6 +21,7 @@ import {
 
 import {
   collectPluginCatalogFiles,
+  discoverPluginCatalogLocales,
   findPluginPackageRoot,
   stagePluginCatalogs,
 } from "./plugin-catalog-resolve.js";
@@ -218,28 +219,25 @@ describe("stagePluginCatalogs — real FS", () => {
     }
   }
 
-  function stage(
-    declared: readonly string[],
-    i18n: ResolvedI18n = SITE_I18N,
-  ): Promise<void> {
+  async function stage(i18n: ResolvedI18n = SITE_I18N): Promise<void> {
     const plugin = definePlugin("vendor", {
       setup: () => undefined,
-      i18n: {
-        sourceLocale: "en",
-        locales: declared,
-        catalogPath: "./locales",
-      },
+      i18n: { sourceLocale: "en", catalogPath: "./locales" },
     });
     const manifest = buildManifest(createPluginRegistry(), {
       plugins: [plugin],
+      pluginCatalogLocales: await discoverPluginCatalogLocales(
+        [plugin],
+        projectRoot,
+      ),
       i18n,
     });
     return stagePluginCatalogs(dest, [plugin], manifest, projectRoot);
   }
 
-  test("copies a declared, site-enabled locale into the staged admin dist", async () => {
+  test("copies a shipped, site-enabled locale into the staged admin dist", async () => {
     await installPlugin(["en", "uk", "de"]);
-    await stage(["en", "uk", "de"]);
+    await stage();
 
     const staged = join(dest, pluginCatalogStagedPath("vendor", "uk"));
     expect(await readFile(staged, "utf8")).toContain('"vendor.hello":"uk"');
@@ -247,7 +245,7 @@ describe("stagePluginCatalogs — real FS", () => {
 
   test("stages the catalog an enabled regional locale reads", async () => {
     await installPlugin(["en", "de"]);
-    await stage(["en", "de"], {
+    await stage({
       defaultLocale: DE_AT,
       locales: [DE_AT],
     });
@@ -258,38 +256,70 @@ describe("stagePluginCatalogs — real FS", () => {
 
   test("skips a locale the site has not enabled", async () => {
     await installPlugin(["en", "uk", "de"]);
-    await stage(["en", "uk", "de"]);
+    await stage();
 
-    // `de` is declared but disabled by the site, so the intersection drops it.
+    // `de` ships but is disabled by the site, so the intersection drops it.
     expect(
       existsSync(join(dest, pluginCatalogStagedPath("vendor", "de"))),
     ).toBe(false);
   });
 
-  test("stages the source catalog even when the slot declares nothing else", async () => {
+  test("stages the source catalog even when the plugin ships nothing else", async () => {
     // The admin falls back to it for every locale the plugin doesn't ship.
-    await installPlugin(["en", "uk", "de"]);
-    await stage(["en"]);
+    await installPlugin(["en"]);
+    await stage();
 
     expect(
       existsSync(join(dest, pluginCatalogStagedPath("vendor", "en"))),
     ).toBe(true);
   });
 
-  test("a missing catalog fails the build before any catalog is staged", async () => {
-    await installPlugin(["en"]);
+  test("a missing source catalog fails the build before any catalog is staged", async () => {
+    // `buildManifest` has already committed to a URL admin will fetch, so a
+    // missing `.mjs` has to fail the build rather than 404 in production.
+    await installPlugin(["uk"]);
 
-    await expect(stage(["en", "uk"])).rejects.toThrow(/uk/);
+    await expect(stage()).rejects.toThrow(/en\.mjs/);
     expect(
-      existsSync(join(dest, pluginCatalogStagedPath("vendor", "en"))),
+      existsSync(join(dest, pluginCatalogStagedPath("vendor", "uk"))),
     ).toBe(false);
   });
 
-  test("throws adminAssetNotFound when a declared locale has no compiled catalog", async () => {
-    // `buildManifest` has already committed to a URL admin will fetch, so a
-    // missing `.mjs` has to fail the build rather than 404 in production.
-    await installPlugin(["en"]);
-    await expect(stage(["en", "uk"])).rejects.toThrow(/uk/);
+  describe("discoverPluginCatalogLocales", () => {
+    const vendor = definePlugin("vendor", {
+      setup: () => undefined,
+      i18n: { sourceLocale: "en", catalogPath: "./locales" },
+    });
+
+    test("lists the top-level compiled catalogs sorted, ignoring every other entry", async () => {
+      await installPlugin(["uk", "en", "pt-BR"]);
+      const localesDir = join(
+        projectRoot,
+        "node_modules/@plumix/plugin-vendor/locales",
+      );
+      await writeFile(join(localesDir, "de.po"), "");
+      await mkdir(join(localesDir, "index.mjs"));
+      await mkdir(join(localesDir, "index"));
+      await writeFile(join(localesDir, "index", "fr.mjs"), "");
+
+      expect(await discoverPluginCatalogLocales([vendor], projectRoot)).toEqual(
+        { vendor: ["en", "pt-BR", "uk"] },
+      );
+    });
+
+    test("finds no locales for a plugin whose catalog directory does not resolve", async () => {
+      expect(await discoverPluginCatalogLocales([vendor], projectRoot)).toEqual(
+        { vendor: [] },
+      );
+    });
+
+    test("omits a plugin with no i18n slot", async () => {
+      const bare = definePlugin("bare", { setup: () => undefined });
+
+      expect(await discoverPluginCatalogLocales([bare], projectRoot)).toEqual(
+        {},
+      );
+    });
   });
 });
 
@@ -339,14 +369,10 @@ describe("collectPluginCatalogFiles — real FS", () => {
     await rm(projectRoot, { recursive: true, force: true });
   });
 
-  test("lists every declared locale's compiled catalog by locale, marking the source locale and skipping any not on disk", async () => {
+  test("lists each enabled locale's compiled catalog, marking the source locale", async () => {
     const vendor = definePlugin("vendor", {
       setup: () => undefined,
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "de", "uk"],
-        catalogPath: "./locales",
-      },
+      i18n: { sourceLocale: "en", catalogPath: "./locales" },
     });
     const bare = definePlugin("bare", { setup: () => undefined });
 
@@ -366,14 +392,10 @@ describe("collectPluginCatalogFiles — real FS", () => {
     });
   });
 
-  test("an enabled locale whose declared catalog is not compiled reads the source catalog", async () => {
+  test("an enabled locale with no compiled catalog reads the source catalog", async () => {
     const vendor = definePlugin("vendor", {
       setup: () => undefined,
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "uk"],
-        catalogPath: "./locales",
-      },
+      i18n: { sourceLocale: "en", catalogPath: "./locales" },
     });
 
     const files = await collectPluginCatalogFiles(
@@ -397,11 +419,7 @@ describe("collectPluginCatalogFiles — real FS", () => {
     );
     const vendor = definePlugin("vendor", {
       setup: () => undefined,
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "de"],
-        catalogPath: "./locales",
-      },
+      i18n: { sourceLocale: "en", catalogPath: "./locales" },
     });
 
     const files = await collectPluginCatalogFiles(
@@ -416,11 +434,7 @@ describe("collectPluginCatalogFiles — real FS", () => {
   test("keys each catalog by the enabled locale it serves, the source catalog included", async () => {
     const vendor = definePlugin("vendor", {
       setup: () => undefined,
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "de"],
-        catalogPath: "./locales",
-      },
+      i18n: { sourceLocale: "en", catalogPath: "./locales" },
     });
 
     const files = await collectPluginCatalogFiles(

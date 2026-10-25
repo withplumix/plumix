@@ -1,6 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, onTestFinished, test } from "vitest";
 
-import { definePlugin, defineTheme } from "@plumix/core";
+import { definePlugin, defineTheme, resolveLocales } from "@plumix/core";
 
 import { computeManifestAndRegistry } from "./manifest.js";
 
@@ -8,6 +11,7 @@ const theme = defineTheme({ templates: () => null });
 
 const OPTIONS = {
   theme,
+  projectRoot: tmpdir(),
   routes: { author: true, date: true, search: true },
 } as const;
 
@@ -122,26 +126,31 @@ describe("computeManifestAndRegistry", () => {
     expect(manifest.frameworkRoutes).toEqual({ author: false });
   });
 
-  test("a first-party plugin publishes its catalogs like any installed one", async () => {
-    // The admin bundle reads no plugin's catalogs at build time, so turbo has
-    // no hidden edge from admin's build to every plugin's i18n:compile.
-    const workspace = definePlugin("workspace", {
-      i18n: {
-        sourceLocale: "en",
-        locales: ["en", "de"],
-        catalogPath: "./locales",
-      },
+  test("publishes the catalogs a plugin compiled under its catalogPath, with no declared locales", async () => {
+    const catalogPath = await mkdtemp(join(tmpdir(), "plumix-catalogs-"));
+    onTestFinished(() => rm(catalogPath, { recursive: true, force: true }));
+    for (const locale of ["en", "pt-BR"]) {
+      await writeFile(
+        join(catalogPath, `${locale}.mjs`),
+        "export const messages = {};\n",
+      );
+    }
+    const translated = definePlugin("translated", {
+      i18n: { sourceLocale: "en", catalogPath },
       setup: () => undefined,
     });
 
-    const { manifest } = await computeManifestAndRegistry([workspace], OPTIONS);
+    const { manifest } = await computeManifestAndRegistry([translated], {
+      ...OPTIONS,
+      i18n: resolveLocales({ defaultLocale: "en", locales: ["en", "pt-BR"] }),
+    });
 
     expect(manifest.pluginI18n).toEqual({
-      workspace: {
+      translated: {
         sourceLocale: "en",
         catalogs: {
-          en: "/_plumix/admin/plugins/workspace/locales/en.mjs",
-          de: "/_plumix/admin/plugins/workspace/locales/de.mjs",
+          en: "/_plumix/admin/plugins/translated/locales/en.mjs",
+          "pt-BR": "/_plumix/admin/plugins/translated/locales/pt-BR.mjs",
         },
       },
     });

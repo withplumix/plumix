@@ -119,7 +119,6 @@ describe("buildManifest", () => {
     const plugin = definePlugin("translated", {
       i18n: {
         sourceLocale: "en",
-        locales: ["en", "de", "fr"],
         catalogPath: "./locales",
       },
       setup: () => undefined,
@@ -131,6 +130,7 @@ describe("buildManifest", () => {
     const manifest = buildManifest(createPluginRegistry(), {
       i18n,
       plugins: [plugin],
+      pluginCatalogLocales: { translated: ["en", "de", "fr"] },
     });
     // English is the source: always published, because a production admin
     // can't compile `descriptor.message`, so a placeholder would render raw.
@@ -150,7 +150,6 @@ describe("buildManifest", () => {
     const plugin = definePlugin("translated", {
       i18n: {
         sourceLocale: "en",
-        locales: ["en", "de"],
         catalogPath: "./locales",
       },
       setup: () => undefined,
@@ -162,6 +161,7 @@ describe("buildManifest", () => {
     const manifest = buildManifest(createPluginRegistry(), {
       i18n,
       plugins: [plugin],
+      pluginCatalogLocales: { translated: ["en", "de"] },
     });
     expect(manifest.pluginI18n.translated?.catalogs).toEqual({
       en: "/_plumix/admin/plugins/translated/locales/en.mjs",
@@ -173,7 +173,6 @@ describe("buildManifest", () => {
     const plugin = definePlugin("translated", {
       i18n: {
         sourceLocale: "en",
-        locales: ["en", "de"],
         catalogPath: "./locales",
       },
       setup: () => undefined,
@@ -182,23 +181,24 @@ describe("buildManifest", () => {
     const manifest = buildManifest(createPluginRegistry(), {
       i18n,
       plugins: [plugin],
+      pluginCatalogLocales: { translated: ["en", "de"] },
     });
     expect(manifest.pluginI18n.translated?.catalogs.fr).toBe(
       "/_plumix/admin/plugins/translated/locales/en.mjs",
     );
   });
 
-  test("buildManifest keeps a plugin's declared locales when the site configures no i18n", () => {
+  test("buildManifest keeps every locale a plugin ships when the site configures no i18n", () => {
     const plugin = definePlugin("translated", {
       i18n: {
         sourceLocale: "en",
-        locales: ["en", "de"],
         catalogPath: "./locales",
       },
       setup: () => undefined,
     });
     const manifest = buildManifest(createPluginRegistry(), {
       plugins: [plugin],
+      pluginCatalogLocales: { translated: ["en", "de"] },
     });
     expect(manifest.pluginI18n.translated?.catalogs).toEqual({
       en: "/_plumix/admin/plugins/translated/locales/en.mjs",

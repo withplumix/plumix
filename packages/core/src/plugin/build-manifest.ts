@@ -142,6 +142,9 @@ export function buildManifest(
       readonly id: string;
       readonly i18n?: PluginI18nSlot;
     }[];
+    /** The locales each plugin's compiled catalogs ship, keyed by plugin id.
+     *  Routed through options because the build reads them off the files. */
+    readonly pluginCatalogLocales?: Readonly<Record<string, readonly string[]>>;
     /** Routed through options — like `tokens` — because slot presence is
      *  read off the site config, not the plugin registry. Omitted means no
      *  slot is configured. */
@@ -265,7 +268,11 @@ export function buildManifest(
       // affordance can be re-introduced when there's a consumer.
       locales: (options?.i18n?.locales ?? []).filter((l) => l.enabled),
     },
-    pluginI18n: projectPluginI18n(options?.plugins, options?.i18n),
+    pluginI18n: projectPluginI18n(
+      options?.plugins,
+      options?.pluginCatalogLocales ?? {},
+      options?.i18n,
+    ),
     configuredSlots,
     refusedAdminAreas,
     frameworkRoutes: { author: registry.frameworkRoutes.author },
@@ -276,6 +283,7 @@ function projectPluginI18n(
   plugins:
     | readonly { readonly id: string; readonly i18n?: PluginI18nSlot }[]
     | undefined,
+  catalogLocales: Readonly<Record<string, readonly string[]>>,
   siteI18n: ResolvedI18n | undefined,
 ): PluginI18nManifest {
   if (!plugins) return {};
@@ -288,8 +296,9 @@ function projectPluginI18n(
   > = {};
   for (const plugin of plugins) {
     if (!plugin.i18n) continue;
-    const { sourceLocale, locales } = plugin.i18n;
-    // With no site i18n, keep the plugin's full locale list.
+    const { sourceLocale } = plugin.i18n;
+    const locales = catalogLocales[plugin.id] ?? [];
+    // With no site i18n, keep every locale the plugin ships.
     const enabled = siteLocales.length > 0 ? siteLocales : locales;
     const catalogs: Record<string, string> = {
       [sourceLocale]: pluginCatalogUrl(plugin.id, sourceLocale),

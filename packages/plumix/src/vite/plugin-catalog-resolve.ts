@@ -1,4 +1,4 @@
-import { copyFile, mkdir, stat } from "node:fs/promises";
+import { copyFile, mkdir, readdir, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, resolve } from "node:path";
 
@@ -48,8 +48,29 @@ export function findPluginPackageRoot(input: {
 }
 
 /**
+ * Read from the compiled `.mjs`, because a published plugin ships those and
+ * not its `.po` files; compile writes one `.mjs` per `.po`.
+ */
+export async function discoverPluginCatalogLocales(
+  plugins: readonly AnyPluginDescriptor[],
+  projectRoot: string,
+): Promise<Record<string, readonly string[]>> {
+  const out: Record<string, readonly string[]> = {};
+  for (const plugin of plugins) {
+    if (!plugin.i18n) continue;
+    const dir = await resolveCatalogDir(
+      plugin.id,
+      plugin.i18n.catalogPath,
+      projectRoot,
+    );
+    out[plugin.id] = dir === null ? [] : await compiledCatalogLocales(dir);
+  }
+  return out;
+}
+
+/**
  * Admin's runtime loader `import(url)`s same-origin paths under the default
- * CSP. A missing `.mjs` for a declared locale fails the build.
+ * CSP. A missing source-locale `.mjs` fails the build.
  */
 export async function stagePluginCatalogs(
   adminDest: string,
@@ -84,9 +105,10 @@ export async function stagePluginCatalogs(
       // Keyed by enabled locale, so several keys may share one catalog.
       const urls = new Set(Object.values(entry.catalogs));
       const staged = new Set(
-        [plugin.i18n.sourceLocale, ...plugin.i18n.locales].filter((locale) =>
-          urls.has(pluginCatalogUrl(plugin.id, locale)),
-        ),
+        [
+          plugin.i18n.sourceLocale,
+          ...(await compiledCatalogLocales(candidate)),
+        ].filter((locale) => urls.has(pluginCatalogUrl(plugin.id, locale))),
       );
       return Promise.all(
         [...staged].map(async (locale) => {
@@ -122,7 +144,7 @@ export async function stagePluginCatalogs(
 
 /**
  * Keyed by the source and enabled locales, each at its catalog locale's file.
- * A declared locale with no compiled file ships nothing: SSR falls back to
+ * A locale reading a missing source catalog gets nothing: SSR falls back to
  * each descriptor's English source.
  */
 export async function collectPluginCatalogFiles(
@@ -136,15 +158,7 @@ export async function collectPluginCatalogFiles(
     const { sourceLocale, catalogPath } = plugin.i18n;
     const dir = await resolveCatalogDir(plugin.id, catalogPath, projectRoot);
     if (dir === null) continue;
-    const compiled = new Set<string>();
-    for (const locale of plugin.i18n.locales) {
-      try {
-        await stat(resolve(dir, `${locale}.mjs`));
-        compiled.add(locale);
-      } catch {
-        continue;
-      }
-    }
+    const compiled = new Set(await compiledCatalogLocales(dir));
     const projected = projectCatalogLocales(
       [sourceLocale, ...enabled],
       [...compiled],
@@ -160,6 +174,14 @@ export async function collectPluginCatalogFiles(
     }
   }
   return files;
+}
+
+async function compiledCatalogLocales(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".mjs"))
+    .map((entry) => entry.name.slice(0, -".mjs".length))
+    .sort();
 }
 
 /**

@@ -34,12 +34,9 @@ export interface PluginI18nSlot {
   /** Source locale every msgid is authored in. Admin reads it from the
    *  manifest to resolve plugin catalog paths, never the lingui config. */
   readonly sourceLocale: string;
-  /** Locales the plugin ships catalogs for. Intersected with the
-   *  site's enabled locales before any URL is generated — declaring
-   *  more locales than the site enables doesn't expand the dropdown. */
-  readonly locales: readonly string[];
   /** Directory of the compiled `<locale>.mjs` catalogs, relative to the
-   *  plugin's package root. */
+   *  plugin's package root. The build serves the locales whose `.mjs` it
+   *  finds here. */
   readonly catalogPath: string;
 }
 
@@ -127,13 +124,11 @@ export function pluginAdminEntryPath(packageName: string): string {
   return `node_modules/${packageName}/dist/admin/index.js`;
 }
 
-/** The catalogs first-party plugins ship, not the site's enabled locales;
- *  those are intersected at render time. Must match the defaults of
- *  `defineLinguiConfig()`.
+/** The slot first-party plugins share. Its source locale must match
+ *  `defineLinguiConfig()`'s.
  *  Guarded by: packages/core/src/plugin/define.test.ts */
 export const PLUGIN_I18N_SLOT: PluginI18nSlot = {
   sourceLocale: "en",
-  locales: ["en", "uk", "ar", "de", "zh-CN"],
   catalogPath: "./locales",
 };
 
