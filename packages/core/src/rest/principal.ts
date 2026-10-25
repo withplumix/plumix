@@ -2,6 +2,7 @@ import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
 import { makeAuthCan } from "../auth/with-user.js";
 import { rebindSettings } from "../context/settings-namespace.js";
+import { rebindDispatch } from "../hooks/dispatch.js";
 
 /**
  * Anonymous requests hold the lowest role's capabilities, so the entry
@@ -34,6 +35,7 @@ export async function resolveRestPrincipal(
       tokenScopes: null,
       auth: { can: makeAuthCan(ctx.plugins, PUBLIC_PRINCIPAL, null) },
       settings: rebindSettings(ctx.settings, () => anonymous),
+      ...rebindDispatch(ctx, () => anonymous),
     };
     return { kind: "anonymous", ctx: anonymous };
   }

@@ -5,13 +5,8 @@ import type {
   Logger,
 } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
-import type {
-  ActionArgs,
-  ActionName,
-  FilterInput,
-  FilterName,
-  FilterRest,
-} from "../hooks/types.js";
+import type { EventDefinition } from "../hooks/define.js";
+import type { ActionArgs, ActionName } from "../hooks/types.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { PlumixApp } from "../runtime/app.js";
@@ -27,7 +22,7 @@ import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import type { HarnessFetchOptions } from "./request.js";
-import type { ActionSpy, FilterSpy } from "./spies.js";
+import type { ActionSpy, BoundFilterSpy, EventSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { createSession } from "../auth/sessions.js";
@@ -43,7 +38,7 @@ import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { fakeMail } from "./mail-fake.js";
 import { appendCookie, buildRequest, TestResponse } from "./request.js";
-import { spyAction, spyFilter } from "./spies.js";
+import { bindFilterSpy, spyAction, spyEvent } from "./spies.js";
 
 export interface CreateDispatcherHarnessOptions {
   /** A supplied db arrives with its schema already applied; the default gets core's. */
@@ -170,9 +165,11 @@ export interface DispatcherHarness {
    * Record every invocation of the named filter. Pass-through by default;
    * call `.override(fn)` on the returned spy to transform values.
    */
-  readonly spyFilter: <TName extends FilterName>(
-    name: TName,
-  ) => FilterSpy<FilterInput<TName>, FilterRest<TName>>;
+  readonly spyFilter: BoundFilterSpy;
+  /** Record every payload the event is emitted with. */
+  readonly spyEvent: <TPayload>(
+    event: EventDefinition<TPayload>,
+  ) => EventSpy<TPayload>;
   /**
    * Await everything routed through `ctx.defer` so far (telemetry snapshot
    * delivery, CDN purges). Stands in for the platform's `waitUntil`: call
@@ -281,7 +278,8 @@ export async function createDispatcherHarness(
     mintPreviewToken: (args) => createPreviewToken(db, args),
     factory: factoriesFor(db),
     spyAction: (name) => spyAction(app.hooks, name),
-    spyFilter: (name) => spyFilter(app.hooks, name),
+    spyFilter: bindFilterSpy(app.hooks),
+    spyEvent: (event) => spyEvent(app.hooks, event),
     drainDeferred,
     mail,
   };

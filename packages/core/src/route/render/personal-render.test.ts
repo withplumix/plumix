@@ -6,6 +6,7 @@ import type {
   Db,
 } from "../../context/app-context.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
+import { block } from "../../hooks/block-render.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../../plugin/define.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
@@ -93,6 +94,36 @@ describe("trackPrincipalReads", () => {
     expect(tracked.auth.can("entry:post:read")).toBe(
       ctx.auth.can("entry:post:read"),
     );
+  });
+
+  test("a handler a render fires gets the tracked context, so its read of the principal marks the render personal", async () => {
+    const hooks = new HookRegistry();
+    await installPlugins({
+      hooks,
+      plugins: [
+        definePlugin("reads-user", {
+          setup: (ctx) => {
+            ctx.filters.add(
+              block.beforeRender,
+              (element, _input, handlerCtx) => {
+                void handlerCtx.user;
+                return element;
+              },
+            );
+          },
+        }),
+      ],
+    });
+    const ctx = createTestContext({ db: {} as Db, user: subscriber, hooks });
+    const tracked = trackPrincipalReads(ctx);
+    expect(renderIsPersonal(ctx)).toBe(false);
+
+    void tracked.filters.apply(block.beforeRender, null, {
+      node: { id: "n", name: "paragraph" },
+      context: {} as never,
+    });
+
+    expect(renderIsPersonal(ctx)).toBe(true);
   });
 
   test("a staff principal's render is personal before anything reads it", () => {

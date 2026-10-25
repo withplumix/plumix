@@ -1,3 +1,4 @@
+import type { EventDefinition, FilterDefinition } from "../hooks/define.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type {
   ActionArgs,
@@ -10,6 +11,10 @@ import { partialMatch } from "./match.js";
 
 export interface ActionCall<TArgs extends readonly unknown[]> {
   readonly args: TArgs;
+}
+
+export interface EventCall<TPayload> {
+  readonly payload: TPayload;
 }
 
 export interface FilterCall<TValue, TRest extends readonly unknown[]> {
@@ -34,6 +39,20 @@ export interface ActionSpy<
   assertCalledWith(
     matcher: (...args: TArgs) => boolean | void,
   ): ActionSpy<TArgs>;
+  reset(): void;
+}
+
+export interface EventSpy<TPayload> extends SpyBaseReadonly<
+  EventCall<TPayload>
+> {
+  readonly lastPayload: TPayload | undefined;
+  assertCalled(): EventSpy<TPayload>;
+  assertCalledOnce(): EventSpy<TPayload>;
+  assertCalledTimes(n: number): EventSpy<TPayload>;
+  assertNotCalled(): EventSpy<TPayload>;
+  assertCalledWith(
+    matcher: (payload: TPayload) => boolean | void,
+  ): EventSpy<TPayload>;
   reset(): void;
 }
 
@@ -150,10 +169,120 @@ export function spyAction<TName extends ActionName>(
 }
 
 /**
- * Install a recording filter on the hook, pass-through until `.override(fn)`.
- * Inputs are `structuredClone`d, so match by equality, not `toBe`.
+ * Subscribe a recording handler to the event. Other handlers run as before.
  */
+export function spyEvent<TPayload>(
+  hooks: HookRegistry,
+  event: EventDefinition<TPayload>,
+): EventSpy<TPayload> {
+  const calls: EventCall<TPayload>[] = [];
+  hooks.on(event, (payload) => {
+    calls.push({ payload });
+  });
+
+  const label = `spyEvent(${event.id})`;
+  const spy: EventSpy<TPayload> = {
+    ...buildSpyBase<EventCall<TPayload>, EventSpy<TPayload>>(
+      label,
+      calls,
+      () => spy,
+    ),
+    get lastPayload() {
+      return calls[calls.length - 1]?.payload;
+    },
+    assertCalledWith(matcher) {
+      for (const call of calls) {
+        const result = matcher(call.payload);
+        if (result === true || result === undefined) return spy;
+      }
+      throw new Error(`${label}: no call matched the supplied matcher`);
+    },
+  };
+  return spy;
+}
+
+/**
+ * Install a recording filter, pass-through until `.override(fn)`. An async
+ * filter's values are `structuredClone`d, so match by equality, not `toBe`.
+ */
+export function spyFilter<TValue, TInput, TSync extends boolean>(
+  hooks: HookRegistry,
+  filter: FilterDefinition<TValue, TInput, TSync>,
+): FilterSpy<TValue, readonly [Readonly<TInput>]>;
 export function spyFilter<TName extends FilterName>(
+  hooks: HookRegistry,
+  name: TName,
+): FilterSpy<FilterInput<TName>, FilterRest<TName>>;
+export function spyFilter(
+  hooks: HookRegistry,
+  filter: FilterName | FilterDefinition<unknown, unknown, boolean>,
+): FilterSpy<unknown, readonly unknown[]> {
+  if (typeof filter === "string") return spyNamedFilter(hooks, filter);
+  const calls: FilterCall<unknown, readonly [unknown]>[] = [];
+  let transform: ((value: unknown, input: unknown) => unknown) | null = null;
+  hooks.add(filter, (value, input) => {
+    calls.push({ input: value, rest: [input] });
+    return transform ? transform(value, input) : value;
+  });
+  return filterSpy(`spyFilter(${filter.id})`, calls, (fn) => {
+    transform = fn;
+  });
+}
+
+/** {@link spyFilter} bound to a harness's hooks. */
+export interface BoundFilterSpy {
+  <TValue, TInput, TSync extends boolean>(
+    filter: FilterDefinition<TValue, TInput, TSync>,
+  ): FilterSpy<TValue, readonly [Readonly<TInput>]>;
+  <TName extends FilterName>(
+    name: TName,
+  ): FilterSpy<FilterInput<TName>, FilterRest<TName>>;
+}
+
+export function bindFilterSpy(hooks: HookRegistry): BoundFilterSpy {
+  function bound<TValue, TInput, TSync extends boolean>(
+    filter: FilterDefinition<TValue, TInput, TSync>,
+  ): FilterSpy<TValue, readonly [Readonly<TInput>]>;
+  function bound<TName extends FilterName>(
+    name: TName,
+  ): FilterSpy<FilterInput<TName>, FilterRest<TName>>;
+  function bound(
+    filter: FilterName | FilterDefinition<unknown, unknown, boolean>,
+  ): FilterSpy<unknown, readonly unknown[]> {
+    return typeof filter === "string"
+      ? spyFilter(hooks, filter)
+      : spyFilter(hooks, filter);
+  }
+  return bound;
+}
+
+function filterSpy<TValue, TRest extends readonly unknown[]>(
+  label: string,
+  calls: FilterCall<TValue, TRest>[],
+  override: FilterSpy<TValue, TRest>["override"],
+): FilterSpy<TValue, TRest> {
+  const spy: FilterSpy<TValue, TRest> = {
+    ...buildSpyBase<FilterCall<TValue, TRest>, FilterSpy<TValue, TRest>>(
+      label,
+      calls,
+      () => spy,
+    ),
+    get lastInput() {
+      return calls[calls.length - 1]?.input;
+    },
+    assertCalledWith(matcher) {
+      for (const call of calls) {
+        const result = matcher(call.input, ...call.rest);
+        if (result === true || result === undefined) return spy;
+      }
+      throw new Error(`${label}: no call matched the supplied matcher`);
+    },
+    override,
+  };
+  return spy;
+}
+
+function spyNamedFilter<TName extends FilterName>(
   hooks: HookRegistry,
   name: TName,
 ): FilterSpy<FilterInput<TName>, FilterRest<TName>> {
@@ -174,27 +303,9 @@ export function spyFilter<TName extends FilterName>(
     return input;
   }) as never);
 
-  const label = `spyFilter(${name})`;
-  const spy: FilterSpy<FilterInput<TName>, FilterRest<TName>> = {
-    ...buildSpyBase<
-      FilterCall<FilterInput<TName>, FilterRest<TName>>,
-      FilterSpy<FilterInput<TName>, FilterRest<TName>>
-    >(label, calls, () => spy),
-    get lastInput() {
-      return calls[calls.length - 1]?.input;
-    },
-    assertCalledWith(matcher) {
-      for (const call of calls) {
-        const result = matcher(call.input, ...call.rest);
-        if (result === true || result === undefined) return spy;
-      }
-      throw new Error(`${label}: no call matched the supplied matcher`);
-    },
-    override(fn) {
-      transform = fn;
-    },
-  };
-  return spy;
+  return filterSpy(`spyFilter(${name})`, calls, (fn) => {
+    transform = fn;
+  });
 }
 
 /**

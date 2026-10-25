@@ -16,6 +16,7 @@ import type { EditLeaseSurface } from "../db/schema/edit_leases.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { SettingsBag } from "../db/schema/settings.js";
 import type { UserRole } from "../db/schema/users.js";
+import type { AppEvents, AppFilters } from "../hooks/define.js";
 import type { HookExecutor } from "../hooks/registry.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonValue } from "../json.js";
@@ -201,6 +202,10 @@ export interface AppContextBase<
    */
   readonly clientAddress?: string;
   readonly hooks: HookExecutor;
+  /** Handlers receive the context `emit` was called on. */
+  readonly events: AppEvents;
+  /** Handlers receive the context `apply` was called on. */
+  readonly filters: AppFilters;
   readonly plugins: PluginRegistry;
   readonly blocks: BlockRegistry;
   /**

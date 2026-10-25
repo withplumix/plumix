@@ -17,6 +17,7 @@ import type {
 import type { McpTool } from "../context/mcp-tool.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DocumentManifest } from "../document-manifest.js";
+import type { SetupEvents, SetupFilters } from "../hooks/define.js";
 import type {
   ActionArgs,
   ActionFn,
@@ -71,6 +72,8 @@ export interface PluginSetupContextBase {
   readonly id: string;
   /** The site's theme, so a plugin registers from what it declares. */
   readonly theme: ThemeDescriptor;
+  readonly events: SetupEvents;
+  readonly filters: SetupFilters;
 
   /** Subscribe to an existing (core or other-plugin) filter. */
   addFilter<TName extends FilterName>(

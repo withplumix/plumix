@@ -102,8 +102,16 @@ export type {
 export { buildRequest, TestResponse } from "./request.js";
 export type { FetchOptions, HarnessFetchOptions } from "./request.js";
 
-export { spyAction, spyFilter, expectError } from "./spies.js";
-export type { ActionSpy, ActionCall, FilterSpy, FilterCall } from "./spies.js";
+export { spyAction, spyEvent, spyFilter, expectError } from "./spies.js";
+export type {
+  ActionSpy,
+  ActionCall,
+  BoundFilterSpy,
+  EventSpy,
+  EventCall,
+  FilterSpy,
+  FilterCall,
+} from "./spies.js";
 
 export { deepEqual, partialMatch } from "./match.js";
 

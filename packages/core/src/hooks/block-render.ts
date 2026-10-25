@@ -1,35 +1,37 @@
 import type { ReactNode } from "react";
 
 import type { BlockContext, BlockNode, BlockSpec } from "../blocks/index.js";
+import { defineEvent, defineFilter } from "./define.js";
 
-export interface BlockRenderHookContext {
+export interface BlockRenderInput {
   readonly node: BlockNode;
   readonly context: BlockContext;
 }
 
-/**
- * Fired by the SSR dispatcher once per rejected loader. The hook is
- * observational only (filters return `void`); plugins typically log to
- * external observability and leave user-visible fallback to
- * `BlockSpec.errorFallback`.
- */
-export interface BlockLoaderErrorContext {
+export interface BlockLoaderFailure {
   readonly spec: BlockSpec;
   readonly node: BlockNode;
   readonly key: string;
   readonly error: unknown;
 }
 
-declare module "./types.js" {
-  interface FilterRegistry {
-    "block:before_render": (
-      element: ReactNode,
-      ctx: BlockRenderHookContext,
-    ) => ReactNode;
-    "block:after_render": (
-      element: ReactNode,
-      ctx: BlockRenderHookContext,
-    ) => ReactNode;
-    "blocks:loader:error": (result: void, ctx: BlockLoaderErrorContext) => void;
-  }
-}
+/** Core's events and filters about blocks. */
+export const block = {
+  /**
+   * A block's loader rejected; the block renders its `errorFallback`. Fired
+   * once per rejected loader.
+   */
+  loaderFailed: defineEvent<BlockLoaderFailure>("block:loaderFailed"),
+  /**
+   * A block's element before its wrapper. Runs mid-render, so a handler
+   * returns the element rather than a promise.
+   */
+  beforeRender: defineFilter<ReactNode, BlockRenderInput>(
+    "block:beforeRender",
+    { sync: true },
+  ),
+  /** A block's element after its wrapper; sync like `beforeRender`. */
+  afterRender: defineFilter<ReactNode, BlockRenderInput>("block:afterRender", {
+    sync: true,
+  }),
+};

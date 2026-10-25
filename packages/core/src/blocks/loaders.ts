@@ -130,8 +130,8 @@ export class BlockLoaderError extends Error {
 
 export interface ResolveBlockLoadersOptions {
   /**
-   * Blocks can't depend on core's hook system, so the dispatcher bridges this
-   * into `blocks:loader:error`. Fires once per rejected loader.
+   * Blocks can't depend on core's events, so the dispatcher bridges this into
+   * `block.loaderFailed`. Fires once per rejected loader.
    */
   readonly onLoaderError?: (event: LoaderErrorEvent) => void;
 }

@@ -7,21 +7,16 @@ import type { BlockRegistry, MarkSpec } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app-context.js";
 import type { User, UserRole } from "../db/schema/users.js";
-import type { HookExecutor, HookRegistry } from "../hooks/registry.js";
-import type {
-  ActionArgs,
-  ActionName,
-  FilterInput,
-  FilterName,
-  FilterRest,
-} from "../hooks/types.js";
+import type { EventDefinition } from "../hooks/define.js";
+import type { HookRegistry } from "../hooks/registry.js";
+import type { ActionArgs, ActionName } from "../hooks/types.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
-import type { ActionSpy, FilterSpy } from "./spies.js";
+import type { ActionSpy, BoundFilterSpy, EventSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { coreAuthMethods } from "../auth/core-methods.js";
 import { declareAuthMethods } from "../auth/declared-methods.js";
@@ -41,7 +36,7 @@ import { silentLogger } from "./context.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { fakeMail } from "./mail-fake.js";
-import { spyAction, spyFilter } from "./spies.js";
+import { bindFilterSpy, spyAction, spyEvent } from "./spies.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
@@ -100,9 +95,11 @@ export interface RpcHarnessBase<TUser extends User | null> {
   readonly spyAction: <TName extends ActionName>(
     name: TName,
   ) => ActionSpy<ActionArgs<TName>>;
-  readonly spyFilter: <TName extends FilterName>(
-    name: TName,
-  ) => FilterSpy<FilterInput<TName>, FilterRest<TName>>;
+  readonly spyFilter: BoundFilterSpy;
+  /** Record every payload the event is emitted with. */
+  readonly spyEvent: <TPayload>(
+    event: EventDefinition<TPayload>,
+  ) => EventSpy<TPayload>;
   /**
    * A harness bound to the given user or a fresh one of the role, sharing db,
    * hooks, plugins and env so state survives the swap.
@@ -129,7 +126,7 @@ export function authedCtx(
 function buildContext(
   db: Db,
   env: PlumixEnv,
-  hooks: HookExecutor,
+  hooks: HookRegistry,
   plugins: PluginRegistry,
   blocks: BlockRegistry,
   marks: readonly MarkSpec[],
@@ -217,7 +214,8 @@ function assemble<TUser extends User | null>(
     factory: factoriesFor(db),
     mail,
     spyAction: (name) => spyAction(hooks, name),
-    spyFilter: (name) => spyFilter(hooks, name),
+    spyFilter: bindFilterSpy(hooks),
+    spyEvent: (event) => spyEvent(hooks, event),
     actingAs: async (userOrRole) => {
       const targetUser: User =
         typeof userOrRole === "string"

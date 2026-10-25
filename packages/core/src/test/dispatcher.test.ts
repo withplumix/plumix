@@ -4,6 +4,7 @@ import type { AppContext } from "../context/app-context.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { tryGetContext } from "../context/stores.js";
 import { entries } from "../db/schema/entries.js";
+import { defineEvent, defineFilter } from "../hooks/define.js";
 import { definePlugin } from "../plugin/define.js";
 import { memoryKv } from "../runtime/memory-kv.js";
 import { fakeCdn } from "./cdn-fake.js";
@@ -312,5 +313,54 @@ describe("createDispatcherHarness assertTemplate", () => {
     expect(() => response.assertStatus(404).assertTemplate("fallback")).toThrow(
       'assertTemplate: expected "fallback", but no template was resolved',
     );
+  });
+});
+
+const noted = defineEvent<{ readonly path: string }>("probe:noted");
+const headline = defineFilter<string, { readonly path: string }>(
+  "probe:headline",
+  { sync: true },
+);
+
+/** A route firing a declared event and applying a declared filter. */
+const firingProbe = definePlugin("probe", {
+  events: [noted],
+  filters: [headline],
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/fire",
+      auth: "public",
+      handler: async (_request, appCtx) => {
+        await appCtx.events.emit(noted, { path: "/fire" });
+        return Response.json({
+          title: appCtx.filters.apply(headline, "Home", { path: "/fire" }),
+        });
+      },
+    });
+  },
+});
+
+describe("createDispatcherHarness spies", () => {
+  test("spyEvent records the payload a request emits", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [firingProbe] },
+    });
+    const spy = h.spyEvent(noted);
+
+    await h.fetch("/_plumix/probe/fire");
+
+    expect(spy.calls).toEqual([{ payload: { path: "/fire" } }]);
+  });
+
+  test("spyFilter on a declared filter records the call a request applies", async () => {
+    const h = await createDispatcherHarness({
+      config: { plugins: [firingProbe] },
+    });
+    const spy = h.spyFilter(headline);
+
+    await h.fetch("/_plumix/probe/fire");
+
+    expect(spy.calls).toEqual([{ input: "Home", rest: [{ path: "/fire" }] }]);
   });
 });

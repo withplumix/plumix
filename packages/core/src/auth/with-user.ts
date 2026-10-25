@@ -9,6 +9,7 @@ import type { PluginRegistry } from "../plugin/manifest.js";
 import { resolveCapability } from "../access/contract/capability.js";
 import { rebindToPrincipal } from "../context/principal-bound.js";
 import { rebindSettings } from "../context/settings-namespace.js";
+import { rebindDispatch } from "../hooks/dispatch.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { getCapabilityResolver } from "./rbac.js";
 
@@ -53,6 +54,7 @@ export function withUser<TSchema extends Record<string, unknown>>(
       i18n: ctx.config.i18n,
     }),
     settings: rebindSettings(ctx.settings, () => next),
+    ...rebindDispatch(ctx, () => next),
   };
   // Onto `next` itself, since the rebound writes close over it.
   return Object.assign(next, {

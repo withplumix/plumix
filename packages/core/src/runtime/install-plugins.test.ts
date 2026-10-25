@@ -3,6 +3,7 @@ import { object } from "valibot";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { coreMarks, defineBlock } from "../blocks/index.js";
+import { defineEvent, defineFilter } from "../hooks/define.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import {
@@ -2422,6 +2423,61 @@ describe("duplicate registration", () => {
 
     await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
       /POST \/upload is not public/,
+    );
+  });
+});
+
+describe("declared events and filters", () => {
+  test("two plugins declaring one id fail boot naming the id, though nothing subscribes", async () => {
+    const first = definePlugin("first-owner", {
+      events: [defineEvent<{ readonly id: number }>("acme:saved")],
+      setup: () => undefined,
+    });
+    const second = definePlugin("second-owner", {
+      events: [defineEvent<{ readonly id: number }>("acme:saved")],
+      setup: () => undefined,
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [first, second],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "second-owner" registers event "acme:saved" already registered by "first-owner".',
+    );
+  });
+
+  test("an event and a filter declaring one id fail boot", async () => {
+    const plugin = definePlugin("acme", {
+      events: [defineEvent<string>("acme:title")],
+      filters: [defineFilter<string>("acme:title", { sync: false })],
+      setup: () => undefined,
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [plugin],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "acme" registers filter "acme:title", which it already registered.',
+    );
+  });
+
+  test("a plugin declaring one of core's ids fails boot naming core", async () => {
+    const plugin = definePlugin("acme", {
+      filters: [defineFilter<string>("block:beforeRender", { sync: true })],
+      setup: () => undefined,
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [plugin],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "acme" registers filter "block:beforeRender" already registered by core.',
     );
   });
 });
