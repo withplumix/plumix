@@ -20,9 +20,9 @@ export interface BlockContentValidationIssue {
   readonly path: string;
   readonly nodeName?: string;
   readonly attributeName?: string;
-  /** For `disallowed_child`: the slot key the offending child landed in. */
+  /** For a node refused inside a slot: the slot key it sits in. */
   readonly slotName?: string;
-  /** For `disallowed_child`: the block owning that slot. */
+  /** For a node refused inside a slot: the block owning that slot. */
   readonly parentName?: string;
   /** For `style_not_allowed`: the CSS property, or `className`. */
   readonly property?: string;

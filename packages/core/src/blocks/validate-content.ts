@@ -221,7 +221,6 @@ function keptAsStored(
   return kept;
 }
 
-/** The slot a refused node sits in, when it sits in one. */
 function slotOf(
   parentName: string | null,
   slotName: string | null,

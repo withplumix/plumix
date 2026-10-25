@@ -145,37 +145,47 @@ export function asWriteToolError(
   }
 }
 
+const PLACEMENT_CODES: ReadonlySet<BlockContentValidationIssue["code"]> =
+  new Set([
+    "disallowed_child",
+    "block_not_allowed",
+    "unknown_block_type",
+    "requires_parent",
+  ]);
+
+function placementAlternative(
+  ctx: AppContext,
+  issue: BlockContentValidationIssue,
+): string | undefined {
+  if (!PLACEMENT_CODES.has(issue.code)) return undefined;
+  if (issue.slotName === undefined || issue.parentName === undefined) {
+    return `Allowed blocks: ${allowedTopLevel(ctx).join(", ")}.`;
+  }
+  const allowed = allowedChildren(ctx, issue.parentName, issue.slotName);
+  return `Slot "${issue.slotName}" of "${issue.parentName}" allows: ${allowed.join(", ") || "none"}.`;
+}
+
+function styleAlternative(
+  ctx: AppContext,
+  issue: BlockContentValidationIssue,
+): string | undefined {
+  if (issue.code !== "style_not_allowed") return undefined;
+  if (issue.property === undefined || issue.property === "className") {
+    return undefined;
+  }
+  const { category, uses } = tokensForProperty(ctx.stylePolicy, issue.property);
+  return `Tokens for "${category}": ${uses.join(", ") || "none"}.`;
+}
+
 function alternativesFor(
   ctx: AppContext,
   issues: IssueData["issues"],
 ): readonly string[] {
   const lines = new Set<string>();
   for (const issue of issues) {
-    if (
-      issue.code === "disallowed_child" ||
-      issue.code === "block_not_allowed" ||
-      issue.code === "unknown_block_type" ||
-      issue.code === "requires_parent"
-    ) {
-      if (issue.slotName !== undefined && issue.parentName !== undefined) {
-        const allowed = allowedChildren(ctx, issue.parentName, issue.slotName);
-        lines.add(
-          `Slot "${issue.slotName}" of "${issue.parentName}" allows: ${allowed.join(", ") || "none"}.`,
-        );
-      } else {
-        lines.add(`Allowed blocks: ${allowedTopLevel(ctx).join(", ")}.`);
-      }
-    } else if (
-      issue.code === "style_not_allowed" &&
-      issue.property !== undefined &&
-      issue.property !== "className"
-    ) {
-      const { category, uses } = tokensForProperty(
-        ctx.stylePolicy,
-        issue.property,
-      );
-      lines.add(`Tokens for "${category}": ${uses.join(", ") || "none"}.`);
-    }
+    const line =
+      placementAlternative(ctx, issue) ?? styleAlternative(ctx, issue);
+    if (line !== undefined) lines.add(line);
   }
   return [...lines];
 }
