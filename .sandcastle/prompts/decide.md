@@ -18,7 +18,8 @@ without waiting for a person? Overnight, a ticket parked at the root of a chain
 holds every ticket behind it, so a choice the documents settle should not wait.
 
 Read, in this order: the ticket's parent spec (`gh issue view <parent>`), the ADRs
-it names and any in the area (`docs/adr/`), `VISION.md` (its principles are
+it names and any in the area (`docs/adr/`), `ARCHITECTURE.md` and the
+`docs/architecture/` page for the subsystem, `VISION.md` (its principles are
 ranked: the higher one wins a trade-off), `CODING_STANDARDS.md`, `AGENTS.md`, and
 the code the stop reason cites. Check each claim in the stop reason against the
 code before you rely on it.
