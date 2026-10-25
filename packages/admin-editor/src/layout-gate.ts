@@ -1,11 +1,7 @@
 import type { BlockInput, BlockSpec } from "@plumix/core/blocks";
 import { isContentInput } from "@plumix/core/blocks";
 
-/**
- * What the writer may do on this entry type, from its `edit_layout`
- * capability. Every control that changes layout asks it; the server enforces
- * the same line on save.
- */
+/** What the writer may do on this entry type, from its `edit_layout` capability. */
 export interface LayoutGate {
   /** Insert, move, duplicate, delete, copy, paste, group and style blocks. */
   readonly editsLayout: boolean;

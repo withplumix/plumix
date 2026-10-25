@@ -27,7 +27,6 @@ export interface CanvasShortcutDeps {
   readonly zoomToSelection: () => void;
   /** The vendored sidebar owns Cmd+B through its own window listener. */
   readonly togglePanels: () => void;
-  /** Absent grants every layout edit. */
   readonly layout?: LayoutGate;
 }
 

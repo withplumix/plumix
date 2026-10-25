@@ -34,7 +34,6 @@ export interface EditorConfig {
   readonly stylePolicy?: StylePolicy;
   /** Absent in a deployment with no plugin field registry. */
   readonly resolvePluginFieldType?: ResolvePluginFieldType;
-  /** What the writer may do to layout; absent grants all of it. */
   readonly layout?: LayoutGate;
 }
 

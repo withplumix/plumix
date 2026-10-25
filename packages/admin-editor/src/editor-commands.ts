@@ -62,7 +62,6 @@ export interface EditorCommandContext {
   readonly entryType?: string;
   /** Opens the host's revision history; the command is offered only with it. */
   readonly openRevisions?: () => void;
-  /** Absent grants every layout edit. */
   readonly layout?: LayoutGate;
 }
 

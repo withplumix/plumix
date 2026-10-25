@@ -80,10 +80,7 @@ export interface PlumixEditorProps {
   readonly registry: BlockRegistry;
   /** Viewer capabilities, gating which blocks the catalog offers. */
   readonly capabilities?: ReadonlySet<string>;
-  /**
-   * Whether the viewer holds `edit_layout` on this entry type; `true` when
-   * absent. Without it only content inputs are editable.
-   */
+  /** Without `edit_layout` on this entry type, only content inputs are editable. */
   readonly editsLayout?: boolean;
   /** Theme + plugin patterns offered in the inserter alongside the blocks. */
   readonly patterns?: readonly InserterPattern[];
