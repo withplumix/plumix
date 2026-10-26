@@ -86,6 +86,8 @@ export const RPC_ERRORS = {
           path: v.string(),
           nodeName: v.optional(v.string()),
           attributeName: v.optional(v.string()),
+          slotName: v.optional(v.string()),
+          parentName: v.optional(v.string()),
           markName: v.optional(v.string()),
           property: v.optional(v.string()),
           breakpoint: v.optional(v.string()),

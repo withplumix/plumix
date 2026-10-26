@@ -1,6 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import * as v from "valibot";
 
+import type { BlockContentValidationIssue } from "../blocks/validation-errors.js";
 import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { LeaseResource } from "../db/edit-lease.js";
@@ -10,6 +11,11 @@ import {
   entryCreateInputSchema,
   entryUpdateInputSchema,
 } from "../rpc/procedures/entry/schemas.js";
+import {
+  allowedChildren,
+  allowedTopLevel,
+  tokensForProperty,
+} from "./block-catalog.js";
 import { McpToolError } from "./errors.js";
 import { mcpRouterClient } from "./router-client.js";
 
@@ -54,10 +60,7 @@ const updateInputSchema = v.object({
 export const WRITE = { readOnlyHint: false, destructiveHint: false } as const;
 
 interface IssueData {
-  readonly issues: readonly {
-    readonly path: string;
-    readonly message: string;
-  }[];
+  readonly issues: readonly BlockContentValidationIssue[];
 }
 
 const SUBJECTS = {
@@ -71,6 +74,7 @@ interface RefusalWording {
 }
 
 export function asWriteToolError(
+  ctx: AppContext,
   error: unknown,
   tool: string,
   { subject = "entry", takesContent = true }: RefusalWording = {},
@@ -115,7 +119,11 @@ export function asWriteToolError(
         .join("; ");
       return McpToolError.invalidContent(
         takesContent
-          ? `${failing}. Fix these nodes and call ${tool} again.`
+          ? [
+              `${failing}.`,
+              ...alternativesFor(ctx, issues),
+              `Fix these nodes and call ${tool} again.`,
+            ].join(" ")
           : `${failing}. Report this to the user and stop; ${tool} takes no content you could fix.`,
       );
     }
@@ -137,6 +145,51 @@ export function asWriteToolError(
   }
 }
 
+const PLACEMENT_CODES: ReadonlySet<BlockContentValidationIssue["code"]> =
+  new Set([
+    "disallowed_child",
+    "block_not_allowed",
+    "unknown_block_type",
+    "requires_parent",
+  ]);
+
+function placementAlternative(
+  ctx: AppContext,
+  issue: BlockContentValidationIssue,
+): string | undefined {
+  if (!PLACEMENT_CODES.has(issue.code)) return undefined;
+  if (issue.slotName === undefined || issue.parentName === undefined) {
+    return `Allowed blocks: ${allowedTopLevel(ctx).join(", ")}.`;
+  }
+  const allowed = allowedChildren(ctx, issue.parentName, issue.slotName);
+  return `Slot "${issue.slotName}" of "${issue.parentName}" allows: ${allowed.join(", ") || "none"}.`;
+}
+
+function styleAlternative(
+  ctx: AppContext,
+  issue: BlockContentValidationIssue,
+): string | undefined {
+  if (issue.code !== "style_not_allowed") return undefined;
+  if (issue.property === undefined || issue.property === "className") {
+    return undefined;
+  }
+  const { category, uses } = tokensForProperty(ctx.stylePolicy, issue.property);
+  return `Tokens for "${category}": ${uses.join(", ") || "none"}.`;
+}
+
+function alternativesFor(
+  ctx: AppContext,
+  issues: IssueData["issues"],
+): readonly string[] {
+  const lines = new Set<string>();
+  for (const issue of issues) {
+    const line =
+      placementAlternative(ctx, issue) ?? styleAlternative(ctx, issue);
+    if (line !== undefined) lines.add(line);
+  }
+  return [...lines];
+}
+
 function capabilityOf(data: unknown): string {
   const capability = (data as { capability?: string } | undefined)?.capability;
   return capability === undefined ? "" : ` (needs ${capability})`;
@@ -153,7 +206,7 @@ export const contentCreateTool: McpTool<typeof createInputSchema> = {
       const written = await mcpRouterClient(ctx).entry.create(input);
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_create");
+      throw asWriteToolError(ctx, error, "content_create");
     }
   },
 };
@@ -212,7 +265,7 @@ export const contentUpdateTool: McpTool<typeof updateInputSchema> = {
       );
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asWriteToolError(error, "content_update");
+      throw asWriteToolError(ctx, error, "content_update");
     }
   },
 };

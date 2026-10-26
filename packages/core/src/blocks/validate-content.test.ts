@@ -101,6 +101,8 @@ describe("validateEntryContent", () => {
         message: 'Unknown block type "acme/widget" at blocks[0].content[0].',
         path: "blocks[0].content[0]",
         nodeName: "acme/widget",
+        parentName: "core/group",
+        slotName: "content",
       },
     ]);
   });

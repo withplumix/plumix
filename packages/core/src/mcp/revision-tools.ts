@@ -50,7 +50,7 @@ export const revisionListTool: McpTool<typeof listInputSchema> = {
         ...(cursor === undefined ? {} : { cursor }),
       });
     } catch (error) {
-      throw asWriteToolError(error, "revision_list");
+      throw asWriteToolError(ctx, error, "revision_list");
     }
   },
 };
@@ -79,7 +79,7 @@ export const revisionRestoreTool: McpTool<typeof restoreInputSchema> = {
       );
       return { id: written.id, etag: written.etag, status: written.status };
     } catch (error) {
-      throw asWriteToolError(error, "revision_restore", {
+      throw asWriteToolError(ctx, error, "revision_restore", {
         takesContent: false,
       });
     }

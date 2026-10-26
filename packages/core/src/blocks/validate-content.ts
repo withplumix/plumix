@@ -55,6 +55,7 @@ export function validateEntryContent(
     content.blocks,
     "blocks",
     null,
+    null,
     errors,
     registry,
     offered,
@@ -220,10 +221,20 @@ function keptAsStored(
   return kept;
 }
 
+function slotOf(
+  parentName: string | null,
+  slotName: string | null,
+): Pick<BlockContentValidationIssue, "parentName" | "slotName"> {
+  return parentName === null || slotName === null
+    ? {}
+    : { parentName, slotName };
+}
+
 function walk(
   nodes: readonly BlockNode[],
   basePath: string,
   parentName: string | null,
+  slotName: string | null,
   out: BlockContentValidationIssue[],
   registry: SpecLookup,
   offered: (name: string) => boolean,
@@ -240,6 +251,7 @@ function walk(
         message: `Unknown block type "${node.name}" at ${path}.`,
         path,
         nodeName: node.name,
+        ...slotOf(parentName, slotName),
       });
       return;
     }
@@ -251,6 +263,7 @@ function walk(
           : `Block "${node.name}" is not allowed by the theme at ${path}.`,
         path,
         nodeName: node.name,
+        ...slotOf(parentName, slotName),
       });
     }
     // The inverse of a slot's `allowedBlocks`: a parent-bound block may only
@@ -267,6 +280,7 @@ function walk(
           .join(", ")} at ${path}.`,
         path,
         nodeName: node.name,
+        ...slotOf(parentName, slotName),
       });
     }
     for (const key of blockSlotKeys(node, spec)) {
@@ -286,6 +300,7 @@ function walk(
             path: childPath,
             nodeName: child.name,
             slotName: key,
+            parentName: node.name,
           });
         });
       }
@@ -293,6 +308,7 @@ function walk(
         value,
         `${path}.${key}`,
         node.name,
+        key,
         out,
         registry,
         offered,

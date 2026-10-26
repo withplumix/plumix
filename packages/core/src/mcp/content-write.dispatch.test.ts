@@ -1,12 +1,18 @@
 import { describe, expect, test } from "vitest";
 
+import type { BlockSpec } from "../blocks/block-registry.js";
+import type { AllowCustomStyles } from "../blocks/styles/style-policy.js";
+import type { ThemeTokens } from "../blocks/styles/types.js";
 import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import { defineBlock } from "../blocks/block-registry.js";
 import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { definePlugin } from "../plugin/define.js";
+import { fallback } from "../route/render/template-builders.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { defineTheme } from "../theme.js";
 
 const blog = definePlugin("test-blog", {
   setup: (ctx) => {
@@ -34,6 +40,50 @@ interface ToolCallResult {
 function mcpHarness(): Promise<DispatcherHarness> {
   return createDispatcherHarness({
     config: { mcp: { enabled: true }, plugins: [blog] },
+  });
+}
+
+const card = defineBlock({
+  name: "site/card",
+  title: "Card",
+  render: () => null,
+  inputs: [{ name: "body", type: "slot", allowedBlocks: ["core/rich-text"] }],
+});
+
+const tabs = defineBlock({
+  name: "site/tabs",
+  render: () => null,
+  inputs: [{ name: "items", type: "slot" }],
+});
+
+const tab = defineBlock({
+  name: "site/tab",
+  render: () => null,
+  requiresParent: ["site/tabs"],
+});
+
+const gated = defineBlock({
+  name: "site/gated",
+  render: () => null,
+  capability: "entry:post:publish",
+});
+
+function themedMcpHarness(theme: {
+  blocks?: readonly BlockSpec[];
+  allowedBlocks?: readonly string[];
+  tokens?: ThemeTokens;
+  allowCustomStyles?: AllowCustomStyles;
+}): Promise<DispatcherHarness> {
+  return createDispatcherHarness({
+    config: {
+      mcp: { enabled: true },
+      plugins: [blog],
+      theme: defineTheme({
+        templates: [fallback(() => null)],
+        ...theme,
+        blocks: theme.blocks ?? [card],
+      }),
+    },
   });
 }
 
@@ -300,6 +350,209 @@ describe("MCP content_create and content_update", () => {
     expect(result._meta?.code).toBe("invalid_content");
     expect(result.content[0]?.text).toContain("content_create");
     expect(result.content[0]?.text).not.toContain("content_update");
+  });
+
+  test("a block the slot refuses lists that slot's allowed blocks", async () => {
+    const h = await themedMcpHarness({});
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "c1",
+            name: "site/card",
+            attrs: { body: [{ id: "v1", name: "core/video", attrs: {} }] },
+          },
+        ],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      'Slot "body" of "site/card" allows: core/rich-text.',
+    );
+  });
+
+  test("a slot whose listed blocks the theme drops says it allows none", async () => {
+    const h = await themedMcpHarness({ allowedBlocks: ["core/group"] });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "c1",
+            name: "site/card",
+            attrs: { body: [{ id: "v1", name: "core/video", attrs: {} }] },
+          },
+        ],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      'Slot "body" of "site/card" allows: none.',
+    );
+  });
+
+  test("a block the theme does not allow lists the allowed top-level blocks", async () => {
+    const h = await themedMcpHarness({ allowedBlocks: ["core/group"] });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "v1", name: "core/video", attrs: {} }],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      "Allowed blocks: core/group, site/card.",
+    );
+  });
+
+  test("a nested block the theme drops lists that slot's blocks, requires-parent children included", async () => {
+    const h = await themedMcpHarness({
+      blocks: [tabs, tab],
+      allowedBlocks: ["core/group"],
+    });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "t1",
+            name: "site/tabs",
+            attrs: { items: [{ id: "v1", name: "core/video", attrs: {} }] },
+          },
+        ],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      'Slot "items" of "site/tabs" allows: core/group, site/tabs, site/tab.',
+    );
+    expect(result.content[0]?.text).not.toContain("Allowed blocks:");
+  });
+
+  test("a requires-parent block at the top level lists the top-level blocks", async () => {
+    const h = await themedMcpHarness({
+      blocks: [tabs, tab],
+      allowedBlocks: ["core/group"],
+    });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "t1", name: "site/tab", attrs: {} }],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      "Allowed blocks: core/group, site/tabs.",
+    );
+  });
+
+  test("a block refused for a missing capability is not offered back", async () => {
+    const h = await themedMcpHarness({ blocks: [gated] });
+    const secret = await mintPat(h, { scopes: ["entry:post:create"] });
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "g1", name: "site/gated", attrs: {} }],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain("needs the");
+    expect(result.content[0]?.text).not.toMatch(
+      /Allowed blocks:[^.]*site\/gated/,
+    );
+  });
+
+  test("a forbidden style literal lists that property's tokens", async () => {
+    const h = await themedMcpHarness({
+      allowCustomStyles: false,
+      tokens: { color: { primary: { value: "#06f" } } },
+    });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "g1",
+            name: "core/group",
+            attrs: {},
+            style: { large: { color: "red" } },
+          },
+        ],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      'Tokens for "color": var(--plumix-color-primary).',
+    );
+  });
+
+  test("a forbidden literal in a category with no tokens says there are none", async () => {
+    const h = await themedMcpHarness({ allowCustomStyles: false });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [
+          {
+            id: "g1",
+            name: "core/group",
+            attrs: {},
+            style: { large: { color: "red" } },
+          },
+        ],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain('Tokens for "color": none.');
+  });
+
+  test("a refusal lists what is allowed before telling the agent to retry", async () => {
+    const h = await themedMcpHarness({ allowedBlocks: ["core/group"] });
+    const secret = await mintPat(h);
+
+    const result = await callTool(h, secret, "content_create", {
+      type: "post",
+      slug: "refused",
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "v1", name: "core/video", attrs: {} }],
+      },
+    });
+
+    expect(result.content[0]?.text).toContain(
+      "Allowed blocks: core/group, site/card. Fix these nodes and call content_create again.",
+    );
   });
 
   test("an id of another entry type is not found", async () => {

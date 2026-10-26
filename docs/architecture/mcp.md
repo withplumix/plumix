@@ -46,6 +46,8 @@ Tools served:
 | `form_list`, `form_describe`, `form_submission_list`                                                                                                                                                       | `packages/plugins/forms/src/server/mcp-tools.ts`                                       | plugin installed; submissions need `form_submission:moderate` |
 | `content_create`, `content_update`, `content_publish`, `content_discard_draft`, `content_duplicate`, `content_trash`, `content_restore`, `revision_list`, `revision_restore`, `term_create`, `term_update` | core `mcp/*-write-tools.ts`, `mcp/content-lifecycle-tools.ts`, `mcp/revision-tools.ts` | the token holds the capability                                |
 
+`schema_describe` carries no capability, so any token that reaches the endpoint can read it. With no `type` it also returns the theme's allowed blocks (inputs, slots, default styles) and the style policy with its tokens (`mcp/block-catalog.ts`); an `invalid_content` refusal from `content_create`/`content_update` appends the allowed blocks for the refused slot, or the tokens for the refused property.
+
 The endpoint has no stdio transport, no resources, no prompts and no SSE (`GET` answers 405).
 
 ## How it works
