@@ -23,7 +23,7 @@
     "eslint-plugin-lingui": "^0.16.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-sonarjs": "^4.2.2",
-    "eslint-plugin-turbo": "^2.11.7",
+    "eslint-plugin-turbo": "^2.11.9",
     "typescript-eslint": "^8"
   },
   "devDependencies": {
