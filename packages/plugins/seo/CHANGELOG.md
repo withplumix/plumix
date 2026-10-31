@@ -1,5 +1,21 @@
 # @plumix/plugin-seo
 
+## 0.5.0
+
+### Minor Changes
+
+- [#3491](https://github.com/withplumix/plumix/pull/3491) [`65a1e0c`](https://github.com/withplumix/plumix/commit/65a1e0c275d5d163584f3183362ad4c3dcac757c) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the plugin's RPC router in its descriptor's type, so a test site that installs it lists its procedures on `site.rpc.seo`. The plugin now depends on `@orpc/server`, since its published types name it.
+
+- [#3380](https://github.com/withplumix/plumix/pull/3380) [`f7b6dfb`](https://github.com/withplumix/plumix/commit/f7b6dfb5deaa60e4bfd3e52bbdca409ed9f34eb2) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes IndexNow notification and the IndexNow key setting. A site that set a key no longer pings search engines when an entry is published, and `/indexnow-key.txt` now answers 404; the sitemap still tells engines what changed.
+
+### Patch Changes
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3403](https://github.com/withplumix/plumix/pull/3403) [`069e7f4`](https://github.com/withplumix/plumix/commit/069e7f43dc66c8167d47159fb9892732ed315d69) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an SEO settings save emptying every cached page and sitemap: a save now purges only the responses that read the group it wrote, so saving a hand-written `robots.txt` keeps pages and sitemaps stored at the edge. Feeds still refresh on a `site` settings save.
+
+- [#3417](https://github.com/withplumix/plumix/pull/3417) [`181d653`](https://github.com/withplumix/plumix/commit/181d653381b99bf8312c0206cbbdff9918016390) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a taxonomy's sitemap staying cached after a term is created or deleted when the taxonomy lists no entry types. Every taxonomy's sitemap and the sitemap index are now purged by a term create or delete in it, and a taxonomy's sitemap is no longer purged when an entry is published.
+
 ## 0.4.1
 
 ### Patch Changes

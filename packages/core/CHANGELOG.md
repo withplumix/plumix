@@ -1,5 +1,21 @@
 # @plumix/core
 
+## 0.27.0
+
+### Minor Changes
+
+- [#3501](https://github.com/withplumix/plumix/pull/3501) [`bdb8718`](https://github.com/withplumix/plumix/commit/bdb8718c76b553b5da40e9668a766406db9d2fd9) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds authorization discovery to the MCP endpoint. It serves RFC 9728 protected-resource metadata at `/.well-known/oauth-protected-resource` and at the path-specific URI for `/_plumix/mcp`, including under a `basePath`. A 401 now carries a `WWW-Authenticate: Bearer` challenge with `resource_metadata` and `scope`. An MCP tool can declare the `capability` it needs, and a token whose capabilities don't cover it gets 403 `insufficient_scope` naming the scope to ask for.
+
+### Patch Changes
+
+- [#3431](https://github.com/withplumix/plumix/pull/3431) [`f739142`](https://github.com/withplumix/plumix/commit/f739142caf44f5b5d0a90fb990203ef90fc344d4) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `auth.apiTokens.create`, `auth.deviceFlow.approve` and `user.requestEmailChange` accepting an API-token caller. They now need a signed-in session, and an API-token request gets `UNAUTHORIZED`.
+
+- [#3414](https://github.com/withplumix/plumix/pull/3414) [`484d78a`](https://github.com/withplumix/plumix/commit/484d78a1baff570b72b4415dc73531d3f301587b) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `ctx.registerMark` accepting a core mark's name such as `bold` or `highlight`: a plugin mark that reuses a core mark name now throws at setup. Name plugin marks `pluginId/markName`.
+
+- [#3430](https://github.com/withplumix/plumix/pull/3430) [`4598b09`](https://github.com/withplumix/plumix/commit/4598b09d1dc0d47494d199fcfe573d94f00c37e6) Thanks [@nasyrov](https://github.com/nasyrov)! - Marks `actingAs` and `openPlaygroundDb` from `plumix/test/playwright` as stable: neither carries `@experimental` any more, and their signatures and behavior are unchanged.
+
+- [#3428](https://github.com/withplumix/plumix/pull/3428) [`fff1361`](https://github.com/withplumix/plumix/commit/fff13613a4d8190639c94d750fc2c043ac7f7c3d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the admin-area list for a browser asking for Traditional Chinese (`zh-TW`, `zh-HK`): it is now English instead of Simplified Chinese. Negotiation follows the CLDR parent locales, so `de-AT` still gets German and `zh-SG` gets Simplified Chinese.
+
 ## 0.26.0
 
 ### Patch Changes

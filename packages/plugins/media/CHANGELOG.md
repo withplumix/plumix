@@ -1,5 +1,23 @@
 # @plumix/plugin-media
 
+## 0.12.0
+
+### Minor Changes
+
+- [#3486](https://github.com/withplumix/plumix/pull/3486) [`2f28426`](https://github.com/withplumix/plumix/commit/2f284267888bf0f356af50ad1212c52e4c47356f) Thanks [@nasyrov](https://github.com/nasyrov)! - Marks the image block's picked image, alt text and caption as content inputs, so a writer without `edit_layout` can still swap an image and fix its text.
+
+- [#3491](https://github.com/withplumix/plumix/pull/3491) [`65a1e0c`](https://github.com/withplumix/plumix/commit/65a1e0c275d5d163584f3183362ad4c3dcac757c) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the plugin's RPC router in its descriptor's type, so a test site that installs it lists its procedures on `site.rpc.media`. The plugin now depends on `@orpc/server`, since its published types name it.
+
+### Patch Changes
+
+- [#3506](https://github.com/withplumix/plumix/pull/3506) [`2284a0b`](https://github.com/withplumix/plumix/commit/2284a0b71cc85d43a5575a077fcc5c5f8fd45245) Thanks [@nasyrov](https://github.com/nasyrov)! - Capabilities now name the default roles that receive them. `registerCapability(name, { grantTo: ["editor"] })` grants a plugin capability to exactly those roles plus `admin`, and one registered without `grantTo` goes to `admin` alone. An entry type's or taxonomy's `capabilities` override maps an action to a list of roles, such as `{ delete: ["author", "editor"] }`. Two types that pool one `capabilityType` with different grants now boot and combine them, where they used to throw. The registered capability carries `grantTo` in place of `minRole` and `defaultGrants`. The `minRole` forms keep working for now, and the first-party plugins use the new form, with every role's rights unchanged.
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3419](https://github.com/withplumix/plumix/pull/3419) [`8245b97`](https://github.com/withplumix/plumix/commit/8245b979410efbf53e4e44788488c82e041c9659) Thanks [@nasyrov](https://github.com/nasyrov)! - Defines the media plugin with the `definePlugin` descriptor form, so it keeps working now that the function form is removed. It registers the same blocks, field types, routes and admin page as before.
+
+- [#3407](https://github.com/withplumix/plumix/pull/3407) [`e9b274c`](https://github.com/withplumix/plumix/commit/e9b274c631482eb1549b09bc3c92e84167c76f6b) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes stale cached pages after a media edit: updating a media item's title or alt text, deleting it, or confirming an upload now purges the pages that show it, including a page that shows it through a media field or an image role.
+
 ## 0.11.1
 
 ### Patch Changes
