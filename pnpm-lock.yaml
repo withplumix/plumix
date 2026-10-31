@@ -2504,9 +2504,6 @@ importers:
       drizzle-orm:
         specifier: catalog:drizzle
         version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
-      esbuild:
-        specifier: 'catalog:'
-        version: 0.28.2
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
