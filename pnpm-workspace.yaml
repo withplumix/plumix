@@ -125,12 +125,12 @@ catalogs:
     "@lingui/react": ^6.9.1
     "@lingui/vite-plugin": ^6.9.1
   orpc:
-    "@orpc/client": ^1.15.6
-    "@orpc/openapi": ^1.15.6
-    "@orpc/server": ^1.15.6
-    "@orpc/standard-server-fetch": ^1.15.6
-    "@orpc/tanstack-query": ^1.15.6
-    "@orpc/valibot": ^1.15.6
+    "@orpc/client": ^1.15.7
+    "@orpc/openapi": ^1.15.7
+    "@orpc/server": ^1.15.7
+    "@orpc/standard-server-fetch": ^1.15.7
+    "@orpc/tanstack-query": ^1.15.7
+    "@orpc/valibot": ^1.15.7
   oslojs:
     "@oslojs/encoding": ^1.1.0
   react:
