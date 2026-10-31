@@ -1099,6 +1099,9 @@ importers:
       highlight.js:
         specifier: ^11.12.0
         version: 11.12.0
+      mrmime:
+        specifier: ^2.0.1
+        version: 2.0.1
       sanitize-html:
         specifier: ^2.18.0
         version: 2.18.0
