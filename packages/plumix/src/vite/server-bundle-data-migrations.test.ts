@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Rolldown } from "vite";
@@ -21,7 +27,8 @@ describe("a server bundle of a site that declares data migrations", () => {
   let warnings: unknown[];
 
   beforeAll(async () => {
-    dir = mkdtempSync(join(tmpdir(), "plumix-server-data-"));
+    // Real, as the module ids it is compared with are.
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "plumix-server-data-")));
     const plugin = join(dir, "node_modules/@acme/plugin-flags");
     mkdirSync(plugin, { recursive: true });
     writeFileSync(

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 
@@ -57,6 +57,14 @@ export function siteRootOf(configPath: string): string {
   return nearestPackageRoot(configPath) ?? dirname(configPath);
 }
 
+/**
+ * Compared by real path: module resolution follows symlinks, and a config
+ * path need not, as under macOS's `/var` or a linked projects folder.
+ */
+export function isSitePackage(root: string, siteRoot: string): boolean {
+  return realpathSync(root) === realpathSync(siteRoot);
+}
+
 /** `null` for the site itself. */
 function schemaOwnerRoot(
   cwd: string,
@@ -64,7 +72,7 @@ function schemaOwnerRoot(
   schemaModule: string,
 ): string | null {
   const root = nearestPackageRoot(resolveSchemaModule(cwd, schemaModule));
-  return root === null || root === siteRoot ? null : root;
+  return root === null || isSitePackage(root, siteRoot) ? null : root;
 }
 
 /**

@@ -6,6 +6,7 @@ import type { PlumixConfig } from "@plumix/core";
 
 import { PlumixCliError } from "../errors.js";
 import {
+  isSitePackage,
   nearestPackageRoot,
   readPackageName,
   SITE_SCHEMA_OUT,
@@ -62,7 +63,7 @@ export function resolveDataMigrationModules(
     if (!plugin.dataMigrations) continue;
     const file = resolvePluginModule(cwd, plugin.dataMigrations);
     const root = nearestPackageRoot(file);
-    if (root === null || root === siteRoot) {
+    if (root === null || isSitePackage(root, siteRoot)) {
       add(site, file);
       continue;
     }

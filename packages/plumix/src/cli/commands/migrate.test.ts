@@ -6,6 +6,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -740,6 +741,35 @@ async up({ db }) {
         "@acme/plugin-a: applied 1 data migration",
         "site: applied 3 data migrations",
       ]);
+    });
+
+    test("a site reached through a symlink still runs the plugin modules inside it after every plugin package", async () => {
+      // A path through a symlink: macOS's `/var`, a linked projects folder.
+      const real = dir;
+      dir = `${real}-link`;
+      symlinkSync(real, dir, "dir");
+      try {
+        installDataMigrations("@acme/plugin-a", recording("a1"));
+        writeFileSync(join(dir, "local-data.mjs"), recording("local1"));
+
+        await migrateCommand.run(
+          applyCtx(
+            [],
+            [
+              dataPlugin("local", "../local-data.mjs"),
+              dataPlugin("a", "@acme/plugin-a/data-migrations"),
+            ],
+          ),
+        );
+
+        expect(query("SELECT name FROM runs ORDER BY n")).toEqual([
+          { name: "a1" },
+          { name: "local1" },
+        ]);
+      } finally {
+        rmSync(dir);
+        dir = real;
+      }
     });
     // `broken` throws until the `fixed` setting exists; `first` and `after`
     // are its neighbours in the plugin's list, `site1` is the site's.
