@@ -60,8 +60,23 @@ describe("resolveAssetPath", () => {
       resolveAssetPath(ROOT, path)?.headers["content-type"];
     expect(type("/logo.SVG")).toBe("image/svg+xml");
     expect(type("/site.webmanifest")).toBe("application/manifest+json");
-    expect(type("/archive.tar.gz")).toBe("application/octet-stream");
+    expect(type("/archive.tar.gz")).toBe("application/gzip");
+    expect(type("/export.plumix-backup")).toBe("application/octet-stream");
     expect(type("/LICENSE")).toBe("application/octet-stream");
+  });
+
+  test("a module script and the files a site's public dir holds get their own types", () => {
+    const type = (path: string) =>
+      resolveAssetPath(ROOT, path)?.headers["content-type"];
+    // A browser refuses a module script served as anything but JavaScript.
+    expect(type("/_plumix/admin/plugins/media/locales/en.mjs")).toBe(
+      "text/javascript; charset=utf-8",
+    );
+    expect(type("/data.json")).toBe("application/json; charset=utf-8");
+    expect(type("/guide.pdf")).toBe("application/pdf");
+    expect(type("/intro.mp4")).toBe("video/mp4");
+    expect(type("/fonts/inter.otf")).toBe("font/otf");
+    expect(type("/favicon.ico")).toBe("image/x-icon");
   });
 
   test("only the hashed-assets prefix is cached as immutable", () => {

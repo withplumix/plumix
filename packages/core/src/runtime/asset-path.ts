@@ -1,24 +1,8 @@
-const CONTENT_TYPES: Readonly<Record<string, string>> = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".map": "application/json; charset=utf-8",
-  ".txt": "text/plain; charset=utf-8",
-  ".xml": "application/xml; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".avif": "image/avif",
-  ".ico": "image/x-icon",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-  ".ttf": "font/ttf",
-  ".wasm": "application/wasm",
-  ".webmanifest": "application/manifest+json",
+import { lookup } from "mrmime";
+
+/** Missing from mrmime's table. */
+const EXTRA_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  ico: "image/x-icon",
 };
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
@@ -34,8 +18,12 @@ export interface AssetPath {
 
 function contentType(name: string): string {
   const dot = name.lastIndexOf(".");
-  const extension = dot <= 0 ? "" : name.slice(dot).toLowerCase();
-  return CONTENT_TYPES[extension] ?? "application/octet-stream";
+  const extension = dot <= 0 ? "" : name.slice(dot + 1).toLowerCase();
+  const type = EXTRA_CONTENT_TYPES[extension] ?? lookup(extension);
+  if (type === undefined) return "application/octet-stream";
+  return type.startsWith("text/") || type === "application/json"
+    ? `${type}; charset=utf-8`
+    : type;
 }
 
 /**
