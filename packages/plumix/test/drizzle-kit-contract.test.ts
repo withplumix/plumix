@@ -3,11 +3,14 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   afterEach,
   beforeAll,
@@ -67,9 +70,23 @@ function generate(): Promise<string> {
   );
 }
 
+/**
+ * The schema imports `drizzle-orm` from the project, as a site's does; outside
+ * it only pnpm's `NODE_PATH` would find one, which a runner need not set.
+ */
+const DRIZZLE_ORM = realpathSync(
+  fileURLToPath(new URL("../node_modules/drizzle-orm", import.meta.url)),
+);
+
+function installDrizzleOrm(project: string): void {
+  mkdirSync(join(project, "node_modules"));
+  symlinkSync(DRIZZLE_ORM, join(project, "node_modules/drizzle-orm"), "dir");
+}
+
 function makeProjectDir(): void {
   dir = mkdtempSync(join(tmpdir(), "plumix-drizzle-contract-"));
   writeFileSync(join(dir, "schema.ts"), SCHEMA, "utf8");
+  installDrizzleOrm(dir);
 }
 
 /**
@@ -160,6 +177,7 @@ describe("plumix migrate generate on a site's own tables", () => {
   beforeEach(() => {
     site = mkdtempSync(join(tmpdir(), "plumix-site-generate-"));
     writeFileSync(join(site, "package.json"), JSON.stringify({ name: "site" }));
+    installDrizzleOrm(site);
     mkdirSync(join(site, "src"));
     writeFileSync(join(site, "src/core-stub.ts"), CORE_STUB, "utf8");
     writeFileSync(join(site, "src/schema.ts"), BOOKMARKS, "utf8");
