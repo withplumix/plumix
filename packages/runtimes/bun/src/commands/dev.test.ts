@@ -1,6 +1,7 @@
 import {
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -31,6 +32,7 @@ import { bun, bunSqlite } from "@plumix/runtime-bun";
 import { greeting } from "./greeting.mjs";
 
 const probes = definePlugin("probes", { setup: (ctx) => {
+  ctx.registerEntryType("probe", { label: ${JSON.stringify(tagline)} });
   ctx.registerPublicRoute({ path: "/probe/greeting", handler: () => new Response(greeting) });
   ctx.registerPublicRoute({ path: "/probe/tagline", handler: () => new Response(${JSON.stringify(tagline)}) });
   ctx.registerPublicRoute({
@@ -160,5 +162,30 @@ describe("plumix dev on the bun runtime", { timeout: 240_000 }, () => {
     writeFileSync(join(dir, CONFIG_FILE), config(dir, "second"));
 
     await expect.poll(() => text("/probe/tagline"), POLL).toBe("second");
+  });
+
+  test("editing the config restages the admin from the edited config", async () => {
+    // The admin's manifest comes from the CLI's own read of the config, not
+    // from the module runner that serves requests.
+    const probeLabel = () => {
+      const html = readFileSync(
+        join(dir, ".plumix/public/_plumix/admin/index.html"),
+        "utf8",
+      );
+      const json =
+        /<script id="plumix-manifest"[^>]*>([\s\S]*?)<\/script>/.exec(
+          html,
+        )?.[1];
+      const manifest = JSON.parse(json ?? "{}") as {
+        entryTypes?: readonly { name: string; label: string }[];
+      };
+      return manifest.entryTypes?.find((type) => type.name === "probe")?.label;
+    };
+    // Where the previous case left it.
+    await expect.poll(probeLabel, POLL).toBe("second");
+
+    writeFileSync(join(dir, CONFIG_FILE), config(dir, "restaged"));
+
+    await expect.poll(probeLabel, POLL).toBe("restaged");
   });
 });

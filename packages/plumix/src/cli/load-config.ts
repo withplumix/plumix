@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createJiti } from "jiti";
@@ -72,7 +72,18 @@ async function evaluateConfig(
 
   let imported: unknown;
   try {
-    imported = await jiti.import(configPath, { default: true });
+    // Node's module cache keeps a native `.mjs` config's first evaluation, so
+    // Node transpiles it. Bun reloads edits natively, and rejects the stack
+    // hook jiti's Babel installs.
+    const module =
+      "Bun" in globalThis
+        ? await jiti.import(configPath)
+        : await jiti.evalModule(readFileSync(configPath, "utf8"), {
+            filename: configPath,
+            async: true,
+            forceTranspile: true,
+          });
+    imported = (module as { default?: unknown } | undefined)?.default ?? module;
   } catch (cause) {
     throw PlumixCliError.configLoadFailed({ configPath, cause });
   }
