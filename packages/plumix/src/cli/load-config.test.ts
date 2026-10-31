@@ -63,6 +63,43 @@ describe("loadConfig", () => {
     expect(afterRefresh.config).toBe(refreshed.config);
   });
 
+  // Node would import these itself, and its module cache never forgets one.
+  test.each([
+    ["an `.mjs` config", "plumix.config.mjs", null],
+    ["a `.js` config in an ESM package", "plumix.config.js", "module"],
+  ])("`fresh` reads an edit to %s", async (_name, file, type) => {
+    const dir = mkdtempSync(join(tmpdir(), "plumix-loadconfig-"));
+    if (type) {
+      writeFileSync(join(dir, "package.json"), JSON.stringify({ type }));
+    }
+    const config = (kind: string) =>
+      `export default { runtime: { name: "test", handler: {}, generateEntry: () => "" }, database: { kind: "${kind}" }, auth: { passkey: {} } };`;
+    writeFileSync(join(dir, file), config("before"));
+    await loadConfig(dir);
+
+    writeFileSync(join(dir, file), config("after"));
+    const { config: reloaded } = await loadConfig(dir, undefined, {
+      fresh: true,
+    });
+
+    expect(reloaded.database.kind).toBe("after");
+  });
+
+  test("loads a config that awaits at its top level", async () => {
+    const dir = writeFixtureDir(
+      `const kind = await Promise.resolve("awaited");
+export default {
+  runtime: { name: "test", handler: {}, generateEntry: () => "" },
+  database: { kind },
+  auth: { passkey: {} },
+};`,
+    );
+
+    const { config } = await loadConfig(dir);
+
+    expect(config.database.kind).toBe("awaited");
+  });
+
   // A module that evaluates cleanly but is not a config must be rejected
   // here rather than reach the runtime as one.
   test.each([
