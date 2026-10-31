@@ -1,6 +1,6 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -32,6 +32,37 @@ function emptyRegistry() {
 }
 
 let workspace: string;
+
+type Registration = readonly [verb: string, ...args: unknown[]];
+
+/** Runs the bundle against a host `window.plumix` that records each call. */
+async function registrationsOf(adminDest: string): Promise<Registration[]> {
+  const calls: Registration[] = [];
+  const host = new Proxy(
+    {},
+    {
+      get:
+        (_target, verb) =>
+        (...args: unknown[]) => {
+          calls.push([String(verb), ...args]);
+        },
+    },
+  );
+  vi.stubGlobal("window", { plumix: host });
+  try {
+    await import(
+      /* @vite-ignore */ pathToFileURL(
+        resolve(adminDest, "plugins/site-bundle.js"),
+      ).href
+    );
+  } finally {
+    vi.unstubAllGlobals();
+  }
+  return calls;
+}
+
+/** A component the bundle passes on, matched by the name `keepNames` keeps. */
+const component = (name: string): unknown => expect.objectContaining({ name });
 
 beforeEach(async () => {
   workspace = await mkdtemp(resolve(tmpdir(), "plumix-assembler-"));
@@ -90,7 +121,7 @@ describe("resolveAndValidateEntry", () => {
 
 describe("assemblePluginAdminBundle", () => {
   test("preserves side-effect imports even when the plugin package declares sideEffects: false", async () => {
-    // With `"sideEffects": false`, esbuild treated the bare side-effect import
+    // With `"sideEffects": false`, the bundler treated the bare side-effect import
     // as removable and the bundle came out empty.
     const pkgDir = resolve(workspace, "node_modules/@fixture/plugin");
     await mkdir(pkgDir, { recursive: true });
@@ -125,6 +156,159 @@ describe("assemblePluginAdminBundle", () => {
     const bundlePath = resolve(adminDest, "plugins/site-bundle.js");
     const bundle = await readFile(bundlePath, "utf8");
     expect(bundle).toContain("__plumix_admin_marker__");
+  });
+
+  test("builds from a `use client` module without printing a warning", async () => {
+    // A site's `plumix build` prints whatever this build does.
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      '"use client";\nglobalThis.__client__ = true;\n',
+    );
+    const warn = vi.spyOn(console, "warn");
+    const log = vi.spyOn(console, "log");
+
+    try {
+      await assemblePluginAdminBundle({
+        plugins: [plugin("./src/admin.ts") as AssemblerPlugin],
+        registry: emptyRegistry(),
+        adminDest: resolve(workspace, "dist"),
+        projectRoot: workspace,
+      });
+
+      expect(warn).not.toHaveBeenCalled();
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+      log.mockRestore();
+    }
+  });
+
+  test("keeps a bundled dependency's licence comment (ADR 0043)", async () => {
+    const pkgDir = resolve(workspace, "node_modules/@fixture/licensed");
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(
+      resolve(pkgDir, "package.json"),
+      JSON.stringify({ name: "@fixture/licensed", type: "module" }),
+    );
+    await writeFile(
+      resolve(pkgDir, "index.js"),
+      "/*! @license Fixture v1 | MIT */\nexport const licensed = () => 1;\n",
+    );
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      'import { licensed } from "@fixture/licensed";\nglobalThis.__licensed__ = licensed;\n',
+    );
+
+    const adminDest = resolve(workspace, "dist");
+    await assemblePluginAdminBundle({
+      plugins: [plugin("./src/admin.ts") as AssemblerPlugin],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    expect(
+      await readFile(resolve(adminDest, "plugins/site-bundle.js"), "utf8"),
+    ).toContain("@license Fixture v1 | MIT");
+  });
+
+  test("puts lazily imported plugin code in the one file the admin loads", async () => {
+    // A split chunk would load from the site root, not from beside the bundle.
+    await writeFile(
+      resolve(workspace, "src/lazy.ts"),
+      'export const lazy = "__lazy_chunk__";\n',
+    );
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      'globalThis.__lazy__ = () => import("./lazy.js");\n',
+    );
+
+    const adminDest = resolve(workspace, "dist");
+    await assemblePluginAdminBundle({
+      plugins: [plugin("./src/admin.ts") as AssemblerPlugin],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    const scripts = (await readdir(resolve(adminDest, "plugins"))).filter(
+      (file) => file.endsWith(".js"),
+    );
+    expect(scripts).toEqual(["site-bundle.js"]);
+    expect(
+      await readFile(resolve(adminDest, "plugins/site-bundle.js"), "utf8"),
+    ).toContain("__lazy_chunk__");
+  });
+
+  test("leaves the plugin files already staged beside the bundle", async () => {
+    const adminDest = resolve(workspace, "dist");
+    const catalog = resolve(adminDest, "plugins/media/locales/en.mjs");
+    await mkdir(dirname(catalog), { recursive: true });
+    await writeFile(catalog, "export const messages = {};\n");
+
+    await assemblePluginAdminBundle({
+      plugins: [plugin("./src/admin.ts") as AssemblerPlugin],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    expect(await readFile(catalog, "utf8")).toBe(
+      "export const messages = {};\n",
+    );
+  });
+
+  test("drops the unused modules of a dependency that declares sideEffects: false", async () => {
+    // An icon library's barrel: each icon is a call, so only the package's
+    // `sideEffects: false` lets the unused ones go.
+    const iconsDir = resolve(workspace, "node_modules/@fixture/icons");
+    await mkdir(iconsDir, { recursive: true });
+    await writeFile(
+      resolve(iconsDir, "package.json"),
+      JSON.stringify({
+        name: "@fixture/icons",
+        version: "0.0.0",
+        type: "module",
+        sideEffects: false,
+        main: "./index.js",
+      }),
+    );
+    await writeFile(
+      resolve(iconsDir, "index.js"),
+      'export { used } from "./used.js";\nexport { unused } from "./unused.js";\n',
+    );
+    await writeFile(
+      resolve(iconsDir, "make.js"),
+      "export const make = (name) => ({ name });\n",
+    );
+    await writeFile(
+      resolve(iconsDir, "used.js"),
+      'import { make } from "./make.js";\nexport const used = make("__used_icon__");\n',
+    );
+    await writeFile(
+      resolve(iconsDir, "unused.js"),
+      'import { make } from "./make.js";\nexport const unused = make("__unused_icon__");\n',
+    );
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      'import { used } from "@fixture/icons";\nglobalThis.__icon__ = used;\n',
+    );
+
+    const adminDest = resolve(workspace, "dist");
+    await mkdir(adminDest, { recursive: true });
+    await assemblePluginAdminBundle({
+      plugins: [plugin("./src/admin.ts") as AssemblerPlugin],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+    });
+
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain("__used_icon__");
+    expect(bundle).not.toContain("__unused_icon__");
   });
 
   test("registers config block modules into the admin (no adminEntry needed)", async () => {
@@ -258,16 +442,10 @@ describe("assemblePluginAdminBundle", () => {
     });
 
     expect(result).not.toBeNull();
-    const bundle = await readFile(
-      resolve(adminDest, "plugins/site-bundle.js"),
-      "utf8",
-    );
-    // Minified output preserves the registration verbs as method names
-    // and the path / type strings as literals.
-    expect(bundle).toContain("registerPluginPage");
-    expect(bundle).toContain('"/auto"');
-    expect(bundle).toContain("registerPluginFieldType");
-    expect(bundle).toContain('"mediaPicker"');
+    expect(await registrationsOf(adminDest)).toEqual([
+      ["registerPluginPage", "/auto", component("MediaLibrary")],
+      ["registerPluginFieldType", "mediaPicker", component("MediaPicker")],
+    ]);
   });
 
   test("auto-emits register* calls for plugin mark adminSchema refs", async () => {
@@ -318,12 +496,13 @@ describe("assemblePluginAdminBundle", () => {
     });
 
     expect(result).not.toBeNull();
-    const bundle = await readFile(
-      resolve(adminDest, "plugins/site-bundle.js"),
-      "utf8",
-    );
-    expect(bundle).toContain("registerPluginMarkSchema");
-    expect(bundle).toContain('"acme/highlight-warning"');
+    expect(await registrationsOf(adminDest)).toEqual([
+      [
+        "registerPluginMarkSchema",
+        "acme/highlight-warning",
+        { name: "acme/highlight-warning" },
+      ],
+    ]);
   });
 
   test("auto-emits a register call for a plugin's declared dashboard widget", async () => {
@@ -357,16 +536,9 @@ describe("assemblePluginAdminBundle", () => {
       projectRoot: workspace,
     });
 
-    const bundle = await readFile(
-      resolve(adminDest, "plugins/site-bundle.js"),
-      "utf8",
-    );
-    expect(bundle).toContain("registerPluginDashboardWidget");
-    expect(bundle).toContain('"acme:stats"');
-    // Inside the `window.plumix` guard, bound to the plugin's `Widget` export.
-    expect(bundle).toMatch(
-      /var (\w+)=\w+\(\(\)=>null,"Widget"\);var (\w+)=window\.plumix;\2&&\2\.registerPluginDashboardWidget\("acme:stats",\1\);/,
-    );
+    expect(await registrationsOf(adminDest)).toEqual([
+      ["registerPluginDashboardWidget", "acme:stats", component("Widget")],
+    ]);
   });
 
   test("emits a dashboard widget only against the plugin that registered it", async () => {
@@ -414,17 +586,14 @@ describe("assemblePluginAdminBundle", () => {
       projectRoot: workspace,
     });
 
-    const bundle = await readFile(
-      resolve(adminDest, "plugins/site-bundle.js"),
-      "utf8",
-    );
-    expect(bundle.match(/registerPluginDashboardWidget\(/g)).toHaveLength(2);
-    expect(bundle).toMatch(
-      /var (\w+)=\w+\(\(\)=>null,"Widget"\);.*registerPluginDashboardWidget\("acme:stats",\1\)/,
-    );
-    expect(bundle).toMatch(
-      /var (\w+)=\w+\(\(\)=>0,"OtherWidget"\);.*registerPluginDashboardWidget\("other:stats",\1\)/,
-    );
+    expect(await registrationsOf(adminDest)).toEqual([
+      ["registerPluginDashboardWidget", "acme:stats", component("Widget")],
+      [
+        "registerPluginDashboardWidget",
+        "other:stats",
+        component("OtherWidget"),
+      ],
+    ]);
   });
 });
 

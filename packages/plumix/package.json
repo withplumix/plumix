@@ -232,7 +232,6 @@
     "@tailwindcss/node": "catalog:tailwind",
     "@tailwindcss/oxide": "catalog:tailwind",
     "drizzle-kit": "catalog:drizzle",
-    "esbuild": "catalog:",
     "jiti": "^2.7.0",
     "tailwindcss": "catalog:tailwind",
     "valibot": "catalog:"

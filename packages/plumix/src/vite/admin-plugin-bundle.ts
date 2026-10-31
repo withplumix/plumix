@@ -1,11 +1,11 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin as EsbuildPlugin } from "esbuild";
+import type { Plugin as VitePlugin } from "vite";
 import { compile, optimize } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
-import { build } from "esbuild";
+import { build } from "vite";
 
 import type {
   AnyPluginDescriptor,
@@ -24,6 +24,7 @@ import {
   blockSpecsArrayExpr,
 } from "./block-module-resolver.js";
 import { VitePluginError } from "./errors.js";
+import { withoutUseClientWarning } from "./use-client-warning.js";
 
 // Bare imports of `react` etc. in the plugin source get aliased to
 // `plumix/admin/<lib>` shims that read from `window.plumix.runtime.*`
@@ -33,6 +34,8 @@ import { VitePluginError } from "./errors.js";
 interface AssembledBundle {
   readonly chunkFile: string;
   readonly cssFile?: string;
+  /** The files it was built from, which a dev server watches. */
+  readonly sourceFiles: readonly string[];
 }
 
 /**
@@ -125,27 +128,40 @@ export async function assemblePluginAdminBundle({
   const pluginsOutDir = resolve(adminDest, "plugins");
   await mkdir(pluginsOutDir, { recursive: true });
 
-  await build({
-    entryPoints: [entryFile],
-    outfile: resolve(pluginsOutDir, "site-bundle.js"),
-    bundle: true,
-    format: "esm",
-    platform: "browser",
-    target: "es2022",
-    minify: true,
-    // Preserves class identifiers through minification. The error-class
-    // `static {}` blocks already pin `error.name` to a string literal,
-    // but `error.constructor.name` would otherwise surface the mangled
-    // identifier (`class PasskeyError` → `class e`).
-    keepNames: true,
-    logLevel: "warning",
+  const output = await build({
+    configFile: false,
+    envDir: false,
+    root: projectRoot,
+    publicDir: false,
+    logLevel: "warn",
     define: { "process.env.NODE_ENV": '"production"' },
-    plugins: [pluginRuntimeAliasPlugin()],
-    nodePaths: [resolve(projectRoot, "node_modules")],
-    absWorkingDir: projectRoot,
-    // A plugin's `"sideEffects": false` would let esbuild tree-shake its
-    // side-effect-only admin entry into a 0-byte bundle.
-    ignoreAnnotations: true,
+    plugins: [
+      pluginRuntimeAliasPlugin(),
+      keepAdminEntriesPlugin(resolvedEntries),
+    ],
+    build: {
+      outDir: pluginsOutDir,
+      emptyOutDir: false,
+      target: "es2022",
+      minify: true,
+      reportCompressedSize: false,
+      rolldownOptions: {
+        input: entryFile,
+        onLog: withoutUseClientWarning(undefined),
+        output: {
+          format: "es",
+          entryFileNames: "site-bundle.js",
+          // One file, which `index.html` names.
+          codeSplitting: false,
+          // `error.constructor.name` would otherwise surface the mangled
+          // identifier (`class PasskeyError` → `class e`).
+          keepNames: true,
+          // Vite drops them on minify; this bundle carries its notices inline
+          // (ADR 0043).
+          comments: { legal: true },
+        },
+      },
+    },
   });
 
   const hasCss = await compilePluginCss({
@@ -158,7 +174,30 @@ export async function assemblePluginAdminBundle({
   return {
     chunkFile: "site-bundle.js",
     cssFile: hasCss ? "site-bundle.css" : undefined,
+    sourceFiles: bundledSourceFiles(output, entryFile),
   };
+}
+
+/** Installed packages left out: nobody edits them under a dev server. */
+function bundledSourceFiles(
+  output: Awaited<ReturnType<typeof build>>,
+  entryFile: string,
+): string[] {
+  const outputs = Array.isArray(output)
+    ? output
+    : "output" in output
+      ? [output]
+      : [];
+  return outputs
+    .flatMap(({ output: files }) =>
+      files.flatMap((file) => (file.type === "chunk" ? file.moduleIds : [])),
+    )
+    .filter(
+      (id) =>
+        isAbsolute(id) &&
+        id !== entryFile &&
+        !id.includes(`${sep}node_modules${sep}`),
+    );
 }
 
 /**
@@ -340,15 +379,36 @@ const SHIM_PATHS: Readonly<Record<string, string>> = Object.fromEntries(
   }),
 );
 
-function pluginRuntimeAliasPlugin(): EsbuildPlugin {
+function pluginRuntimeAliasPlugin(): VitePlugin {
   return {
     name: "plumix:plugin-runtime-alias",
-    setup(buildApi) {
-      buildApi.onResolve({ filter: /.*/ }, (args) => {
-        const target = SHIM_PATHS[args.path];
-        if (target === undefined) return null;
-        return { path: target };
+    // Ahead of Vite's resolver, which would find the package itself.
+    enforce: "pre",
+    resolveId(source) {
+      return SHIM_PATHS[source] ?? null;
+    },
+  };
+}
+
+/**
+ * A plugin's `"sideEffects": false` would tree-shake its side-effect-only
+ * admin entry away. Overriding only the entries keeps the flag pruning
+ * their dependencies, such as an icon barrel.
+ */
+function keepAdminEntriesPlugin(entries: readonly string[]): VitePlugin {
+  const entrySet = new Set(entries);
+  return {
+    name: "plumix:keep-admin-entries",
+    enforce: "pre",
+    async resolveId(source, importer, options) {
+      if (!entrySet.has(source)) return null;
+      // Vite's own resolution, so a workspace plugin's entry gets its real
+      // path rather than the `node_modules` link to it.
+      const resolved = await this.resolve(source, importer, {
+        ...options,
+        skipSelf: true,
       });
+      return resolved && { ...resolved, moduleSideEffects: true };
     },
   };
 }

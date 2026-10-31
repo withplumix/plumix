@@ -138,6 +138,39 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   // Discovered at config() time so rollupOptions.input can be extended
   // before Vite resolves entries.
   let islands: readonly DiscoveredIsland[] = [];
+  let prepared: Promise<void> | undefined;
+  // The last config staged, which a dev server restages on an admin edit.
+  let emitted: Regenerated | undefined;
+  let adminSourceFiles: readonly string[] = [];
+
+  async function stage(next: Regenerated): Promise<void> {
+    emitted = next;
+    configPath = next.configPath;
+    workerExports = next.workerExports;
+    pluginCatalogFiles = next.pluginCatalogFiles;
+    catalogLocales = projectEnabledLocales(next.i18n);
+    // The `_plumix/` filter in `stageUserPublic` keeps a user's files
+    // out of the admin's subtree, which `stageAdminAssets` owns.
+    await stageUserPublic({ workspaceRoot: root, publicDir });
+    adminSourceFiles = await stageAdminAssets(
+      publicDir,
+      next.manifest,
+      next.plugins,
+      next.registry,
+      root,
+      next.editorBlockModules,
+      options.adminDir,
+    );
+  }
+
+  function prepare(warn: (message: string) => void): Promise<void> {
+    prepared ??= (async () => {
+      const next = await regenerate(root, options.configFile);
+      warnOnPluginAdminMismatch(next.plugins, warn);
+      await stage(next);
+    })();
+    return prepared;
+  }
 
   return {
     name: "plumix",
@@ -331,30 +364,20 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       const result = transformUseClientModule(code, id, { chunkUrl });
       return result ? { code: result.code, map: null } : null;
     },
+    // Once for the whole app build, ahead of its environments, so no
+    // environment's `buildStart` waits on the staging.
+    async buildApp() {
+      await prepare(this.warn.bind(this));
+    },
     async buildStart() {
-      const emitted = await regenerate(root, options.configFile);
-      configPath = emitted.configPath;
-      workerExports = emitted.workerExports;
-      pluginCatalogFiles = emitted.pluginCatalogFiles;
-      catalogLocales = projectEnabledLocales(emitted.i18n);
-      warnOnPluginAdminMismatch(emitted.plugins, this.warn.bind(this));
-      // The `_plumix/` filter in `stageUserPublic` keeps a user's files
-      // out of the admin's subtree, which `stageAdminAssets` owns.
-      await stageUserPublic({ workspaceRoot: root, publicDir });
-      await stageAdminAssets(
-        publicDir,
-        emitted.manifest,
-        emitted.plugins,
-        emitted.registry,
-        root,
-        emitted.editorBlockModules,
-        options.adminDir,
-      );
+      await prepare(this.warn.bind(this));
     },
     // No watcher on workspace `public/` here — Vite serves `publicDir`
     // contents directly from disk in dev, so file edits / additions are
     // picked up on next request without a re-stage.
     configureServer(server) {
+      // A Vite restart reuses this plugin object, and must stage afresh.
+      prepared = undefined;
       // The worker has no `fs`. Registered ahead of the @cloudflare/vite-plugin
       // proxy, so the request never reaches the worker.
       server.middlewares.use((req, res, next) => {
@@ -461,33 +484,46 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         res.end(JSON.stringify({ errors: forwarder.read() }));
       });
 
-      server.watcher.on("change", (path) => {
-        if (!configPath || resolve(path) !== configPath) return;
-        // Force-fresh: the whole point of the watcher is to pick up the edit,
-        // so bypass (and refresh) the cold-start config cache.
-        void regenerate(root, options.configFile, { fresh: true })
-          .then(async (emitted) => {
-            workerExports = emitted.workerExports;
-            pluginCatalogFiles = emitted.pluginCatalogFiles;
-            catalogLocales = projectEnabledLocales(emitted.i18n);
-            await stageUserPublic({ workspaceRoot: root, publicDir });
-            await stageAdminAssets(
-              publicDir,
-              emitted.manifest,
-              emitted.plugins,
-              emitted.registry,
-              root,
-              emitted.editorBlockModules,
-              options.adminDir,
-            );
+      // Outside the root, a workspace plugin's files need adding to the watch.
+      void prepare((message) => server.config.logger.warn(message))
+        .then(() => server.watcher.add([...adminSourceFiles]))
+        // `buildStart` awaits the same staging and reports its failure.
+        .catch(() => undefined);
+
+      const restage = (next: Promise<Regenerated>, failure: string): void => {
+        void next
+          .then(async (regenerated) => {
+            await stage(regenerated);
+            server.watcher.add([...adminSourceFiles]);
             server.ws.send({ type: "full-reload" });
           })
           .catch((error: unknown) => {
             server.config.logger.error(
-              `[plumix] failed to regenerate config on change: ${String(error)}`,
-              { error: error instanceof Error ? error : undefined },
+              `[plumix] ${failure}: ${String(error)}`,
+              {
+                error: error instanceof Error ? error : undefined,
+              },
             );
           });
+      };
+
+      server.watcher.on("change", (path) => {
+        const changed = resolve(path);
+        if (configPath && changed === configPath) {
+          // Force-fresh: the whole point of the watcher is to pick up the
+          // edit, so bypass (and refresh) the cold-start config cache.
+          restage(
+            regenerate(root, options.configFile, { fresh: true }),
+            "failed to regenerate config on change",
+          );
+          return;
+        }
+        if (emitted && adminSourceFiles.includes(changed)) {
+          restage(
+            Promise.resolve(emitted),
+            "failed to rebuild the plugin admin bundle on change",
+          );
+        }
       });
     },
   };
@@ -511,23 +547,28 @@ export async function emitPlumixSources(
   return { configPath, runtime };
 }
 
+interface Regenerated {
+  readonly configPath: string;
+  readonly runtime: RuntimeAdapter;
+  readonly manifest: PlumixManifest;
+  readonly registry: PluginRegistry;
+  readonly plugins: readonly AnyPluginDescriptor[];
+  readonly workerExports: readonly string[];
+  readonly pluginCatalogFiles: ReadonlyMap<
+    string,
+    readonly PluginCatalogFile[]
+  >;
+  readonly i18n: PlumixConfig["i18n"];
+  readonly editorBlockModules: readonly BlockModuleRef[];
+}
+
 async function regenerate(
   cwd: string,
   explicitConfig: string | undefined,
   // The dev watcher forces a fresh config eval on `plumix.config.ts` edits;
   // cold-start callers share the cached one (#1102).
   options?: LoadConfigOptions,
-): Promise<{
-  configPath: string;
-  runtime: RuntimeAdapter;
-  manifest: PlumixManifest;
-  registry: PluginRegistry;
-  plugins: readonly AnyPluginDescriptor[];
-  workerExports: readonly string[];
-  pluginCatalogFiles: ReadonlyMap<string, readonly PluginCatalogFile[]>;
-  i18n: PlumixConfig["i18n"];
-  editorBlockModules: readonly BlockModuleRef[];
-}> {
+): Promise<Regenerated> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
 
   const schemaSource = generateSchemaSource(config).source;
@@ -628,7 +669,8 @@ function isInAdminStaging(projectRoot: string): (path: string) => boolean {
 
 /**
  * Built in full outside publicDir and swapped in only when it differs, so an
- * unchanged admin doesn't bounce Vite's file watcher.
+ * unchanged admin doesn't bounce Vite's file watcher. Resolves to the plugin
+ * admin bundle's source files.
  */
 async function stageAdminAssets(
   publicDir: string,
@@ -638,13 +680,14 @@ async function stageAdminAssets(
   projectRoot: string,
   blockModules: readonly BlockModuleRef[],
   adminDir = ADMIN_SOURCE_DIR,
-): Promise<void> {
+): Promise<readonly string[]> {
+  let sourceFiles: readonly string[] = [];
   await stageIntoPlace({
     stagingRoot: adminStagingRoot(projectRoot),
     dest: resolve(publicDir, "_plumix/admin"),
     populate: async (staging) => {
       await cp(adminDir, staging, { recursive: true });
-      await stageAdminInto(
+      sourceFiles = await stageAdminInto(
         staging,
         manifest,
         plugins,
@@ -654,6 +697,7 @@ async function stageAdminAssets(
       );
     },
   });
+  return sourceFiles;
 }
 
 async function stageAdminInto(
@@ -663,7 +707,7 @@ async function stageAdminInto(
   registry: PluginRegistry,
   projectRoot: string,
   blockModules: readonly BlockModuleRef[],
-): Promise<void> {
+): Promise<readonly string[]> {
   const chunks = await stagePluginChunks(dest, plugins, projectRoot);
   // Separate from chunk staging: a server-side-only plugin (no `adminChunk`)
   // can still contribute admin-rendered labels and needs its catalogs shipped.
@@ -691,6 +735,7 @@ async function stageAdminInto(
     await withAdminCatalogLocales(dest, manifest),
     allChunks,
   );
+  return assembled?.sourceFiles ?? [];
 }
 
 async function injectIndexHtml(

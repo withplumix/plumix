@@ -15,8 +15,8 @@ React's `@license` header, and the site's plugin admin bundle passed
 > `{ fileName: "THIRD-PARTY-NOTICES.md" }` on the top-level `build`, so every
 > environment writes a notices file for what it bundles: one in the client
 > output, served publicly, and one beside the server bundle. The site's plugin
-> admin bundle keeps esbuild's default end-of-file legal comments. It is on by
-> default, a site turns it off with Vite's own option
+> admin bundle keeps its legal comments inline (`output.comments.legal`). It
+> is on by default, a site turns it off with Vite's own option
 > (`vite: { build: { license: false } }` in `plumix.config.ts`), and it only
 > reports: no licence fails a site's build.**
 
@@ -35,9 +35,9 @@ React's `@license` header, and the site's plugin admin bundle passed
   come from its own build and are copied with it. They are not merged into the
   site's files, the same way Vite and Angular cover only what their own build
   bundles.
-- **The plugin admin bundle carries its notices inline.** esbuild keeps every
-  bundled legal comment in one block at the end of `site-bundle.js`, which in
-  the demo is 85 KB of a 1.4 MB file.
+- **The plugin admin bundle carries its notices inline.** Its Rolldown build
+  sets `output.comments.legal`, which Vite turns off when it minifies, so each
+  bundled legal comment stays in `site-bundle.js` beside the code it covers.
 
 ## Considered options
 
