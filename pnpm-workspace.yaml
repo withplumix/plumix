@@ -153,7 +153,7 @@ catalogs:
     "@tanstack/react-table": ^9.2.8
     "@tanstack/router-plugin": ^1.168.43
   tiptap:
-    "@tiptap/core": ^3.31.4
+    "@tiptap/core": ^3.32.0
     # Explicit extension set for the rich-text rail instead of starter-kit,
     # which bundles ~16 extensions but we activate only these (the rest are
     # disabled marks we replace with the core block marks, or nodes that are
@@ -164,16 +164,16 @@ catalogs:
     # version an older lockfile holds. Never pin it in `overrides`,
     # which silently rewrites the peer range and forks it away from the
     # version tiptap expects.
-    "@tiptap/extension-blockquote": ^3.31.4
-    "@tiptap/extension-document": ^3.31.4
-    "@tiptap/extension-hard-break": ^3.31.4
-    "@tiptap/extension-heading": ^3.31.4
-    "@tiptap/extension-list": ^3.31.4
-    "@tiptap/extension-paragraph": ^3.31.4
-    "@tiptap/extension-text": ^3.31.4
-    "@tiptap/extensions": ^3.31.4
-    "@tiptap/pm": ^3.31.4
-    "@tiptap/react": ^3.31.4
+    "@tiptap/extension-blockquote": ^3.32.0
+    "@tiptap/extension-document": ^3.32.0
+    "@tiptap/extension-hard-break": ^3.32.0
+    "@tiptap/extension-heading": ^3.32.0
+    "@tiptap/extension-list": ^3.32.0
+    "@tiptap/extension-paragraph": ^3.32.0
+    "@tiptap/extension-text": ^3.32.0
+    "@tiptap/extensions": ^3.32.0
+    "@tiptap/pm": ^3.32.0
+    "@tiptap/react": ^3.32.0
   vite:
     "@vitejs/plugin-react": ^6.1.2
     vite: ^8.3.4
