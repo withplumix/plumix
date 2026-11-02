@@ -178,8 +178,8 @@ catalogs:
     "@vitejs/plugin-react": ^6.1.2
     vite: ^8.3.4
   vitest:
-    "@vitest/coverage-v8": ^5.0.4
-    vitest: ^5.0.4
+    "@vitest/coverage-v8": ^5.0.5
+    vitest: ^5.0.5
 
 publicHoistPattern:
   - "@ianvs/prettier-plugin-sort-imports"
