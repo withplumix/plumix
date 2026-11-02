@@ -165,14 +165,14 @@ settings:
 catalogs:
   cloudflare:
     '@cloudflare/vite-plugin':
-      specifier: ^1.63.1
-      version: 1.63.1
+      specifier: ^1.65.0
+      version: 1.65.0
     '@cloudflare/workers-types':
-      specifier: ^5.20261012.1
-      version: 5.20261012.1
+      specifier: ^5.20261026.1
+      version: 5.20261026.1
     wrangler:
-      specifier: ^4.149.0
-      version: 4.149.0
+      specifier: ^4.153.0
+      version: 4.153.0
   default:
     '@arethetypeswrong/cli':
       specifier: ^0.18.5
@@ -508,7 +508,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.64.0
@@ -547,7 +547,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   apps/docs:
     dependencies:
@@ -590,7 +590,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   apps/marketing:
     dependencies:
@@ -615,7 +615,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -654,7 +654,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/admin:
     dependencies:
@@ -1089,10 +1089,10 @@ importers:
         version: 0.31.11
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       drizzle-valibot:
         specifier: catalog:drizzle
-        version: 0.4.2(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3))
+        version: 0.4.2(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3))
       fishery:
         specifier: 'catalog:'
         version: 2.4.0
@@ -1198,7 +1198,7 @@ importers:
         version: link:../../runtimes/cloudflare
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       plumix:
         specifier: workspace:*
         version: link:../../plumix
@@ -1208,7 +1208,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../tooling/typescript
@@ -1223,7 +1223,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/create-plumix-app:
     dependencies:
@@ -1338,7 +1338,7 @@ importers:
         version: 1.1.0
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
@@ -1433,7 +1433,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -1445,13 +1445,13 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/blog:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -1519,7 +1519,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -1534,7 +1534,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/comments:
     dependencies:
@@ -1543,7 +1543,7 @@ importers:
         version: 1.15.6(crossws@0.3.5)(ws@8.22.0)
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       markdown-it:
         specifier: ^15.0.2
         version: 15.0.2
@@ -1650,7 +1650,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -1665,7 +1665,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/feeds:
     devDependencies:
@@ -1726,7 +1726,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -1738,7 +1738,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/forms:
     dependencies:
@@ -1750,7 +1750,7 @@ importers:
         version: 1.15.6(crossws@0.3.5)(ws@8.22.0)
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
@@ -1857,7 +1857,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -1872,7 +1872,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/media:
     dependencies:
@@ -1964,7 +1964,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -1976,7 +1976,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/menu:
     dependencies:
@@ -2080,7 +2080,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -2095,7 +2095,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/og:
     dependencies:
@@ -2205,7 +2205,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -2217,7 +2217,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/pages:
     devDependencies:
@@ -2284,7 +2284,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -2296,13 +2296,13 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plugins/search:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -2458,7 +2458,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -2470,7 +2470,7 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/plumix:
     dependencies:
@@ -2506,7 +2506,7 @@ importers:
         version: 0.31.11
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
@@ -2600,7 +2600,7 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       vite:
         specifier: catalog:vite
         version: 8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
@@ -2683,10 +2683,10 @@ importers:
     dependencies:
       '@cloudflare/vite-plugin':
         specifier: catalog:cloudflare
-        version: 1.63.1(@types/node@24.19.1)(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1))
+        version: 1.65.0(@types/node@24.19.1)(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(workerd@1.20261019.1)(wrangler@4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1))
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       jose:
         specifier: ^6.2.12
         version: 6.2.12
@@ -2705,7 +2705,7 @@ importers:
         version: 0.18.5
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.18.0
@@ -2750,7 +2750,7 @@ importers:
         version: 5.0.4(@types/node@24.19.1)(@vitest/coverage-v8@5.0.4)(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/runtimes/cloudflare/playground:
     dependencies:
@@ -2772,7 +2772,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
-        version: 5.20261012.1
+        version: 5.20261026.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -2787,13 +2787,13 @@ importers:
         version: 6.0.3
       wrangler:
         specifier: catalog:cloudflare
-        version: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
+        version: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
 
   packages/runtimes/node:
     dependencies:
       drizzle-orm:
         specifier: catalog:drizzle
-        version: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       vite:
         specifier: catalog:vite
         version: 8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
@@ -3852,45 +3852,74 @@ packages:
       workerd:
         optional: true
 
-  '@cloudflare/vite-plugin@1.63.1':
-    resolution: {integrity: sha512-6EtAoRqWryl43bYiCl7yvCBHi3R+L/fM11zu8zRyvBMe0Yk63NseyrhA19nO5Y1yrrk6dD+Su7NBZhDuUbjh0g==}
-    hasBin: true
+  '@cloudflare/vite-plugin@1.65.0':
+    resolution: {integrity: sha512-6Oot0UAqh0Lr1nzZbacUyBGi4xbmNXDpbkWdSvpudxFkrFAXJ8gYF+XMzVyytWqrWM23WGuPE+9/vQaEVSGrcg==}
     peerDependencies:
       vite: ^6.1.0 || ^7.0.0 || ^8.0.0
-      wrangler: ^4.149.0
+      wrangler: ^4.152.0
 
-  '@cloudflare/workerd-darwin-64@1.20261006.1':
-    resolution: {integrity: sha512-lCX6avJO2It9AyDEYitjmOtJRVp/xmaW0TziyoLAnfxlzozyyRbSFfIIMMCiDx/sTP1++E4VLbV+7BHSD33f0Q==}
+  '@cloudflare/workerd-darwin-64@1.20261019.1':
+    resolution: {integrity: sha512-5ZILbAta/fBQvhmAYeCE7dKMMYIr7N9wJEX50fEGLKSIwGtvT0HzSfHNIK/O7cBQ4gHQ2WfIiPClvwcye6E0fA==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-arm64@1.20261006.1':
-    resolution: {integrity: sha512-PyFGjOaldtppnLuKsdkoYWXfLVpDjuf8u+uoykX+1Xvxo2EPmCVViq0iDKm+U7c7PRno85ehS3/MPVXyk2HwHw==}
+  '@cloudflare/workerd-darwin-64@1.20261023.1':
+    resolution: {integrity: sha512-lsEx0i7nR0PNG/erUFFHmQmiidEhLfDE5uQmAL9421/y4/ycuxDDOSaxu3VGGYFFPK5sduyUeMmjIlX4CwOBFg==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@cloudflare/workerd-darwin-arm64@1.20261019.1':
+    resolution: {integrity: sha512-cww2Ab6lVMxpTiEEjKmPI58p5EMo0vYTZSH+3WkqXJdQgc3ES66GuL247+U2B2YWajhhu2tqj7jySrXneU749g==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
-  '@cloudflare/workerd-linux-64@1.20261006.1':
-    resolution: {integrity: sha512-Ntf9S8eesmVufdjaT2kzWlz6Ng9XGYTc6cHQVRKAg59lFufwsIabGeMT6U4KkrpEeSIxgHq8aPtuLbZXE19tCA==}
+  '@cloudflare/workerd-darwin-arm64@1.20261023.1':
+    resolution: {integrity: sha512-5e79fHgabdDD8EgmjOhJ1S+xMsf6DbC7fL7IgTBizMnzOp0P2isDn7pYmUxI9AJZE9FVQ4RUilH/I36YNg+GQQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@cloudflare/workerd-linux-64@1.20261019.1':
+    resolution: {integrity: sha512-4++VRi9vkQROYqrpZYOixIJuVDmujkwrT4kszsxNFlvcmsX6Mr2GumvxIN3gIixS3vJUh3Umdtkthqj5X0S3Xw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-arm64@1.20261006.1':
-    resolution: {integrity: sha512-JyeDBymVWw5tVRebSsVE8ojDYxd6UlZrAseHU8G+NpIyd5wF61tXlF/axLeCUqu0pOhBFHb8I5QKi0jwrCK41Q==}
+  '@cloudflare/workerd-linux-64@1.20261023.1':
+    resolution: {integrity: sha512-VHQ6jKFSihjR2+x1buby8XTdBLLJztVnYiB7OLOTYO8aDXB+c1Rd2410PdgFuFYc4AgFEk6PCJLyCLL5L1KBnw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+
+  '@cloudflare/workerd-linux-arm64@1.20261019.1':
+    resolution: {integrity: sha512-75PVtJOwfjScQ53sbLtQXI7D8yP1c21t+WEUPaYbqkzaz4ZqfR5wAd+zuWs8G5Q7kOj2SQIvEfY5Sn8Y+UVrnA==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
-  '@cloudflare/workerd-windows-64@1.20261006.1':
-    resolution: {integrity: sha512-nWP0URNqOBN9fa/gZ7eh/w051DwjOXN8j4lDZDYVXyQPsux6sV3DfyYZT+CjR/rt9nKBSmJT9QE9/bWT18+84w==}
+  '@cloudflare/workerd-linux-arm64@1.20261023.1':
+    resolution: {integrity: sha512-ilpRHzfDN8YFRM5CLRKuFw40x/LJBS89yVdhdQmxehlVDuBqjKpJB++zPFbTgKRRFaNupgnXc8RHktXAIhgCmQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@cloudflare/workerd-windows-64@1.20261019.1':
+    resolution: {integrity: sha512-z49fvKTETMCnG6wnMcQwxx9CpryFceiKz04FRjq26EkhCyzRNJ6c3UXhyZz3r5f1CXnnBZc5DcU8ZouPkUJCqw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workers-types@5.20261012.1':
-    resolution: {integrity: sha512-5Y0NrKXG9CZaNUZ6Dt3TLRE4UQe2/DGuxIhTEVYHUl0jAlv1TpQtI59YBAszRpSaZAMzbM8nqGc1n9Z2q4TVyA==}
+  '@cloudflare/workerd-windows-64@1.20261023.1':
+    resolution: {integrity: sha512-279WLVjNsMycAwr0EZNiNEf0l2SY6NUtsN80NwZzbTHzakmiN+WSx4w38muxPm+PAU0oSPPAPXKVD+H6Hya8xw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
+
+  '@cloudflare/workers-types@5.20261026.1':
+    resolution: {integrity: sha512-E+KMLXOMip7uzfkFYoSjAF0n0+VFkK2KFU0Md/PM3JkPpC9Km0/YAoDttkmxAoZLGbK1wQRAFg2IJtyZkTBCHg==}
 
   '@codemirror/autocomplete@6.20.3':
     resolution: {integrity: sha512-tlosUqb+3BbxCxZdu4tKeRghPFC+QM7q4X5YhKV2eCmPG+1r2F3f4AaSz5sCrFqUtX4Jh20VFTKecl16MgiV9g==}
@@ -9442,8 +9471,12 @@ packages:
     resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
     engines: {node: '>=18'}
 
-  miniflare@5.20261006.1-alpha:
-    resolution: {integrity: sha512-6ylv8tamkrspDI2R/cAYfv+YWmfGNdXe76Pi9TauEUWsFVXn3LNF9Yk8oduzf1a+TYsSRYTqlOE7+nGGRsMHdw==}
+  miniflare@5.20261019.2-beta:
+    resolution: {integrity: sha512-QNgCA/axizZ7kv7RV3nwbRoz+w4watBlwIsyXjwgYHw4eSw5BrR1F2152s3Kz+Bzy/YxjKFHrZl3LzBRbPgYoQ==}
+    engines: {node: '>=22.0.0'}
+
+  miniflare@5.20261023.0-beta:
+    resolution: {integrity: sha512-SHY8A98gCvmrnBLqABHRTSh3duAL1z+tHPRZu/tqxHFqVARrZ4oQis/ALYwp3XvzHvs6B/ff/CdcCafqP+cOFA==}
     engines: {node: '>=22.0.0'}
 
   minimalistic-assert@1.0.1:
@@ -10600,6 +10633,10 @@ packages:
     resolution: {integrity: sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==}
     engines: {node: '>=20.18.1'}
 
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
+    engines: {node: '>=20.18.1'}
+
   undici@8.11.2:
     resolution: {integrity: sha512-u4UB2/IrKdU6lFxumHmmo1a3fCQO5tzQllRorfoRS63txhrB7xTpSn1PftwC4qEHkOaqP95fCWW4lJzwErwzhQ==}
     engines: {node: '>=22.19.0'}
@@ -11039,17 +11076,22 @@ packages:
   wordwrap@1.0.0:
     resolution: {integrity: sha512-gvVzJFlPycKc5dZN4yPkP8w7Dc37BtP1yczEneOb4uq34pXZcvrtRTmWV8W+Ume+XCxKgbjM+nevkyFPMybd4Q==}
 
-  workerd@1.20261006.1:
-    resolution: {integrity: sha512-8MadBuffZ5NdpLwZjUmsqT5QlaKXq4gjgT6wzcKeynZTICNXyePhc+5QVoKiK7+MMhFTLNrRO2KXLlpk8Q6BkA==}
+  workerd@1.20261019.1:
+    resolution: {integrity: sha512-UUYRUq/7DmeCl11YriNbcVbjUZVLtt8uuCXFu+nz77hGFf8d4DEVXoCYtnA+MlBatE4+wxoj47DVqzK3xGBAiw==}
     engines: {node: '>=16'}
     hasBin: true
 
-  wrangler@4.149.0:
-    resolution: {integrity: sha512-OzK7xmB5r5iLKb3cIT3783g13fe6T7xyeKu9LEdUyl+DKAM2KP/jkjnE0OUhyw+mB/XJM9ycjgF3MWm8PR9amg==}
+  workerd@1.20261023.1:
+    resolution: {integrity: sha512-NeofJFyaYNpqKpFRJW3ApuonaerPd6/JWlfTtLDYf2A6ygqrDEFnYgEXmc0hhOxqnJsSM+kXJN6VebPojzRrsg==}
+    engines: {node: '>=16'}
+    hasBin: true
+
+  wrangler@4.153.0:
+    resolution: {integrity: sha512-Hn1AowKzZao/729rMpdpxBZt/RaKQNJ4GtKtHQcOrwT+J/GIq0iwl680+dhJyO00iSsXaCkxoNcLg3yVIwIvyw==}
     engines: {node: '>=22.0.0'}
     hasBin: true
     peerDependencies:
-      '@cloudflare/workers-types': ^5.20261006.1
+      '@cloudflare/workers-types': ^5.20261023.1
     peerDependenciesMeta:
       '@cloudflare/workers-types':
         optional: true
@@ -11997,42 +12039,63 @@ snapshots:
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 
-  '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261006.1)':
+  '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261019.1)':
     dependencies:
       unenv: 2.0.0-rc.24
     optionalDependencies:
-      workerd: 1.20261006.1
+      workerd: 1.20261019.1
 
-  '@cloudflare/vite-plugin@1.63.1(@types/node@24.19.1)(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(wrangler@4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1))':
+  '@cloudflare/unenv-preset@2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261023.1)':
     dependencies:
-      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261006.1)
-      miniflare: 5.20261006.1-alpha(@types/node@24.19.1)
+      unenv: 2.0.0-rc.24
+    optionalDependencies:
+      workerd: 1.20261023.1
+
+  '@cloudflare/vite-plugin@1.65.0(@types/node@24.19.1)(vite@8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(workerd@1.20261019.1)(wrangler@4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1))':
+    dependencies:
+      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261019.1)
+      miniflare: 5.20261019.2-beta(@types/node@24.19.1)
       unenv: 2.0.0-rc.24
       vite: 8.3.4(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-      workerd: 1.20261006.1
-      wrangler: 4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1)
-      ws: 8.21.0
+      wrangler: 4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1)
+      ws: 8.22.0
     transitivePeerDependencies:
       - '@types/node'
       - bufferutil
       - utf-8-validate
+      - workerd
 
-  '@cloudflare/workerd-darwin-64@1.20261006.1':
+  '@cloudflare/workerd-darwin-64@1.20261019.1':
     optional: true
 
-  '@cloudflare/workerd-darwin-arm64@1.20261006.1':
+  '@cloudflare/workerd-darwin-64@1.20261023.1':
     optional: true
 
-  '@cloudflare/workerd-linux-64@1.20261006.1':
+  '@cloudflare/workerd-darwin-arm64@1.20261019.1':
     optional: true
 
-  '@cloudflare/workerd-linux-arm64@1.20261006.1':
+  '@cloudflare/workerd-darwin-arm64@1.20261023.1':
     optional: true
 
-  '@cloudflare/workerd-windows-64@1.20261006.1':
+  '@cloudflare/workerd-linux-64@1.20261019.1':
     optional: true
 
-  '@cloudflare/workers-types@5.20261012.1': {}
+  '@cloudflare/workerd-linux-64@1.20261023.1':
+    optional: true
+
+  '@cloudflare/workerd-linux-arm64@1.20261019.1':
+    optional: true
+
+  '@cloudflare/workerd-linux-arm64@1.20261023.1':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20261019.1':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20261023.1':
+    optional: true
+
+  '@cloudflare/workers-types@5.20261026.1': {}
 
   '@codemirror/autocomplete@6.20.3':
     dependencies:
@@ -16047,15 +16110,15 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.15
 
-  drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2):
+  drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2):
     optionalDependencies:
-      '@cloudflare/workers-types': 5.20261012.1
+      '@cloudflare/workers-types': 5.20261026.1
       '@libsql/client': 0.18.0
       bun-types: 1.4.2
 
-  drizzle-valibot@0.4.2(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3)):
+  drizzle-valibot@0.4.2(drizzle-orm@0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2))(valibot@1.5.0(typescript@6.0.3)):
     dependencies:
-      drizzle-orm: 0.45.4(@cloudflare/workers-types@5.20261012.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
+      drizzle-orm: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       valibot: 1.5.0(typescript@6.0.3)
 
   dset@3.1.4: {}
@@ -17483,12 +17546,25 @@ snapshots:
 
   mimic-function@5.0.1: {}
 
-  miniflare@5.20261006.1-alpha(@types/node@24.19.1):
+  miniflare@5.20261019.2-beta(@types/node@24.19.1):
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
       sharp: 0.35.5(@types/node@24.19.1)
       undici: 7.29.1
-      workerd: 1.20261006.1
+      workerd: 1.20261019.1
+      ws: 8.21.0
+      youch: 4.1.0-beta.10
+    transitivePeerDependencies:
+      - '@types/node'
+      - bufferutil
+      - utf-8-validate
+
+  miniflare@5.20261023.0-beta(@types/node@24.19.1):
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      sharp: 0.35.5(@types/node@24.19.1)
+      undici: 7.30.1
+      workerd: 1.20261023.1
       ws: 8.21.0
       youch: 4.1.0-beta.10
     transitivePeerDependencies:
@@ -18797,6 +18873,8 @@ snapshots:
 
   undici@7.29.1: {}
 
+  undici@7.30.1: {}
+
   undici@8.11.2: {}
 
   unenv@2.0.0-rc.24:
@@ -19131,26 +19209,34 @@ snapshots:
 
   wordwrap@1.0.0: {}
 
-  workerd@1.20261006.1:
+  workerd@1.20261019.1:
     optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20261006.1
-      '@cloudflare/workerd-darwin-arm64': 1.20261006.1
-      '@cloudflare/workerd-linux-64': 1.20261006.1
-      '@cloudflare/workerd-linux-arm64': 1.20261006.1
-      '@cloudflare/workerd-windows-64': 1.20261006.1
+      '@cloudflare/workerd-darwin-64': 1.20261019.1
+      '@cloudflare/workerd-darwin-arm64': 1.20261019.1
+      '@cloudflare/workerd-linux-64': 1.20261019.1
+      '@cloudflare/workerd-linux-arm64': 1.20261019.1
+      '@cloudflare/workerd-windows-64': 1.20261019.1
 
-  wrangler@4.149.0(@cloudflare/workers-types@5.20261012.1)(@types/node@24.19.1):
+  workerd@1.20261023.1:
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20261023.1
+      '@cloudflare/workerd-darwin-arm64': 1.20261023.1
+      '@cloudflare/workerd-linux-64': 1.20261023.1
+      '@cloudflare/workerd-linux-arm64': 1.20261023.1
+      '@cloudflare/workerd-windows-64': 1.20261023.1
+
+  wrangler@4.153.0(@cloudflare/workers-types@5.20261026.1)(@types/node@24.19.1):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
-      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261006.1)
+      '@cloudflare/unenv-preset': 2.16.2(unenv@2.0.0-rc.24)(workerd@1.20261023.1)
       blake3-wasm: 2.1.5
       esbuild: 0.28.2
-      miniflare: 5.20261006.1-alpha(@types/node@24.19.1)
+      miniflare: 5.20261023.0-beta(@types/node@24.19.1)
       path-to-regexp: 6.3.0
       unenv: 2.0.0-rc.24
-      workerd: 1.20261006.1
+      workerd: 1.20261023.1
     optionalDependencies:
-      '@cloudflare/workers-types': 5.20261012.1
+      '@cloudflare/workers-types': 5.20261026.1
       fsevents: 2.3.3
     transitivePeerDependencies:
       - '@types/node'
