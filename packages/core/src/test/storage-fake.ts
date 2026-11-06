@@ -1,4 +1,8 @@
-import type { ConnectedMemoryStorage } from "../runtime/memory-storage.js";
+import type { ObjectStorage } from "../runtime/contract/slots.js";
+import type {
+  ConnectedMemoryStorage,
+  MemoryStorageConfig,
+} from "../runtime/memory-storage.js";
 import { memoryStorage } from "../runtime/memory-storage.js";
 
 /**
@@ -11,8 +15,12 @@ export interface StorageFake extends ConnectedMemoryStorage {
   readonly assertMissing: (key: string) => Promise<void>;
 }
 
-export function fakeStorage(): StorageFake {
-  const bucket = memoryStorage().connect();
+/**
+ * A fresh bucket, built with the options of `from` when it is a
+ * `memoryStorage`, so its seed and URL base hold, and the defaults otherwise.
+ */
+export function fakeStorage(from?: ObjectStorage): StorageFake {
+  const bucket = memoryStorage(optionsOf(from)).connect();
 
   async function fail(expectation: string): Promise<never> {
     const { items } = await bucket.list();
@@ -34,4 +42,9 @@ export function fakeStorage(): StorageFake {
       await fail(`Expected "${key}" not to be stored, but it is.`);
     },
   };
+}
+
+function optionsOf(storage?: ObjectStorage): MemoryStorageConfig {
+  if (storage?.kind !== "memory" || !("options" in storage)) return {};
+  return storage.options as MemoryStorageConfig;
 }

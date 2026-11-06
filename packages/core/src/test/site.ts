@@ -13,13 +13,14 @@ import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
 import type { PluginRpcClient } from "../plugin/registry.js";
 import type { AppRouterClient } from "../rpc/router.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
-import type { ConnectedKv } from "../runtime/contract/slots.js";
+import type { ConnectedKv, ObjectStorage } from "../runtime/contract/slots.js";
 import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories, SeededRole } from "./factories.js";
 import type { FetchFake } from "./fetch-fake.js";
 import type { LoggerFake } from "./logger-fake.js";
 import type { MailFake } from "./mail-fake.js";
+import type { FetchOptions } from "./request.js";
 import type { TestRunReport, TestSchedule } from "./schedule.js";
 import type { Travel } from "./site-clock.js";
 import type { StorageFake } from "./storage-fake.js";
@@ -103,9 +104,13 @@ export interface TestSite<
   readonly context: AppContext;
   /**
    * Request a path, or an entry at its permalink, as a visitor or the user
-   * `actingAs` names. Deferred work settles before it resolves.
+   * `actingAs` names; a GET unless `options` names a method. Deferred work
+   * settles first.
    */
-  readonly visit: (target: string | Entry) => Promise<TestPage>;
+  readonly visit: (
+    target: string | Entry,
+    options?: Pick<FetchOptions, "method" | "headers" | "body">,
+  ) => Promise<TestPage>;
   /**
    * Calls a procedure over the wire, through the site's own dispatcher.
    * Deferred work settles before it resolves.
@@ -175,12 +180,12 @@ export async function testSite<
   );
   const { defer, drainDeferred } = createDeferQueue();
   const time = siteClock();
-  let fakes = freshFakes();
+  let fakes = freshFakes(config.storage);
   let signedIn = new WeakMap<NonNullable<Principal>, SignIn>();
   beforeEach(async () => {
     await drainDeferred();
     await reset();
-    fakes = freshFakes();
+    fakes = freshFakes(config.storage);
     time.reset();
     signedIn = new WeakMap();
   });
@@ -325,10 +330,12 @@ export async function testSite<
         const { id, email, role, meta } = userOf(principal);
         return withUser(ctx, { id, email, role, meta });
       },
-      visit: async (target) => {
+      visit: async (target, options) => {
         const path =
           typeof target === "string" ? target : await permalinkOf(target);
-        const ctx = contextFor(await signIn(await buildRequest(db, path)));
+        const ctx = contextFor(
+          await signIn(await buildRequest(db, path, options)),
+        );
         const response = await dispatch(ctx);
         return new TestPage({
           status: response.status,
@@ -431,14 +438,14 @@ interface Fakes {
   readonly kv: ConnectedKv;
 }
 
-function freshFakes(): Fakes {
+function freshFakes(storage: ObjectStorage | undefined): Fakes {
   return {
     mail: fakeMail(),
     cdn: fakeCdn(),
     fetch: fakeFetch(),
     logger: fakeLogger(),
     telemetry: fakeTelemetry(),
-    storage: fakeStorage(),
+    storage: fakeStorage(storage),
     kv: memoryKv().connect(),
   };
 }

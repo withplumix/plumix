@@ -40,6 +40,8 @@ export interface ConnectedMemoryStorage extends ConnectedObjectStorage {
 
 /** Binds against nothing, so the env is optional, as with `memoryKv()`. */
 export interface MemoryObjectStorage extends ObjectStorage {
+  /** What it was built with, so a test site rebuilds it empty for each test. */
+  readonly options: MemoryStorageConfig;
   connect(env?: PlumixEnv): ConnectedMemoryStorage;
 }
 
@@ -170,6 +172,7 @@ export function memoryStorage(
 
   return {
     kind: "memory",
+    options: config,
     connect: () => connected,
   };
 }

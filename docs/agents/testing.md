@@ -21,8 +21,8 @@ line the site logged (`assertLogged(level, message)`, `assertNothingLogged(level
 builds a capturing logger, and `site.telemetry`, which records each request's telemetry snapshot
 in place of the config's consumers (`site.telemetry.span(name).attributes`), and `site.storage`,
 the in-memory bucket a config that declares `storage` gets (`assertStored(key)`, `assertMissing(key)`),
-which answers a browser's presigned PUT through `site.storage.fetch(request)` and which the site
-serves at its URLs; a config that declares `kv` or `imageDelivery` gets an in-memory kv and an image
+built with a config `memoryStorage`'s seed and URL base, which the site serves at its URLs and
+answers a browser's presigned PUT at (`site.visit(uploadUrl, { method, headers, body })`); a config that declares `kv` or `imageDelivery` gets an in-memory kv and an image
 delivery that serves the stored original. `plumix/test/conformance` holds the
 contract suites a runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`editor`, `mailbox`, `passkey`, `PNG_1X1`,
 the shared `runtimeSpec`) from `plumix/test/playwright`.

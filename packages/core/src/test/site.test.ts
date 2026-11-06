@@ -10,6 +10,7 @@ import { settings } from "../db/schema/settings.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
 import { base } from "../rpc/base.js";
+import { memoryStorage } from "../runtime/memory-storage.js";
 import { testSite } from "./site.js";
 
 const posts = definePlugin("posts", {
@@ -184,6 +185,32 @@ describe("the site's storage", () => {
       .assertOk()
       .assertHeader("content-type", "image/png")
       .assertSee("original");
+  });
+});
+
+const seeded = await testSite({
+  config: {
+    storage: memoryStorage({
+      publicUrlBase: "/files/",
+      seed: { "a.png": new Uint8Array([1]) },
+    }),
+  },
+});
+
+describe("the site's storage, from the config's memoryStorage", () => {
+  test("holds its seed and serves it at its URL base", async () => {
+    await seeded.storage.assertStored("a.png");
+    (await seeded.visit("/files/a.png")).assertOk();
+  });
+
+  test("starts the next test from the seed again", async () => {
+    await seeded.storage.delete("a.png");
+    await seeded.storage.put("b.png", "b");
+  });
+
+  test("so what the last test changed is gone", async () => {
+    await seeded.storage.assertStored("a.png");
+    await seeded.storage.assertMissing("b.png");
   });
 });
 

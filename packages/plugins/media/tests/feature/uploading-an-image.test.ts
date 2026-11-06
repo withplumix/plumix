@@ -1,6 +1,6 @@
 import { memoryStorage } from "plumix/runtime";
 import { testSite } from "plumix/test";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 
 import { media } from "../../src/index.js";
 
@@ -21,16 +21,15 @@ describe("uploading an image", () => {
       size: PNG.byteLength,
     });
 
-    const sent = await site.storage.fetch(
-      new Request(new URL(upload.uploadUrl, "https://cms.example"), {
-        method: upload.method,
-        headers: upload.headers,
-        body: PNG,
-      }),
-    );
+    // The browser sends it to the site, at the URL the bucket presigned.
+    const sent = await site.visit(upload.uploadUrl, {
+      method: upload.method,
+      headers: upload.headers,
+      body: PNG,
+    });
     const confirmed = await author.rpc.media.confirm({ id: upload.mediaId });
 
-    expect(sent.ok).toBe(true);
+    sent.assertOk();
     await site.storage.assertStored(confirmed.storageKey);
     (await site.visit(confirmed.url))
       .assertOk()
