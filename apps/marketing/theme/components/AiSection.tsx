@@ -32,12 +32,11 @@ const DEV_TOOLS = [
 
 const LIVE_TOOLS = [
   "schema_describe",
+  "content_list",
   "content_get",
-  "content_create",
-  "content_update",
-  "content_publish",
-  "revision_restore",
-  "term_create",
+  "taxonomy_list",
+  "term_list",
+  "term_get",
 ];
 
 export function AiSection(): ReactNode {
@@ -58,8 +57,8 @@ export function AiSection(): ReactNode {
           <p>
             Plumix serves MCP. While you build, a coding agent reads the same
             errors and traces you do. On the live site, if you switch it on, an
-            agent drafts, edits and publishes your content with the permissions
-            of the user whose token it holds.
+            agent edits your content with the permissions of the user whose
+            token it holds.
           </p>
         </SectionHeading>
 
@@ -84,11 +83,10 @@ export function AiSection(): ReactNode {
           <div data-testid="ai-live">
             <Eyebrow>On the live site</Eyebrow>
             <p className="text-muted mt-4 leading-relaxed text-pretty">
-              Turn it on and agents learn your content model, blocks and design
-              tokens, then draft, edit and publish entries and terms. Access
-              goes through a personal token, so an agent may do exactly what its
-              user may, and every change is a revision you can restore. Plugins
-              add their own tools with{" "}
+              Turn it on and agents can describe your content model and read and
+              write entries and terms. Access goes through a personal token, so
+              an agent may do exactly what its user may. Plugins add their own
+              tools with{" "}
               <code className="text-ink font-mono text-sm">
                 registerMcpTool
               </code>
