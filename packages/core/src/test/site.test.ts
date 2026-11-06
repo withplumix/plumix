@@ -452,6 +452,21 @@ describe("the site's scheduled tasks", () => {
     report.assertFailed("failing:throws").assertTimedOut("failing:stalls");
     expect(report.ran).toEqual([]);
   });
+
+  test("log a failed task at error", async () => {
+    await scheduling.runSchedule("0 4 * * *");
+
+    scheduling.logger.assertLogged(
+      "error",
+      '[plumix] scheduled task "failing:throws" failed: boom',
+    );
+  });
+
+  test("deliver a telemetry snapshot of the firing", async () => {
+    await scheduling.runSchedule("0 3 * * *");
+
+    expect(scheduling.telemetry.snapshots).toHaveLength(1);
+  });
 });
 
 const heartbeat = definePlugin("heartbeat", {
@@ -547,4 +562,73 @@ describe("the site's outbound fetches", () => {
       await forecasting.visit("/_plumix/forecast/today");
     },
   );
+});
+
+function deferToNextTurn(defer: (promise: Promise<void>) => void): void {
+  defer(new Promise<void>((resolve) => setImmediate(resolve)));
+}
+const slowRouter = {
+  later: base.handler(({ context }) => {
+    deferToNextTurn(context.defer);
+  }),
+};
+
+function slow(): PluginDescriptor<
+  undefined,
+  { readonly slow: typeof slowRouter }
+> {
+  return definePlugin("slow", {
+    setup: (ctx) => {
+      ctx.registerRpcRouter(slowRouter);
+      ctx.registerRoute({
+        method: "GET",
+        path: "/later",
+        auth: "public",
+        handler: (_request, appCtx) => {
+          deferToNextTurn(appCtx.defer);
+          return new Response("Queued");
+        },
+      });
+    },
+  });
+}
+const tracing = await testSite({ plugins: [slow()] });
+
+describe("the site's telemetry", () => {
+  test("holds a request's snapshot once the work it deferred settles", async () => {
+    await tracing.visit("/_plumix/slow/later");
+
+    expect(tracing.telemetry.snapshots).toHaveLength(1);
+  });
+
+  test("holds an rpc call's snapshot once the work it deferred settles", async () => {
+    await tracing.rpc.slow.later();
+
+    expect(tracing.telemetry.snapshots).toHaveLength(1);
+  });
+});
+
+const exported: string[] = [];
+const exporting = await testSite({
+  config: {
+    telemetry: {
+      consumers: [
+        {
+          id: "exporter",
+          onRequestEnd: (snapshot) => {
+            exported.push(snapshot.request.url);
+          },
+        },
+      ],
+    },
+  },
+});
+
+describe("a config's own telemetry consumers", () => {
+  test("are replaced by the site's, so none exports from a test", async () => {
+    await exporting.visit("/");
+
+    expect(exported).toEqual([]);
+    expect(exporting.telemetry.snapshots).toHaveLength(1);
+  });
 });
