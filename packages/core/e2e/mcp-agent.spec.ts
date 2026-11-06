@@ -36,7 +36,7 @@ function agent(request: APIRequestContext, secret: string) {
     expect(response.status()).toBe(200);
     return ((await response.json()) as { result: ToolResult }).result;
   };
-  const read = async <T>(
+  const callSucceeding = async <T>(
     name: string,
     args: Record<string, unknown>,
   ): Promise<T> => {
@@ -44,7 +44,7 @@ function agent(request: APIRequestContext, secret: string) {
     expect(result.isError, result.content[0]?.text).toBeFalsy();
     return JSON.parse(result.content[0]?.text ?? "null") as T;
   };
-  return { call, read };
+  return { call, callSucceeding };
 }
 
 test("an agent drafts, is refused a stale write and an entry held in the admin, then publishes", async ({
@@ -64,23 +64,23 @@ test("an agent drafts, is refused a stale write and an entry held in the admin, 
     baseURL,
     storageState: { cookies: [], origins: [] },
   });
-  const { call, read } = agent(request, secret);
+  const { call, callSucceeding } = agent(request, secret);
 
-  const model = await read<{
+  const model = await callSucceeding<{
     entryTypes: readonly { name: string }[];
     blocks: readonly { name: string }[];
   }>("schema_describe", {});
   expect(model.entryTypes.map(({ name }) => name)).toContain("post");
   expect(model.blocks.map(({ name }) => name)).toContain("playground/rating");
 
-  const draft = await read<Written>("content_create", {
+  const draft = await callSucceeding<Written>("content_create", {
     type: "post",
     slug: "agent-draft",
     title: "Agent draft",
   });
   expect(draft.status).toBe("draft");
   const post = { type: "post", id: draft.id };
-  const edited = await read<Written>("content_update", {
+  const edited = await callSucceeding<Written>("content_update", {
     ...post,
     ifMatch: draft.etag,
     title: "Agent edit",
@@ -100,7 +100,7 @@ test("an agent drafts, is refused a stale write and an entry held in the admin, 
     authorId: admin.id,
   });
   await editor.open(held);
-  const { etag: heldEtag } = await read<Written>("content_get", {
+  const { etag: heldEtag } = await callSucceeding<Written>("content_get", {
     type: "post",
     id: held.id,
   });
@@ -113,7 +113,7 @@ test("an agent drafts, is refused a stale write and an entry held in the admin, 
   expect(locked._meta?.code).toBe("locked");
   expect(locked.content[0]?.text).toContain(admin.email);
 
-  const published = await read<Written>("content_publish", {
+  const published = await callSucceeding<Written>("content_publish", {
     ...post,
     ifMatch: edited.etag,
   });
