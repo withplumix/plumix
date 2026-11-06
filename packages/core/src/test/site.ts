@@ -163,6 +163,7 @@ export async function testSite<
       : testConfig({ ...options.config, plugins: options.plugins ?? [] });
   const { db, reset } = await createSiteDatabase(
     migrationFolders(siteRootOf(cwd), config.plugins),
+    { d1: config.database.kind === "d1" },
   );
   const { defer, drainDeferred } = createDeferQueue();
   const time = siteClock();

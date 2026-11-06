@@ -99,14 +99,14 @@ acks a job is the runtime's.
 
 Where each slot contract's conformance suite runs:
 
-| Suite          | Runs in                                                                                                                                                  |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database       | `cloudflare/src/d1.test.ts`, `node/src/node-sqlite.test.ts`, `bun/src/bun-sqlite.test.ts`, `core/src/db/libsql.test.ts`                                  |
-| Object storage | `cloudflare/src/r2.test.ts`, `node/src/disk-storage.test.ts`, `bun/src/disk-storage.test.ts`, `bun/src/bun-s3.test.ts`, `core/src/storage/s3/s3.test.ts` |
-| Key-value      | `cloudflare/src/kv.test.ts`, `core/src/runtime/memory-kv.test.ts`                                                                                        |
-| CDN            | `cloudflare/src/cdn.test.ts`, `core/src/cdn/cloudflare/cloudflare.test.ts`                                                                               |
-| Assets         | `cloudflare/src/adapter.test.ts`, `node/src/http/assets.test.ts`, `bun/src/http/assets.test.ts`                                                          |
-| Sync, run      | `*/src/commands/sync.test.ts`, `*/src/commands/migrations.test.ts` in all three                                                                          |
+| Suite          | Runs in                                                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database       | `cloudflare/src/d1.test.ts`, `node/src/node-sqlite.test.ts`, `bun/src/bun-sqlite.test.ts`, `core/src/db/libsql.test.ts`, `core/src/test/site-database.test.ts` |
+| Object storage | `cloudflare/src/r2.test.ts`, `node/src/disk-storage.test.ts`, `bun/src/disk-storage.test.ts`, `bun/src/bun-s3.test.ts`, `core/src/storage/s3/s3.test.ts`       |
+| Key-value      | `cloudflare/src/kv.test.ts`, `core/src/runtime/memory-kv.test.ts`                                                                                              |
+| CDN            | `cloudflare/src/cdn.test.ts`, `core/src/cdn/cloudflare/cloudflare.test.ts`                                                                                     |
+| Assets         | `cloudflare/src/adapter.test.ts`, `node/src/http/assets.test.ts`, `bun/src/http/assets.test.ts`                                                                |
+| Sync, run      | `*/src/commands/sync.test.ts`, `*/src/commands/migrations.test.ts` in all three                                                                                |
 
 ## Invariants
 

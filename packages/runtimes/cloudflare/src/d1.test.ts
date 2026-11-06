@@ -124,6 +124,7 @@ async function wipe(binding: D1Database): Promise<void> {
 }
 
 describeDatabaseContract({
+  d1Limits: true,
   connect: async () => {
     await wipe(proxy.env.DB);
     return { adapter: d1({ binding: "DB" }), env: { DB: proxy.env.DB } };

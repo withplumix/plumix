@@ -1,3 +1,4 @@
+import { inArray } from "drizzle-orm";
 import { Factory } from "fishery";
 import * as v from "valibot";
 import { beforeEach, describe, expect, expectTypeOf, test } from "vitest";
@@ -6,7 +7,9 @@ import type { Db } from "../context/app-context.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { PluginDescriptor } from "../plugin/define.js";
 import { now } from "../clock.js";
+import { libsql } from "../db/libsql.js";
 import { settings } from "../db/schema/settings.js";
+import { users } from "../db/schema/users.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
 import { base } from "../rpc/base.js";
@@ -630,5 +633,25 @@ describe("a config's own telemetry consumers", () => {
 
     expect(exported).toEqual([]);
     expect(exporting.telemetry.snapshots).toHaveLength(1);
+  });
+});
+
+const onLibsql = await testSite({
+  config: { database: libsql({ url: ":memory:" }) },
+});
+
+describe("a site whose database is not D1", () => {
+  test("binds more parameters than D1 allows in one statement", async () => {
+    const ids = Array.from({ length: 150 }, (_, index) => index + 1);
+
+    await expect(
+      onLibsql.context.db.select().from(users).where(inArray(users.id, ids)),
+    ).resolves.toEqual([]);
+  });
+
+  test("runs an interactive transaction", async () => {
+    await expect(
+      onLibsql.context.db.transaction((tx) => tx.select().from(users)),
+    ).resolves.toEqual([]);
   });
 });
