@@ -19,7 +19,6 @@ export const entry = { ...entryEvents, rpc: entryRpc };
 /** Core's events and filters about terms; see {@link entry}. */
 export const term = { ...termEvents, rpc: termRpc };
 
-/** What `settings.for(group)` returns. */
 export type SettingsGroupHandle = SettingsGroupEvents & {
   readonly rpc: SettingsRpc;
 };

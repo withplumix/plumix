@@ -104,7 +104,7 @@ Core's subjects are exported from `plumix/plugin`. `block` (`packages/core/src/h
 | `settings.rpc.<get\|upsert>.input`  | async filter | the procedure's input                                            | `rpc/procedures/settings/**`                        |
 | `settings.rpc.<get\|upsert>.output` | async filter | the group's copy, with `{ group }` as input                      | `rpc/procedures/settings/**`                        |
 
-`settings.for(group)` scopes all of them, the `rpc` filters too, since each settings procedure names one group: it returns the event and `rpc` carrying the group as their `scope`. Each is emitted or applied once through `settings.for(group)`, and the boot check fails on a scope naming no registered settings group, core's `site` included among the registered names. The input filters are scoped by the group the caller asked for.
+`settings.for(group)` scopes all of them, the `rpc` filters too, since each settings procedure names one group: it returns the event and `rpc` carrying the group as their `scope`. The event is emitted once through `settings.for(group)` in `hooks/settings.ts` and each filter applied once through `settingsRpcFor(group)` in `rpc/filters.ts`, and the boot check fails on a scope naming no registered settings group, core's `site` included among the registered names. The input filters are scoped by the group the caller asked for.
 
 `user` (`packages/core/src/hooks/user.ts` holds its events; `packages/core/src/rpc/procedures/user/subject.ts` adds the filters, whose types live in `rpc/`) is fired from `rpc/procedures/user/**`:
 

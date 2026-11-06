@@ -30,5 +30,4 @@ export const settings = {
     scopeDeclarations(declarations, group),
 };
 
-/** Every declaration `settings` holds, for the boot checks. */
 export const settingsDeclarations = Object.values(declarations);

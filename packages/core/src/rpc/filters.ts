@@ -179,7 +179,6 @@ const settingsProcedures: readonly Readonly<
   Record<string, AnyFilterDefinition>
 >[] = Object.values(settingsRpc);
 
-/** Every settings filter above, for the boot check on its scopes. */
 export const settingsRpcDeclarations = settingsProcedures.flatMap((procedure) =>
   Object.values(procedure),
 );
