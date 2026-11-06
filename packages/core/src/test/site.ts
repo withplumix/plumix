@@ -176,7 +176,7 @@ export async function testSite<
   afterEach(() => {
     fakes.fetch.assertAllDeclared();
   });
-  // Forwards to the current test's fake, as `withFakes` does for the slots.
+  // The fake is rebuilt before each test, so each line goes to the current one.
   const logger: Logger = {
     debug: (message, meta) => {
       fakes.logger.debug(message, meta);

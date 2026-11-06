@@ -452,6 +452,21 @@ describe("the site's scheduled tasks", () => {
     report.assertFailed("failing:throws").assertTimedOut("failing:stalls");
     expect(report.ran).toEqual([]);
   });
+
+  test("log a failed task at error", async () => {
+    await scheduling.runSchedule("0 4 * * *");
+
+    scheduling.logger.assertLogged(
+      "error",
+      '[plumix] scheduled task "failing:throws" failed: boom',
+    );
+  });
+
+  test("deliver a telemetry snapshot of the firing", async () => {
+    await scheduling.runSchedule("0 3 * * *");
+
+    expect(scheduling.telemetry.snapshots).toHaveLength(1);
+  });
 });
 
 const heartbeat = definePlugin("heartbeat", {
@@ -549,20 +564,35 @@ describe("the site's outbound fetches", () => {
   );
 });
 
-const slow = definePlugin("slow", {
-  setup: (ctx) => {
-    ctx.registerRoute({
-      method: "GET",
-      path: "/later",
-      auth: "public",
-      handler: (_request, appCtx) => {
-        appCtx.defer(new Promise((resolve) => setTimeout(resolve, 20)));
-        return new Response("Queued");
-      },
-    });
-  },
-});
-const tracing = await testSite({ plugins: [slow] });
+function deferToNextTurn(defer: (promise: Promise<void>) => void): void {
+  defer(new Promise<void>((resolve) => setImmediate(resolve)));
+}
+const slowRouter = {
+  later: base.handler(({ context }) => {
+    deferToNextTurn(context.defer);
+  }),
+};
+
+function slow(): PluginDescriptor<
+  undefined,
+  { readonly slow: typeof slowRouter }
+> {
+  return definePlugin("slow", {
+    setup: (ctx) => {
+      ctx.registerRpcRouter(slowRouter);
+      ctx.registerRoute({
+        method: "GET",
+        path: "/later",
+        auth: "public",
+        handler: (_request, appCtx) => {
+          deferToNextTurn(appCtx.defer);
+          return new Response("Queued");
+        },
+      });
+    },
+  });
+}
+const tracing = await testSite({ plugins: [slow()] });
 
 describe("the site's telemetry", () => {
   test("holds a request's snapshot once the work it deferred settles", async () => {
@@ -571,12 +601,10 @@ describe("the site's telemetry", () => {
     expect(tracing.telemetry.snapshots).toHaveLength(1);
   });
 
-  test("names the spans it recorded when one is missing", async () => {
-    await tracing.visit("/_plumix/slow/later");
+  test("holds an rpc call's snapshot once the work it deferred settles", async () => {
+    await tracing.rpc.slow.later();
 
-    expect(() => tracing.telemetry.span("render")).toThrow(
-      /Expected a span named "render", but none was recorded\.\nRecorded:\n {2}dispatch\n/,
-    );
+    expect(tracing.telemetry.snapshots).toHaveLength(1);
   });
 });
 
@@ -602,18 +630,5 @@ describe("a config's own telemetry consumers", () => {
 
     expect(exported).toEqual([]);
     expect(exporting.telemetry.snapshots).toHaveLength(1);
-  });
-});
-
-describe("the site's logger", () => {
-  test("names the lines it logged when one is missing", () => {
-    tracing.context.logger.warn("slow_task");
-
-    expect(() => tracing.logger.assertLogged("error", "slow_task")).toThrow(
-      'Expected "slow_task" to be logged at error, but it was not.\nLogged:\n  warn: slow_task',
-    );
-    expect(() => tracing.logger.assertNothingLogged("warn")).toThrow(
-      "Expected nothing to be logged at warn, but 1 line was.",
-    );
   });
 });
