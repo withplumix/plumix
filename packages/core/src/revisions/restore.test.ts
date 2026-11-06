@@ -341,7 +341,7 @@ describe("entry.revisions.restore", () => {
     expect(restored.slug).toBe("first");
   });
 
-  test("fires entry:published when the revision restores a draft to published", async () => {
+  test("fires entry.published when the revision restores a draft to published", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithRevisions(),
@@ -662,7 +662,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     expect(previewed.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
 
-  test("fires entry:<type>:revision_restored AND entry:<type>:autosave_saved — but NOT entry:updated", async () => {
+  test("fires a type's revisionRestored AND autosaveSaved — but NOT updated", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithAutosave(),

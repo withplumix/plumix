@@ -9,7 +9,7 @@ import "./rpc/procedures/entry/writes-shared.js";
 // `emailChange`) into the published declaration graph, the same way.
 import "./mail/core-mails.js";
 
-// `entry` and `term` name the template builders here; `plumix/plugin` renames.
+// `entry` and `term` are the template builders in this barrel.
 export {
   entry as entrySubject,
   term as termSubject,

@@ -70,7 +70,7 @@ const declarations = {
 /** What `entry.for(type)` and `registerEntryType` return. */
 export type EntryTypeHandle = typeof declarations;
 
-/** Core's events and filters about entries, before its RPC filters join. */
+/** Core's events and filters about entries. */
 export const entry = {
   ...declarations,
   /**

@@ -7,6 +7,10 @@ import { testSite } from "../../src/test/site.js";
 
 const published: string[] = [];
 
+function publishedFor(slug: string): string[] {
+  return published.filter((name) => name.endsWith(`:${slug}`)).sort();
+}
+
 const shop = definePlugin("shop", {
   setup: (ctx) => {
     // Subscribed first, so only the scoped-first rule puts it second.
@@ -49,8 +53,6 @@ const site = await testSite({ plugins: [shop, catalog] });
 
 describe("a product entry", () => {
   test("publishing it runs its type's handler and every entry's handler, each once", async () => {
-    published.length = 0;
-
     await site.actingAs("editor").rpc.entry.create({
       type: "product",
       title: "Lamp",
@@ -58,14 +60,14 @@ describe("a product entry", () => {
       status: "published",
     });
 
-    expect(
-      published.filter((name) => !name.startsWith("catalog:")).sort(),
-    ).toEqual(["entry:lamp", "product:lamp"]);
+    expect(publishedFor("lamp")).toEqual([
+      "catalog:lamp",
+      "entry:lamp",
+      "product:lamp",
+    ]);
   });
 
   test("a handler scoped by name runs where the registration's handle runs", async () => {
-    published.length = 0;
-
     await site.actingAs("editor").rpc.entry.create({
       type: "product",
       title: "Vase",
@@ -73,8 +75,9 @@ describe("a product entry", () => {
       status: "published",
     });
 
-    expect(published.filter((name) => name !== "entry:vase").sort()).toEqual([
+    expect(publishedFor("vase")).toEqual([
       "catalog:vase",
+      "entry:vase",
       "product:vase",
     ]);
   });
@@ -82,8 +85,6 @@ describe("a product entry", () => {
 
 describe("an entry of another type", () => {
   test("publishing it runs only the handlers for every entry", async () => {
-    published.length = 0;
-
     await site.actingAs("editor").rpc.entry.create({
       type: "post",
       title: "News",
@@ -91,7 +92,7 @@ describe("an entry of another type", () => {
       status: "published",
     });
 
-    expect(published).toEqual(["entry:news"]);
+    expect(publishedFor("news")).toEqual(["entry:news"]);
   });
 });
 

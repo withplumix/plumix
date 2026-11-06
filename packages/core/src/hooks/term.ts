@@ -22,7 +22,7 @@ const declarations = {
 /** What `term.for(taxonomy)` and `registerTermTaxonomy` return. */
 export type TermTaxonomyHandle = typeof declarations;
 
-/** Core's events about terms, before its RPC filters join. */
+/** Core's events about terms. */
 export const term = {
   ...declarations,
   /**

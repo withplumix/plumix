@@ -109,7 +109,7 @@ async function assertParentReassignmentValid(
 }
 
 /**
- * The whole save as one guarded update: the columns after `before_save`, the
+ * The whole save as one guarded update: the columns after `beforeSave`, the
  * meta merged from the row the save read, and the token claimed from `ifMatch`.
  */
 async function writeGuarded(

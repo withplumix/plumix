@@ -772,7 +772,7 @@ describe("entry.publish", () => {
     });
   });
 
-  test("a publish from a stale copy runs no entry:before_save filter", async () => {
+  test("a publish from a stale copy runs no entry.beforeSave filter", async () => {
     const h = await publishedPostFixture();
     await h.client.entry.update({
       id: h.entryId,
