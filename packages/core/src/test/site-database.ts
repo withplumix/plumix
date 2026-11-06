@@ -1,8 +1,9 @@
-import type { Client, Transaction } from "@libsql/client";
+import type { Client, InArgs, InStatement, Transaction } from "@libsql/client";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
+import { D1_MAX_BOUND_PARAMETERS } from "../db/d1-chunk.js";
 import * as schema from "../db/schema/index.js";
 import { traceSqlClient } from "../db/trace-libsql.js";
 import { applyTestSchema } from "./harness.js";
@@ -13,15 +14,22 @@ export interface SiteDatabase {
   readonly reset: () => Promise<void>;
 }
 
+export interface SiteDatabaseOptions {
+  /** Refuse what D1 refuses in production, for a site whose config is `d1()`. */
+  readonly d1?: boolean;
+}
+
 /**
  * An in-memory database with each history in `migrationFolders` applied, in
  * order.
  */
 export async function createSiteDatabase(
   migrationFolders: readonly string[],
+  options: SiteDatabaseOptions = {},
 ): Promise<SiteDatabase> {
+  const traced = traceSqlClient(createClient({ url: ":memory:" }));
   const handle = forwardingHandle(
-    traceSqlClient(createClient({ url: ":memory:" })),
+    options.d1 === true ? refusingWhatD1Refuses(traced) : traced,
   );
   const db = drizzle(handle.client, { schema, casing: "snake_case" });
   for (const folder of migrationFolders) await applyTestSchema(db, folder);
@@ -38,6 +46,59 @@ export async function createSiteDatabase(
       await handle.client.executeMultiple(script);
     },
   };
+}
+
+/**
+ * Fails a statement before it runs wherever D1 would, so a query that breaks
+ * in production breaks in the test too.
+ */
+function refusingWhatD1Refuses(target: Client): Client {
+  const execute = (
+    statement: InStatement | string,
+    args?: InArgs,
+  ): ReturnType<Client["execute"]> => {
+    if (typeof statement === "string") {
+      assertWithinD1Cap(args);
+      return target.execute(statement, args);
+    }
+    assertWithinD1Cap(statement.args);
+    return target.execute(statement);
+  };
+  const batch: Client["batch"] = (statements, mode) => {
+    for (const statement of statements) {
+      assertWithinD1Cap(
+        Array.isArray(statement)
+          ? statement[1]
+          : typeof statement === "string"
+            ? undefined
+            : statement.args,
+      );
+    }
+    return target.batch(statements, mode);
+  };
+  const transaction = (): Promise<Transaction> =>
+    Promise.reject(
+      new Error(
+        "D1 refuses an interactive transaction, so db.transaction fails on it in production. Send the writes together with db.batch, which D1 runs as one transaction.",
+      ),
+    );
+  return new Proxy(target, {
+    get(on, key) {
+      if (key === "execute") return execute;
+      if (key === "batch") return batch;
+      if (key === "transaction") return transaction;
+      return forwarded(on, key);
+    },
+  });
+}
+
+function assertWithinD1Cap(args: InArgs | undefined): void {
+  if (args === undefined) return;
+  const bound = Array.isArray(args) ? args.length : Object.keys(args).length;
+  if (bound <= D1_MAX_BOUND_PARAMETERS) return;
+  throw new Error(
+    `D1 binds at most ${String(D1_MAX_BOUND_PARAMETERS)} parameters in one statement, and this one binds ${String(bound)}. Chunk the ids with chunkForD1 from plumix/db and run one statement per chunk, or send the statements together with db.batch.`,
+  );
 }
 
 interface ForwardingHandle {

@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import { expect } from "vitest";
 
@@ -6,6 +6,7 @@ import type { Db } from "../../context/app-context.js";
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type { DatabaseAdapter } from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
+import { D1_MAX_BOUND_PARAMETERS } from "../../db/d1-chunk.js";
 import { rowsAffected } from "../../db/rows-affected.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { entries } from "../../db/schema/entries.js";
@@ -30,6 +31,12 @@ export interface DatabaseContractOptions {
    */
   readonly connect: () =>
     DatabaseContractBinding | Promise<DatabaseContractBinding>;
+  /**
+   * The database refuses what D1 refuses: a statement binding more than
+   * `D1_MAX_BOUND_PARAMETERS`, and an interactive transaction. Runs the cases
+   * that hold it to that.
+   */
+  readonly d1Limits?: boolean;
 }
 
 type Case = ContractCase<DatabaseContractOptions>;
@@ -85,6 +92,12 @@ async function applyStatements(
     if (statement.trim() !== "") await db.run(sql.raw(statement));
   }
 }
+
+const onlyD1 = (options: DatabaseContractOptions): string | null =>
+  options.d1Limits === true ? null : "only D1 refuses it";
+
+const ids = (count: number): number[] =>
+  Array.from({ length: count }, (_, index) => index + 1);
 
 /**
  * Every case of the database contract, for guard tests that run them outside
@@ -303,6 +316,37 @@ export const databaseContractCases: readonly Case[] = [
             .select({ entryId: entryChanges.entryId, kind: entryChanges.kind })
             .from(entryChanges),
         ).toEqual([{ entryId: entry.id, kind: "upsert" }]);
+      }),
+  },
+  {
+    name: "a statement binding more parameters than D1 allows is refused",
+    skip: onlyD1,
+    run: (options) =>
+      withCoreSchema(options, async (db) => {
+        const select = (count: number) =>
+          db
+            .select()
+            .from(users)
+            .where(inArray(users.id, ids(count)));
+
+        await expect(select(D1_MAX_BOUND_PARAMETERS)).resolves.toEqual([]);
+        await expect(select(D1_MAX_BOUND_PARAMETERS + 1)).rejects.toThrow();
+      }),
+  },
+  {
+    name: "an interactive transaction is refused, and writes nothing",
+    skip: onlyD1,
+    run: (options) =>
+      withCoreSchema(options, async (db) => {
+        await expect(
+          db.transaction(async (tx) => {
+            await tx
+              .insert(users)
+              .values({ email: "ada@example.test", slug: "ada" });
+          }),
+        ).rejects.toThrow();
+
+        expect(await db.select().from(users)).toEqual([]);
       }),
   },
 ];

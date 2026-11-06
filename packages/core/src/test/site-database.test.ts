@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 
 import { entryChanges } from "../db/schema/entry_changes.js";
 import { users } from "../db/schema/users.js";
+import { describeDatabaseContract } from "./conformance/database.js";
 import { factoriesFor } from "./factories.js";
 import { CORE_MIGRATIONS } from "./harness.js";
 import { createSiteDatabase } from "./site-database.js";
@@ -111,4 +112,12 @@ describe("resetting the site database", () => {
 
     expect(await db.select().from(users)).toEqual([]);
   });
+});
+
+describeDatabaseContract({
+  d1Limits: true,
+  connect: async () => {
+    const { db } = await createSiteDatabase([], { d1: true });
+    return { adapter: { kind: "test", connect: () => ({ db }) } };
+  },
 });
