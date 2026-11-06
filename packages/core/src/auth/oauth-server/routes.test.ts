@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { User } from "../../db/schema/users.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { DefaultRole } from "../../users/contract/roles.js";
+import { oauthRefreshTokens } from "../../db/schema/oauth_refresh_tokens.js";
 import { encodeBase64url } from "../../encoding.js";
 import { definePlugin } from "../../plugin/define.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
@@ -227,7 +228,7 @@ function seed(
 }
 
 describe("authorization-server metadata", () => {
-  test("advertises the endpoints, CIMD, public clients, S256 and the three scopes", async () => {
+  test("advertises the endpoints, the refresh grant, CIMD, public clients, S256 and the three scopes", async () => {
     const h = await mcpHarness();
 
     const res = await h.dispatch(
@@ -240,7 +241,7 @@ describe("authorization-server metadata", () => {
       authorization_endpoint: "https://cms.example/_plumix/oauth/authorize",
       token_endpoint: "https://cms.example/_plumix/oauth/token",
       response_types_supported: ["code"],
-      grant_types_supported: ["authorization_code"],
+      grant_types_supported: ["authorization_code", "refresh_token"],
       token_endpoint_auth_methods_supported: ["none"],
       code_challenge_methods_supported: ["S256"],
       scopes_supported: ["read", "draft", "full"],
@@ -515,6 +516,149 @@ describe("a refused code exchange", () => {
 
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: "invalid_request" });
+  });
+});
+
+describe("refreshing", () => {
+  interface TokenPair {
+    readonly access_token: string;
+    readonly refresh_token: string;
+  }
+
+  async function tokenPair(
+    h: DispatcherHarness,
+    user: User,
+  ): Promise<TokenPair> {
+    const keys = await pkce();
+    const redirect = await approve(h, user, authorizationParams(keys));
+    const code = redirect.searchParams.get("code") ?? "";
+    const { body } = await exchange(h, exchangeForm(code, keys));
+    return body as unknown as TokenPair;
+  }
+
+  function refresh(
+    h: DispatcherHarness,
+    refreshToken: string,
+  ): Promise<{ status: number; body: Record<string, unknown> }> {
+    return exchange(h, {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: CLIENT_ID,
+    });
+  }
+
+  test("a code exchange returns a refresh token, and refreshing returns a new pair whose access token calls an MCP tool", async () => {
+    const h = await mcpHarness();
+    const first = await tokenPair(h, await seed(h));
+
+    const { status, body } = await refresh(h, first.refresh_token);
+    const call = await callTool(
+      h,
+      body.access_token as string,
+      "content_create",
+      { type: "post", slug: "hello", title: "Hello" },
+    );
+
+    expect(first.refresh_token).toEqual(expect.any(String));
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ token_type: "Bearer", expires_in: 3600 });
+    expect(body.refresh_token).toEqual(expect.any(String));
+    expect(body.refresh_token).not.toBe(first.refresh_token);
+    expect(body.access_token).not.toBe(first.access_token);
+    expect(call.result?.isError).toBeUndefined();
+  });
+
+  test("reusing a rotated refresh token is invalid_grant and revokes every token of the grant", async () => {
+    const h = await mcpHarness();
+    const first = await tokenPair(h, await seed(h));
+    const { body } = await refresh(h, first.refresh_token);
+    const second = body as unknown as TokenPair;
+
+    const reused = await refresh(h, first.refresh_token);
+    const latestRefresh = await refresh(h, second.refresh_token);
+    const calls = await Promise.all(
+      [first.access_token, second.access_token].map((token) =>
+        callTool(h, token, "content_create", {
+          type: "post",
+          slug: "hello",
+          title: "Hello",
+        }),
+      ),
+    );
+
+    expect(reused).toEqual({ status: 400, body: { error: "invalid_grant" } });
+    expect(latestRefresh.body).toEqual({ error: "invalid_grant" });
+    expect(calls.map((call) => call.status)).toEqual([401, 401]);
+  });
+
+  test("a refresh token presented by another client is invalid_grant", async () => {
+    const h = await mcpHarness();
+    const { refresh_token } = await tokenPair(h, await seed(h));
+
+    const { status, body } = await exchange(h, {
+      grant_type: "refresh_token",
+      refresh_token,
+      client_id: "https://other.example/client.json",
+    });
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "invalid_grant" });
+  });
+
+  test("a resource other than the MCP URL is invalid_target", async () => {
+    const h = await mcpHarness();
+    const { refresh_token } = await tokenPair(h, await seed(h));
+
+    const { status, body } = await exchange(h, {
+      grant_type: "refresh_token",
+      refresh_token,
+      client_id: CLIENT_ID,
+      resource: "https://cms.example/_plumix/rpc",
+    });
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "invalid_target" });
+  });
+
+  test("stores a refresh token only as its hash", async () => {
+    const h = await mcpHarness();
+    const { refresh_token } = await tokenPair(h, await seed(h));
+
+    const rows = await h.db.select().from(oauthRefreshTokens);
+
+    expect(rows).toHaveLength(1);
+    expect(JSON.stringify(rows)).not.toContain(refresh_token);
+  });
+
+  test("a refresh token older than thirty days is invalid_grant", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const h = await mcpHarness();
+      const { refresh_token } = await tokenPair(h, await seed(h));
+
+      vi.advanceTimersByTime(30 * 24 * 60 * 60_000 + 1_000);
+      const { status, body } = await refresh(h, refresh_token);
+
+      expect(status).toBe(400);
+      expect(body).toEqual({ error: "invalid_grant" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a refresh token still inside its thirty days is refreshed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const h = await mcpHarness();
+      const { refresh_token } = await tokenPair(h, await seed(h));
+
+      vi.advanceTimersByTime(29 * 24 * 60 * 60_000);
+      const { status } = await refresh(h, refresh_token);
+
+      expect(status).toBe(200);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

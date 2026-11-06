@@ -230,4 +230,5 @@ export const SYNC_AUTH_TABLES: readonly string[] = [
   "oauth_accounts",
   "oauth_grants",
   "oauth_authorization_codes",
+  "oauth_refresh_tokens",
 ];

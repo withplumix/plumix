@@ -21,6 +21,7 @@ export {
   oauthAccounts,
   oauthAuthorizationCodes,
   oauthGrants,
+  oauthRefreshTokens,
   scheduledTaskClaims,
   scheduledTaskLeases,
   sessions,
