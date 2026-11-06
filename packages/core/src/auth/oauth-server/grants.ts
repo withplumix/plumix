@@ -11,7 +11,7 @@ const CODE_BYTES = 32;
 const CODE_TTL_MS = 10 * 60_000;
 
 /** The capabilities `userId` granted `clientId`; `null` before any consent. */
-export async function findGrant(
+export async function findOAuthGrant(
   db: Db,
   userId: number,
   clientId: string,
@@ -26,8 +26,7 @@ export async function findGrant(
   return row?.scopes ?? null;
 }
 
-/** A grant covers a request when it holds every capability asked for. */
-export function grantCovers(
+export function oauthGrantCovers(
   granted: readonly string[],
   requested: readonly string[],
 ): boolean {
@@ -35,8 +34,7 @@ export function grantCovers(
   return requested.every((capability) => held.has(capability));
 }
 
-/** Replaces any earlier grant to the same client. */
-export async function saveGrant(
+export async function saveOAuthGrant(
   db: Db,
   input: {
     readonly userId: number;
@@ -53,7 +51,6 @@ export async function saveGrant(
     });
 }
 
-/** Only the hash is stored; the raw code goes to the client once. */
 export async function issueAuthorizationCode(
   db: Db,
   input: {

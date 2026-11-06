@@ -1,7 +1,7 @@
 import { authorizationResponseUrl } from "../../../../auth/oauth-server/authorization-request.js";
 import {
   issueAuthorizationCode,
-  saveGrant,
+  saveOAuthGrant,
 } from "../../../../auth/oauth-server/grants.js";
 import { resolveScope } from "../../../../auth/oauth-server/scopes.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
@@ -9,10 +9,6 @@ import { base } from "../../../base.js";
 import { oauthConsentApproveInputSchema } from "./schemas.js";
 import { validatedRequest } from "./validated.js";
 
-/**
- * Stores the scope resolved against the person's role, narrowed to the
- * capabilities they kept, and returns where to send the browser with the code.
- */
 export const approve = base
   .use(sessionAuthenticated)
   .input(oauthConsentApproveInputSchema)
@@ -30,7 +26,7 @@ export const approve = base
         ? resolved
         : resolved.filter((capability) => kept.has(capability));
 
-    await saveGrant(context.db, {
+    await saveOAuthGrant(context.db, {
       userId: context.user.id,
       clientId: request.client.clientId,
       scopes,

@@ -4,7 +4,6 @@ import { base } from "../../../base.js";
 import { oauthConsentLookupInputSchema } from "./schemas.js";
 import { validatedRequest } from "./validated.js";
 
-/** What the consent page shows: the client, and what its scope means for the person. */
 export const lookup = base
   .use(authenticated)
   .input(oauthConsentLookupInputSchema)

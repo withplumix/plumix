@@ -20,9 +20,9 @@ import {
 import { ClientMetadataError } from "./client-metadata.js";
 import {
   consumeAuthorizationCode,
-  findGrant,
-  grantCovers,
+  findOAuthGrant,
   issueAuthorizationCode,
+  oauthGrantCovers,
 } from "./grants.js";
 import { resolveScope } from "./scopes.js";
 
@@ -36,10 +36,6 @@ const CONSENT_PATH = "/_plumix/admin/auth/authorize";
 
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
 
-/**
- * RFC 6749 §4.1.1. A person whose grant already covers the request gets a code
- * at once; anyone else goes to the consent page, which signs them in first.
- */
 export async function handleAuthorize(ctx: AppContext): Promise<Response> {
   if (ctx.request.method !== "GET") return methodNotAllowed(["GET"]);
   const url = new URL(ctx.request.url);
@@ -61,7 +57,7 @@ export async function handleAuthorize(ctx: AppContext): Promise<Response> {
   const { request } = validated;
   const session = await authenticateSession(ctx);
   if (session !== null) {
-    const granted = await findGrant(
+    const granted = await findOAuthGrant(
       ctx.db,
       session.user.id,
       request.client.clientId,
@@ -71,7 +67,7 @@ export async function handleAuthorize(ctx: AppContext): Promise<Response> {
       session.user.role,
       ctx.plugins,
     );
-    if (granted !== null && grantCovers(granted, requested)) {
+    if (granted !== null && oauthGrantCovers(granted, requested)) {
       const code = await issueAuthorizationCode(ctx.db, {
         userId: session.user.id,
         request,
@@ -94,10 +90,6 @@ const tokenRequestSchema = v.object({
   resource: v.optional(v.string()),
 });
 
-/**
- * RFC 6749 §4.1.3 for public clients: the PKCE verifier stands in for a client
- * secret. Errors are §5.2's.
- */
 export async function handleToken(ctx: AppContext): Promise<Response> {
   if (ctx.request.method !== "POST") return methodNotAllowed(["POST"]);
   const contentType = ctx.request.headers.get("content-type") ?? "";

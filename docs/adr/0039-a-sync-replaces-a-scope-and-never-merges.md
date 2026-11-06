@@ -47,7 +47,8 @@ as a `RuntimeAdapter` member. This record supersedes it on those points.
   cleared where its key sets null. Comments on replaced entries go. The dry
   run counts them, so the operator sees the loss before it happens.
 - **Auth state never travels.** `sessions`, `api_tokens`, `auth_tokens`,
-  `device_codes` and `oauth_accounts` are in no scope and never in a dump. A
+  `device_codes`, `oauth_accounts`, `oauth_grants` and `oauth_authorization_codes`
+  are in no scope and never in a dump. A
   `users` replace re-points each target session and API token to the imported
   user with the same email, so the token a remote settle authenticates with
   survives the push, and removes and counts the rest.

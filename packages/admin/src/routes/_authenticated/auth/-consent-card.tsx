@@ -35,10 +35,6 @@ function ScopeName({ scope }: { readonly scope: ConsentScope }): ReactNode {
   }
 }
 
-/**
- * What an OAuth client asks for, shaped like device approval: the person keeps
- * any part of the requested scope and approves only that.
- */
 export function ConsentCard({
   client,
   scope,

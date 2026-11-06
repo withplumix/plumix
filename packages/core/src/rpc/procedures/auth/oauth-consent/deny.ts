@@ -4,7 +4,6 @@ import { base } from "../../../base.js";
 import { oauthConsentDenyInputSchema } from "./schemas.js";
 import { validatedRequest } from "./validated.js";
 
-/** Sends the browser back to the client with RFC 6749's `access_denied`. */
 export const deny = base
   .use(authenticated)
   .input(oauthConsentDenyInputSchema)

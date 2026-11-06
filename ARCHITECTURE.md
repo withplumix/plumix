@@ -702,6 +702,8 @@ erDiagram
   users ||--o{ api_tokens : "owns"
   users |o--o{ auth_tokens : "one-time tokens: invites, verification, OAuth state"
   users |o--o{ device_codes : "approves"
+  users ||--o{ oauth_grants : "approves OAuth clients"
+  users ||--o{ oauth_authorization_codes : "is issued"
   users ||--o{ edit_leases : "holds"
   users {
     int id

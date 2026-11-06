@@ -79,7 +79,7 @@ const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
-/** The authorization server MCP clients connect through; inlined like MCP's. */
+/** Inlined, not imported, so the eager graph skips the routes. */
 const OAUTH_AUTHORIZE_PATH = "/_plumix/oauth/authorize";
 const OAUTH_TOKEN_PATH = "/_plumix/oauth/token";
 /** RFC 9728's well-known prefix, inlined so the eager graph skips the SDK. */

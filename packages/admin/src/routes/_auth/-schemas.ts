@@ -26,7 +26,6 @@ export const loginSearchSchema = v.object({
   // same param to set `<html lang dir>`; the dropdown below lets the
   // user flip it from inside the form.
   lang: v.optional(v.string()),
-  /** The admin page that sent the person here to sign in. */
   next: v.optional(v.pipe(v.string(), v.maxLength(4096))),
 });
 
