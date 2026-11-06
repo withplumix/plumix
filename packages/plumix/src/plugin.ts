@@ -25,6 +25,7 @@ export {
   definePlugin,
   ENTRY_MENU_ICONS,
   entryCapability,
+  entrySubject as entry,
   findEntryMetaField,
   findTermMetaField,
   findUserMetaField,
@@ -50,6 +51,7 @@ export {
   TAXONOMY_MENU_ICONS,
   termCapability,
   user,
+  termSubject as term,
 } from "@plumix/core";
 
 // Core's barrel spends `auth` on the config builder `plumix/auth` publishes.
@@ -216,6 +218,7 @@ export type {
   EntryMetaBoxOptions,
   EntryReferenceSummary,
   EntryTypeAccess,
+  EntryTypeHandle,
   EntryTypeLabels,
   EntryTypeManifestEntry,
   EntryTypeTargets,
@@ -386,6 +389,7 @@ export type {
   TermMetaBoxOptions,
   TermMetaOf,
   TermReferenceSummary,
+  TermTaxonomyHandle,
   TermTaxonomyLabels,
   TermTaxonomyManifestEntry,
   TermTaxonomyTargets,

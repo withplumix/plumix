@@ -13,6 +13,7 @@ import {
 import { withUser } from "../../auth/with-user.js";
 import { eq } from "../../db/index.js";
 import { users } from "../../db/schema/users.js";
+import { entry } from "../../hooks/entry.js";
 import { userEvents } from "../../hooks/user.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/builder.js";
@@ -188,7 +189,7 @@ describe("resolveEntryList author memoization", () => {
 
     await run(async () => {
       await resolveEntryList(ctx, [post]);
-      await ctx.hooks.doAction("entry:published", post, ctx);
+      await ctx.events.emit(entry.published, { entry: post });
       const queriesAfterPublish = dbQueryCount();
       await resolveEntryList(ctx, [post]);
 

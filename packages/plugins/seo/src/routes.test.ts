@@ -15,7 +15,7 @@ import {
   grant,
 } from "plumix/auth";
 import { eq, etagOf } from "plumix/db";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, entry as entryEvents } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness, fakeCdn } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
@@ -2558,8 +2558,11 @@ function lifecycleFirer() {
           if (entry === undefined) {
             return new Response("no entry", { status: 404 });
           }
-          await appCtx.hooks.doAction("entry:updated", entry, entry, appCtx);
-          await appCtx.hooks.doAction("entry:published", entry, appCtx);
+          await appCtx.events.emit(entryEvents.updated, {
+            entry,
+            previous: entry,
+          });
+          await appCtx.events.emit(entryEvents.published, { entry });
           return new Response("ok");
         },
       });

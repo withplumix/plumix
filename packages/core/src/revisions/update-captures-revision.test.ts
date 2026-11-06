@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { entries } from "../db/schema/entries.js";
+import { entry } from "../hooks/entry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { currentEtag } from "../test/entry-etag.js";
@@ -68,12 +69,12 @@ describe("entry.update revision capture", () => {
     expect(revisions).toHaveLength(2);
   });
 
-  test("fires entry:revision_created action on capture", async () => {
+  test("emits entry.revisionCreated on capture", async () => {
     const h = await createRpcHarness({
       authAs: "author",
       plugins: registryWithRevisions(),
     });
-    const onCreated = h.spyAction("entry:revision_created");
+    const onCreated = h.spyEvent(entry.revisionCreated);
     const created = await h.client.entry.create({
       title: "X",
       slug: "x",

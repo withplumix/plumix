@@ -12,6 +12,7 @@ import type {
 } from "./core.js";
 import { and, eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
+import { term } from "../hooks/term.js";
 import { findTermMetaField, listTermMetaFields } from "../plugin/manifest.js";
 import {
   decodeMetaBag as decodeMetaBagCore,
@@ -25,8 +26,6 @@ import {
   validateMetaReferencesForRpc,
 } from "./core.js";
 import { assertMetaCapabilities } from "./entry.js";
-
-export type { MetaChanges as TermMetaChanges } from "./core.js";
 
 /**
  * RPC-facing sanitizer for a term's meta input, scoped by taxonomy. The
@@ -169,19 +168,17 @@ export async function writeSettledTermMeta(
   return true;
 }
 
-/** Fire `term:meta_changed` once a write carrying `patch` has landed. */
-export function announceTermMetaChange(
+/** Emit `term.metaChanged` once a write carrying `patch` has landed. */
+export async function announceTermMetaChange(
   ctx: AppContext,
-  term: { readonly id: number; readonly taxonomy: string },
+  row: { readonly id: number; readonly taxonomy: string },
   patch: MetaPatch,
 ): Promise<void> {
-  return ctx.hooks.doAction(
-    "term:meta_changed",
-    term,
-    {
+  await ctx.events.emit(term.for(row.taxonomy).metaChanged, {
+    term: row,
+    changes: {
       set: Object.fromEntries(patch.upserts),
       removed: [...patch.deletes],
     },
-    ctx,
-  );
+  });
 }

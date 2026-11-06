@@ -127,7 +127,7 @@ export async function runScheduledTasks(
     }
   }
   try {
-    // A scheduled publish fires `entry:published`; flush the batched CDN
+    // A scheduled publish fires `entry.published`; flush the batched CDN
     // purge it accumulated, the same request-end seam the dispatcher uses.
     flushPurgeTags(ctx);
     // No response exists on this path — the envelope carries a synthetic 200;

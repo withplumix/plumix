@@ -7,6 +7,7 @@ import { assertCanDeleteEntry } from "../../../entries/editability.js";
 import { deleteEntriesHistory } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { entryRpc } from "../../filters.js";
 import { fireEntryDeleted } from "./lifecycle.js";
 import { entryDeletePermanentInputSchema } from "./schemas.js";
 import { writeErrors as errors } from "./writes-shared.js";
@@ -37,8 +38,8 @@ export const deletePermanent = base
   .use(authenticated)
   .input(entryDeletePermanentInputSchema)
   .handler(async ({ input, context }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:entry.deletePermanent:input",
+    const filtered = await context.filters.apply(
+      entryRpc.deletePermanent.input,
       input,
     );
 
@@ -48,8 +49,5 @@ export const deletePermanent = base
         throw errors.CONFLICT({ data: { reason: "not_trashed" } });
       }
     });
-    return context.hooks.applyFilter(
-      "rpc:entry.deletePermanent:output",
-      existing,
-    );
+    return context.filters.apply(entryRpc.deletePermanent.output, existing);
   });

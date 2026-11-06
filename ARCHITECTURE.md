@@ -283,10 +283,10 @@ flowchart LR
   authc -- "Signs people in [OAuth 2.0]" --> idp
   content -- "Reads through" --> slots
   pluginsys -- "Installs and calls" --> plugins
-  pluginsys -- "Queues purge tags from entry actions" --> cdn
+  pluginsys -- "Queues purge tags from entry events" --> cdn
   authc -- "Stores OAuth state and sessions<br/>[SQL via drizzle]" --> slots
   sched -- "Publishes due entries, prunes sessions<br/>[SQL via drizzle]" --> slots
-  sched -- "Fires the entry actions of scheduled publishing" --> pluginsys
+  sched -- "Emits the entry events of scheduled publishing" --> pluginsys
   sched -- "Flushes purges after a run" --> cdn
   mailc -- "Delivers through" --> slots
   slots -- "Reads and writes [SQL via drizzle]" --> db
@@ -295,7 +295,7 @@ flowchart LR
   slots -- "Sends mail [provider API or SMTP]" --> mail
   slots -- "Purges by tag [HTTPS API]" --> cdnapi
 
-  pluginsys -- "Hands content actions to" --> webhooks
+  pluginsys -- "Hands entry events (entry.published, …) to" --> webhooks
   webhooks -- "Enqueues each delivery through" --> slots
   slots -- "Enqueues [the queue slot]" --> queuec
   queuec -- "Delivers queued jobs [the runtime's queue consumer]" --> entry
@@ -516,7 +516,7 @@ sequenceDiagram
   D->>D: Checks the X-Plumix-Request header and origin
   D->>P: Hands the call to the procedure
   P->>A: Authenticates the session
-  P->>H: Runs the rpc:entry.update:input filter
+  P->>H: Runs the entry.rpc.update.input filter
   P->>S: Checks the user may edit this entry
   P->>P: Checks no one else holds a live lease, unless the caller takes it over,<br/>then that its etag is current
   alt someone else holds a live lease, and the caller does not take over
@@ -643,7 +643,7 @@ sequenceDiagram
     alt zero rows, another save won the race
       P-->>G: CONFLICT
     else one row
-      P->>H: Fires the updated and published actions, queues purge tags
+      P->>H: Emits entry.updated and entry.published, queues purge tags
       P-->>G: The saved entry, with its new etag
     end
   end
@@ -663,8 +663,8 @@ sequenceDiagram
   participant RE as Runtime handler
   participant ST as Scheduled tasks
   participant R as Webhook receivers
-  P->>H: Fires the published action
-  H->>W: Hands the action to the entry type's webhooks
+  P->>H: Emits entry.published, scoped to the entry's type
+  H->>W: Runs the handlers for entry.published and entry.for(type).published
   W->>SL: Enqueues one delivery per matching webhook
   SL->>Q: Stores the jobs [the runtime's queue]
   Q->>RE: Delivers each job [the runtime's queue consumer]
@@ -766,16 +766,16 @@ erDiagram
 ### Entry lifecycle
 
 The statuses an entry moves through. `entry.update` accepts any status, so every move between draft,
-scheduled and published is one save. Each move fires actions, type-scoped first
-(`entry:<type>:<action>`) and then generic: a save that changes a column fires `updated`, a status change also
-fires `transition`, and reaching published fires `published`; a save that only changes meta fires
-`entry:meta_changed`. Trash, restore and permanent
-delete fire `trashed`, `restored` and `deleted`. The scheduled task publishes due entries every five
+scheduled and published is one save. Each move emits events of the `entry` subject once, scoped to
+the entry's type, so handlers from `entry.for(type)` run first and unscoped ones after: a save that
+changes a column emits `updated`, a status change also emits `transition`, and reaching published
+emits `published`; a save that only changes meta emits `metaChanged`. Trash, restore and permanent
+delete emit `trashed`, `restored` and `deleted`. The scheduled task publishes due entries every five
 minutes.
 
 On a type that autosaves, saving a published entry does not touch it: the editor's changes go to their
-own autosave row and fire `autosave_saved`, until publishing promotes them (`updated`) or the editor
-discards them (`autosave_discarded`).
+own autosave row and emit `autosaveSaved`, until publishing promotes them (`updated`) or the editor
+discards them (`autosaveDiscarded`).
 
 ```mermaid
 ---

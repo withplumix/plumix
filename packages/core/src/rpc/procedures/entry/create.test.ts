@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { entry } from "../../../hooks/entry.js";
 import { group, number, repeater, text } from "../../../plugin/fields/index.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { resolveEntryList } from "../../../route/render/resolve-entry-list.js";
@@ -9,6 +10,7 @@ import { forEntryType } from "../../../route/render/template-builders.js";
 import { resolveTemplate } from "../../../route/render/template-hierarchy.js";
 import { defaultTestTheme } from "../../../test/default-theme.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { entryRpc } from "../../filters.js";
 import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
 describe("entry.create", () => {
@@ -136,12 +138,12 @@ describe("entry.create", () => {
     });
   });
 
-  test("entry:before_save cannot overwrite authorId at create", async () => {
+  test("entry.beforeSave cannot overwrite authorId at create", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const other = await h.factory.admin.create({
       email: "other@example.test",
     });
-    h.hooks.addFilter("entry:before_save", (post) => ({
+    h.hooks.add(entry.beforeSave, (post) => ({
       ...post,
       authorId: other.id,
     }));
@@ -174,9 +176,9 @@ describe("entry.create", () => {
     });
   });
 
-  test("rpc:entry.create:input filter can rewrite the input before persistence", async () => {
+  test("entry.rpc.create.input filter can rewrite the input before persistence", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    h.hooks.addFilter("rpc:entry.create:input", (input) => ({
+    h.hooks.add(entryRpc.create.input, (input) => ({
       ...input,
       title: `[pinned] ${input.title}`,
     }));
@@ -188,9 +190,9 @@ describe("entry.create", () => {
     expect(created.title).toBe("[pinned] orig");
   });
 
-  test("entry:before_save filter runs before the insert", async () => {
+  test("entry.beforeSave filter runs before the insert", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    h.hooks.addFilter("entry:before_save", (post) => ({
+    h.hooks.add(entry.beforeSave, (post) => ({
       ...post,
       excerpt: `[auto] ${post.title}`,
     }));
@@ -202,9 +204,9 @@ describe("entry.create", () => {
     expect(created.excerpt).toBe("[auto] t");
   });
 
-  test("entry:published fires once when status is published, never on drafts", async () => {
+  test("entry.published fires once when status is published, never on drafts", async () => {
     const h = await createRpcHarness({ authAs: "author" });
-    const onPublish = h.spyAction("entry:published");
+    const onPublish = h.spyEvent(entry.published);
 
     await h.client.entry.create({ title: "d", slug: "d-1" });
     onPublish.assertNotCalled();
@@ -371,7 +373,7 @@ describe("entry.create", () => {
     expect(saved.title).toBe("renamed");
   });
 
-  test("a create with meta announces entry:meta_changed once, with the keys it set", async () => {
+  test("a create with meta announces entry.metaChanged once, with the keys it set", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("test-seo", {
       id: "test-seo",
@@ -388,7 +390,7 @@ describe("entry.create", () => {
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    const onMetaChanged = h.spyAction("entry:meta_changed");
+    const onMetaChanged = h.spyEvent(entry.metaChanged);
 
     await h.client.entry.create({
       title: "announced",
@@ -397,7 +399,7 @@ describe("entry.create", () => {
     });
 
     onMetaChanged.assertCalledOnce();
-    expect(onMetaChanged.lastArgs?.[1]).toEqual({
+    expect(onMetaChanged.lastPayload?.changes).toEqual({
       set: { meta_title: "SEO title" },
       removed: [],
     });

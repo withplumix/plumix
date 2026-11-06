@@ -1,6 +1,7 @@
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
+import { term } from "../../../hooks/term.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
   announceTermMetaChange,
@@ -13,6 +14,7 @@ import { startingMeta } from "../../../plugin/fields/starting-meta.js";
 import { listTermMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { termRpc } from "../../filters.js";
 import { termWire } from "./helpers.js";
 import { termCreateInputSchema } from "./schemas.js";
 
@@ -20,10 +22,7 @@ export const create = base
   .use(authenticated)
   .input(termCreateInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:term.create:input",
-      input,
-    );
+    const filtered = await context.filters.apply(termRpc.create.input, input);
 
     if (!context.plugins.termTaxonomies.has(filtered.taxonomy)) {
       throw errors.NOT_FOUND({
@@ -107,9 +106,11 @@ export const create = base
     }
     const meta = await resolveTermMeta(context, created.taxonomy, created.meta);
 
-    await context.hooks.doAction("term:created", created, context);
+    await context.events.emit(term.for(created.taxonomy).created, {
+      term: created,
+    });
     return termWire(
-      await context.hooks.applyFilter("rpc:term.create:output", {
+      await context.filters.apply(termRpc.create.output, {
         ...created,
         meta,
       }),

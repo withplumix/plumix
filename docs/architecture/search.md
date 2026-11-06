@@ -49,7 +49,7 @@ Without the plugin, `/search/:query` resolves in `resolveSearch` (core). With it
 
 **Staying current.** There are three paths:
 
-- In request: `registerIndexInvalidator` hooks `entry:published|updated|trashed|restored|deleted|meta_changed` and `term:created|updated|deleted`, then `ctx.defer`s an index write. Entries are claimed once per request memo and acked from the feed.
+- In request: `registerIndexInvalidator` subscribes to `entry.published|updated|trashed|restored|deleted|metaChanged` and `term.created|updated|deleted`, then `ctx.defer`s an index write. Entries are claimed once per request memo and acked from the feed.
 - Feed drain: core triggers append to `entry_changes` on every entry write, seeds and imports included. `drainEntryChanges` reads up to 10 batches of 100 and acks by row id after the write.
 - Sweeps: `runSearchMaintenance` runs the drain, then `advanceReindex`, then `repairStaleEntries`, then `backfillTerms`. Terms have no feed, so `backfillTerms` finds missing or outdated term documents with a join.
 
@@ -76,5 +76,5 @@ Key files:
 - A site that turns search off never compiles core's search rules, and the plugin still serves `/search/:query` ([ADR 0029](../adr/0029-a-framework-route-a-site-turns-off-is-never-compiled.md)). Guarded by `packages/core/src/route/compile.test.ts` and `packages/core/src/route/resolve.test.ts`.
 - A site can grant `search:reindex` to any role it defines; the plugin names only the default roles that get it (`registerCapability` in `src/index.ts`).
 - A content sync starts a full rebuild (`registerSyncReindex`, [ADR 0039](../adr/0039-a-sync-replaces-a-scope-and-never-merges.md)).
-- `term:meta_changed` is not hooked, because term meta is never indexed. The backfill comparison mirrors what `indexTerms` writes. Guarded by `src/server/drain.test.ts`.
+- `term.metaChanged` has no subscriber, because term meta is never indexed. The backfill comparison mirrors what `indexTerms` writes. Guarded by `src/server/drain.test.ts`.
 - Core's `LIKE` conditions never read `entries.content`. Guarded by `packages/core/src/entries/read-service.test.ts`.

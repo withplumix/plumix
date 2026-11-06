@@ -45,6 +45,7 @@ import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { assertLeaseAllows } from "../../concurrency.js";
+import { entryRpc } from "../../filters.js";
 import { entryRows } from "./concurrency.js";
 import {
   assertContentValidAgainstRegistries,
@@ -108,7 +109,7 @@ async function assertParentReassignmentValid(
 }
 
 /**
- * The whole save as one guarded update: the columns after `before_save`, the
+ * The whole save as one guarded update: the columns after `beforeSave`, the
  * meta merged from the row the save read, and the token claimed from `ifMatch`.
  */
 async function writeGuarded(
@@ -471,10 +472,7 @@ export const update = base
   .use(authenticated)
   .input(entryUpdateInputSchema)
   .handler(async ({ input, context }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:entry.update:input",
-      input,
-    );
+    const filtered = await context.filters.apply(entryRpc.update.input, input);
     const written = await updateEntry(context, filtered, {
       edit: (existing) => {
         assertCanEditEntry(context, existing, errors);
@@ -486,7 +484,7 @@ export const update = base
         assertCanDeleteEntry(context, existing, errors);
       },
     });
-    const output = await context.hooks.applyFilter("rpc:entry.update:output", {
+    const output = await context.filters.apply(entryRpc.update.output, {
       ...written.entry,
       meta: written.meta,
     });

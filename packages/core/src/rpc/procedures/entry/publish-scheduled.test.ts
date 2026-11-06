@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { entries } from "../../../db/schema/entries.js";
+import { entry } from "../../../hooks/entry.js";
 import { HookRegistry } from "../../../hooks/registry.js";
 import { createTestContext } from "../../../test/context.js";
 import { entryFactory, userFactory } from "../../../test/factories.js";
@@ -13,8 +14,8 @@ async function setup() {
   const user = await userFactory.transient({ db }).create({ role: "admin" });
   const hooks = new HookRegistry();
   const published: number[] = [];
-  hooks.addAction("entry:published", (entry: { id: number }) => {
-    published.push(entry.id);
+  hooks.on(entry.published, ({ entry: row }) => {
+    published.push(row.id);
   });
   const ctx = createTestContext({ db, hooks });
   return { db, user, hooks, published, ctx };
@@ -36,7 +37,7 @@ describe("publishDueScheduledEntries", () => {
     vi.useRealTimers();
   });
 
-  it("publishes only scheduled entries whose publishedAt has passed, firing entry:published", async () => {
+  it("publishes only scheduled entries whose publishedAt has passed, firing entry.published", async () => {
     const { db, user, published, ctx } = await setup();
     const due = await entryFactory.transient({ db }).create({
       authorId: user.id,
@@ -99,7 +100,7 @@ describe("publishDueScheduledEntries", () => {
       status: "scheduled",
       publishedAt: new Date(Date.now() - 1000),
     });
-    hooks.addAction("entry:published", async () => {
+    hooks.on(entry.published, async () => {
       await db
         .update(entries)
         .set({ status: "published" })
@@ -124,7 +125,7 @@ describe("publishDueScheduledEntries", () => {
       status: "scheduled",
       publishedAt: new Date(Date.now() - 1000),
     });
-    hooks.addAction("entry:published", async () => {
+    hooks.on(entry.published, async () => {
       await db
         .update(entries)
         .set({ publishedAt: new Date(Date.now() + 60_000) })

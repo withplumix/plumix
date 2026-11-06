@@ -8,13 +8,12 @@ import type {
   EventDefinition,
   PluginSetupContext,
 } from "plumix/plugin";
-import type { Entry, EntryStatus, SettingsBag } from "plumix/schema";
-import { auth, user } from "plumix/plugin";
+import type { SettingsBag } from "plumix/schema";
+import { auth, entry, term, user } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditEntityRow, AuditLogActor } from "../types.js";
 import type { AuditService } from "./auditService.js";
-import type { EntryMetaChanges } from "./entry-meta-changes.js";
 import type { SubjectInput } from "./subjectExtractors.js";
 import { buildAuditRow } from "./buildAuditRow.js";
 import { extractSubject } from "./subjectExtractors.js";
@@ -199,88 +198,6 @@ export function assertRedactionInvariants(
 // ──────────────────────────────────────────────────────────────────
 
 export const auditEvents: readonly AuditEventDef[] = [
-  // ─── Entry surface ───
-  {
-    event: "entry:updated",
-    subject: { kind: "extract", type: "entry" },
-    // Auto-managed timestamps would surface as a "diff" on every update;
-    // nested JSON (`content` / `meta`) is covered by `entry:meta_changed`
-    // so we don't double-count.
-    diff: { omit: ["createdAt", "updatedAt", "content", "meta"] },
-  },
-  {
-    event: "entry:transition",
-    subject: { kind: "extract", type: "entry" },
-    extra: (entry: Entry, oldStatus: EntryStatus) => ({
-      status: { from: oldStatus, to: entry.status },
-    }),
-  },
-  {
-    event: "entry:published",
-    subject: { kind: "extract", type: "entry" },
-  },
-  {
-    event: "entry:trashed",
-    subject: { kind: "extract", type: "entry" },
-  },
-  {
-    event: "entry:restored",
-    subject: { kind: "extract", type: "entry" },
-  },
-  {
-    event: "entry:deleted",
-    subject: { kind: "extract", type: "entry" },
-  },
-  {
-    event: "entry:meta_changed",
-    subject: {
-      kind: "inline",
-      type: "entry",
-      resolve: (entry: { readonly id: number }) => ({
-        id: String(entry.id),
-        label: `Entry #${String(entry.id)}`,
-      }),
-    },
-    extra: (_entry: unknown, changes: EntryMetaChanges) => ({
-      metaSet: Object.keys(changes.set),
-      metaRemoved: changes.removed,
-    }),
-  },
-
-  // ─── Term surface ───
-  {
-    event: "term:created",
-    subject: { kind: "extract", type: "term" },
-  },
-  {
-    event: "term:updated",
-    subject: { kind: "extract", type: "term" },
-    diff: { omit: ["createdAt", "updatedAt", "meta"] },
-  },
-  {
-    event: "term:deleted",
-    subject: { kind: "extract", type: "term" },
-  },
-  {
-    event: "term:meta_changed",
-    subject: {
-      kind: "inline",
-      type: "term",
-      resolve: (term: { readonly id: number }) => ({
-        id: String(term.id),
-        label: `Term #${String(term.id)}`,
-      }),
-    },
-    extra: (
-      term: { readonly taxonomy: string },
-      changes: EntryMetaChanges,
-    ) => ({
-      taxonomy: term.taxonomy,
-      metaSet: Object.keys(changes.set),
-      metaRemoved: changes.removed,
-    }),
-  },
-
   // ─── Settings surface ───
   {
     event: "settings:group_changed",
@@ -405,6 +322,18 @@ function actorOfCtx(_payload: unknown, ctx: AppContext): AuditLogActor {
   return actorOf(ctx);
 }
 
+const entrySubject = {
+  kind: "extract",
+  type: "entry",
+  from: ({ entry }: { readonly entry: SubjectInput }) => entry,
+} as const;
+
+const termSubject = {
+  kind: "extract",
+  type: "term",
+  from: ({ term }: { readonly term: SubjectInput }) => term,
+} as const;
+
 const userSubject = {
   kind: "extract",
   type: "user",
@@ -412,6 +341,113 @@ const userSubject = {
 } as const;
 
 export const auditedEvents: readonly AuditedEvent[] = [
+  // ─── Entry surface ───
+  audited({
+    event: "entry:updated",
+    on: entry.updated,
+    subject: entrySubject,
+    actor: actorOfCtx,
+    // Auto-managed timestamps would surface as a "diff" on every update;
+    // nested JSON (`content` / `meta`) is covered by `entry:meta_changed`
+    // so we don't double-count.
+    diff: {
+      omit: ["createdAt", "updatedAt", "content", "meta"],
+      between: ({ entry, previous }) => ({ previous, next: entry }),
+    },
+  }),
+  audited({
+    event: "entry:transition",
+    on: entry.transition,
+    subject: entrySubject,
+    actor: actorOfCtx,
+    extra: ({ entry, previousStatus }) => ({
+      status: { from: previousStatus, to: entry.status },
+    }),
+  }),
+  audited({
+    event: "entry:published",
+    on: entry.published,
+    subject: entrySubject,
+    actor: actorOfCtx,
+  }),
+  audited({
+    event: "entry:trashed",
+    on: entry.trashed,
+    subject: entrySubject,
+    actor: actorOfCtx,
+  }),
+  audited({
+    event: "entry:restored",
+    on: entry.restored,
+    subject: entrySubject,
+    actor: actorOfCtx,
+  }),
+  audited({
+    event: "entry:deleted",
+    on: entry.deleted,
+    subject: entrySubject,
+    actor: actorOfCtx,
+  }),
+  audited({
+    event: "entry:meta_changed",
+    on: entry.metaChanged,
+    subject: {
+      kind: "inline",
+      type: "entry",
+      resolve: ({ entry }) => ({
+        id: String(entry.id),
+        label: `Entry #${String(entry.id)}`,
+      }),
+    },
+    actor: actorOfCtx,
+    extra: ({ changes }) => ({
+      metaSet: Object.keys(changes.set),
+      metaRemoved: changes.removed,
+    }),
+  }),
+
+  // ─── Term surface ───
+  audited({
+    event: "term:created",
+    on: term.created,
+    subject: termSubject,
+    actor: actorOfCtx,
+  }),
+  audited({
+    event: "term:updated",
+    on: term.updated,
+    subject: termSubject,
+    actor: actorOfCtx,
+    diff: {
+      omit: ["createdAt", "updatedAt", "meta"],
+      between: ({ term, previous }) => ({ previous, next: term }),
+    },
+  }),
+  audited({
+    event: "term:deleted",
+    on: term.deleted,
+    subject: termSubject,
+    actor: actorOfCtx,
+  }),
+  audited({
+    event: "term:meta_changed",
+    on: term.metaChanged,
+    subject: {
+      kind: "inline",
+      type: "term",
+      resolve: ({ term }) => ({
+        id: String(term.id),
+        label: `Term #${String(term.id)}`,
+      }),
+    },
+    actor: actorOfCtx,
+    extra: ({ term, changes }) => ({
+      taxonomy: term.taxonomy,
+      metaSet: Object.keys(changes.set),
+      metaRemoved: changes.removed,
+    }),
+  }),
+
   // ─── User surface ───
   audited({
     event: "user:updated",

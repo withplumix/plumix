@@ -8,6 +8,8 @@ declare const inputType: unique symbol;
 export interface EventDefinition<TPayload> {
   readonly kind: "event";
   readonly id: string;
+  /** The registered name `.for(name)` scoped it to; absent when unscoped. */
+  readonly scope?: string;
   readonly [payloadType]?: (payload: TPayload) => TPayload;
 }
 
@@ -16,16 +18,21 @@ export interface FilterDefinition<TValue, TInput, TSync extends boolean> {
   readonly kind: "filter";
   readonly id: string;
   readonly sync: TSync;
+  /** See {@link EventDefinition.scope}. */
+  readonly scope?: string;
   readonly [valueType]?: (value: TValue) => TValue;
   readonly [inputType]?: (input: TInput) => TInput;
 }
 
 /** Any event, whatever its payload: what a descriptor lists. */
-export type AnyEventDefinition = Pick<EventDefinition<unknown>, "kind" | "id">;
+export type AnyEventDefinition = Pick<
+  EventDefinition<unknown>,
+  "kind" | "id" | "scope"
+>;
 /** Any filter, whatever its types: what a descriptor lists. */
 export type AnyFilterDefinition = Pick<
   FilterDefinition<unknown, unknown, boolean>,
-  "kind" | "id" | "sync"
+  "kind" | "id" | "sync" | "scope"
 >;
 
 /** Bands first, then core, then plugin config order, then registration order. */

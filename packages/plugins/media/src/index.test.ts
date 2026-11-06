@@ -4,6 +4,7 @@ import { text } from "plumix/fields";
 import {
   buildManifest,
   definePlugin,
+  entry,
   HookRegistry,
   installPlugins,
   tagCdnEntry,
@@ -36,7 +37,7 @@ describe("@plumix/plugin-media — variant purge", () => {
       await installPlugins({ hooks, plugins: [media()] });
       const db = await createTestDb();
       const author = await userFactory.transient({ db }).create({});
-      const entry = await entryFactory.transient({ db }).create({
+      const upload = await entryFactory.transient({ db }).create({
         type: "media",
         authorId: author.id,
         meta: { storageKey: "photo.png", mime: "image/png", size: 1 },
@@ -49,7 +50,7 @@ describe("@plumix/plugin-media — variant purge", () => {
         imageDelivery: { kind: "test", url: (source) => source, purge },
       });
 
-      await hooks.doAction(`entry:media:${event}`, entry, ctx);
+      await hooks.emit(entry.for("media")[event], { entry: upload }, ctx);
 
       expect(purge).toHaveBeenCalledOnce();
     },

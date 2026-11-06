@@ -17,6 +17,7 @@ import type { FieldPipelineMode } from "./field-pipeline.js";
 import { resolveCapability } from "../access/contract/capability.js";
 import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { entry } from "../hooks/entry.js";
 import { findEntryMetaField, listEntryMetaFields } from "../plugin/manifest.js";
 import {
   decodeMetaBag as decodeMetaBagCore,
@@ -34,8 +35,6 @@ import {
   validateAndPromoteMetaBag,
   validateMetaReferencesForRpc,
 } from "./core.js";
-
-export type { MetaChanges as EntryMetaChanges } from "./core.js";
 
 /**
  * RPC-facing sanitizer for an entry's meta input, scoped by entry type. The
@@ -292,22 +291,20 @@ export async function loadEntryMeta(
 }
 
 /**
- * Fire `entry:meta_changed` once a write carrying `patch` has landed. Plugins
- * that need to mutate the patch subscribe to `rpc:entry.{create,update}:input`
+ * Emit `entry.metaChanged` once a write carrying `patch` has landed. Plugins
+ * that need to mutate the patch subscribe to `entry.rpc.{create,update}.input`
  * and mutate `input.meta` there.
  */
-export function announceEntryMetaChange(
+export async function announceEntryMetaChange(
   ctx: AppContext,
-  entry: { readonly id: number; readonly type: string },
+  row: { readonly id: number; readonly type: string },
   patch: MetaPatch,
 ): Promise<void> {
-  return ctx.hooks.doAction(
-    "entry:meta_changed",
-    entry,
-    {
+  await ctx.events.emit(entry.for(row.type).metaChanged, {
+    entry: row,
+    changes: {
       set: Object.fromEntries(patch.upserts),
       removed: [...patch.deletes],
     },
-    ctx,
-  );
+  });
 }

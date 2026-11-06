@@ -3,6 +3,7 @@ import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { assertTermCopyCurrent, claimTerm } from "../../../db/term-claim.js";
+import { term } from "../../../hooks/term.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
   announceTermMetaChange,
@@ -14,6 +15,7 @@ import {
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { assertLeaseAllows } from "../../concurrency.js";
+import { termRpc } from "../../filters.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { parentWouldCreateCycle, termWire } from "./helpers.js";
 import { termUpdateInputSchema } from "./schemas.js";
@@ -22,10 +24,7 @@ export const update = base
   .use(authenticated)
   .input(termUpdateInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:term.update:input",
-      input,
-    );
+    const filtered = await context.filters.apply(termRpc.update.input, input);
 
     const existing = await context.db.query.terms.findFirst({
       where: eq(terms.id, filtered.id),
@@ -111,7 +110,7 @@ export const update = base
         existing.meta,
       );
       return termWire(
-        await context.hooks.applyFilter("rpc:term.update:output", {
+        await context.filters.apply(termRpc.update.output, {
           ...existing,
           meta,
         }),
@@ -141,11 +140,14 @@ export const update = base
       await announceTermMetaChange(context, updated, metaPatch);
     }
     if (Object.keys(patch).length > 0) {
-      await context.hooks.doAction("term:updated", updated, existing, context);
+      await context.events.emit(term.for(updated.taxonomy).updated, {
+        term: updated,
+        previous: existing,
+      });
     }
     const meta = await resolveTermMeta(context, updated.taxonomy, updated.meta);
     return termWire(
-      await context.hooks.applyFilter("rpc:term.update:output", {
+      await context.filters.apply(termRpc.update.output, {
         ...updated,
         meta,
       }),

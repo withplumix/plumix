@@ -8,7 +8,7 @@ import type { PluginSetupContext } from "./plugin.js";
 
 describe("plumix/plugin", () => {
   test("carries the RPC lifecycle action names, not `never`", () => {
-    expectTypeOf<"entry:published">().toExtend<
+    expectTypeOf<"settings:group_changed">().toExtend<
       Parameters<PluginSetupContext["addAction"]>[0]
     >();
   });

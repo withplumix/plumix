@@ -1,7 +1,7 @@
 import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import type { Term } from "plumix/schema";
 import { eq } from "plumix/db";
-import { ackEntryChanges } from "plumix/plugin";
+import { ackEntryChanges, entry, term } from "plumix/plugin";
 import { entryChanges } from "plumix/schema";
 
 import { indexEntries, indexTerms } from "./index-writer.js";
@@ -66,33 +66,30 @@ async function indexAndAck(ctx: AppContext, entryId: number): Promise<void> {
 }
 
 export function registerIndexInvalidator(ctx: PluginSetupContext): void {
-  // `entry:meta_changed` counts because meta fields can be searchable. It fires
-  // before `entry:updated`, so a later `entry:updated` mutation waits for the
+  // `entry.metaChanged` counts because meta fields can be searchable. It fires
+  // before `entry.updated`, so a later `entry.updated` mutation waits for the
   // drain.
   const onEntry = (
-    entry: { readonly id: number },
+    { entry: row }: { readonly entry: { readonly id: number } },
     appCtx: AppContext,
   ): void => {
-    enqueueEntryIndex(appCtx, entry.id);
+    enqueueEntryIndex(appCtx, row.id);
   };
-  ctx.addAction("entry:published", onEntry);
-  ctx.addAction("entry:trashed", onEntry);
-  ctx.addAction("entry:restored", onEntry);
-  ctx.addAction("entry:deleted", onEntry);
-  ctx.addAction("entry:updated", (entry, _previous, appCtx) =>
-    onEntry(entry, appCtx),
-  );
-  ctx.addAction("entry:meta_changed", (entry, _changes, appCtx) =>
-    onEntry(entry, appCtx),
-  );
+  ctx.events.on(entry.published, onEntry);
+  ctx.events.on(entry.trashed, onEntry);
+  ctx.events.on(entry.restored, onEntry);
+  ctx.events.on(entry.deleted, onEntry);
+  ctx.events.on(entry.updated, onEntry);
+  ctx.events.on(entry.metaChanged, onEntry);
 
-  // No `term:meta_changed`: term meta is never indexed.
-  const onTerm = (term: Term, appCtx: AppContext): void => {
-    enqueueTermIndex(appCtx, term.id);
+  // No `term.metaChanged`: term meta is never indexed.
+  const onTerm = (
+    { term: row }: { readonly term: Term },
+    appCtx: AppContext,
+  ): void => {
+    enqueueTermIndex(appCtx, row.id);
   };
-  ctx.addAction("term:created", onTerm);
-  ctx.addAction("term:deleted", onTerm);
-  ctx.addAction("term:updated", (term, _previous, appCtx) =>
-    onTerm(term, appCtx),
-  );
+  ctx.events.on(term.created, onTerm);
+  ctx.events.on(term.deleted, onTerm);
+  ctx.events.on(term.updated, onTerm);
 }

@@ -671,6 +671,7 @@ type PluginDefinitionErrorCode =
   | "meta_box_references_unknown_scope"
   | "settings_page_references_unknown_group"
   | "admin_bar_node_references_unknown_parent"
+  | "handler_scoped_to_unknown_name"
   | "admin_slug_derivation_failed"
   | "admin_manifest_placeholder_missing";
 
@@ -695,6 +696,8 @@ interface PluginDefinitionErrorFields {
   scriptId?: string;
   nodeId?: string;
   parent?: string;
+  declarationId?: string;
+  registered?: readonly string[];
 }
 
 export class PluginDefinitionError extends Error {
@@ -723,6 +726,8 @@ export class PluginDefinitionError extends Error {
   readonly scriptId: string | undefined;
   readonly nodeId: string | undefined;
   readonly parent: string | undefined;
+  readonly declarationId: string | undefined;
+  readonly registered: readonly string[] | undefined;
 
   private constructor(
     code: PluginDefinitionErrorCode,
@@ -751,6 +756,8 @@ export class PluginDefinitionError extends Error {
     this.scriptId = fields.scriptId;
     this.nodeId = fields.nodeId;
     this.parent = fields.parent;
+    this.declarationId = fields.declarationId;
+    this.registered = fields.registered;
   }
 
   static invalidPluginIdLength(ctx: {
@@ -908,6 +915,23 @@ export class PluginDefinitionError extends Error {
       "admin_bar_node_references_unknown_parent",
       `Admin bar node "${ctx.nodeId}" names parent "${ctx.parent}", ` +
         `which isn't a registered node.`,
+      ctx,
+    );
+  }
+
+  static handlerScopedToUnknownName(ctx: {
+    pluginId: string;
+    declarationId: string;
+    kind: string;
+    scope: string;
+    registered: readonly string[];
+  }): PluginDefinitionError {
+    return new PluginDefinitionError(
+      "handler_scoped_to_unknown_name",
+      `Plugin "${ctx.pluginId}" subscribes to "${ctx.declarationId}" for ` +
+        `${ctx.kind} "${ctx.scope}", which no plugin registered. ` +
+        `Registered ${ctx.kind === "taxonomy" ? "taxonomies" : `${ctx.kind}s`}: ` +
+        `${ctx.registered.join(", ")}.`,
       ctx,
     );
   }

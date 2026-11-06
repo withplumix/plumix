@@ -9,7 +9,7 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-Every entry carries exactly one of four statuses. The status decides who can read the entry, whether the router will serve it, and which lifecycle hooks fire when it changes.
+Every entry carries exactly one of four statuses. The status decides who can read the entry, whether the router will serve it, and which lifecycle events fire when it changes.
 
 ## Overview
 
@@ -23,7 +23,7 @@ The read service clamps an admin read to what the caller may see. A caller with 
 
 Writing a status has a capability attached too. Creating an entry straight to `published` or `scheduled` needs `entry:<type>:publish` on top of `entry:<type>:create`, and so does moving an existing entry to `published`.
 
-The examples below subscribe to the lifecycle from a plugin's `setup`, through the two methods the context carries. `ctx.addFilter` registers a filter, which receives a value and returns one, so a `before_save` handler is handed the entry about to be written and returns the entry to write. `ctx.addAction` registers an action, which returns nothing and runs for its side effects, so a `published` handler only learns that a recipe went live. Both take a hook name, and the names are fixed strings core declares. The Hooks section, which lists every name with its arguments, is not written yet.
+The examples below subscribe to the lifecycle from a plugin's `setup`. `registerEntryType` returns the type's own events and filters, so `recipe.published` and `recipe.beforeSave` run only for recipes; `entry.published` and `entry.beforeSave`, imported from `plumix/plugin`, run for every type, and `entry.for("recipe")` addresses a type another plugin registered. `ctx.filters.add` subscribes to a filter, which receives a value and returns one, so a `beforeSave` handler is handed the entry about to be written and returns the entry to write; a handler that throws refuses the save with its error. `ctx.events.on` subscribes to an event, which returns nothing and runs for its side effects, so a `published` handler only learns that a recipe went live. An event handler receives an object, `{ entry }` or `{ entry, previousStatus }`, and the request's `ctx` second. A scope naming a type no plugin registers fails boot and lists the registered types.
 
 ## The four statuses
 
@@ -40,8 +40,10 @@ import { definePlugin } from "plumix/plugin";
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
+    const recipe = ctx.registerEntryType("recipe", { label: "Recipes" });
+
     // Runs on every save of a recipe, draft or not; the guard narrows it.
-    ctx.addFilter("entry:recipe:before_save", (entry) => {
+    ctx.filters.add(recipe.beforeSave, (entry) => {
       if (entry.status !== "draft") return entry;
       return { ...entry, title: entry.title || "Untitled recipe" };
     });
@@ -64,7 +66,9 @@ import { definePlugin } from "plumix/plugin";
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
-    ctx.addAction("entry:recipe:published", (entry) => {
+    const recipe = ctx.registerEntryType("recipe", { label: "Recipes" });
+
+    ctx.events.on(recipe.published, ({ entry }) => {
       console.info(
         `[recipes] ${entry.slug} went live at ${
           entry.publishedAt?.toISOString() ?? "an unrecorded time"
@@ -75,7 +79,7 @@ export const recipes = definePlugin("recipes", {
 });
 ```
 
-`entry:recipe:published` fires alongside the type-free `entry:published`. Both always fire, so subscribe to whichever granularity you need rather than filtering by type inside a generic handler.
+Publishing a recipe emits `entry.published` once, and it runs both the handlers scoped to recipes and the unscoped ones, so subscribe at whichever granularity you need rather than filtering by type inside a generic handler. At the same `order`, the scoped handlers run first.
 
 ### scheduled
 
@@ -90,11 +94,13 @@ import { definePlugin } from "plumix/plugin";
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
-    ctx.addAction("entry:recipe:transition", (entry, oldStatus) => {
+    const recipe = ctx.registerEntryType("recipe", { label: "Recipes" });
+
+    ctx.events.on(recipe.transition, ({ entry, previousStatus }) => {
       if (entry.status !== "scheduled") return;
       const waitMs = (entry.publishedAt?.getTime() ?? 0) - Date.now();
       console.info(
-        `[recipes] ${entry.slug} left ${oldStatus}, publishing in ${String(
+        `[recipes] ${entry.slug} left ${previousStatus}, publishing in ${String(
           Math.round(waitMs / 60_000),
         )} minutes`,
       );
@@ -118,11 +124,13 @@ import { definePlugin } from "plumix/plugin";
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
-    ctx.addAction("entry:recipe:trashed", (entry) => {
+    const recipe = ctx.registerEntryType("recipe", { label: "Recipes" });
+
+    ctx.events.on(recipe.trashed, ({ entry }) => {
       console.info(`[recipes] ${entry.slug} moved to trash`);
     });
 
-    ctx.addAction("entry:recipe:restored", (entry) => {
+    ctx.events.on(recipe.restored, ({ entry }) => {
       console.info(`[recipes] ${entry.slug} restored as ${entry.status}`);
     });
   },
@@ -139,7 +147,7 @@ Any status can reach any other. No state machine forbids a pair. What varies is 
 - Out of `trash`: the restore procedure, which lands on `draft`.
 - Out of `published` back to `draft`: an ordinary update, with no publish capability and no strict validation. The other direction is the publish transition in the first bullet.
 
-`entry:transition` fires with the entry and its old status, and only when the status actually changed. A save that leaves the status alone fires `entry:updated` and no transition. The type-scoped `entry:<type>:transition` fires first, then the generic one.
+`entry.transition` is emitted with `{ entry, previousStatus }`, and only when the status actually changed. A save that leaves the status alone emits `entry.updated` and no transition. A handler scoped with `entry.for(type)` runs before an unscoped one of the same order.
 
 Trashing, restoring and deleting come in single and bulk forms. Bulk trash and bulk restore skip rows that are already in the target state; bulk permanent delete refuses the whole batch if any selected row is not in the trash, rather than half-applying an unrecoverable operation.
 
@@ -147,9 +155,9 @@ Trashing, restoring and deleting come in single and bulk forms. Bulk trash and b
 
 A scheduled entry becomes live through a cron task that core registers at boot. `publish-scheduled` runs every five minutes, selects the entries whose status is `scheduled` and whose `publishedAt` has arrived, and flips each one to `published`.
 
-The flip keeps the scheduled time as the publish time, so a recipe scheduled for 09:00 and picked up at 09:03 still reads as published at 09:00. Each flipped entry fires `entry:updated`, `entry:transition` and `entry:published`, the same three the editor's publish path fires. Cache purging and sitemap invalidation therefore run whichever way the entry went live.
+The flip keeps the scheduled time as the publish time, so a recipe scheduled for 09:00 and picked up at 09:03 still reads as published at 09:00. Each flipped entry emits `entry.updated`, `entry.transition` and `entry.published`, the same three the editor's publish path emits. Cache purging and sitemap invalidation therefore run whichever way the entry went live.
 
-Two things the cron deliberately skips: the `entry:before_save` filter and revision capture. A cron run has no signed-in user, so there is no author to attribute a snapshot to, and the scheduling save already took one.
+Two things the cron deliberately skips: the `entry.beforeSave` filter and revision capture. A cron run has no signed-in user, so there is no author to attribute a snapshot to, and the scheduling save already took one.
 
 <Aside
   type="caution"

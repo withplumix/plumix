@@ -5,6 +5,7 @@ import { deriveEntryTypeCapabilities } from "../access/contract/rbac.js";
 import { etagOf } from "../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { entries } from "../db/schema/entries.js";
+import { entry } from "../hooks/entry.js";
 import { text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
@@ -290,14 +291,12 @@ describe("entry.revisions.restore", () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
     const ifMatch = await currentEtag(h.db, entryId);
     // A plugin's own write, landing after the restore read live.
-    // @ts-expect-error -- `applyFilter` awaits a handler's promise; the
-    // registry types `entry:before_save` handlers as sync.
-    h.hooks.addFilter("entry:before_save", async (entry) => {
+    h.hooks.add(entry.beforeSave, async (row) => {
       await h.db
         .update(entries)
         .set({ title: "theirs" })
         .where(eq(entries.id, entryId));
-      return entry;
+      return row;
     });
 
     await expect(
@@ -342,7 +341,7 @@ describe("entry.revisions.restore", () => {
     expect(restored.slug).toBe("first");
   });
 
-  test("fires entry:published when the revision restores a draft to published", async () => {
+  test("fires entry.published when the revision restores a draft to published", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithRevisions(),
@@ -369,7 +368,7 @@ describe("entry.revisions.restore", () => {
       (r) => r.status === "published",
     );
     if (!publishedRevision) throw new Error("expected a published revision");
-    const onPublished = h.spyAction("entry:published");
+    const onPublished = h.spyEvent(entry.published);
     await h.client.entry.revisions.restore({
       revisionId: publishedRevision.id,
       ifMatch: await currentEtag(h.db, created.id),
@@ -663,7 +662,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     expect(previewed.meta[NAMED_TEMPLATE_META_KEY]).toBeUndefined();
   });
 
-  test("fires entry:<type>:revision_restored AND entry:<type>:autosave_saved — but NOT entry:updated", async () => {
+  test("fires a type's revisionRestored AND autosaveSaved — but NOT updated", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithAutosave(),
@@ -684,16 +683,16 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     });
     if (!revision) throw new Error("expected one revision");
 
-    const onRestored = h.spyAction("entry:post:revision_restored");
-    const onAutosaveSaved = h.spyAction("entry:post:autosave_saved");
-    const onUpdated = h.spyAction("entry:post:updated");
+    const onRestored = h.spyEvent(entry.for("post").revisionRestored);
+    const onAutosaveSaved = h.spyEvent(entry.for("post").autosaveSaved);
+    const onUpdated = h.spyEvent(entry.for("post").updated);
     await h.client.entry.revisions.restore({
       revisionId: revision.id,
       ifMatch: await currentEtag(h.db, created.id),
     });
     onRestored.assertCalledOnce();
     onAutosaveSaved.assertCalledOnce();
-    // Live didn't change — `entry:updated` would mis-signal cache
+    // Live didn't change — `entry.updated` would mis-signal cache
     // invalidators and feed-rebuilders.
     expect(onUpdated.calls).toEqual([]);
   });

@@ -10,7 +10,13 @@ import type {
   SetupEvents,
 } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
-import { authenticated, base, definePlugin, HookRegistry } from "plumix/plugin";
+import {
+  authenticated,
+  base,
+  definePlugin,
+  entry,
+  HookRegistry,
+} from "plumix/plugin";
 import {
   createDeferQueue,
   createDispatcherHarness,
@@ -224,15 +230,17 @@ describe("createAuditExtension — integration with the real AuditService", () =
       event: "comment:approved",
       subject: { type: "comment", id: 5, label: "first" },
     });
-    await hooks.doAction(
-      "entry:published",
+    await hooks.emit(
+      entry.published,
       {
-        id: 99,
-        title: "Hello",
-        slug: "hello",
-        type: "post",
-        status: "published",
-      } as unknown as Entry,
+        entry: {
+          id: 99,
+          title: "Hello",
+          slug: "hello",
+          type: "post",
+          status: "published",
+        } as unknown as Entry,
+      },
       ctx,
     );
     await flush();
