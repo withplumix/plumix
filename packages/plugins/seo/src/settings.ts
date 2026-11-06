@@ -7,7 +7,7 @@ import type {
   PluginSetupContext,
 } from "plumix/plugin";
 import type { SettingsBag } from "plumix/schema";
-import { loadSettingsGroups } from "plumix/plugin";
+import { loadSettingsGroups, settings } from "plumix/plugin";
 
 import { publicTargets } from "./scope.js";
 
@@ -444,10 +444,13 @@ export function registerSeoSettings(ctx: PluginAfterSetupContext): void {
  * would turn indexing back on.
  */
 export function registerSeoSettingsDefaults(ctx: PluginSetupContext): void {
-  ctx.addFilter("rpc:settings.get:output", async (copy, context, appCtx) => {
-    if (context.group !== SEO_SETTINGS_GROUP) return copy;
-    return { ...copy, values: await withLegacyDefaults(copy.values, appCtx) };
-  });
+  ctx.filters.add(
+    settings.for(SEO_SETTINGS_GROUP).rpc.get.output,
+    async (copy, _input, appCtx) => ({
+      ...copy,
+      values: await withLegacyDefaults(copy.values, appCtx),
+    }),
+  );
 }
 
 async function withLegacyDefaults(

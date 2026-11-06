@@ -4,12 +4,14 @@ import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { and, eq } from "../../../db/index.js";
 import { settings } from "../../../db/schema/settings.js";
 import { HookRegistry } from "../../../hooks/registry.js";
+import { settings as settingsEvents } from "../../../hooks/settings.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { number, select, text, url } from "../../../plugin/fields/index.js";
 import { installPlugins } from "../../../runtime/install-plugins.js";
 import { loadSettingsGroups } from "../../../seo/site-settings.js";
 import { adminUser } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { settingsRpc } from "../../filters.js";
 
 type Harness = Awaited<ReturnType<typeof createRpcHarness>>;
 
@@ -141,20 +143,19 @@ describe("settings.upsert", () => {
     ]);
   });
 
-  test("fires `settings:group_changed` with the upserts + removed keys", async () => {
+  test("emits `settings.groupChanged` with the upserts + removed keys", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await saveCurrent(h, {
       group: "general",
       values: { site_title: "v1", tagline: "t1" },
     });
-    const spy = h.spyAction("settings:group_changed");
+    const spy = h.spyEvent(settingsEvents.groupChanged);
     await saveCurrent(h, {
       group: "general",
       values: { site_title: "v2", tagline: null },
     });
     spy.assertCalledOnce();
-    const [changes] = spy.lastArgs ?? [];
-    expect(changes).toEqual({
+    expect(spy.lastPayload).toEqual({
       group: "general",
       set: { site_title: "v2" },
       removed: ["tagline"],
@@ -220,13 +221,13 @@ describe("settings.upsert", () => {
       key: "site_title",
       value: "Example",
     });
-    const spy = h.spyAction("settings:group_changed");
+    const spy = h.spyEvent(settingsEvents.groupChanged);
     const bag = await saveCurrent(h, {
       group: "general",
       values: {},
     });
     expect(bag).toEqual({ site_title: "Example" });
-    // No writes, no action fired.
+    // No writes, no event emitted.
     expect(spy.calls).toHaveLength(0);
   });
 
@@ -533,7 +534,7 @@ describe("settings groups: created on first save", () => {
   test("the marker never reaches settings.get or its output filter", async () => {
     const h = await harnessWithDefaults();
     await saveCurrent(h, { group: "blog", values: {} });
-    const spy = h.spyFilter("rpc:settings.get:output");
+    const spy = h.spyFilter(settingsRpc.get.output);
 
     const { values: bag } = await h.client.settings.get({ group: "blog" });
 

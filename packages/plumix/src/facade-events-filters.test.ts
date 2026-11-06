@@ -21,6 +21,8 @@ import type {
   PluginSetupContext,
   render,
   RenderDocumentInput,
+  settings,
+  SettingsGroupHandle,
   SetupEvents,
   SetupFilters,
   sync,
@@ -28,7 +30,14 @@ import type {
   TermTaxonomyHandle,
   user,
 } from "./plugin.js";
-import type { Entry, NewEntry, Term, User } from "./schema/index.js";
+import type {
+  Entry,
+  NewEntry,
+  SettingsBag,
+  SettingsGroupCopy,
+  Term,
+  User,
+} from "./schema/index.js";
 import type { DocumentManifest } from "./theme/index.js";
 
 describe("plumix/plugin", () => {
@@ -96,6 +105,25 @@ describe("plumix/plugin", () => {
     expectTypeOf<
       ReturnType<PluginSetupContext["registerTermTaxonomy"]>
     >().toEqualTypeOf<TermTaxonomyHandle>();
+  });
+
+  test("carries core's settings subject, scoped to one group, its RPC filters too", () => {
+    expectTypeOf<(typeof settings)["groupChanged"]>().toEqualTypeOf<
+      EventDefinition<{
+        readonly group: string;
+        readonly set: SettingsBag;
+        readonly removed: readonly string[];
+      }>
+    >();
+    expectTypeOf<(typeof settings)["rpc"]["get"]["output"]>().toEqualTypeOf<
+      FilterDefinition<SettingsGroupCopy, { readonly group: string }, false>
+    >();
+    expectTypeOf<
+      ReturnType<(typeof settings)["for"]>
+    >().toEqualTypeOf<SettingsGroupHandle>();
+    expectTypeOf<SettingsGroupHandle["rpc"]>().toEqualTypeOf<
+      (typeof settings)["rpc"]
+    >();
   });
 
   test("carries core's user subject", () => {

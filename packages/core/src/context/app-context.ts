@@ -136,7 +136,7 @@ export type SettingsPatch = Readonly<Record<string, unknown>>;
 
 export interface SettingsNamespace {
   /**
-   * Leaves unmentioned keys alone, and fires `settings:group_changed` when
+   * Leaves unmentioned keys alone, and emits `settings.groupChanged` when
    * anything changed in a public group. Unguarded, it moves the token of a
    * group already saved, unchecked.
    */

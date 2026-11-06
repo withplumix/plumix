@@ -3,6 +3,7 @@ import { SettingsWriteError } from "../../../settings/errors.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { rpcSurface } from "../../concurrency.js";
+import { settingsRpcFor } from "../../filters.js";
 import { requireCapability } from "../../require-capability.js";
 import { settingsUpsertInputSchema } from "./schemas.js";
 
@@ -14,8 +15,8 @@ export const upsert = base
   .use(requireCapability(CAPABILITY))
   .input(settingsUpsertInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:settings.upsert:input",
+    const filtered = await context.filters.apply(
+      settingsRpcFor(input.group).upsert.input,
       input,
     );
     if (isPrivateSettingsGroup(filtered.group)) {
@@ -35,12 +36,9 @@ export const upsert = base
         throw error;
       });
 
-    return context.hooks.applyFilter(
-      "rpc:settings.upsert:output",
+    return context.filters.apply(
+      settingsRpcFor(filtered.group).upsert.output,
       copy,
-      {
-        group: filtered.group,
-      },
-      context,
+      { group: filtered.group },
     );
   });

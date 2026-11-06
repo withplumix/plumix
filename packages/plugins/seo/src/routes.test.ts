@@ -15,7 +15,7 @@ import {
   grant,
 } from "plumix/auth";
 import { eq, etagOf } from "plumix/db";
-import { definePlugin, entry as entryEvents } from "plumix/plugin";
+import { definePlugin, entry as entryEvents, settings } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness, fakeCdn } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
@@ -257,8 +257,8 @@ function registerPictureAdapter(
 }
 
 /**
- * A settings save fires its action mid-request, which is where the purge
- * accumulator lives; this stands in for the RPC that would normally fire it.
+ * A settings save emits its event mid-request, which is where the purge
+ * accumulator lives; this stands in for the RPC that would normally emit it.
  */
 function settingsSaver(group: string): AnyPluginDescriptor {
   return definePlugin("settings-saver", {
@@ -266,11 +266,11 @@ function settingsSaver(group: string): AnyPluginDescriptor {
       ctx.registerPublicRoute({
         path: "/fire-settings-change",
         handler: async (_request, appCtx) => {
-          await appCtx.hooks.doAction(
-            "settings:group_changed",
-            { group, set: { indexable: false }, removed: [] },
-            appCtx,
-          );
+          await appCtx.events.emit(settings.for(group).groupChanged, {
+            group,
+            set: { indexable: false },
+            removed: [],
+          });
           return new Response("ok");
         },
       });

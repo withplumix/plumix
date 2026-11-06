@@ -1,6 +1,6 @@
 import type { AnyPluginDescriptor } from "plumix";
 import type { CdnFake, DispatcherHarness } from "plumix/test";
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, settings } from "plumix/plugin";
 import { createDispatcherHarness, fakeCdn, plumixRequest } from "plumix/test";
 import { defineTemplate, defineTheme, entry } from "plumix/theme";
 import { describe, expect, test } from "vitest";
@@ -314,7 +314,7 @@ describe("@plumix/plugin-menu — location writes", () => {
     const heard: string[] = [];
     const listener = definePlugin("listener", {
       setup: (ctx) => {
-        ctx.addAction("settings:group_changed", (changes) => {
+        ctx.events.on(settings.groupChanged, (changes) => {
           heard.push(`${changes.group}: ${changes.removed.join(",")}`);
         });
         ctx.events.on(menuSubject.deleted, ({ slug }) => {

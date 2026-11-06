@@ -5,7 +5,6 @@ import type {
   AuthenticatedAppContext,
   AuthenticatedUser,
   DeferFn,
-  HookOptions,
   PluginSetupContext,
   SetupEvents,
 } from "plumix/plugin";
@@ -209,13 +208,6 @@ describe("createAuditExtension — integration with the real AuditService", () =
     const audit = createAuditExtension(service);
     const hooks = new HookRegistry();
     const setupCtx = {
-      addAction: (
-        name: string,
-        fn: (...args: unknown[]) => unknown,
-        options?: HookOptions,
-      ) => {
-        hooks.addAction(name as never, fn as never, options);
-      },
       events: {
         on: (event, handler, options) => {
           hooks.on(event, handler, options);

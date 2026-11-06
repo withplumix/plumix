@@ -15,6 +15,7 @@ import { auth } from "../hooks/auth.js";
 import { block } from "../hooks/block-render.js";
 import { entryDeclarations } from "../hooks/entry.js";
 import { render } from "../hooks/render.js";
+import { settingsDeclarations } from "../hooks/settings.js";
 import { sync } from "../hooks/sync.js";
 import { termDeclarations } from "../hooks/term.js";
 import { assertValidPluginId } from "../plugin/define.js";
@@ -28,7 +29,10 @@ import {
   createPluginAfterSetupContext,
   createPluginSetupContext,
 } from "../plugin/setup-context.js";
-import { rpcFilterDeclarations } from "../rpc/filters.js";
+import {
+  rpcFilterDeclarations,
+  settingsRpcDeclarations,
+} from "../rpc/filters.js";
 import { user } from "../rpc/procedures/user/subject.js";
 
 export interface PluginInstallResult {
@@ -145,6 +149,7 @@ const CORE_DECLARATIONS: readonly Declaration[] = [
   ...Object.values(auth),
   ...entryDeclarations,
   ...termDeclarations,
+  ...settingsDeclarations,
   ...rpcFilterDeclarations,
 ];
 
@@ -166,6 +171,15 @@ function assertKnownScopes(
       ids: new Set(termDeclarations.map(({ id }) => id)),
       kind: "taxonomy",
       registered: registry.termTaxonomies,
+    },
+    {
+      ids: new Set(
+        [...settingsDeclarations, ...settingsRpcDeclarations].map(
+          ({ id }) => id,
+        ),
+      ),
+      kind: "settings group",
+      registered: registry.settingsGroups,
     },
   ];
   for (const { id, scope, plugin } of hooks.scopedSubscriptions()) {

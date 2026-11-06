@@ -1,29 +1,7 @@
+import type { Lazy } from "@orpc/server";
 import { createRouterClient } from "@orpc/server";
 import { object } from "valibot";
 import { describe, expect, expectTypeOf, test } from "vitest";
-
-import { coreMarks, defineBlock } from "../blocks/index.js";
-import { defineEvent, defineFilter } from "../hooks/define.js";
-import { entry } from "../hooks/entry.js";
-import { HookRegistry } from "../hooks/registry.js";
-import { term } from "../hooks/term.js";
-import { definePlugin } from "../plugin/define.js";
-import {
-  DuplicateRegistrationError,
-  PluginContextError,
-} from "../plugin/errors.js";
-import { createPluginRegistry } from "../plugin/manifest.js";
-import { base } from "../rpc/base.js";
-import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
-import { registerCoreSettings } from "../settings-core.js";
-import { registerCoreTemplateDeps } from "../template-deps-core.js";
-import { createTestContext } from "../test/context.js";
-import { createTestDb } from "../test/harness.js";
-import { installPlugins } from "./install-plugins.js";
-
-import "../rpc/hooks.js";
-
-import type { Lazy } from "@orpc/server";
 
 import type { NewEntry } from "../db/schema/entries.js";
 import type { Label } from "../i18n/label.js";
@@ -38,6 +16,26 @@ import type {
 } from "../plugin/registry.js";
 import type { PluginSetupContext } from "../plugin/setup-context-types.js";
 import type { DefaultRole } from "../users/contract/roles.js";
+import { coreMarks, defineBlock } from "../blocks/index.js";
+import { defineEvent, defineFilter } from "../hooks/define.js";
+import { entry } from "../hooks/entry.js";
+import { HookRegistry } from "../hooks/registry.js";
+import { settings } from "../hooks/settings.js";
+import { term } from "../hooks/term.js";
+import { definePlugin } from "../plugin/define.js";
+import {
+  DuplicateRegistrationError,
+  PluginContextError,
+} from "../plugin/errors.js";
+import { createPluginRegistry } from "../plugin/manifest.js";
+import { base } from "../rpc/base.js";
+import { settingsRpcFor } from "../rpc/filters.js";
+import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
+import { registerCoreSettings } from "../settings-core.js";
+import { registerCoreTemplateDeps } from "../template-deps-core.js";
+import { createTestContext } from "../test/context.js";
+import { createTestDb } from "../test/harness.js";
+import { installPlugins } from "./install-plugins.js";
 
 declare module "../blocks/deps.js" {
   interface TemplateDepRegistry {
@@ -2595,6 +2593,49 @@ describe("scoped events and filters", () => {
     await expect(install).rejects.toThrow(
       'Plugin "shop" subscribes to "term:created" for taxonomy "brnad", ' +
         "which no plugin registered. Registered taxonomies: brand.",
+    );
+  });
+
+  test("a handler scoped to an unregistered settings group fails boot, listing the registered groups", async () => {
+    const shop = definePlugin("shop", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("shop", { label: "Shop", fields: [] });
+        ctx.registerSettingsGroup("shipping", {
+          label: "Shipping",
+          fields: [],
+        });
+        ctx.events.on(settings.for("shpo").groupChanged, () => undefined);
+      },
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [shop],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "shop" subscribes to "settings:groupChanged" for settings group ' +
+        '"shpo", which no plugin registered. Registered settings groups: ' +
+        "shipping, shop.",
+    );
+  });
+
+  test("a settings filter scoped to an unregistered group fails boot", async () => {
+    const shop = definePlugin("shop", {
+      setup: (ctx) => {
+        ctx.registerSettingsGroup("shop", { label: "Shop", fields: [] });
+        ctx.filters.add(settingsRpcFor("shpo").get.output, (copy) => copy);
+      },
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [shop],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "shop" subscribes to "settings:rpc.get.output" for settings ' +
+        'group "shpo", which no plugin registered.',
     );
   });
 });

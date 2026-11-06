@@ -2,6 +2,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import { entry } from "../hooks/entry.js";
+import { settings } from "../hooks/settings.js";
 import { term } from "../hooks/term.js";
 import { userEvents } from "../hooks/user.js";
 import {
@@ -116,7 +117,7 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   hooks.on(term.metaChanged, onTermEdit);
 
   // A response that printed a settings group is stored under its tag.
-  hooks.addAction("settings:group_changed", (changes, ctx) => {
-    enqueuePurgeTags(ctx, [settingsTag(changes.group)]);
+  hooks.on(settings.groupChanged, ({ group }, ctx) => {
+    enqueuePurgeTags(ctx, [settingsTag(group)]);
   });
 }

@@ -287,7 +287,7 @@ export const externalLinks = definePlugin("external-links", {
 
 `menu.saved` is an event emitted after every successful save, including a save that changed nothing, with `{ termId, addedIds, removedIds, modifiedIds }` and the request context. A handler that clears a cache can run on every call without inspecting the payload. A handler that throws does not undo the save.
 
-`menu.deleted` is an event emitted after a menu and its items are deleted, with `{ termId, slug }` and the request context. Assigning or clearing a location, and deleting a menu that was assigned to one, fire core's `settings:group_changed` for the `menu_locations` group.
+`menu.deleted` is an event emitted after a menu and its items are deleted, with `{ termId, slug }` and the request context. Assigning or clearing a location, and deleting a menu that was assigned to one, emit core's `settings.groupChanged` event from `plumix/plugin` for the `menu_locations` group. Subscribe to `settings.for("menu_locations").groupChanged` to hear only those.
 
 ## Related
 

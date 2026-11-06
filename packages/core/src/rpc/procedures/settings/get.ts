@@ -5,6 +5,7 @@ import { settingsGroupEtag } from "../../../settings/token.js";
 import { settingsGroupBag } from "../../../template-deps-core.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { settingsRpcFor } from "../../filters.js";
 import { requireCapability } from "../../require-capability.js";
 import { settingsGetInputSchema } from "./schemas.js";
 
@@ -24,8 +25,8 @@ export const get = base
   .use(requireCapability(CAPABILITY))
   .input(settingsGetInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:settings.get:input",
+    const filtered = await context.filters.apply(
+      settingsRpcFor(input.group).get.input,
       input,
     );
     if (isPrivateSettingsGroup(filtered.group)) {
@@ -46,12 +47,9 @@ export const get = base
       ),
     };
 
-    return context.hooks.applyFilter(
-      "rpc:settings.get:output",
+    return context.filters.apply(
+      settingsRpcFor(filtered.group).get.output,
       copy,
-      {
-        group: filtered.group,
-      },
-      context,
+      { group: filtered.group },
     );
   });

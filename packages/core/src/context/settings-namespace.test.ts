@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext, Db } from "./app-context.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { settings } from "../hooks/settings.js";
 import { definePlugin } from "../plugin/define.js";
 import { resolveRestPrincipal } from "../rest/principal.js";
 import { createTestContext } from "../test/context.js";
@@ -19,7 +20,7 @@ beforeAll(async () => {
 function heardContext(overrides: { readonly user?: AppContext["user"] } = {}) {
   const heard: AppContext[] = [];
   const hooks = new HookRegistry();
-  hooks.addAction("settings:group_changed", (_changes, ctx) => {
+  hooks.on(settings.groupChanged, (_changes, ctx) => {
     heard.push(ctx);
   });
   return { heard, ctx: createTestContext({ db, hooks, ...overrides }) };
@@ -56,7 +57,7 @@ describe("ctx.settings on a derived context", () => {
     const heard: string[] = [];
     const writer = definePlugin("writer", {
       setup: (ctx) => {
-        ctx.addAction("settings:group_changed", (_changes, appCtx) => {
+        ctx.events.on(settings.groupChanged, (_changes, appCtx) => {
           heard.push(appCtx.request.url);
         });
         ctx.registerRoute({
@@ -90,7 +91,7 @@ describe("ctx.settings on a derived context", () => {
     const heard: boolean[] = [];
     const writer = definePlugin("writer", {
       setup: (ctx) => {
-        ctx.addAction("settings:group_changed", (_changes, appCtx) => {
+        ctx.events.on(settings.groupChanged, (_changes, appCtx) => {
           heard.push(
             appCtx.authenticator.hasSession?.(appCtx.request) ?? false,
           );

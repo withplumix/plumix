@@ -7,6 +7,7 @@ import { settings } from "../../../db/schema/settings.js";
 import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
 import { authoredEntryRows } from "../../../entries/authored.js";
+import { settings as settingsEvents } from "../../../hooks/settings.js";
 import {
   metaScope,
   metaScopeCache,
@@ -279,11 +280,11 @@ async function sweepSettings(
   }
   for (const [group, set] of changedByGroup) {
     await bumpSettingsGroup(walk.ctx.db, group);
-    await walk.ctx.hooks.doAction(
-      "settings:group_changed",
-      { group, set, removed: [] },
-      walk.ctx,
-    );
+    await walk.ctx.events.emit(settingsEvents.for(group).groupChanged, {
+      group,
+      set,
+      removed: [],
+    });
   }
   return stopped;
 }
