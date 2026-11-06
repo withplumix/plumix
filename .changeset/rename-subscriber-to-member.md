@@ -1,7 +1,7 @@
 ---
 "plumix": minor
 "@plumix/runtime-cloudflare": patch
-"@plumix/plugin-media": patch
+"@plumix/plugin-media": minor
 ---
 
 Renames the `subscriber` role to `member` and retires `contributor` as a default role. The default roles are now `member`, `author`, `editor` and `admin`, with `member` holding exactly what `subscriber` held. A data migration renames `subscriber` to `member` on every user and pending invite. New invites, self-signups, anonymous REST requests and users that `plumix import` or `plumix sync` create without a role now get `member`, and the `memberUser` test factory replaces `subscriberUser` and `contributorUser`.

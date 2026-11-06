@@ -71,10 +71,10 @@ history, such as the search plugin's FTS5 table in
 Core and the audit-log, comments, forms and search plugins ship histories. Roles live in config,
 not the database ([ADR 0055](../adr/0055-a-role-is-a-set-of-capabilities-declared-in-code.md)): the
 users table's role column and the invite token's role are free text naming one. Core's one data
-migration renames `subscriber` to `member` and leaves `contributor` rows alone; before anything is
-written, `plumix migrate`, `plumix dev` and `migrateBeforeDeploy` refuse a database whose users hold
-`contributor` while the config declares no such role, printing one to paste
-(`assertContributorRoleDeclared`). The column's SQL default is still `subscriber`, because changing
+migration renames `subscriber` to `member` and leaves `contributor` rows alone; before a plan prints
+or a prompt asks, `plumix migrate` (`--dry-run` too), `plumix dev` and `migrateBeforeDeploy` refuse a
+database whose users hold `contributor` while the config declares no such role, printing one to
+paste (`assertContributorRoleDeclared`). The column's SQL default is still `subscriber`, because changing
 it rebuilds the table, so every core insert names the role.
 
 - `packages/plumix/src/cli/migrate/owners.ts`: `resolveOwners`, `TRACKING_TABLE_PREFIX`, `sitePlugins`.

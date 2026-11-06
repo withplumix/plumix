@@ -6,6 +6,7 @@ import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
+import { CONTRIBUTOR_ROLE } from "../test/roles.js";
 import { contributorRoleSnippet } from "./contributor-role.js";
 
 /**
@@ -100,5 +101,30 @@ describe("the contributor role plumix migrate prints", () => {
       "user:edit_own",
     ]);
     expect(unknownRoleGrants(registry)).toEqual([]);
+  });
+
+  test("is what the test kit's CONTRIBUTOR_ROLE grants, on a site with posts, categories and tags", async () => {
+    const blog = definePlugin("blog", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("category", { label: "Categories" });
+        ctx.registerTermTaxonomy("tag", { label: "Tags" });
+      },
+    });
+    const resolved = async (roles: SiteRoles) => {
+      const { registry } = await installPlugins({
+        hooks: new HookRegistry(),
+        plugins: [blog],
+        registry: createPluginRegistry(undefined, roles),
+      });
+      return capabilitiesForRole("contributor", registry);
+    };
+    const { registry: bare } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [blog],
+    });
+
+    expect(await resolved(CONTRIBUTOR_ROLE)).toEqual(
+      await resolved(pasted(contributorRoleSnippet(bare))),
+    );
   });
 });

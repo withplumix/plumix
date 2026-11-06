@@ -82,6 +82,7 @@ export const migrateCommand: CommandDefinition = {
       await checkSiteDrift(target);
       await withDatabase(target, database, async (db, owners, data, run) => {
         announce(db);
+        await assertContributorRoleDeclared(db, target.config, target.plugins);
         if (!(await confirmedPlan(db, owners, data, args))) return;
         await adoptAndApply(target, database)(db, owners, data, run);
       });
@@ -265,7 +266,6 @@ function adoptAndApply(
   database: DatabaseChoice,
 ): MigrationWork {
   return async (db, owners, data, migrations) => {
-    await assertContributorRoleDeclared(db, target.config, target.plugins);
     await adoptLegacyDatabase(
       db,
       owners,
@@ -479,6 +479,7 @@ export async function migrateBeforeDeploy(
   await checkSiteDrift(site);
   await withDatabase(site, database, async (db, owners, data, migrations) => {
     announce(db);
+    await assertContributorRoleDeclared(db, site.config, site.plugins);
     await reportPlan(db, owners, data);
     await adoptAndApply(site, database)(db, owners, data, migrations);
   });
@@ -503,11 +504,10 @@ export async function migrateForDev(target: MigrationTarget): Promise<void> {
       report.success(`Wrote the site's next migration, ${written}: commit it.`);
     }
   }
-  await withDatabase(
-    target,
-    LOCAL_DATABASE,
-    adoptAndApply(target, LOCAL_DATABASE),
-  );
+  await withDatabase(target, LOCAL_DATABASE, async (db, ...rest) => {
+    await assertContributorRoleDeclared(db, target.config, target.plugins);
+    await adoptAndApply(target, LOCAL_DATABASE)(db, ...rest);
+  });
 }
 
 async function migrateGenerate(target: MigrationTarget): Promise<void> {

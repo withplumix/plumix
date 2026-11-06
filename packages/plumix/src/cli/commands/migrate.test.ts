@@ -943,6 +943,75 @@ async up({ db }) {
       ]);
     });
 
+    describe("on a deployed database", () => {
+      const production = (argv: readonly string[]) =>
+        applyCtx(["--production", ...argv], [], runtime(PRODUCTION));
+
+      function printed(): string[] {
+        const lines: string[] = [];
+        vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
+        return lines;
+      }
+
+      test("is refused before its plan prints or it asks", async () => {
+        await siteBeforeTheRename("contributor");
+        const lines = printed();
+        vi.spyOn(syncDeps, "isInteractive").mockReturnValue(true);
+        const confirm = vi.spyOn(syncDeps, "confirm").mockResolvedValue(true);
+
+        await expect(migrateCommand.run(production([]))).rejects.toMatchObject({
+          code: "migrate_contributor_role_missing",
+        });
+
+        expect(lines).toEqual(["→ production · site.sqlite"]);
+        expect(confirm).not.toHaveBeenCalled();
+      });
+
+      test("--dry-run reports the refusal the run would meet", async () => {
+        await siteBeforeTheRename("contributor");
+        const lines = printed();
+
+        await expect(
+          migrateCommand.run(production(["--dry-run"])),
+        ).rejects.toMatchObject({ code: "migrate_contributor_role_missing" });
+
+        expect(lines).toEqual(["→ production · site.sqlite"]);
+      });
+
+      test("a migrate before a deploy is refused before its plan prints", async () => {
+        await siteBeforeTheRename("contributor");
+        const lines = printed();
+
+        await expect(
+          migrateBeforeDeploy(applyCtx([], [], runtime(PRODUCTION)), {
+            production: true,
+          }),
+        ).rejects.toMatchObject({ code: "migrate_contributor_role_missing" });
+
+        expect(lines).toEqual(["→ production · site.sqlite"]);
+      });
+    });
+
+    test("plumix dev is refused before it migrates", async () => {
+      await siteBeforeTheRename("subscriber", "contributor");
+      const { cwd, configPath, app, runtimeMigrations } = applyCtx([]);
+
+      await expect(
+        migrateForDev({
+          cwd,
+          configPath,
+          config: app.config,
+          runtimeMigrations,
+          plugins: () => Promise.resolve(app.plugins),
+        }),
+      ).rejects.toMatchObject({ code: "migrate_contributor_role_missing" });
+
+      expect(usersByRole()).toContainEqual({
+        slug: "subscriber",
+        role: "subscriber",
+      });
+    });
+
     test("with no contributors, migrates without the role", async () => {
       await siteBeforeTheRename("subscriber", "editor");
 

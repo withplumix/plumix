@@ -431,6 +431,36 @@ export const syncContractCases: readonly Case[] = [
     },
   },
   {
+    name: "an added author whose dump row names no role is added as a member",
+    run: async (options) => {
+      const ends = await options.open(new HookRegistry());
+      await seed(ends.remote, [
+        user(8, "bob@example.test", "author"),
+        entry(1, "by-bob", 8),
+      ]);
+      const dump = await exportFrom(ends, "remote", [SCOPES.content]);
+      // A dump is a file, so its author rows may omit `role`.
+      const roleless: DumpReader = {
+        ...dump,
+        rows: (table) => dump.rows(table),
+        authors: async function* () {
+          for await (const { role: _role, ...author } of dump.authors()) {
+            yield author;
+          }
+        },
+        objects: () => dump.objects(),
+      };
+
+      await importInto(ends, "local", roleless, [SCOPES.content]);
+
+      expect(
+        await ends.local.execute(
+          "SELECT role FROM users WHERE email = 'bob@example.test'",
+        ),
+      ).toEqual([{ role: "member" }]);
+    },
+  },
+  {
     name: "an added author whose slug is taken on the target gets a numbered one",
     run: async (options) => {
       const ends = await options.open(new HookRegistry());
