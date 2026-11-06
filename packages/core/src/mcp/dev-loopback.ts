@@ -7,10 +7,7 @@ import { users } from "../db/schema/users.js";
 /** Stands in for the API token a dev-trusted agent never presented. */
 const DEV_LOOPBACK = { id: "dev-loopback", name: "dev (loopback)" } as const;
 
-/**
- * The authenticator is replaced too, since the procedures a write tool calls
- * authenticate again. With no admin yet, the context stays anonymous.
- */
+/** A write tool's procedures re-run the authenticator, so it must return the admin too. */
 export async function asLoopbackAdmin(ctx: AppContext): Promise<AppContext> {
   const [admin] = await ctx.db
     .select()
