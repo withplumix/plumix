@@ -888,9 +888,19 @@ msgid "users.list.roleFilter.all"
 msgstr "All roles"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.description"
+msgstr "An app wants to work on this site as you. It gets only what you approve, and never more than you can do."
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API tokens"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.approve"
+msgstr "Approve"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1186,6 +1196,11 @@ msgid "userEdit.email.confirmationSent"
 msgstr "Confirmation sent to {email}. The change takes effect once they click the link."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.title"
+msgstr "Connect an app"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.idle"
 msgstr "Continue"
@@ -1246,6 +1261,11 @@ msgstr "Core site identity and metadata."
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.statusFallback"
 msgstr "Couldn't change the account status. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.error"
+msgstr "Couldn't complete the request. Try again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1640,6 +1660,11 @@ msgid "auth.device.denied"
 msgstr "Denied. The CLI will get an access_denied response and stop polling."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.deny"
+msgstr "Deny"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.deny.idle"
 msgstr "Deny"
@@ -1725,6 +1750,11 @@ msgstr "Draft"
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.discarded"
 msgstr "Draft discarded."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.draft"
+msgstr "Draft, can't publish"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -2106,6 +2136,11 @@ msgstr "Invite user"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.submit.pending"
 msgstr "Inviting…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.label"
+msgstr "It asks for: <0/>. Untick anything it shouldn't do."
 
 #. js-lingui-explicit-id
 #: src/editor/EditConflictDialog.tsx
@@ -2891,6 +2926,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "Re-enable user"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.read"
+msgstr "Read only"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.readOnly"
 msgstr "Read only"
@@ -3057,6 +3097,11 @@ msgstr "Role"
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
 msgstr "Row {n}"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.full"
+msgstr "Same as me"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3714,6 +3759,11 @@ msgid "userEdit.email.error.accountDisabled"
 msgstr "This account is disabled."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.loopbackWarning"
+msgstr "This app only sends you back to an address on your own computer. Approve it only if you started connecting it yourself."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.expired"
 msgstr "This code expired before you could finish — re-run your CLI."
@@ -3742,6 +3792,11 @@ msgstr "This code was already approved on another tab."
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.alreadyDenied"
 msgstr "This code was already denied."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.invalid"
+msgstr "This connection request isn't valid. Start connecting again from the app."
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

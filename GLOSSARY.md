@@ -371,6 +371,10 @@ _Avoid_: bare audience (a segment's label)
 An MCP client that connects to a site through OAuth, identified by the URL of its Client ID Metadata Document. The document must name that URL as its `client_id` and lists the redirect URIs the client may receive codes at. Distinct from the OAuth providers (`github()`, `google()`) a person signs in with.
 _Avoid_: app, registered client
 
+**OAuth grant**:
+A person's approval of one OAuth client: the capabilities their consent resolved the requested scope to, fixed at approval. A later request the grant covers skips consent; one asking for more asks again.
+_Avoid_: bare grant (a role's capability grant, or an access policy's `grant`), consent (the page that creates one)
+
 **Access policy**:
 A developer-supplied rule pairing an arbitrary resolve step with a closed, declarable set of audience segments.
 

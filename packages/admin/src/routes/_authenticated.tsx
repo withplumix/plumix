@@ -9,7 +9,8 @@ import { SidebarInset, SidebarProvider } from "@plumix/admin-ui/sidebar";
 import { TooltipProvider } from "@plumix/admin-ui/tooltip";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: ({ context }) => requireAuthenticatedSession(context.queryClient),
+  beforeLoad: ({ context, location }) =>
+    requireAuthenticatedSession(context.queryClient, location.href),
   component: AppShell,
 });
 

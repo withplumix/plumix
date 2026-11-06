@@ -79,8 +79,13 @@ const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
+/** The authorization server MCP clients connect through; inlined like MCP's. */
+const OAUTH_AUTHORIZE_PATH = "/_plumix/oauth/authorize";
+const OAUTH_TOKEN_PATH = "/_plumix/oauth/token";
 /** RFC 9728's well-known prefix, inlined so the eager graph skips the SDK. */
 const PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource";
+/** RFC 8414's, which takes the issuer's path, not the resource's. */
+const AUTHORIZATION_SERVER_PREFIX = "/.well-known/oauth-authorization-server";
 const API_PREFIX = "/_plumix/api";
 /** Inlined, not imported, so the eager graph skips the routes. */
 const SYNC_PREFIX = "/_plumix/api/v1/system/sync/";
@@ -101,6 +106,9 @@ function coreAnswersPlumixPath(pathname: string): boolean {
 
 const loadResourceMetadata = loadOnce(
   () => import("../mcp/resource-metadata.js"),
+);
+const loadOAuthServerRoutes = loadOnce(
+  () => import("../auth/oauth-server/routes.js"),
 );
 const loadSyncSettle = loadOnce(() => import("./sync-settle.js"));
 const loadSyncTransfer = loadOnce(() => import("./sync-transfer.js"));
@@ -266,7 +274,8 @@ function stripBasePathOrReject(
 }
 
 /**
- * Ahead of the CSRF gate: bearer-token MCP and anonymous REST are CSRF-immune.
+ * Ahead of the CSRF gate: bearer-token MCP, the OAuth endpoints and anonymous
+ * REST are CSRF-immune.
  * Each 404s before its import when disabled.
  */
 async function tryColdInterfaces(
@@ -275,6 +284,9 @@ async function tryColdInterfaces(
   pathname: string,
 ): Promise<Response | null> {
   if (pathname === MCP_PATH) return withNoStore(await dispatchMcp(app, ctx));
+  if (pathname === OAUTH_AUTHORIZE_PATH || pathname === OAUTH_TOKEN_PATH) {
+    return withNoStore(await dispatchOAuthServer(app, ctx, pathname));
+  }
   if (pathname === SYNC_SETTLE_PATH) {
     const { handleSyncSettle } = await loadSyncSettle();
     return withNoStore(await handleSyncSettle(ctx));
@@ -305,6 +317,22 @@ async function dispatchMcp(app: PlumixApp, ctx: AppContext): Promise<Response> {
   if (!mcpServed(app)) return notFound("mcp-disabled");
   const handleMcpRequest = await app.loadMcpHandler();
   return handleMcpRequest(ctx);
+}
+
+/**
+ * A browser navigation and a client's form post, neither able to send the CSRF
+ * header: PKCE and the session-only consent guard them instead.
+ */
+async function dispatchOAuthServer(
+  app: PlumixApp,
+  ctx: AppContext,
+  pathname: string,
+): Promise<Response> {
+  if (!mcpServed(app)) return notFound("mcp-disabled");
+  const { handleAuthorize, handleToken } = await loadOAuthServerRoutes();
+  return pathname === OAUTH_TOKEN_PATH
+    ? handleToken(ctx)
+    : handleAuthorize(ctx);
 }
 
 async function dispatchRest(
@@ -397,25 +425,34 @@ async function tryPlumixRoutes(
 }
 
 /**
- * Matched before `basePath` is stripped: RFC 9728 puts the prefix at the
- * origin root, ahead of the mounted path. The bare prefix answers for clients
- * that probe only the root.
+ * Matched before `basePath` is stripped: RFC 9728 and RFC 8414 put the prefix
+ * at the origin root, ahead of the mounted path. The bare prefix answers
+ * clients that probe only the root.
  */
 async function tryMcpMetadata(
   app: PlumixApp,
   ctx: AppContext,
 ): Promise<Response | null> {
   const { pathname } = new URL(ctx.request.url);
+  const { basePath } = app.config;
   if (
-    pathname !== PROTECTED_RESOURCE_PREFIX &&
-    pathname !==
-      `${PROTECTED_RESOURCE_PREFIX}${withBasePath(MCP_PATH, app.config.basePath)}`
+    pathname === PROTECTED_RESOURCE_PREFIX ||
+    pathname ===
+      `${PROTECTED_RESOURCE_PREFIX}${withBasePath(MCP_PATH, basePath)}`
   ) {
-    return null;
+    if (!mcpServed(app)) return notFound("mcp-disabled");
+    const { handleProtectedResourceMetadata } = await loadResourceMetadata();
+    return withNoStore(handleProtectedResourceMetadata(ctx));
   }
-  if (!mcpServed(app)) return notFound("mcp-disabled");
-  const { handleProtectedResourceMetadata } = await loadResourceMetadata();
-  return withNoStore(handleProtectedResourceMetadata(ctx));
+  if (
+    pathname === AUTHORIZATION_SERVER_PREFIX ||
+    pathname === `${AUTHORIZATION_SERVER_PREFIX}${basePath}`
+  ) {
+    if (!mcpServed(app)) return notFound("mcp-disabled");
+    const { handleAuthorizationServerMetadata } = await loadOAuthServerRoutes();
+    return withNoStore(handleAuthorizationServerMetadata(ctx));
+  }
+  return null;
 }
 
 async function route(app: PlumixApp, ctx: AppContext): Promise<Response> {

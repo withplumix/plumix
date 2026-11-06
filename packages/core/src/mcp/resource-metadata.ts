@@ -11,38 +11,15 @@ import {
 } from "@modelcontextprotocol/server";
 
 import type { AppContext } from "../context/app-context.js";
+import { issuer, MCP_SCOPES, mcpUrl } from "../auth/oauth-server/urls.js";
 import { narrowestPresetHolding } from "../auth/token-presets.js";
-import { withBasePath } from "../base-path.js";
 import { jsonResponse } from "../runtime/contract/http.js";
-
-const MCP_PATH = "/_plumix/mcp";
-
-/** Coarse presets a client asks for; consent resolves them to capabilities. */
-const MCP_SCOPES = ["read", "draft", "full"] as const;
-
-/**
- * From the request URL the adapter rebuilt from the forwarded scheme and
- * host, so a TLS-terminating proxy can't make it `http`. Works before and
- * after `basePath` is stripped.
- */
-export function mcpUrl(ctx: AppContext): URL {
-  return new URL(withBasePath(MCP_PATH, ctx.config.basePath), ctx.request.url);
-}
 
 export function resourceMetadataUrl(ctx: AppContext): string {
   return getOAuthProtectedResourceMetadataUrl(mcpUrl(ctx));
 }
 
-/** The request origin plus `basePath`. */
-function issuer(ctx: AppContext): string {
-  return new URL(ctx.request.url).origin + ctx.config.basePath;
-}
-
-/**
- * RFC 9728 protected-resource metadata for `/_plumix/mcp`. Not the SDK's
- * builder: it takes the whole authorization-server document, and core serves
- * no authorization endpoints yet.
- */
+/** RFC 9728 protected-resource metadata for `/_plumix/mcp`. */
 export function handleProtectedResourceMetadata(ctx: AppContext): Response {
   const metadata: OAuthProtectedResourceMetadata = {
     resource: mcpUrl(ctx).href,

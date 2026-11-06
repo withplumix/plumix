@@ -17,6 +17,7 @@ import {
   usePasskeyErrorMessage,
 } from "@/lib/passkey-errors.js";
 import { refetchSession } from "@/lib/session.js";
+import { signInReturnPath } from "@/lib/sign-in-return.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Trans, useLingui } from "@lingui/react";
@@ -116,7 +117,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
     onMutate: () => setPasskeyError(null),
     onSuccess: async () => {
       await refetchSession(router.options.context.queryClient);
-      await router.navigate({ to: "/" });
+      await router.navigate({ href: signInReturnPath(search.next) });
     },
     onError: (err) => {
       setPasskeyError(err instanceof PasskeyError ? err.code : "unknown");
@@ -148,7 +149,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
         return;
       }
       await refetchSession(router.options.context.queryClient);
-      await router.navigate({ to: "/" });
+      await router.navigate({ href: signInReturnPath(search.next) });
     },
   });
   const pending =

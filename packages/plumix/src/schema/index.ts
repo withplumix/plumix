@@ -19,6 +19,8 @@ export {
   entryChanges,
   entryTerm,
   oauthAccounts,
+  oauthAuthorizationCodes,
+  oauthGrants,
   scheduledTaskClaims,
   scheduledTaskLeases,
   sessions,

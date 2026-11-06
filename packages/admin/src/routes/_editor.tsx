@@ -5,7 +5,8 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { TooltipProvider } from "@plumix/admin-ui/tooltip";
 
 export const Route = createFileRoute("/_editor")({
-  beforeLoad: ({ context }) => requireAuthenticatedSession(context.queryClient),
+  beforeLoad: ({ context, location }) =>
+    requireAuthenticatedSession(context.queryClient, location.href),
   component: EditorLayout,
 });
 
