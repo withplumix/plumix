@@ -701,6 +701,75 @@ describe("runShipLoop", () => {
     expect(seen).toEqual(["rerun", "repair"]);
   });
 
+  test("a check that fails on the commit a rebase pushed gets its own re-run", async () => {
+    const seen: string[] = [];
+    const refusals: MergeOutcome[] = [
+      ciRed,
+      { ...ciRed, failingChecks: [], conflicted: true },
+      ciRed,
+      merged,
+    ];
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => refusals.shift() ?? merged,
+      rerunFailedChecks: async () => {
+        seen.push("rerun");
+        return true;
+      },
+      repair: async (_ticket, _pr, refusal) => {
+        seen.push(
+          refusal.status === "failed" && refusal.conflicted
+            ? "rebase"
+            : "repair",
+        );
+        return { status: "repaired" } as const;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(seen).toEqual(["rerun", "rebase", "rerun"]);
+    expect(report.merged).toHaveLength(1);
+    expect(parked).toEqual([]);
+  });
+
+  test("a declined repair of a check a re-run could settle is re-run before it parks", async () => {
+    const seen: string[] = [];
+    let confirms = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => (++confirms <= 2 ? ciRed : merged),
+      rerunFailedChecks: async () => {
+        seen.push("rerun");
+        return true;
+      },
+      repair: async () => {
+        seen.push("repair");
+        return { status: "declined", reason: "nothing to fix here" } as const;
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(seen).toEqual(["rerun", "repair", "rerun"]);
+    expect(report.merged).toHaveLength(1);
+    expect(parked).toEqual([]);
+  });
+
+  test("a declined repair parks when no re-run can settle the check", async () => {
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ciRed,
+      rerunFailedChecks: async () => false,
+      repair: async () =>
+        ({ status: "declined", reason: "nothing to fix here" }) as const,
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(parked[0]?.reason).toBe("nothing to fix here");
+  });
+
   test.each([
     [
       "the merge group failed",
