@@ -173,13 +173,16 @@ describe("the site's storage", () => {
   });
 
   test("is served at its URL through image delivery, as the stored original", async () => {
-    const { storage, imageDelivery } = storing.context;
-    await storage?.put("photo.png", "original", { contentType: "image/png" });
-    const source = await storage?.url("photo.png");
+    await storing.storage.put("photo.png", "original", {
+      contentType: "image/png",
+    });
+    const source = await storing.storage.url("photo.png");
+    const delivered = storing.context.imageDelivery?.url(source, {
+      width: 640,
+    });
 
-    const page = await storing.visit(
-      imageDelivery?.url(source ?? "", { width: 640 }) ?? "",
-    );
+    expect(delivered).toBe(source);
+    const page = await storing.visit(source);
 
     page
       .assertOk()
