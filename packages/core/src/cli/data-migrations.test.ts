@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
+import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { CORE_DATA_MIGRATIONS } from "./data-migrations.js";
 
@@ -13,13 +14,26 @@ async function runCoreDataMigrations(
 describe("core's data migrations", () => {
   test("rename subscriber to member on users and invites, and leave contributors as they are", async () => {
     const db = await createTestDb();
-    await db.run(sql`INSERT INTO users (email, slug, role) VALUES
-      ('sub@example.test', 'sub', 'subscriber'),
-      ('con@example.test', 'con', 'contributor'),
-      ('ed@example.test', 'ed', 'editor')`);
-    await db.run(sql`INSERT INTO auth_tokens (hash, email, type, role, expires_at) VALUES
-      ('a', 'invited@example.test', 'invite', 'subscriber', 9999999999),
-      ('b', 'other@example.test', 'invite', 'contributor', 9999999999)`);
+    const factory = factoriesFor(db);
+    const subscriber = await factory.user.create({
+      slug: "sub",
+      role: "subscriber",
+    });
+    const contributor = await factory.user.create({
+      slug: "con",
+      role: "contributor",
+    });
+    await factory.user.create({ slug: "ed", role: "editor" });
+    await factory.invite.create({
+      hash: "a",
+      userId: subscriber.id,
+      role: "subscriber",
+    });
+    await factory.invite.create({
+      hash: "b",
+      userId: contributor.id,
+      role: "contributor",
+    });
 
     await runCoreDataMigrations(db);
 
@@ -40,9 +54,7 @@ describe("core's data migrations", () => {
 
   test("can run again after it already ran, changing nothing", async () => {
     const db = await createTestDb();
-    await db.run(
-      sql`INSERT INTO users (email, slug, role) VALUES ('sub@example.test', 'sub', 'subscriber')`,
-    );
+    await factoriesFor(db).user.create({ role: "subscriber" });
     await runCoreDataMigrations(db);
 
     await runCoreDataMigrations(db);

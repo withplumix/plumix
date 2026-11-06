@@ -34,7 +34,7 @@ const site = definePlugin("site", {
   },
 });
 
-/** What core grants a `contributor` on this site, pinned from the old ladder. */
+/** What core grants a `contributor` on this site. */
 const CONTRIBUTOR_CORE_GRANTS = [
   "admin:access",
   "entry:page:create",

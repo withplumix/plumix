@@ -27,7 +27,7 @@ describe("first-user-admin bootstrap", () => {
     expect(result.user.role).toBe("author");
   });
 
-  // The column's SQL default is still `subscriber`, so this proves the insert
+  // The column's SQL default is `subscriber`, so this proves the insert
   // names the role.
   test("a later user given no defaultRole is stored as a member", async () => {
     const db = await createTestDb();
