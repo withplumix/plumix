@@ -196,14 +196,14 @@
     "@tiptap/core": "catalog:tiptap",
     "@tiptap/pm": "catalog:tiptap",
     "@valibot/to-json-schema": "^1.8.0",
-    "dompurify": "^3.4.16",
+    "dompurify": "^3.4.17",
     "drizzle-kit": "catalog:drizzle",
     "drizzle-orm": "catalog:drizzle",
     "drizzle-valibot": "catalog:drizzle",
     "fishery": "catalog:",
     "highlight.js": "^11.12.0",
     "mrmime": "^2.0.1",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "valibot": "catalog:"
   },
   "peerDependencies": {

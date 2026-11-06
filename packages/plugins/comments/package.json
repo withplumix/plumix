@@ -75,7 +75,7 @@
   "dependencies": {
     "@orpc/server": "catalog:orpc",
     "drizzle-orm": "catalog:drizzle",
-    "markdown-it": "^15.0.2",
+    "markdown-it": "^15.0.3",
     "valibot": "catalog:"
   },
   "peerDependencies": {
