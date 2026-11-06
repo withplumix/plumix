@@ -691,6 +691,40 @@ describe("consent", () => {
     expect(body.capabilities).not.toContain("entry:post:create");
   });
 
+  test("tells a person who signed in mid-flow that their grant already covers the request", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    await connect(h, user, { scope: "draft" });
+    const covered = async (scope: string) =>
+      (
+        await consentRpc<{ covered: boolean }>(
+          h,
+          "lookup",
+          authorizationParams(await pkce(), { scope }),
+          { as: user },
+        )
+      ).body.covered;
+
+    expect(await covered("read")).toBe(true);
+    expect(await covered("full")).toBe(false);
+  });
+
+  test("a covered request sent back to /authorize after sign-in is answered with a code", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    await connect(h, user, { scope: "draft" });
+    const params = authorizationParams(await pkce(), { scope: "draft" });
+    const signedOut = locationOf(await authorize(h, params));
+
+    const signedIn = locationOf(
+      await authorize(h, Object.fromEntries(signedOut.searchParams), user),
+    );
+
+    expect(signedOut.pathname).toBe("/_plumix/admin/auth/authorize");
+    expect(signedIn.origin + signedIn.pathname).toBe(REDIRECT_URI);
+    expect(signedIn.searchParams.get("code")).not.toBeNull();
+  });
+
   test("flags a client whose every redirect is loopback", async () => {
     const h = await mcpHarness();
     vi.stubGlobal("fetch", () =>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { adminBasePath } from "@/lib/admin-base.js";
 import { orpc } from "@/lib/orpc.js";
 import { Trans } from "@lingui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import * as v from "valibot";
 import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 
 import type { ConsentClient, ConsentScope } from "./-consent-card.js";
+import { authorizeUrl } from "./-authorize-url.js";
 import { ConsentCard } from "./-consent-card.js";
 
 const param = v.optional(v.pipe(v.string(), v.maxLength(2048)));
@@ -39,6 +41,14 @@ function AuthorizeRoute(): ReactNode {
     ...orpc.auth.oauthConsent.lookup.queryOptions({ input: request }),
     retry: false,
   });
+  const covered = lookup.data?.covered === true;
+
+  // Someone who signed in on the way here may already hold a grant that covers
+  // the request; `/authorize` then answers the client without asking again.
+  useEffect(() => {
+    if (covered)
+      window.location.replace(authorizeUrl(adminBasePath(), request));
+  }, [covered, request]);
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
@@ -68,7 +78,7 @@ function AuthorizeRoute(): ReactNode {
         </Alert>
       ) : null}
 
-      {lookup.data ? (
+      {lookup.data && !covered ? (
         <Consent
           request={request}
           client={lookup.data.client}
