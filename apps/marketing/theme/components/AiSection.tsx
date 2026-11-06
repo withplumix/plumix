@@ -57,7 +57,7 @@ export function AiSection(): ReactNode {
           <p>
             Plumix serves MCP. While you build, a coding agent reads the same
             errors and traces you do. On the live site, if you switch it on, an
-            agent reads your content with the permissions of the user whose
+            agent edits your content with the permissions of the user whose
             token it holds.
           </p>
         </SectionHeading>
@@ -83,9 +83,9 @@ export function AiSection(): ReactNode {
           <div data-testid="ai-live">
             <Eyebrow>On the live site</Eyebrow>
             <p className="text-muted mt-4 leading-relaxed text-pretty">
-              Turn it on and agents can describe your content model and read
-              entries and terms. Access goes through a personal token, so an
-              agent sees exactly what its user may read. Plugins add their own
+              Turn it on and agents can describe your content model and read and
+              write entries and terms. Access goes through a personal token, so
+              an agent may do exactly what its user may. Plugins add their own
               tools with{" "}
               <code className="text-ink font-mono text-sm">
                 registerMcpTool

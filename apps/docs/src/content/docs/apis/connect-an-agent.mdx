@@ -1,0 +1,233 @@
+---
+title: Connect an agent
+description: Mint an API token, add your site's MCP endpoint to an agent, and let it draft, edit and publish under the same rules as an editor in the admin.
+tier: P1
+sidebar:
+  order: 20
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+An agent is an MCP client, such as Claude Code or Cursor, that acts with a person's API token. Plumix serves the Model Context Protocol at `/_plumix/mcp`. An agent connected there can read your content model, and it can draft, edit and publish entries, held to the same rules an editor meets in the admin.
+
+## Overview
+
+An agent can do what an editor does, and never more than its token allows:
+
+- It reads the content model, including the blocks the theme allows and the style tokens it declares.
+- It creates drafts and edits them, publishes, discards a pending draft, duplicates entries, and moves them to the trash and back.
+- It lists an entry's revisions and restores one.
+- It creates and updates terms.
+
+Nothing over MCP deletes an entry or a term for good. That stays with people in the admin.
+
+Every write goes through the same procedures the admin calls. The token's capabilities, the edit lease, the concurrency check and the theme's allowed blocks and style policy all apply. The write is captured as a revision whose author is the person who owns the token. The admin's revision list shows it as "Ada via Claude Code", naming the token as it was called when the agent wrote.
+
+## Quickstart
+
+<Steps>
+
+1. **Turn the endpoint on** in your config. `plumix dev` serves it without this, so skip this step to try it locally:
+
+   ```ts
+   import type { PlumixConfigInput } from "plumix";
+
+   export const mcp: PlumixConfigInput["mcp"] = { enabled: true };
+   ```
+
+   Pass it as the `mcp` slot of `plumix({ … })`.
+
+2. **Mint a token.** Open your profile in the admin (`/_plumix/admin/profile`), and in the API tokens card name the token after the agent, pick its permissions, and mint it. Copy the secret: it is shown once.
+
+3. **Add the endpoint to your client.** With Claude Code:
+
+   ```sh
+   claude mcp add --transport http plumix https://example.com/_plumix/mcp \
+     --header "Authorization: Bearer $PLUMIX_TOKEN"
+   ```
+
+   A client configured from JSON, such as Cursor's `mcp.json`, takes the same URL and header:
+
+   ```json
+   {
+     "mcpServers": {
+       "plumix": {
+         "url": "https://example.com/_plumix/mcp",
+         "headers": { "Authorization": "Bearer <your token>" }
+       }
+     }
+   }
+   ```
+
+4. **Ask it to start.** A good first request is "describe the site's content model", which calls `schema_describe`.
+
+</Steps>
+
+## Choosing a token's permissions
+
+The mint form offers three choices, and one more for fine-grained lists:
+
+| Choice                 | What the agent may do                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| "Same as me"           | Everything your role allows. The token stores no scopes.                                       |
+| "Read only"            | Read and list, including drafts and revisions your role can read. Every write tool is refused. |
+| "Draft, can't publish" | Create and edit drafts. It can't publish, trash, delete for good or restore a revision.        |
+
+"Read only" and "Draft, can't publish" are resolved to an explicit capability list when you mint the token, so a capability your role gains later never widens it. Whatever you pick, the token never exceeds what your role grants. A core tool the token can't use answers `forbidden`. A plugin tool that declares a `capability` the token lacks is refused with a 403 `insufficient_scope` before it runs, naming the narrowest scope that holds it.
+
+Revoking the token in the same card stops the agent at its next request. The revisions it already wrote keep its name.
+
+## Working locally
+
+`plumix dev` serves the endpoint without the `mcp` slot. An agent on the same machine needs no token: a loopback request without one acts as the site's first admin, and the revisions it writes name "dev (loopback)" as the token. Point the client at the URL `plumix dev` prints, `http://localhost:5173` on Cloudflare:
+
+```sh
+claude mcp add --transport http plumix http://localhost:5173/_plumix/mcp
+```
+
+A loopback request that does carry a token acts as that token's person, as it would in production, so you can try a narrowed token locally. A request whose `Origin` is another site is refused, and a request from off the machine needs a token. None of this exists in a production build. [Configuration](/getting-started/configuration/#mcp) has the details.
+
+## The tools
+
+Core serves these tools. Each write tool returns only `{ id, etag, status }` (`{ id, etag }` for a term), so an agent's context isn't filled with whole entries.
+
+| Tool                    | What it does                                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `schema_describe`       | The content model: entry types, taxonomies, the allowed blocks and the style policy. With `type`, one entry type in detail.    |
+| `content_list`          | A page of entries of one type, filtered by status and search.                                                                  |
+| `content_get`           | One entry in full, with the `etag` every write to it needs.                                                                    |
+| `content_create`        | Creates a draft from `type`, `slug` and optional `title`, `excerpt`, `content`, `meta` and `terms`.                            |
+| `content_update`        | Merges the fields it is sent into an entry. `content` replaces the whole block tree; blocks the new tree still holds are kept. |
+| `content_publish`       | Publishes a draft, or a published entry's pending draft.                                                                       |
+| `content_discard_draft` | Discards a published entry's pending draft, so the live entry stands.                                                          |
+| `content_duplicate`     | Copies an entry, its terms and its meta into a new draft.                                                                      |
+| `content_trash`         | Moves an entry to the trash, which takes it off the site.                                                                      |
+| `content_restore`       | Brings a trashed entry back as a draft.                                                                                        |
+| `revision_list`         | An entry's revisions, newest first.                                                                                            |
+| `revision_restore`      | Restores a revision onto its entry.                                                                                            |
+| `taxonomy_list`         | The taxonomies and the entry types they apply to.                                                                              |
+| `term_list`             | A page of terms in one taxonomy.                                                                                               |
+| `term_get`              | One term, with the `etag` `term_update` needs.                                                                                 |
+| `term_create`           | Creates a term in a taxonomy.                                                                                                  |
+| `term_update`           | Changes the fields it is sent on a term.                                                                                       |
+
+Under `plumix dev` three more tools read the dev server's own state: `error_list` for server and browser errors, and `telemetry_requests_list` and `telemetry_request_get` for request traces. Plugins add their own, such as the [Media](/plugins/media/) plugin's `media_list` and `media_get` and the [Forms](/plugins/forms-submissions/) plugin's submission tools.
+
+Block content is the `plumix.v2` envelope the editor stores:
+
+```json
+{
+  "version": "plumix.v2",
+  "blocks": [
+    {
+      "id": "intro",
+      "name": "core/heading",
+      "attrs": { "text": "Hello from an agent", "level": 2 }
+    }
+  ]
+}
+```
+
+## Discovery
+
+An agent learns what it may build with from `schema_describe`. Called with no arguments, it returns:
+
+- `entryTypes` and `taxonomies`, the content model.
+- `blocks`: every block the theme allows, each with its inputs, its slots and the blocks each slot accepts, and its default styles.
+- `styles`: the style policy and the design tokens the theme declares, so an agent can keep a page on brand.
+
+Any token that reaches the endpoint can call it, so discovery is never gated above writing.
+
+A client given only your site's URL can find out how to authorize too. A request without a valid token gets a 401 whose challenge points at the protected-resource metadata and names the scopes:
+
+```http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer error="invalid_token", error_description="Missing or invalid token", scope="read draft full", resource_metadata="https://example.com/.well-known/oauth-protected-resource/_plumix/mcp"
+```
+
+The scopes match the mint form: `read` is "Read only", `draft` is "Draft, can't publish", and `full` is "Same as me". The metadata document at that URL names the endpoint as the resource and the site as its authorization server. A client that speaks OAuth signs you in from there: you approve it on a consent page in the admin, where you can untick capabilities of the scope it asked for, and it gets a one-hour token that works only on `/_plumix/mcp`. A client without OAuth connects with a minted token as the [Quickstart](#quickstart) shows.
+
+## Conflicts and leases
+
+Every write to an existing entry or term needs `ifMatch`, the `etag` the agent last read from `content_get` or `term_get`, or got back from its last write. That keeps an agent from overwriting a change it never saw.
+
+- **`conflict`.** Someone changed the entry since the agent read it. The refusal carries the current etag and tells the agent to call `content_get` again, reapply its change to what it gets back, and retry.
+- **`locked`.** Someone has the entry open in the admin's editor and holds its edit lease. The refusal names them and says since when, and tells the agent to report that and stop. An agent never takes a lease over, and each write takes and frees its own lease within the one call, so an agent never leaves an entry locked.
+
+A refused call is a tool result with `isError: true` and a stable code in `_meta.code`. Its text starts with the code and names the tool to call next:
+
+```json
+{
+  "isError": true,
+  "content": [
+    {
+      "type": "text",
+      "text": "locked: Ada Lovelace has been editing this entry since 2026-11-06T09:12:44.000Z. Report this to the user and stop; do not retry."
+    }
+  ],
+  "_meta": { "code": "locked" }
+}
+```
+
+| Code              | Meaning                                                                                               |
+| ----------------- | ----------------------------------------------------------------------------------------------------- |
+| `not_found`       | No such entry, term, revision or taxonomy, or one the token may not see. A write names the list tool. |
+| `forbidden`       | The token may not do this. A write names the capability it lacks.                                     |
+| `bad_input`       | The input failed the tool's schema, or a procedure refused a value, such as a missing `ifMatch`.      |
+| `conflict`        | A stale `ifMatch`, with the current etag; or a value that clashes, such as a slug already taken.      |
+| `locked`          | Someone else holds the edit lease. Report it and stop.                                                |
+| `invalid_content` | The block tree breaks the theme's rules. Names each failing node's path and what is allowed instead.  |
+
+`invalid_content` lists the blocks the refused slot accepts, or the tokens the refused style property takes, so the agent can fix the node and call the same tool again.
+
+## Adding a tool from a plugin
+
+A plugin registers a tool in its `setup` with `ctx.registerMcpTool`. A tool has a `name`, a `description` the agent reads, a valibot `inputSchema`, and a `run` that receives the request's context and the checked input. Throw `McpToolError` for an outcome the agent should act on, so it gets the same codes core's tools use.
+
+A tool that leaves out `annotations` is listed as read-only, so a tool that writes says so:
+
+```ts
+import type { McpTool } from "plumix/plugin";
+import { definePlugin, McpToolError } from "plumix/plugin";
+import * as v from "valibot";
+
+import { archiveBookmark } from "./bookmarks.js";
+
+const archiveInput = v.object({ id: v.pipe(v.number(), v.integer()) });
+
+const bookmarkArchiveTool: McpTool<typeof archiveInput> = {
+  name: "bookmark_archive",
+  description:
+    "Archive a bookmark. Archived bookmarks leave the reading list and can be unarchived.",
+  inputSchema: archiveInput,
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: true,
+  },
+  capability: "bookmark:edit",
+  async run(ctx, { id }) {
+    const archived = await archiveBookmark(ctx, id);
+    if (!archived) {
+      throw McpToolError.notFound("No such bookmark. Call bookmark_list.");
+    }
+    return { id };
+  },
+};
+
+export const bookmarks = definePlugin("bookmarks", {
+  setup: (ctx) => {
+    ctx.registerMcpTool(bookmarkArchiveTool);
+  },
+});
+```
+
+`readOnlyHint`, `destructiveHint` and `idempotentHint` mirror the MCP spec's tool annotations. A client uses them to decide when to ask before calling a tool. They are hints only: nothing in Plumix authorizes on them, so `run` checks what the person may do itself, through `ctx.auth.can` or the procedures it calls. `capability` refuses a token that lacks it with a 403 before `run` starts. A tool name has one owner, and registering one of core's names throws.
+
+## Related
+
+[Configuration](/getting-started/configuration/#mcp) covers the `mcp` slot and the dev relaxation. [REST API](/apis/rest-api/) is the read-only JSON surface for published content, with the same API tokens. [Access & Identity](/access/overview/) explains roles and capabilities, which bound every token.
+
+## Next steps
+
+Read [Blocks](/blocks/overview/) for the allowed blocks an agent composes pages from, and [Themes](/themes/overview/) for the style policy and design tokens it must keep to.
