@@ -13,7 +13,8 @@ the older harnesses
 helpers, the `fakeFile`/`fakeImage` upload fakes, the mail kit: `fakeMail`, which both harnesses
 and `testSite` install as `h.mail` and `site.mail`, and `renderMail`, and `fakeCdn`, which a test
 hands the dispatcher harness as `cdn` to render, write and assert a page is no longer stored, and
-which `testSite` always swaps in, and `site.fetch`, which answers `ctx.fetch` from the routes a test
+which `testSite` always swaps in as `site.cdn`, recording which tags a write purged
+(`assertPurged(tag)`, `assertNotPurged(tag)`, `assertNothingPurged()`), and `site.fetch`, which answers `ctx.fetch` from the routes a test
 declares (`site.fetch.route(method, url, answer)`, a failure or a timeout included) and fails the
 test on any other request, so no test stubs the global `fetch`, `site.logger`, which records every
 line the site logged (`assertLogged(level, message)`, `assertNothingLogged(level)`), so no test
