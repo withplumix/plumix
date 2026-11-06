@@ -1,5 +1,6 @@
 import { and, eq, sql } from "../../../../db/index.js";
 import { credentials } from "../../../../db/schema/credentials.js";
+import { auth } from "../../../../hooks/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { credentialsDeleteInputSchema } from "./schemas.js";
@@ -25,12 +26,10 @@ export const del = base
       )
       .returning({ id: credentials.id });
     if (row) {
-      await context.hooks.doAction(
-        "credential:revoked",
-        { id: row.id, userId },
-        { actor: context.user },
-        context,
-      );
+      await context.events.emit(auth.credentialRevoked, {
+        credential: { id: row.id, userId },
+        actor: context.user,
+      });
       return row;
     }
 

@@ -1,5 +1,6 @@
 import { and, eq } from "../../../../db/index.js";
 import { credentials } from "../../../../db/schema/credentials.js";
+import { auth } from "../../../../hooks/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { credentialsRenameInputSchema } from "./schemas.js";
@@ -28,11 +29,10 @@ export const rename = base
     if (!row) {
       throw errors.NOT_FOUND({ data: { kind: "credential", id: input.id } });
     }
-    await context.hooks.doAction(
-      "credential:renamed",
-      { id: row.id, userId: context.user.id },
-      { actor: context.user, name: row.name ?? "" },
-      context,
-    );
+    await context.events.emit(auth.credentialRenamed, {
+      credential: { id: row.id, userId: context.user.id },
+      actor: context.user,
+      name: row.name ?? "",
+    });
     return row;
   });

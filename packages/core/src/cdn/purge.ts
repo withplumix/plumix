@@ -1,6 +1,7 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
+import { userEvents } from "../hooks/user.js";
 import {
   entryPurgeTags,
   normalizeTag,
@@ -82,13 +83,11 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     enqueuePurgeTags(ctx, [userTag(user.id)]);
     ctx.memo.invalidate([userSlugsTag()]);
   };
-  hooks.addAction("user:updated", (user, _previous, ctx) => onUser(user, ctx));
-  hooks.addAction("user:meta_changed", (user, _changes, ctx) =>
-    onUser(user, ctx),
-  );
+  hooks.on(userEvents.updated, ({ user }, ctx) => onUser(user, ctx));
+  hooks.on(userEvents.metaChanged, ({ user }, ctx) => onUser(user, ctx));
   // The deleted user's entries now render the user they went to, whose pages
-  // never heard an entry action for them.
-  hooks.addAction("user:deleted", (user, { reassignedTo }, ctx) => {
+  // never heard an entry event for them.
+  hooks.on(userEvents.deleted, ({ user, reassignedTo }, ctx) => {
     onUser(user, ctx);
     if (reassignedTo !== null) onUser({ id: reassignedTo }, ctx);
   });

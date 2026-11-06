@@ -2,6 +2,7 @@ import { readSessionCookie } from "../../../../auth/cookies.js";
 import { hashToken } from "../../../../auth/tokens.js";
 import { and, eq } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
+import { auth } from "../../../../hooks/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { sessionsRevokeInputSchema } from "./schemas.js";
@@ -31,11 +32,10 @@ export const revoke = base
     if (!row) {
       throw errors.NOT_FOUND({ data: { kind: "session", id: input.id } });
     }
-    await context.hooks.doAction(
-      "session:revoked",
-      { id: row.id, userId: context.user.id },
-      { actor: context.user, mode: "single" },
-      context,
-    );
+    await context.events.emit(auth.sessionRevoked, {
+      session: { id: row.id, userId: context.user.id },
+      actor: context.user,
+      mode: "single",
+    });
     return row;
   });

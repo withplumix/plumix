@@ -39,6 +39,12 @@ type Curated =
 const CORE_WITHHELD: readonly Withholding[] = [
   {
     reason:
+      "core's auth subject, which plumix/plugin publishes as `auth`: core's " +
+      "barrel spends that name on the config builder plumix/auth publishes",
+    names: ["authEvents"],
+  },
+  {
+    reason:
       "the editing-copy controller and the save queue it writes through, " +
       "which only the admin's own editors use until a plugin editor moves " +
       "onto them (#3241)",
@@ -323,7 +329,7 @@ const CORE_WITHHELD: readonly Withholding[] = [
 
 const CURATED: Readonly<Record<string, Curated>> = {
   ".": { draws: "@plumix/core" },
-  "./plugin": { draws: "@plumix/core", adds: ["v"] },
+  "./plugin": { draws: "@plumix/core", adds: ["v", "auth"] },
   "./theme": { draws: "@plumix/core" },
   "./runtime": { draws: "@plumix/core" },
   "./auth": { draws: "@plumix/core" },
@@ -976,7 +982,7 @@ test("plumix/plugin offers core's page-data resolvers, not the row assembler", (
 });
 
 // ADR 0052: a plugin declares and subscribes through values, not strings.
-test("plumix/plugin offers the event and filter declarers and core's block, render and sync subjects", () => {
+test("plumix/plugin offers the event and filter declarers and core's block, render, sync, user and auth subjects", () => {
   const plugin = loaded(facade, "./plugin");
   expect({
     defineEvent: typeof plugin.defineEvent,
@@ -984,6 +990,8 @@ test("plumix/plugin offers the event and filter declarers and core's block, rend
     block: Object.keys(plugin.block ?? {}).sort(),
     render: Object.keys(plugin.render ?? {}).sort(),
     sync: Object.keys(plugin.sync ?? {}).sort(),
+    user: Object.keys(plugin.user ?? {}).sort(),
+    auth: Object.keys(plugin.auth ?? {}).sort(),
   }).toEqual({
     defineEvent: "function",
     defineFilter: "function",
@@ -1000,6 +1008,41 @@ test("plumix/plugin offers the event and filter declarers and core's block, rend
       "term",
     ],
     sync: ["after"],
+    user: [
+      "deleteOutput",
+      "deleted",
+      "disableInput",
+      "disableOutput",
+      "enableInput",
+      "enableOutput",
+      "getOutput",
+      "inviteInput",
+      "inviteOutput",
+      "invited",
+      "listInput",
+      "listOutput",
+      "metaChanged",
+      "statusChanged",
+      "updateInput",
+      "updateOutput",
+      "updated",
+    ],
+    auth: [
+      "apiTokenCreated",
+      "apiTokenRevoked",
+      "credentialCreated",
+      "credentialRenamed",
+      "credentialRevoked",
+      "deviceCodeApproved",
+      "deviceCodeDenied",
+      "emailChangeRequested",
+      "emailChanged",
+      "oauthAccountUnlinked",
+      "registered",
+      "sessionRevoked",
+      "signedIn",
+      "signedOut",
+    ],
   });
 });
 

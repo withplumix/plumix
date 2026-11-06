@@ -1,4 +1,5 @@
 import { revokeApiToken } from "../../../../auth/api-tokens.js";
+import { auth } from "../../../../hooks/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensRevokeInputSchema } from "./schemas.js";
@@ -18,11 +19,10 @@ export const revoke = base
     if (!ok) {
       throw errors.NOT_FOUND({ data: { kind: "api_token", id: input.id } });
     }
-    await context.hooks.doAction(
-      "api_token:revoked",
-      { id: input.id, userId: context.user.id },
-      { actor: context.user, mode: "self" },
-      context,
-    );
+    await context.events.emit(auth.apiTokenRevoked, {
+      apiToken: { id: input.id, userId: context.user.id },
+      actor: context.user,
+      mode: "self",
+    });
     return { id: input.id };
   });

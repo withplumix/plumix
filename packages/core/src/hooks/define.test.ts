@@ -105,4 +105,11 @@ describe("firing", () => {
     // @ts-expect-error the payload is `{ id }`
     void appCtx.events.emit(saved, { slug: "x" });
   });
+
+  test("emit takes a payload written inline for an event with a literal union in it", () => {
+    const moved = defineEvent<{ readonly mode: "self" | "admin" }>(
+      "acme:moved",
+    );
+    void appCtx.events.emit(moved, { mode: "admin" });
+  });
 });

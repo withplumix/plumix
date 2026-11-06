@@ -4,6 +4,7 @@ import {
 } from "../../../auth/email-change/index.js";
 import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
+import { auth } from "../../../hooks/auth.js";
 import { sessionAuthenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { userRequestEmailChangeInputSchema } from "./schemas.js";
@@ -48,16 +49,12 @@ export const requestEmailChangeProc = base
         logger: context.logger,
       });
 
-      await context.hooks.doAction(
-        "user:email_change_requested",
-        result.user,
-        {
-          actor: context.user,
-          newEmail: input.newEmail.trim().toLowerCase(),
-          expiresAt: result.expiresAt,
-        },
-        context,
-      );
+      await context.events.emit(auth.emailChangeRequested, {
+        user: result.user,
+        actor: context.user,
+        newEmail: input.newEmail.trim().toLowerCase(),
+        expiresAt: result.expiresAt,
+      });
 
       return { ok: true as const, expiresAt: result.expiresAt };
     } catch (error) {

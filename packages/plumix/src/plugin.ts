@@ -49,7 +49,11 @@ export {
   sync,
   TAXONOMY_MENU_ICONS,
   termCapability,
+  user,
 } from "@plumix/core";
+
+// Core's barrel spends `auth` on the config builder `plumix/auth` publishes.
+export { authEvents as auth } from "@plumix/core";
 
 // `tryGetContext` serves a component rendered without a context argument, such
 // as SEO's breadcrumbs; `requestStore` is kept with it so a test can enter the

@@ -6,6 +6,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { userListInputSchema } from "./schemas.js";
+import { user } from "./subject.js";
 
 const CAPABILITY = "user:list";
 
@@ -14,10 +15,7 @@ export const list = base
   .use(requireCapability(CAPABILITY))
   .input(userListInputSchema)
   .handler(async ({ input, context }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:user.list:input",
-      input,
-    );
+    const filtered = await context.filters.apply(user.listInput, input);
 
     const conditions = [];
     if (filtered.role) conditions.push(eq(users.role, filtered.role));
@@ -70,9 +68,6 @@ export const list = base
         lastSignInEpoch === null ? null : new Date(lastSignInEpoch * 1000),
     }));
 
-    const output = await context.hooks.applyFilter(
-      "rpc:user.list:output",
-      rows,
-    );
+    const output = await context.filters.apply(user.listOutput, rows);
     return output.map((row) => ({ ...row, etag: etagOf(row.updatedAt) }));
   });

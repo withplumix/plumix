@@ -37,6 +37,7 @@ export { withUser } from "./auth/with-user.js";
 export { traceDbBatch, traceDbQuery, traceDbQuerySync } from "./db/trace.js";
 export type { TracedQuery } from "./db/trace.js";
 export * from "./hooks/index.js";
+export { user } from "./rpc/procedures/user/subject.js";
 export * from "./i18n/index.js";
 // Server- and build-side only: the browser `./i18n` subpath stays without the
 // CLDR data.

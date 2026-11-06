@@ -78,7 +78,7 @@ export interface AppEvents {
    */
   emit<TPayload>(
     event: EventDefinition<TPayload>,
-    payload: TPayload,
+    payload: NoInfer<TPayload>,
   ): Promise<readonly EventFailure[]>;
 }
 

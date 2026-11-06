@@ -2,6 +2,7 @@ import {
   approveDeviceCode,
   lookupDeviceCodeByUserCode,
 } from "../../../../auth/device-flow.js";
+import { auth } from "../../../../hooks/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { assertLookupOk } from "./lookup-helpers.js";
@@ -25,16 +26,14 @@ export const approve = base
       tokenName: input.tokenName,
       scopes: input.scopes,
     });
-    await context.hooks.doAction(
-      "device_code:approved",
-      {
+    await context.events.emit(auth.deviceCodeApproved, {
+      deviceCode: {
         id: ok.id,
         userCode: input.userCode,
         tokenName: input.tokenName,
         scopes: input.scopes ?? null,
       },
-      { actor: context.user },
-      context,
-    );
+      actor: context.user,
+    });
     return { ok: true as const };
   });

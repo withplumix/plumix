@@ -11,6 +11,7 @@ import type {
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { CapabilityErrors } from "../../../rpc-errors.js";
 import { users } from "../../../db/schema/users.js";
+import { userEvents } from "../../../hooks/user.js";
 import {
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,
@@ -29,8 +30,6 @@ import {
   listUserMetaFields,
 } from "../../../plugin/manifest.js";
 import { userRows } from "./concurrency.js";
-
-export type { MetaChanges as UserMetaChanges } from "../../../meta/core.js";
 
 /** RPC-facing sanitizer for a user's meta input. User meta is a flat
  *  keyspace — no scope argument. The target's `stored` is the meta the patch
@@ -140,7 +139,7 @@ export async function loadUserMeta(
   return resolveMetaReferencesCore(ctx, scope.findField, decoded);
 }
 
-/** A system write of `patch` to `users.meta`, then `user:meta_changed`. */
+/** A system write of `patch` to `users.meta`, then `user.metaChanged`. */
 export async function writeUserMeta(
   ctx: AppContext,
   user: { readonly id: number },
@@ -154,19 +153,17 @@ export async function writeUserMeta(
   if (result?.written) await announceUserMetaChange(ctx, user, patch);
 }
 
-/** Fire `user:meta_changed` once a write carrying `patch` has landed. */
-export function announceUserMetaChange(
+/** Emit `user.metaChanged` once a write carrying `patch` has landed. */
+export async function announceUserMetaChange(
   ctx: AppContext,
   user: { readonly id: number },
   patch: MetaPatch,
 ): Promise<void> {
-  return ctx.hooks.doAction(
-    "user:meta_changed",
+  await ctx.events.emit(userEvents.metaChanged, {
     user,
-    {
+    changes: {
       set: Object.fromEntries(patch.upserts),
       removed: [...patch.deletes],
     },
-    ctx,
-  );
+  });
 }

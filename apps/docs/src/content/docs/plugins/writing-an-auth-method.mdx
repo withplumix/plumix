@@ -64,7 +64,7 @@ Each handler receives the kernel, bound to the request:
 - **An email proof**, `{ email, emailVerified }`, for a method that proved an address. `emailVerified` is `true` only when the method proved the caller owns the inbox, as a code mailed there does. It signs in the account with that address, or creates one where the site's sign-up rules allow. It can also carry `providerAccount: { provider, accountId }`, which links an external account so it signs its user in whatever address it reports later, and a `profile` with a `name` and `avatarUrl`, used only when the account is created.
 - **An account proof**, `{ userId }`, for a credential bound to one existing account, such as a passkey. It never creates an account.
 
-The second argument takes `redirectTo`, a value the method carried itself, such as through OAuth state, in place of the request's `?redirectTo=`. It also takes `afterSession(user)`, which runs once the session exists and before `user:signed_in`, and for an account proof, `firstSignIn`.
+The second argument takes `redirectTo`, a value the method carried itself, such as through OAuth state, in place of the request's `?redirectTo=`. It also takes `afterSession(user)`, which runs once the session exists and before `auth.signedIn` is emitted, and for an account proof, `firstSignIn`.
 
 ### Answers by transport
 
@@ -129,7 +129,7 @@ The method proves who the caller is, and core keeps every other rule:
 - **Who may have an account.** A new address needs one of the site's allowed domains, or an open `selfSignup`. Otherwise the answer is `domain_not_allowed`. An email proof with `emailVerified: false` signs no one in and creates nothing, `email_unverified`.
 - **The first account.** While the site has no users, a method creates the first one only where bootstrap is allowed. Otherwise the answer is `registration_closed`.
 - **Disabled accounts**, `account_disabled`, and an account proof whose user is gone, `link_broken`.
-- **The session**, its cookie and the `user:signed_in` action.
+- **The session**, its cookie and the `auth.signedIn` event.
 - **Where the visitor lands.** `redirectTo` is kept only when it is a root-relative path inside the base path, and sent to the site root otherwise.
 
 A refusal answers like a `fail` with a `403`, so the theme shows it next to the method's own codes.

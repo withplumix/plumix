@@ -2,6 +2,7 @@ import { readSessionCookie } from "../../../../auth/cookies.js";
 import { hashToken } from "../../../../auth/tokens.js";
 import { and, eq, ne } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
+import { auth } from "../../../../hooks/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { sessionsRevokeOthersInputSchema } from "./schemas.js";
@@ -30,12 +31,11 @@ export const revokeOthers = base
     // device individually — better UX than a single "N revoked" entry
     // for forensic timelines.
     for (const row of rows) {
-      await context.hooks.doAction(
-        "session:revoked",
-        { id: row.id, userId: context.user.id },
-        { actor: context.user, mode: "all_others" },
-        context,
-      );
+      await context.events.emit(auth.sessionRevoked, {
+        session: { id: row.id, userId: context.user.id },
+        actor: context.user,
+        mode: "all_others",
+      });
     }
     return { revoked: rows.length };
   });

@@ -2,6 +2,7 @@ import type { AppContext } from "../../context/app-context.js";
 import type { AuthFlowApp } from "../flow-app.js";
 import type { EmailChangeErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
+import { auth } from "../../hooks/auth.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
 import { resolveLoginPath } from "../config.js";
 import { EmailChangeError } from "./errors.js";
@@ -42,14 +43,10 @@ export async function handleEmailChangeVerify(
   // The change is committed, so a throwing subscriber must not report an error
   // and send the user back to their old email.
   try {
-    await ctx.hooks.doAction(
-      "user:email_changed",
-      result.user,
-      {
-        previousEmail: result.previousEmail,
-      },
-      ctx,
-    );
+    await ctx.events.emit(auth.emailChanged, {
+      user: result.user,
+      previousEmail: result.previousEmail,
+    });
   } catch (error) {
     ctx.logger.error("email_change_hook_failed", { error });
   }

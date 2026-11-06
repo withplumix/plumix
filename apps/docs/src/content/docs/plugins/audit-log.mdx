@@ -93,18 +93,34 @@ Then:
 
 ## What it records
 
-Every event below is one core already fires. The plugin records it under the same name.
+Every row below records an event core already fires. Entry, term and settings rows carry the name core fires them under. User and auth rows carry the name in the first column, recorded from the `user` and `auth` events in `plumix/plugin` shown beside it.
 
-| Subject          | Events                                                                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entry`          | `entry:updated`, `entry:transition`, `entry:published`, `entry:trashed`, `entry:restored`, `entry:deleted`, `entry:meta_changed`                                                                        |
-| `user`           | `user:updated`, `user:status_changed`, `user:deleted`, `user:meta_changed`, `user:invited`, `user:registered`, `user:signed_in`, `user:signed_out`, `user:email_change_requested`, `user:email_changed` |
-| `credential`     | `credential:created`, `credential:revoked`, `credential:renamed`                                                                                                                                        |
-| `session`        | `session:revoked`                                                                                                                                                                                       |
-| `api_token`      | `api_token:created`, `api_token:revoked`                                                                                                                                                                |
-| `device_code`    | `device_code:approved`, `device_code:denied`                                                                                                                                                            |
-| `term`           | `term:created`, `term:updated`, `term:deleted`, `term:meta_changed`                                                                                                                                     |
-| `settings_group` | `settings:group_changed`                                                                                                                                                                                |
+| Subject          | Events                                                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `entry`          | `entry:updated`, `entry:transition`, `entry:published`, `entry:trashed`, `entry:restored`, `entry:deleted`, `entry:meta_changed` |
+| `term`           | `term:created`, `term:updated`, `term:deleted`, `term:meta_changed`                                                              |
+| `settings_group` | `settings:group_changed`                                                                                                         |
+
+| Row event                     | Subject       | Recorded from               |
+| ----------------------------- | ------------- | --------------------------- |
+| `user:updated`                | `user`        | `user.updated`              |
+| `user:status_changed`         | `user`        | `user.statusChanged`        |
+| `user:deleted`                | `user`        | `user.deleted`              |
+| `user:meta_changed`           | `user`        | `user.metaChanged`          |
+| `user:invited`                | `user`        | `user.invited`              |
+| `user:registered`             | `user`        | `auth.registered`           |
+| `user:signed_in`              | `user`        | `auth.signedIn`             |
+| `user:signed_out`             | `user`        | `auth.signedOut`            |
+| `user:email_change_requested` | `user`        | `auth.emailChangeRequested` |
+| `user:email_changed`          | `user`        | `auth.emailChanged`         |
+| `credential:created`          | `credential`  | `auth.credentialCreated`    |
+| `credential:revoked`          | `credential`  | `auth.credentialRevoked`    |
+| `credential:renamed`          | `credential`  | `auth.credentialRenamed`    |
+| `session:revoked`             | `session`     | `auth.sessionRevoked`       |
+| `api_token:created`           | `api_token`   | `auth.apiTokenCreated`      |
+| `api_token:revoked`           | `api_token`   | `auth.apiTokenRevoked`      |
+| `device_code:approved`        | `device_code` | `auth.deviceCodeApproved`   |
+| `device_code:denied`          | `device_code` | `auth.deviceCodeDenied`     |
 
 Core fires no event when an entry is created, so the first row an entry gets is its first save, status change or publish.
 

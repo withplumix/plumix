@@ -7,6 +7,8 @@ import type { SyncAfterEvent } from "./cli/kit.js";
 import type { EntryQuery } from "./db/index.js";
 import type {
   ArchiveEntriesInput,
+  auth,
+  AuthenticatedUser,
   block,
   BlockLoaderFailure,
   BlockRenderInput,
@@ -20,7 +22,9 @@ import type {
   SetupEvents,
   SetupFilters,
   sync,
+  user,
 } from "./plugin.js";
+import type { User } from "./schema/index.js";
 import type { DocumentManifest } from "./theme/index.js";
 
 describe("plumix/plugin", () => {
@@ -60,6 +64,32 @@ describe("plumix/plugin", () => {
   test("carries core's sync subject", () => {
     expectTypeOf<(typeof sync)["after"]>().toEqualTypeOf<
       EventDefinition<SyncAfterEvent>
+    >();
+  });
+
+  test("carries core's user subject", () => {
+    expectTypeOf<(typeof user)["updated"]>().toEqualTypeOf<
+      EventDefinition<{ readonly user: User; readonly previous: User }>
+    >();
+    expectTypeOf<(typeof user)["deleteOutput"]>().toEqualTypeOf<
+      FilterDefinition<User, undefined, false>
+    >();
+  });
+
+  test("carries core's auth subject", () => {
+    expectTypeOf<(typeof auth)["signedIn"]>().toEqualTypeOf<
+      EventDefinition<{
+        readonly user: User;
+        readonly method: string;
+        readonly provider?: string;
+        readonly firstSignIn: boolean;
+      }>
+    >();
+    expectTypeOf<(typeof auth)["credentialRevoked"]>().toEqualTypeOf<
+      EventDefinition<{
+        readonly credential: { readonly id: string; readonly userId: number };
+        readonly actor: AuthenticatedUser;
+      }>
     >();
   });
 

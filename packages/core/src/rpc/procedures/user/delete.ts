@@ -6,6 +6,7 @@ import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import { userDeleteInputSchema } from "./schemas.js";
+import { user } from "./subject.js";
 
 const CAPABILITY = "user:delete";
 
@@ -72,14 +73,10 @@ export const del = base
     // WP's `deleted_user` parity. `reassignedTo` is `null` if the user
     // had no entries (no reassignment happened); otherwise carries the id
     // we migrated entries to so audit-log plugins can reconstruct the move.
-    await context.hooks.doAction(
-      "user:deleted",
-      deleted,
-      {
-        reassignedTo: entryCount > 0 ? (input.reassignTo ?? null) : null,
-      },
-      context,
-    );
+    await context.events.emit(user.deleted, {
+      user: deleted,
+      reassignedTo: entryCount > 0 ? (input.reassignTo ?? null) : null,
+    });
 
-    return context.hooks.applyFilter("rpc:user.delete:output", deleted);
+    return context.filters.apply(user.deleteOutput, deleted);
   });

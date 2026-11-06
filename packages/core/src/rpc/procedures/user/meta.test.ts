@@ -11,6 +11,7 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { currentUserEtag } from "../../../test/user-etag.js";
 import { loadUserMeta } from "./meta.js";
+import { user } from "./subject.js";
 
 function registerUserFields(
   plugins: MutablePluginRegistry,
@@ -138,13 +139,13 @@ describe("user meta: registration + round-trip via user.update", () => {
     expect(afterClear.meta).toEqual({ newsletter: true });
   });
 
-  test("user:meta_changed fires with the upsert + delete diff", async () => {
+  test("user.metaChanged fires with the upsert + delete diff", async () => {
     const plugins = createPluginRegistry();
     registerUserFields(plugins, [
       { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
     ]);
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    const spy = h.spyAction("user:meta_changed");
+    const spy = h.spyEvent(user.metaChanged);
 
     await h.client.user.update({
       id: h.user.id,
@@ -158,20 +159,23 @@ describe("user meta: registration + round-trip via user.update", () => {
     });
 
     expect(spy.calls).toHaveLength(2);
-    expect(spy.calls[0]?.args[1]).toEqual({
+    expect(spy.calls[0]?.payload.changes).toEqual({
       set: { bio: "hello" },
       removed: [],
     });
-    expect(spy.calls[1]?.args[1]).toEqual({ set: {}, removed: ["bio"] });
+    expect(spy.calls[1]?.payload.changes).toEqual({
+      set: {},
+      removed: ["bio"],
+    });
   });
 
-  test("user.update with an empty meta patch does not fire user:meta_changed", async () => {
+  test("user.update with an empty meta patch does not fire user.metaChanged", async () => {
     const plugins = createPluginRegistry();
     registerUserFields(plugins, [
       { key: "bio", label: "Bio", type: "string", inputType: "textarea" },
     ]);
     const h = await createRpcHarness({ authAs: "admin", plugins });
-    const spy = h.spyAction("user:meta_changed");
+    const spy = h.spyEvent(user.metaChanged);
 
     await h.client.user.update({
       id: h.user.id,

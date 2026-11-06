@@ -4,6 +4,7 @@ import { createApiToken } from "../../../auth/api-tokens.js";
 import { eq } from "../../../db/index.js";
 import { authTokens } from "../../../db/schema/auth_tokens.js";
 import { users } from "../../../db/schema/users.js";
+import { auth } from "../../../hooks/auth.js";
 import { createTestContext } from "../../../test/context.js";
 import { createDispatcherHarness } from "../../../test/dispatcher.js";
 import { poCatalogs } from "../../../test/po-catalog.js";
@@ -22,7 +23,7 @@ describe("user.requestEmailChange", () => {
       authAs: "editor",
       config: { auth: { magicLink: { siteName: "Test" } } },
     });
-    const spy = h.spyAction("user:email_change_requested");
+    const spy = h.spyEvent(auth.emailChangeRequested);
 
     const result = await h.client.user.requestEmailChange({
       id: h.user.id,
@@ -31,10 +32,10 @@ describe("user.requestEmailChange", () => {
     expect(result.ok).toBe(true);
 
     spy.assertCalledOnce();
-    const [user, ctx] = spy.lastArgs ?? [];
-    expect(user?.id).toBe(h.user.id);
-    expect(ctx?.actor.id).toBe(h.user.id);
-    expect(ctx?.newEmail).toBe("new@example.test");
+    const payload = spy.lastPayload;
+    expect(payload?.user.id).toBe(h.user.id);
+    expect(payload?.actor.id).toBe(h.user.id);
+    expect(payload?.newEmail).toBe("new@example.test");
     h.mail.assertSent("emailChange", { to: "new@example.test", times: 1 });
   });
 
@@ -291,7 +292,7 @@ describe("GET /_plumix/auth/verify-email", () => {
       email: "alice@old.example",
       role: "editor",
     });
-    const spyChanged = h.spyAction("user:email_changed");
+    const spyChanged = h.spyEvent(auth.emailChanged);
 
     // Use the primitive directly to mint a verification token, since
     // there's no harness shortcut for "as user X submit RPC".
@@ -321,9 +322,9 @@ describe("GET /_plumix/auth/verify-email", () => {
     );
 
     spyChanged.assertCalledOnce();
-    const [user, ctx] = spyChanged.lastArgs ?? [];
-    expect(user?.email).toBe("alice@new.example");
-    expect(ctx?.previousEmail).toBe("alice@old.example");
+    const payload = spyChanged.lastPayload;
+    expect(payload?.user.email).toBe("alice@new.example");
+    expect(payload?.previousEmail).toBe("alice@old.example");
   });
 
   test("missing-token redirects to login with email_change_error=missing_token", async () => {

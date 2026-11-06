@@ -1,11 +1,13 @@
 import type {
   AppContext,
   AuthenticatedUser,
+  EventDefinition,
   HookOptions,
   PluginSetupContext,
+  SetupEvents,
 } from "plumix/plugin";
 import type { Term, User } from "plumix/schema";
-import { HookRegistry } from "plumix/plugin";
+import { auth, HookRegistry, user } from "plumix/plugin";
 import {
   createDispatcherHarness,
   createTestContext,
@@ -22,6 +24,7 @@ import { auditLog } from "../index.js";
 import { createDb } from "../test-support.js";
 import {
   assertRedactionInvariants,
+  auditedEvents,
   auditEvents,
   registerAuditEvents,
   SUBJECT_REQUIRED_REDACTIONS,
@@ -66,6 +69,44 @@ describe("registerAuditEvents — through a procedure", () => {
     const row = writes.find((w) => w.event === "settings:group_changed");
     expect(row?.actorId).toBe(admin.id);
   });
+
+  test("an admin disabling a user is recorded against the user, by the admin", async () => {
+    const writes: NewAuditLogRow[] = [];
+    const storage: AuditLogStorage = {
+      kind: "capture",
+      write: (_ctx, rows) => {
+        writes.push(...rows);
+        return Promise.resolve();
+      },
+      query: () => Promise.resolve({ rows: [], nextCursor: null }),
+    };
+    const h = await createDispatcherHarness({
+      config: { plugins: [auditLog({ storage })] },
+    });
+    const admin = await h.factory.user.create({ role: "admin" });
+    const target = await h.factory.user.create({ role: "editor" });
+    const request = await h.authenticateRequest(
+      plumixRequest("/_plumix/rpc/user/disable", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ json: { id: target.id } }),
+      }),
+      admin.id,
+    );
+
+    const response = await h.dispatch(request);
+    await h.drainDeferred();
+
+    expect(response.status).toBe(200);
+    expect(writes.find((w) => w.event === "user:status_changed")).toMatchObject(
+      {
+        subjectType: "user",
+        subjectId: String(target.id),
+        actorId: admin.id,
+        properties: { status: ["enabled", "disabled"] },
+      },
+    );
+  });
 });
 
 /**
@@ -105,15 +146,19 @@ interface HarnessHandles {
   readonly hooks: HookRegistry;
   readonly state: FakeServiceState;
   readonly fire: ActionDispatcher;
+  readonly emit: <TPayload>(
+    event: EventDefinition<TPayload>,
+    payload: NoInfer<TPayload>,
+  ) => Promise<unknown>;
 }
 
 function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
   const hooks = new HookRegistry();
   const state = fakeService();
 
-  // Minimal PluginSetupContext stand-in: only `addAction` is needed
-  // by `registerHooks`. Casting through `unknown` lets us satisfy
-  // the strict type without conjuring every register* method.
+  // Minimal PluginSetupContext stand-in: only `addAction` and `events.on`
+  // are needed by `registerAuditEvents`. Casting through `unknown` lets us
+  // satisfy the strict type without conjuring every register* method.
   const ctx = {
     addAction: (
       name: string,
@@ -122,6 +167,11 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
     ) => {
       hooks.addAction(name as never, fn as never, options);
     },
+    events: {
+      on: (event, handler, options) => {
+        hooks.on(event, handler, options);
+      },
+    } satisfies SetupEvents,
   } as unknown as PluginSetupContext;
   registerAuditEvents(ctx, state.service);
 
@@ -133,6 +183,7 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
     // private state through `this.#actions`.
     fire: (name, ...args) =>
       (hooks.doAction as ActionDispatcher).call(hooks, name, ...args, fakeCtx),
+    emit: (event, payload) => hooks.emit(event, payload, fakeCtx),
   };
 }
 
@@ -175,13 +226,21 @@ describe("registerAuditEvents — entry surface (regression)", () => {
 describe("registerAuditEvents — user surface", () => {
   test("user:status_changed encodes the toggle as a [from, to] tuple", async () => {
     const h = harness();
-    await h.fire("user:status_changed", subjectUser, { enabled: false });
+    await h.emit(user.statusChanged, { user: subjectUser, enabled: false });
     expect(h.state.rows[0]).toMatchObject({
       event: "user:status_changed",
       subjectType: "user",
       subjectId: "42",
       subjectLabel: "Bob",
       properties: { status: ["enabled", "disabled"] },
+    });
+  });
+
+  test("user:status_changed encodes a re-enable as the reverse tuple", async () => {
+    const h = harness();
+    await h.emit(user.statusChanged, { user: subjectUser, enabled: true });
+    expect(h.state.rows[0]?.properties).toEqual({
+      status: ["disabled", "enabled"],
     });
   });
 
@@ -199,7 +258,7 @@ describe("registerAuditEvents — user surface", () => {
       meta: { something: "new" },
       updatedAt: new Date("2026-05-10T18:00:00Z"),
     } as unknown as User;
-    await h.fire("user:updated", next, previous);
+    await h.emit(user.updated, { user: next, previous });
 
     const row = h.state.rows[0];
     if (!row) throw new Error("expected a captured row");
@@ -215,7 +274,8 @@ describe("registerAuditEvents — user surface", () => {
   test("user:invited attributes to invitedBy with admin email as label, never logs the invite token", async () => {
     const h = harness();
     const expiresAt = new Date("2026-05-17T00:00:00Z");
-    await h.fire("user:invited", subjectUser, {
+    await h.emit(user.invited, {
+      user: subjectUser,
       inviteToken: "secret-do-not-log",
       invitedBy: 7,
       expiresAt,
@@ -233,7 +293,9 @@ describe("registerAuditEvents — user surface", () => {
   test("user:invited falls back to id-as-string label when ctx.user is unrelated (e.g. CLI)", async () => {
     const h = harness(null);
     const expiresAt = new Date("2026-05-17T00:00:00Z");
-    await h.fire("user:invited", subjectUser, {
+    await h.emit(user.invited, {
+      user: subjectUser,
+      inviteToken: "secret-do-not-log",
       invitedBy: 9,
       expiresAt,
     });
@@ -244,7 +306,7 @@ describe("registerAuditEvents — user surface", () => {
 
   test("user:registered self-attributes when ctx.user is null", async () => {
     const h = harness(null);
-    await h.fire("user:registered", subjectUser);
+    await h.emit(auth.registered, { user: subjectUser });
     const row = h.state.rows[0];
     expect(row?.event).toBe("user:registered");
     expect(row?.actorId).toBe(42);
@@ -255,7 +317,8 @@ describe("registerAuditEvents — user surface", () => {
 describe("registerAuditEvents — auth surface", () => {
   test("user:signed_in self-attributes (ctx.user is null at sign-in time)", async () => {
     const h = harness(null);
-    await h.fire("user:signed_in", subjectUser, {
+    await h.emit(auth.signedIn, {
+      user: subjectUser,
       method: "oauth",
       provider: "github",
       firstSignIn: false,
@@ -272,17 +335,16 @@ describe("registerAuditEvents — auth surface", () => {
 
   test("credential:created uses the credential subject + actor from context", async () => {
     const h = harness();
-    await h.fire(
-      "credential:created",
-      {
+    await h.emit(auth.credentialCreated, {
+      credential: {
         id: "cred-1",
         userId: 42,
         name: "My laptop",
-        deviceType: "platform",
+        deviceType: "single_device",
         isBackedUp: true,
       },
-      { actor: adminUser },
-    );
+      actor: adminUser,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "credential:created",
       subjectType: "credential",
@@ -291,7 +353,7 @@ describe("registerAuditEvents — auth surface", () => {
       actorId: 7,
       actorLabel: "alice@example.com",
       properties: {
-        deviceType: "platform",
+        deviceType: "single_device",
         isBackedUp: true,
         userId: 42,
       },
@@ -300,11 +362,11 @@ describe("registerAuditEvents — auth surface", () => {
 
   test("api_token:revoked includes the mode (self vs admin) for downstream copy", async () => {
     const h = harness();
-    await h.fire(
-      "api_token:revoked",
-      { id: "tok-9", userId: 42 },
-      { actor: adminUser, mode: "admin" },
-    );
+    await h.emit(auth.apiTokenRevoked, {
+      apiToken: { id: "tok-9", userId: 42 },
+      actor: adminUser,
+      mode: "admin",
+    });
     expect(h.state.rows[0]?.properties).toMatchObject({
       mode: "admin",
       userId: 42,
@@ -313,16 +375,15 @@ describe("registerAuditEvents — auth surface", () => {
 
   test("device_code:approved labels the row with the userCode", async () => {
     const h = harness();
-    await h.fire(
-      "device_code:approved",
-      {
+    await h.emit(auth.deviceCodeApproved, {
+      deviceCode: {
         id: "dev-9",
         userCode: "ABCD-WXYZ",
         tokenName: "CI deploy",
         scopes: ["entry:read"],
       },
-      { actor: adminUser },
-    );
+      actor: adminUser,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "device_code:approved",
       subjectType: "device_code",
@@ -520,7 +581,7 @@ describe("registerAuditEvents — entry backfill", () => {
 describe("registerAuditEvents — user backfill", () => {
   test("user:deleted carries the reassignedTo target", async () => {
     const h = harness();
-    await h.fire("user:deleted", subjectUser, { reassignedTo: 1 });
+    await h.emit(user.deleted, { user: subjectUser, reassignedTo: 1 });
     expect(h.state.rows[0]).toMatchObject({
       event: "user:deleted",
       subjectType: "user",
@@ -531,11 +592,10 @@ describe("registerAuditEvents — user backfill", () => {
 
   test("user:meta_changed records key names only", async () => {
     const h = harness();
-    await h.fire(
-      "user:meta_changed",
-      { id: 42 },
-      { set: { timezone: "UTC" }, removed: ["betaFlag"] },
-    );
+    await h.emit(user.metaChanged, {
+      user: { id: 42 },
+      changes: { set: { timezone: "UTC" }, removed: ["betaFlag"] },
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "user:meta_changed",
       subjectType: "user",
@@ -548,7 +608,7 @@ describe("registerAuditEvents — user backfill", () => {
 describe("registerAuditEvents — auth backfill", () => {
   test("user:signed_out self-attributes to the signed-out user", async () => {
     const h = harness(null);
-    await h.fire("user:signed_out", subjectUser);
+    await h.emit(auth.signedOut, { user: subjectUser });
     expect(h.state.rows[0]).toMatchObject({
       event: "user:signed_out",
       subjectType: "user",
@@ -561,7 +621,8 @@ describe("registerAuditEvents — auth backfill", () => {
   test("user:email_change_requested attributes to the explicit context.actor", async () => {
     const h = harness();
     const expiresAt = new Date("2026-05-20T00:00:00Z");
-    await h.fire("user:email_change_requested", subjectUser, {
+    await h.emit(auth.emailChangeRequested, {
+      user: subjectUser,
       actor: adminUser,
       newEmail: "bob.new@example.com",
       expiresAt,
@@ -579,7 +640,8 @@ describe("registerAuditEvents — auth backfill", () => {
 
   test("user:email_changed records [previous, current] email pair", async () => {
     const h = harness();
-    await h.fire("user:email_changed", subjectUser, {
+    await h.emit(auth.emailChanged, {
+      user: subjectUser,
       previousEmail: "old@example.com",
     });
     expect(h.state.rows[0]?.properties).toMatchObject({
@@ -589,11 +651,10 @@ describe("registerAuditEvents — auth backfill", () => {
 
   test("credential:revoked records the credential subject + userId", async () => {
     const h = harness();
-    await h.fire(
-      "credential:revoked",
-      { id: "cred-2", userId: 42 },
-      { actor: adminUser },
-    );
+    await h.emit(auth.credentialRevoked, {
+      credential: { id: "cred-2", userId: 42 },
+      actor: adminUser,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "credential:revoked",
       subjectType: "credential",
@@ -605,11 +666,11 @@ describe("registerAuditEvents — auth backfill", () => {
 
   test("credential:renamed uses the new name as the subject label", async () => {
     const h = harness();
-    await h.fire(
-      "credential:renamed",
-      { id: "cred-3", userId: 42 },
-      { actor: adminUser, name: "Work phone" },
-    );
+    await h.emit(auth.credentialRenamed, {
+      credential: { id: "cred-3", userId: 42 },
+      actor: adminUser,
+      name: "Work phone",
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "credential:renamed",
       subjectType: "credential",
@@ -621,11 +682,11 @@ describe("registerAuditEvents — auth backfill", () => {
 
   test("session:revoked carries mode + userId", async () => {
     const h = harness();
-    await h.fire(
-      "session:revoked",
-      { id: "sess-1", userId: 42 },
-      { actor: adminUser, mode: "all_others" },
-    );
+    await h.emit(auth.sessionRevoked, {
+      session: { id: "sess-1", userId: 42 },
+      actor: adminUser,
+      mode: "all_others",
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "session:revoked",
       subjectType: "session",
@@ -636,9 +697,8 @@ describe("registerAuditEvents — auth backfill", () => {
 
   test("api_token:created records prefix + scopes + expiresAt iso (or null)", async () => {
     const h = harness();
-    await h.fire(
-      "api_token:created",
-      {
+    await h.emit(auth.apiTokenCreated, {
+      apiToken: {
         id: "tok-1",
         userId: 42,
         name: "CI",
@@ -646,8 +706,8 @@ describe("registerAuditEvents — auth backfill", () => {
         scopes: ["entry:read"],
         expiresAt: null,
       },
-      { actor: adminUser },
-    );
+      actor: adminUser,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "api_token:created",
       subjectType: "api_token",
@@ -663,11 +723,10 @@ describe("registerAuditEvents — auth backfill", () => {
 
   test("device_code:denied labels the row with the userCode", async () => {
     const h = harness();
-    await h.fire(
-      "device_code:denied",
-      { id: "dev-7", userCode: "WXYZ-ABCD" },
-      { actor: adminUser },
-    );
+    await h.emit(auth.deviceCodeDenied, {
+      deviceCode: { id: "dev-7", userCode: "WXYZ-ABCD" },
+      actor: adminUser,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "device_code:denied",
       subjectType: "device_code",
@@ -726,16 +785,27 @@ describe("auditEvents table", () => {
       addAction: (name: string) => {
         registered.push(name);
       },
+      events: {
+        on: (event) => {
+          registered.push(event.id);
+        },
+      } satisfies SetupEvents,
     } as unknown as PluginSetupContext;
     registerAuditEvents(ctx, fakeService().service);
     expect(registered.sort()).toEqual([
-      "api_token:created",
-      "api_token:revoked",
-      "credential:created",
-      "credential:renamed",
-      "credential:revoked",
-      "device_code:approved",
-      "device_code:denied",
+      "auth:apiTokenCreated",
+      "auth:apiTokenRevoked",
+      "auth:credentialCreated",
+      "auth:credentialRenamed",
+      "auth:credentialRevoked",
+      "auth:deviceCodeApproved",
+      "auth:deviceCodeDenied",
+      "auth:emailChangeRequested",
+      "auth:emailChanged",
+      "auth:registered",
+      "auth:sessionRevoked",
+      "auth:signedIn",
+      "auth:signedOut",
       "entry:deleted",
       "entry:meta_changed",
       "entry:published",
@@ -743,30 +813,27 @@ describe("auditEvents table", () => {
       "entry:transition",
       "entry:trashed",
       "entry:updated",
-      "session:revoked",
       "settings:group_changed",
       "term:created",
       "term:deleted",
       "term:meta_changed",
       "term:updated",
       "user:deleted",
-      "user:email_change_requested",
-      "user:email_changed",
       "user:invited",
-      "user:meta_changed",
-      "user:registered",
-      "user:signed_in",
-      "user:signed_out",
-      "user:status_changed",
+      "user:metaChanged",
+      "user:statusChanged",
       "user:updated",
     ]);
   });
 });
 
 describe("assertRedactionInvariants", () => {
-  test("real table satisfies the configured required-redaction map", () => {
+  test("real tables satisfy the configured required-redaction map", () => {
     expect(() =>
-      assertRedactionInvariants(auditEvents, SUBJECT_REQUIRED_REDACTIONS),
+      assertRedactionInvariants(
+        [...auditEvents, ...auditedEvents],
+        SUBJECT_REQUIRED_REDACTIONS,
+      ),
     ).not.toThrow();
   });
 
@@ -775,7 +842,6 @@ describe("assertRedactionInvariants", () => {
       {
         event: "user:bad" as AuditEventDef["event"],
         subject: { kind: "extract", type: "user" },
-        actor: { kind: "ctx" },
         // `passwordHash` deliberately missing from the omit list.
         diff: { omit: ["createdAt", "updatedAt"] },
       },
@@ -790,7 +856,6 @@ describe("assertRedactionInvariants", () => {
       {
         event: "user:tagged" as AuditEventDef["event"],
         subject: { kind: "extract", type: "user" },
-        actor: { kind: "ctx" },
       },
     ];
     expect(() =>

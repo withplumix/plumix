@@ -5,6 +5,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { userEnableInputSchema } from "./schemas.js";
+import { user } from "./subject.js";
 
 const CAPABILITY = "user:edit";
 
@@ -14,10 +15,7 @@ export const enable = base
   .use(requireCapability(CAPABILITY))
   .input(userEnableInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:user.enable:input",
-      input,
-    );
+    const filtered = await context.filters.apply(user.enableInput, input);
 
     const existing = await context.db.query.users.findFirst({
       where: eq(users.id, filtered.id),
@@ -26,10 +24,7 @@ export const enable = base
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
     if (!existing.disabledAt) {
-      const output = await context.hooks.applyFilter(
-        "rpc:user.enable:output",
-        existing,
-      );
+      const output = await context.filters.apply(user.enableOutput, existing);
       return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
@@ -42,20 +37,11 @@ export const enable = base
       throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
 
-    // One `user:status_changed` hook covers enable and disable, so plugins
-    // observing "account activity state changed" don't need two events.
-    await context.hooks.doAction(
-      "user:status_changed",
-      updated,
-      {
-        enabled: true,
-      },
-      context,
-    );
+    await context.events.emit(user.statusChanged, {
+      user: updated,
+      enabled: true,
+    });
 
-    const output = await context.hooks.applyFilter(
-      "rpc:user.enable:output",
-      updated,
-    );
+    const output = await context.filters.apply(user.enableOutput, updated);
     return { ...output, etag: etagOf(updated.updatedAt) };
   });

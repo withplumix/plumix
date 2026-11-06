@@ -11,6 +11,7 @@ import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
+import { auth as authEvents } from "../../hooks/auth.js";
 import { startingMeta } from "../../plugin/fields/starting-meta.js";
 import { listUserMetaFields } from "../../plugin/manifest.js";
 import { jsonResponse } from "../../runtime/contract/http.js";
@@ -266,30 +267,26 @@ export async function handlePasskeyRegisterVerify(
   }
 }
 
-function announceCredential(
+async function announceCredential(
   ctx: AppContext,
   credential: Credential,
   user: User,
 ): Promise<void> {
-  return ctx.hooks.doAction(
-    "credential:created",
-    {
+  await ctx.events.emit(authEvents.credentialCreated, {
+    credential: {
       id: credential.id,
       userId: credential.userId,
       name: credential.name,
       deviceType: credential.deviceType,
       isBackedUp: credential.isBackedUp,
     },
-    {
-      actor: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        meta: user.meta,
-      },
+    actor: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      meta: user.meta,
     },
-    ctx,
-  );
+  });
 }
 
 export async function handlePasskeyLoginOptions(
@@ -357,7 +354,7 @@ export async function handleSignout(
     const validated = await validateSession(ctx.db, token, app.sessionPolicy);
     await invalidateSession(ctx.db, token);
     if (validated) {
-      await ctx.hooks.doAction("user:signed_out", validated.user, ctx);
+      await ctx.events.emit(authEvents.signedOut, { user: validated.user });
     }
   }
   const cookie = {
@@ -470,7 +467,7 @@ export async function handleInviteRegisterVerify(
         firstSignIn: true,
         // After the session exists, so handlers see a fully enrolled user.
         afterSession: async (enrolled) => {
-          await ctx.hooks.doAction("user:registered", enrolled, ctx);
+          await ctx.events.emit(authEvents.registered, { user: enrolled });
           await announceCredential(ctx, credential, enrolled);
         },
       },

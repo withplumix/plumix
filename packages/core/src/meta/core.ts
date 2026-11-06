@@ -95,15 +95,7 @@ export class MetaSanitizationError extends Error {
   }
 }
 
-/**
- * Standard payload for `<entity>:meta_changed` actions. `set` is the
- * decoded key → value map of upserts; `removed` is the list of
- * cleared keys.
- */
-export interface MetaChanges {
-  readonly set: JsonObject;
-  readonly removed: readonly string[];
-}
+export type { MetaChanges } from "./contract/bags.js";
 
 /**
  * Carries every `{ path, message }` across the patch so the admin form can

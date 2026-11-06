@@ -1,5 +1,6 @@
 import { createApiToken } from "../../../../auth/api-tokens.js";
 import { resolveApiTokenPreset } from "../../../../auth/token-presets.js";
+import { auth } from "../../../../hooks/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensCreateInputSchema } from "./schemas.js";
@@ -36,9 +37,8 @@ export const create = base
       scopes,
     });
 
-    await context.hooks.doAction(
-      "api_token:created",
-      {
+    await context.events.emit(auth.apiTokenCreated, {
+      apiToken: {
         id: minted.row.id,
         userId: minted.row.userId,
         name: minted.row.name,
@@ -46,9 +46,8 @@ export const create = base
         scopes: minted.row.scopes,
         expiresAt: minted.row.expiresAt,
       },
-      { actor: context.user },
-      context,
-    );
+      actor: context.user,
+    });
 
     return {
       // The full secret — show once, never recoverable.
