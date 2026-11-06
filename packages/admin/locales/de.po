@@ -888,9 +888,19 @@ msgid "users.list.roleFilter.all"
 msgstr "Alle Rollen"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API-Tokens"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.approve"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1186,6 +1196,11 @@ msgid "userEdit.email.confirmationSent"
 msgstr "Bestätigung an {email} gesendet. Die Änderung tritt in Kraft, sobald der Link angeklickt wurde."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.idle"
 msgstr "Weiter"
@@ -1246,6 +1261,11 @@ msgstr "Grundlegende Website-Identität und Metadaten."
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.statusFallback"
 msgstr "Kontostatus konnte nicht geändert werden. Bitte erneut versuchen."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.error"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1640,6 +1660,11 @@ msgid "auth.device.denied"
 msgstr "Abgelehnt. Die CLI erhält eine access_denied-Antwort und stoppt die Abfragen."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.deny"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.deny.idle"
 msgstr "Ablehnen"
@@ -1724,6 +1749,11 @@ msgstr "Entwurf"
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.discarded"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.draft"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2106,6 +2136,11 @@ msgstr "Benutzer einladen"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.submit.pending"
 msgstr "Wird eingeladen…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.label"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/EditConflictDialog.tsx
@@ -2891,6 +2926,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "Benutzer reaktivieren"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.read"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.readOnly"
 msgstr ""
@@ -3056,6 +3096,11 @@ msgstr "Rolle"
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.full"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3714,6 +3759,11 @@ msgid "userEdit.email.error.accountDisabled"
 msgstr "Dieses Konto ist deaktiviert."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.loopbackWarning"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.expired"
 msgstr "Dieser Code ist abgelaufen, bevor Sie fertig werden konnten — starten Sie Ihre CLI neu."
@@ -3742,6 +3792,11 @@ msgstr "Dieser Code wurde bereits in einem anderen Tab genehmigt."
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.alreadyDenied"
 msgstr "Dieser Code wurde bereits abgelehnt."
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.invalid"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

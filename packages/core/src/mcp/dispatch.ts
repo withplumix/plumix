@@ -1,7 +1,9 @@
 import type { AuthInfo } from "@modelcontextprotocol/server";
 
 import type { AppContext } from "../context/app-context.js";
+import { audienceTokenAuthenticator } from "../auth/authenticator.js";
 import { authenticateBearer } from "../auth/bearer.js";
+import { mcpUrl } from "../auth/oauth-server/urls.js";
 import { loadOnce } from "../load-once.js";
 import { forbidden, methodNotAllowed } from "../runtime/contract/http.js";
 import { asLoopbackAdmin } from "./dev-loopback.js";
@@ -32,11 +34,17 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
   if (process.env.PLUMIX_DEV && trust === "trusted") {
     toolCtx = await asLoopbackAdmin(ctx);
   } else {
-    const { mcpUrl, tokenAuthInfo, unauthorizedChallenge } =
+    const { tokenAuthInfo, unauthorizedChallenge } =
       await loadResourceMetadata();
-    const authedCtx = await authenticateBearer(ctx, mcpUrl(ctx).href);
+    const audience = mcpUrl(ctx).href;
+    const authedCtx = await authenticateBearer(ctx, audience);
     if (!authedCtx) return unauthorizedChallenge(ctx);
-    toolCtx = authedCtx;
+    // A tool's RPC call resolves the caller again, so it must accept the
+    // audience-bound token this endpoint did.
+    toolCtx = {
+      ...authedCtx,
+      authenticator: audienceTokenAuthenticator(audience),
+    };
     authInfo = tokenAuthInfo(authedCtx);
   }
 

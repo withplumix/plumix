@@ -888,9 +888,19 @@ msgid "users.list.roleFilter.all"
 msgstr "所有角色"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API 令牌"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.approve"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1186,6 +1196,11 @@ msgid "userEdit.email.confirmationSent"
 msgstr "确认邮件已发送至 {email}。点击链接后更改生效。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.lookup.submit.idle"
 msgstr "继续"
@@ -1246,6 +1261,11 @@ msgstr "核心站点标识与元数据。"
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.statusFallback"
 msgstr "无法更新账户状态。请重试。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.error"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -1640,6 +1660,11 @@ msgid "auth.device.denied"
 msgstr "已拒绝。CLI 将收到 access_denied 响应并停止轮询。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.deny"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.deny.idle"
 msgstr "拒绝"
@@ -1724,6 +1749,11 @@ msgstr "草稿"
 #. js-lingui-explicit-id
 #: src/routes/_editor/entries/$slug/$id/edit.tsx
 msgid "editor.toast.discarded"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.draft"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2106,6 +2136,11 @@ msgstr "邀请用户"
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.submit.pending"
 msgstr "邀请中…"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.label"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/EditConflictDialog.tsx
@@ -2891,6 +2926,11 @@ msgid "userEdit.status.toggle.enable"
 msgstr "重新激活用户"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.read"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.scope.readOnly"
 msgstr ""
@@ -3056,6 +3096,11 @@ msgstr "角色"
 #. js-lingui-explicit-id
 #: src/components/meta-box/repeater-field.tsx
 msgid "metaBox.repeater.rowSummaryEmpty"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.scope.full"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3714,6 +3759,11 @@ msgid "userEdit.email.error.accountDisabled"
 msgstr "此账户已停用。"
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/-consent-card.tsx
+msgid "auth.authorize.loopbackWarning"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.expired"
 msgstr "此代码在您完成之前已过期 — 请重新启动您的 CLI。"
@@ -3742,6 +3792,11 @@ msgstr "此代码已在其他标签页中被批准。"
 #: src/routes/_authenticated/auth/device.tsx
 msgid "auth.device.approve.error.alreadyDenied"
 msgstr "此代码已被拒绝。"
+
+#. js-lingui-explicit-id
+#: src/routes/_authenticated/auth/authorize.tsx
+msgid "auth.authorize.invalid"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx

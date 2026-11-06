@@ -32,12 +32,22 @@ export function refetchSession(queryClient: QueryClient) {
   return queryClient.refetchQueries({ queryKey: SESSION_QUERY_KEY });
 }
 
+type SignedInSession = Awaited<ReturnType<typeof loadSession>>;
+
 /** Throws a TanStack Router redirect when signed out. */
-export async function requireAuthenticatedSession(queryClient: QueryClient) {
+export async function requireAuthenticatedSession(
+  queryClient: QueryClient,
+  returnTo: string,
+): Promise<{ user: NonNullable<SignedInSession["user"]> }> {
   const session = await loadSession(queryClient);
   if (!session.user) {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow; see https://tanstack.com/router/latest/docs/framework/react/guide/authenticated-routes
-    throw redirect({ to: session.needsBootstrap ? "/bootstrap" : "/login" });
+    throw session.needsBootstrap
+      ? redirect({ to: "/bootstrap" })
+      : redirect({
+          to: "/login",
+          search: returnTo === "/" ? {} : { next: returnTo },
+        });
   }
   return { user: session.user };
 }

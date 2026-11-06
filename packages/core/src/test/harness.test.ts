@@ -55,6 +55,8 @@ describe("applyCoreTestSchema", () => {
       "entry_changes",
       "entry_term",
       "oauth_accounts",
+      "oauth_authorization_codes",
+      "oauth_grants",
       "scheduled_task_claims",
       "scheduled_task_leases",
       "sessions",

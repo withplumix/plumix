@@ -17,6 +17,7 @@ import {
   usePasskeyErrorMessage,
 } from "@/lib/passkey-errors.js";
 import { refetchSession } from "@/lib/session.js";
+import { signInRedirectTo, signInReturnPath } from "@/lib/sign-in-return.js";
 import { useLabel } from "@/lib/use-label.js";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Trans, useLingui } from "@lingui/react";
@@ -116,7 +117,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
     onMutate: () => setPasskeyError(null),
     onSuccess: async () => {
       await refetchSession(router.options.context.queryClient);
-      await router.navigate({ to: "/" });
+      await router.navigate({ href: signInReturnPath(search.next) });
     },
     onError: (err) => {
       setPasskeyError(err instanceof PasskeyError ? err.code : "unknown");
@@ -125,7 +126,10 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
 
   const magicLink = useMutation({
     mutationFn: (input: { email: string }) =>
-      authClient.signIn.magicLink({ email: input.email }),
+      authClient.signIn.magicLink({
+        email: input.email,
+        redirectTo: signInRedirectTo(search.next),
+      }),
     onMutate: () => {
       setMagicLinkError(null);
       setMagicLinkSent(false);
@@ -148,7 +152,7 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
         return;
       }
       await refetchSession(router.options.context.queryClient);
-      await router.navigate({ to: "/" });
+      await router.navigate({ href: signInReturnPath(search.next) });
     },
   });
   const pending =
@@ -404,10 +408,13 @@ export function LoginScreen({ search }: { search: LoginSearch }): ReactNode {
                 data-testid={`login-oauth-${key}`}
               >
                 <a
-                  href={authClient.url({
-                    method: "oauth",
-                    route: `${encodeURIComponent(key)}/start`,
-                  })}
+                  href={authClient.url(
+                    {
+                      method: "oauth",
+                      route: `${encodeURIComponent(key)}/start`,
+                    },
+                    { redirectTo: signInRedirectTo(search.next) },
+                  )}
                 >
                   <Trans
                     id="login.oauth.continueWith"
