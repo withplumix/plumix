@@ -19,12 +19,10 @@ import {
 } from "./authorization-request.js";
 import { ClientMetadataError } from "./client-metadata.js";
 import {
+  checkOAuthGrant,
   consumeAuthorizationCode,
-  findOAuthGrant,
   issueAuthorizationCode,
-  oauthGrantCovers,
 } from "./grants.js";
-import { resolveScope } from "./scopes.js";
 
 export { handleAuthorizationServerMetadata } from "./metadata.js";
 
@@ -57,17 +55,13 @@ export async function handleAuthorize(ctx: AppContext): Promise<Response> {
   const { request } = validated;
   const session = await authenticateSession(ctx);
   if (session !== null) {
-    const granted = await findOAuthGrant(
+    const { requested, covered } = await checkOAuthGrant(
       ctx.db,
-      session.user.id,
-      request.client.clientId,
-    );
-    const requested = resolveScope(
-      request.scope,
-      session.user.role,
       ctx.plugins,
+      session.user,
+      request,
     );
-    if (granted !== null && oauthGrantCovers(granted, requested)) {
+    if (covered) {
       const code = await issueAuthorizationCode(ctx.db, {
         userId: session.user.id,
         request,

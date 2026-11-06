@@ -1,4 +1,5 @@
 import type { Db } from "../../context/app-context.js";
+import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { AuthorizationRequest } from "./authorization-request.js";
 import { now } from "../../clock.js";
 import { and, eq } from "../../db/index.js";
@@ -6,6 +7,7 @@ import { oauthAuthorizationCodes } from "../../db/schema/oauth_authorization_cod
 import { oauthGrants } from "../../db/schema/oauth_grants.js";
 import { encodeBase64url } from "../../encoding.js";
 import { hashToken } from "../tokens.js";
+import { resolveScope } from "./scopes.js";
 
 const CODE_BYTES = 32;
 const CODE_TTL_MS = 10 * 60_000;
@@ -32,6 +34,21 @@ export function oauthGrantCovers(
 ): boolean {
   const held = new Set(granted);
   return requested.every((capability) => held.has(capability));
+}
+
+/** What `request` asks `user` for, and whether their grant to the client already holds it. */
+export async function checkOAuthGrant(
+  db: Db,
+  plugins: PluginRegistry,
+  user: { readonly id: number; readonly role: string },
+  request: AuthorizationRequest,
+): Promise<{ requested: readonly string[]; covered: boolean }> {
+  const requested = resolveScope(request.scope, user.role, plugins);
+  const granted = await findOAuthGrant(db, user.id, request.client.clientId);
+  return {
+    requested,
+    covered: granted !== null && oauthGrantCovers(granted, requested),
+  };
 }
 
 export async function saveOAuthGrant(

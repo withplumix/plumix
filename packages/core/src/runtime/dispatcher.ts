@@ -25,6 +25,7 @@ import {
 } from "../auth/csrf.js";
 import { matchAuthMethodRoute } from "../auth/declared-methods.js";
 import { loadAuthFlowRoutes } from "../auth/flow-routes-loader.js";
+import { AUTHORIZE_PATH, TOKEN_PATH } from "../auth/oauth-server/urls.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
@@ -79,9 +80,6 @@ const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
 const MCP_PATH = "/_plumix/mcp";
-/** Inlined, not imported, so the eager graph skips the routes. */
-const OAUTH_AUTHORIZE_PATH = "/_plumix/oauth/authorize";
-const OAUTH_TOKEN_PATH = "/_plumix/oauth/token";
 /** RFC 9728's well-known prefix, inlined so the eager graph skips the SDK. */
 const PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource";
 /** RFC 8414's, which takes the issuer's path, not the resource's. */
@@ -284,7 +282,7 @@ async function tryColdInterfaces(
   pathname: string,
 ): Promise<Response | null> {
   if (pathname === MCP_PATH) return withNoStore(await dispatchMcp(app, ctx));
-  if (pathname === OAUTH_AUTHORIZE_PATH || pathname === OAUTH_TOKEN_PATH) {
+  if (pathname === AUTHORIZE_PATH || pathname === TOKEN_PATH) {
     return withNoStore(await dispatchOAuthServer(app, ctx, pathname));
   }
   if (pathname === SYNC_SETTLE_PATH) {
@@ -330,9 +328,7 @@ async function dispatchOAuthServer(
 ): Promise<Response> {
   if (!mcpServed(app)) return notFound("mcp-disabled");
   const { handleAuthorize, handleToken } = await loadOAuthServerRoutes();
-  return pathname === OAUTH_TOKEN_PATH
-    ? handleToken(ctx)
-    : handleAuthorize(ctx);
+  return pathname === TOKEN_PATH ? handleToken(ctx) : handleAuthorize(ctx);
 }
 
 async function dispatchRest(
