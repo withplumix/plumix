@@ -13,11 +13,14 @@ import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { DefaultRole } from "../users/contract/roles.js";
 import corePackage from "../../package.json" with { type: "json" };
 import { defineBlock } from "../blocks/block-registry.js";
+import { eq } from "../db/index.js";
+import { entries } from "../db/schema/entries.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
 import { trustRequest } from "../runtime/request-trust.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
+import { currentEtag } from "../test/entry-etag.js";
 import { defineTheme } from "../theme.js";
 
 /**
@@ -1059,6 +1062,36 @@ describe("MCP endpoint — protected-resource metadata", () => {
   });
 });
 
+const revisedBlog = definePlugin("test-revised-blog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      isHierarchical: false,
+      supports: ["title", "editor", "revisions"],
+    });
+  },
+});
+
+async function callLoopbackTool(
+  h: DispatcherHarness,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<JsonRpcEnvelope<ToolCallResult>> {
+  const res = await h.dispatch(
+    mcpRequest(
+      {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name, arguments: args },
+      },
+      { url: "http://localhost/_plumix/mcp" },
+    ),
+  );
+  return (await res.json()) as JsonRpcEnvelope<ToolCallResult>;
+}
+
 describe("MCP endpoint — dev trust", () => {
   afterEach(() => void vi.unstubAllEnvs());
 
@@ -1080,6 +1113,71 @@ describe("MCP endpoint — dev trust", () => {
     expect(json.result.tools.some((t) => t.name === "schema_describe")).toBe(
       true,
     );
+  });
+
+  test("a loopback request with no token sees drafts as the first admin", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [blog] } });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.admin.create();
+    await h.factory.draft.create({ authorId: author.id, slug: "draft" });
+
+    const json = await callLoopbackTool(h, "content_list", { type: "post" });
+
+    const rows = parseToolResult<ContentRow[]>(json);
+    expect(rows.map((r) => r.slug)).toEqual(["draft"]);
+  });
+
+  test("a loopback request with no token creates a draft as the first admin", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [blog] } });
+    const admin = await h.factory.admin.create();
+    await h.factory.admin.create();
+
+    const json = await callLoopbackTool(h, "content_create", {
+      type: "post",
+      slug: "hello",
+      title: "Hello",
+    });
+
+    const { id } = parseToolResult<{ id: number }>(json);
+    const [row] = await h.db.select().from(entries).where(eq(entries.id, id));
+    expect(row).toMatchObject({ status: "draft", authorId: admin.id });
+  });
+
+  test("a loopback edit's revision is attributed to dev (loopback)", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [revisedBlog] } });
+    const admin = await h.factory.admin.create();
+    const draft = await h.factory.draft.create({ authorId: admin.id });
+
+    await callLoopbackTool(h, "content_update", {
+      type: "post",
+      id: draft.id,
+      ifMatch: await currentEtag(h.db, draft.id),
+      title: "Edited",
+    });
+
+    const [revision] = await h.db
+      .select()
+      .from(entries)
+      .where(eq(entries.type, "revision"));
+    expect(revision?.authorId).toBe(admin.id);
+    expect(revision?.meta).toMatchObject({
+      __plumix_revision_token: { tokenName: "dev (loopback)" },
+    });
+  });
+
+  test("a loopback request on a site with no admin reads as anonymous", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [blog] } });
+    const author = await h.factory.user.create({ role: "editor" });
+    await h.factory.draft.create({ authorId: author.id, slug: "draft" });
+
+    const json = await callLoopbackTool(h, "content_list", { type: "post" });
+
+    expect(json.result.isError).toBe(true);
+    expect(json.result.content[0]?.text).toContain("forbidden");
   });
 
   test("a loopback Origin is allowed on the frictionless path", async () => {

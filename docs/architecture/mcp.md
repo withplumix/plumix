@@ -58,7 +58,7 @@ The dispatcher checks `/_plumix/mcp` in `tryColdInterfaces`, before the CSRF gat
 
 - In a production build it is always `"token"`, because `process.env.PLUMIX_DEV` folds to `""`.
 - Under dev, a cross-site `Origin` is `"rejected"` (403 `mcp_cross_origin`). A loopback host is `"trusted"`. Any other host is `"token"`.
-- `"trusted"` passes the dispatcher's context through as it is. No authenticator has run on it, so the principal is anonymous and tools see only what an anonymous visitor may read.
+- `"trusted"` acts as the first admin user, with no scope narrowing (`asLoopbackAdmin` in `mcp/dev-loopback.ts`). It also replaces the context's authenticator, so the procedures a write tool calls authenticate as that admin. A revision it writes records the token name "dev (loopback)". With no admin yet, the principal stays anonymous. The module is imported only inside the inline `process.env.PLUMIX_DEV` branch, so a build drops it.
 - `"token"` runs `authenticateBearer` with the endpoint's own URL (`basePath` included) as the audience, which accepts only an API token: one with no audience, or one bound to that URL. A token bound to another URL, or a session cookie, gets 401.
 
 **Discovery and challenges.** An OAuth client given only the site's URL finds out how to authorize from RFC 9728 protected-resource metadata. The dispatcher answers it at the path-specific well-known URI (`/.well-known/oauth-protected-resource` followed by the MCP path, `basePath` included) and at the bare root URI. It matches both on the raw path, before `basePath` is stripped, and 404s them when the endpoint is off. The document names the MCP URL as `resource`, the request origin plus `basePath` as the one authorization server, and `read`, `draft` and `full` as `scopes_supported`. Both URLs come from the request URL the runtime adapter rebuilt from the forwarded scheme and host, so a TLS-terminating proxy can't make them `http`. The 401 is the SDK's `bearerAuthChallengeResponse`: `WWW-Authenticate: Bearer` with `resource_metadata` and `scope="read draft full"`. It asks for every scope because consent offers what was asked for and lets the person narrow it. A tool that sets `capability` gets the SDK's per-tool `scopeChallenge`. When the token's capabilities don't cover it, the call is refused with 403 `insufficient_scope` before the tool runs, naming the narrowest scope whose preset holds the capability (`narrowestPresetHolding` in `auth/token-presets.ts`). Dev trust passes no token, so no challenge applies there, and `run` still checks whatever depends on the input.
@@ -74,6 +74,7 @@ The in-editor agent is not served over MCP. It is an RPC procedure behind an `ll
 
 - `packages/core/src/mcp/dispatch.ts`: `handleMcpRequest`.
 - `packages/core/src/mcp/dev-trust.ts`: `resolveMcpDevTrust`.
+- `packages/core/src/mcp/dev-loopback.ts`: `asLoopbackAdmin`.
 - `packages/core/src/mcp/resource-metadata.ts`: `handleProtectedResourceMetadata`, `unauthorizedChallenge`, `capabilityChallenge`.
 - `packages/core/src/mcp/server.ts`: `buildMcpServer`, `SERVER_INFO`.
 - `packages/core/src/mcp/registry.ts`: `coreMcpTools`, `CORE_MCP_TOOL_NAMES`, `buildMcpToolRegistry`.
@@ -82,7 +83,7 @@ The in-editor agent is not served over MCP. It is an RPC procedure behind an `ll
 
 ## Invariants
 
-- Production MCP needs an API token. Dev trust is statically off in a build. `packages/core/src/mcp/dispatch.test.ts` ("production (dev trust off) still requires a token over loopback"); `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`.
+- Production MCP needs an API token. Dev trust, and with it the loopback admin, is statically off in a build. `packages/core/src/mcp/dispatch.test.ts` ("production (dev trust off) still requires a token over loopback"); `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`.
 - A 401 points at the protected-resource metadata, which is served with and without a `basePath`. `dispatch.test.ts` ("protected-resource metadata", "authorization challenges").
 - A token whose capabilities don't cover a tool's `capability` gets 403 `insufficient_scope` before the tool runs. `dispatch.test.ts` ("authorization challenges").
 - MCP authenticates by API token only, never by session cookie. `dispatch.test.ts` ("a session-cookie request is rejected").

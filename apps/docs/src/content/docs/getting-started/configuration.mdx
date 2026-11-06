@@ -350,7 +350,7 @@ export const basePath: PlumixConfigInput["basePath"] = "/recipes";
 
 The Model Context Protocol endpoint at `/_plumix/mcp`, where an MCP client reaches the site's tools. Default-off in production, and the gate is early. With no `mcp` block a production dispatcher answers 404 before it imports the handler graph at all.
 
-`plumix dev` bypasses that gate. The dev server auto-enables the endpoint, so a connected coding agent reaches your tools locally with no config flag. The check behind it is statically false in a production build, so the bypass cannot follow you to the deploy.
+`plumix dev` bypasses that gate. The dev server auto-enables the endpoint, so a connected coding agent reaches your tools locally with no config flag. An agent on the same machine needs no token either: a loopback request without one acts as the site's first admin, and the revisions it writes name "dev (loopback)" as the token. A request whose `Origin` is another site is still refused, and off loopback the endpoint asks for a token as in production. The check behind all of this is statically false in a production build, so the bypass cannot follow you to the deploy.
 
 ```ts
 import type { PlumixConfigInput } from "plumix";

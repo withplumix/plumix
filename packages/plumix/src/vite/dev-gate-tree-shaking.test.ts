@@ -29,6 +29,7 @@ const GATED_DEV_MODULES = [
   "dev/mail/viewer.tsx",
   "dev/server/hints/core-hints.ts",
   "dev/server/respond.ts",
+  "mcp/dev-loopback.ts",
   "mcp/error-tools.ts",
   "mcp/telemetry-tools.ts",
   "runtime/dev.ts",
