@@ -496,8 +496,6 @@ export function createMenuRouter(
       const itemIdSet = new Set(itemIds);
       const removed = [...priorIds].filter((id) => !itemIdSet.has(id));
 
-      // Fires even for no-op saves so cache invalidators needn't sniff the
-      // payload. Subscriber failures don't roll back the commit.
       await context.events.emit(menu.saved, {
         termId: term.id,
         addedIds: added,

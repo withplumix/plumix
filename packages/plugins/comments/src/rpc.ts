@@ -93,8 +93,8 @@ export function createCommentsRouter() {
       return countByStatus(context);
     });
 
-  // `restore` reuses the approved event — returning a comment to the queue
-  // is re-approving it (no separate `comment.restored` event in v1).
+  // `restore` reuses the approved event: returning a comment to the queue is
+  // re-approving it.
   function transition(target: CommentStatus, event: TransitionEvent) {
     return base
       .use(authenticated)
