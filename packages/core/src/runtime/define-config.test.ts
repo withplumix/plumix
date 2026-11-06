@@ -126,6 +126,6 @@ test("an invite's role names a default role or a declared one", () => {
     roles: { designer },
   });
   expectTypeOf<RoleNameOf<typeof _config>>().toEqualTypeOf<
-    "subscriber" | "contributor" | "author" | "editor" | "admin" | "designer"
+    "member" | "author" | "editor" | "admin" | "designer"
   >();
 });

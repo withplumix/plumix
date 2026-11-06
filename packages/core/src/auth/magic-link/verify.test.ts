@@ -67,7 +67,7 @@ describe("consumeMagicLinkToken", () => {
         type: "invite",
         userId: user.id,
         email: user.email,
-        role: "subscriber",
+        role: "member",
       });
 
     await expect(consumeMagicLinkToken(db, raw)).rejects.toMatchObject({

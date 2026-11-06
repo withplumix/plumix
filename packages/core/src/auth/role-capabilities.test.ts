@@ -32,33 +32,16 @@ const pinnedSite = definePlugin("pinned", {
       capabilities: { assign: ["author", "editor"] },
     });
     ctx.registerCapability("seo:manage", { grantTo: ["editor"] });
-    ctx.registerCapability("menu:manage", { grantTo: ["contributor"] });
+    ctx.registerCapability("menu:manage");
   },
 });
 
 /** Change this only in a change that changes someone's rights. */
 const PINNED_GRANTS: Readonly<Record<DefaultRole, readonly string[]>> = {
-  subscriber: [
+  member: [
     "entry:page:read",
     "entry:post:read",
     "entry:product:read",
-    "term:category:read",
-    "term:region:read",
-    "user:edit_own",
-  ],
-  contributor: [
-    "admin:access",
-    "entry:page:create",
-    "entry:page:edit_own",
-    "entry:page:read",
-    "entry:post:create",
-    "entry:post:edit_own",
-    "entry:post:read",
-    "entry:product:create",
-    "entry:product:edit_own",
-    "entry:product:read",
-    "menu:manage",
-    "term:category:assign",
     "term:category:read",
     "term:region:read",
     "user:edit_own",
@@ -195,6 +178,10 @@ function allCapabilityNames(registry: PluginRegistry): readonly string[] {
 }
 
 describe("the resolved role table", () => {
+  test("the default roles are member, author, editor and admin", () => {
+    expect(DEFAULT_ROLES).toEqual(["member", "author", "editor", "admin"]);
+  });
+
   test.each(DEFAULT_ROLES)(
     "the session's capability list and hasCapability agree for %s",
     async (role) => {
@@ -237,12 +224,12 @@ describe("a plugin naming the default roles that receive its capability", () => 
     const plugin = definePlugin("badges", {
       setup: (ctx) => {
         ctx.registerCapability("badge:award", {
-          grantTo: ["contributor", "editor"],
+          grantTo: ["member", "editor"],
         });
       },
     });
     expect(await rolesHolding("badge:award", plugin)).toEqual([
-      "contributor",
+      "member",
       "editor",
       "admin",
     ]);
@@ -303,12 +290,12 @@ describe("a plugin naming the default roles that receive its capability", () => 
         ctx.registerEntryType("guide", {
           label: "Guides",
           capabilityType: "knowledge",
-          capabilities: { delete: ["contributor"] },
+          capabilities: { delete: ["member"] },
         });
       },
     });
     expect(await rolesHolding("entry:knowledge:delete", docs, guides)).toEqual([
-      "contributor",
+      "member",
       "author",
       "admin",
     ]);

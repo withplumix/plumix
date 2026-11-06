@@ -60,8 +60,8 @@ describe("entry.trash", () => {
     ).resolves.toMatchObject({ title: "Edited in the trash" });
   });
 
-  test("contributor cannot trash (no post:delete cap)", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+  test("an author cannot trash (no post:delete cap)", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
     const target = await h.factory.published.create({
       authorId: h.user.id,
       slug: "keep",

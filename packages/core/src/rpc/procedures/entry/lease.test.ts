@@ -61,7 +61,7 @@ describe("entry.lease.acquire", () => {
   });
 
   test("a caller who can't edit the entry can't lease it", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     const ada = await editorUser
       .transient({ db: h.db })
       .create({ name: "Ada" });

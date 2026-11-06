@@ -273,7 +273,7 @@ describe("findRelatedEntries under an entry's access policy", () => {
   test("lists a members sibling to a signed-in member without edit capability", async () => {
     const db = await createTestDb();
     const current = await seedMembersSibling(db);
-    const member = await factoriesFor(db).subscriber.create({});
+    const member = await factoriesFor(db).member.create({});
 
     const related = await findRelatedEntries(
       ctxFor(db, {

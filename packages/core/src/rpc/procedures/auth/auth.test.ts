@@ -93,8 +93,8 @@ describe("auth.session", () => {
     );
   });
 
-  test("subscriber role returns only the low-privilege capabilities", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member role returns only the low-privilege capabilities", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const result = await h.client.auth.session({});
     expect(result.user?.capabilities).toEqual([
       "entry:post:read",

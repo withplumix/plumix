@@ -299,8 +299,8 @@ describe("installPlugins", () => {
 
     const { registry } = await installPlugins({ hooks, plugins: [blog] });
     expect(
-      registry.capabilities.get("entry:landing_page:create")?.grantTo,
-    ).toEqual(["contributor", "author", "editor", "admin"]);
+      registry.capabilities.get("entry:landing_page:read")?.grantTo,
+    ).toEqual(["member", "author", "editor", "admin"]);
     expect(
       registry.capabilities.get("entry:landing_page:publish")?.grantTo,
     ).toEqual(["author", "editor", "admin"]);
@@ -423,7 +423,6 @@ describe("installPlugins", () => {
 
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.capabilities.get("term:region:assign")?.grantTo).toEqual([
-      "contributor",
       "author",
       "editor",
       "admin",

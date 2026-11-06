@@ -43,8 +43,8 @@ describe("a type pooled onto another's capabilities", () => {
 });
 
 describe("entry.list", () => {
-  test("returns published entries by default for subscriber", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("returns published entries by default for member", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await h.factory.published.create({ authorId: h.user.id, slug: "pub-1" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "draft-1" });
 
@@ -61,8 +61,8 @@ describe("entry.list", () => {
     expect(rows).toEqual([expect.objectContaining({ slug: "draft-2" })]);
   });
 
-  test("subscriber asking for drafts gets an empty list, not a 403", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member asking for drafts gets an empty list, not a 403", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "secret" });
 
     const rows = await h.client.entry.list({ status: "draft" });
@@ -453,8 +453,8 @@ describe("entry.list", () => {
     expect(rows.map((r) => r.slug).sort()).toEqual(["draft", "scheduled"]);
   });
 
-  test("subscriber asking for a status array including non-public gets empty", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member asking for a status array including non-public gets empty", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "secret" });
     await h.factory.published.create({ authorId: h.user.id, slug: "ok" });
 
@@ -466,8 +466,8 @@ describe("entry.list", () => {
     expect(rows).toEqual([]);
   });
 
-  test("subscriber asking for status: ['published'] is equivalent to 'published'", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member asking for status: ['published'] is equivalent to 'published'", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await h.factory.published.create({ authorId: h.user.id, slug: "visible" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "hidden" });
 
@@ -547,7 +547,7 @@ describe("entry.list", () => {
 
 describe("entry.get", () => {
   test("returns the row when published", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     const post = await h.factory.published.create({ authorId: h.user.id });
     const got = await h.client.entry.get({ id: post.id });
     expect(got.id).toBe(post.id);
@@ -560,8 +560,8 @@ describe("entry.get", () => {
     });
   });
 
-  test("404 (not 403) when a subscriber targets a draft — existence is hidden", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("404 (not 403) when a member targets a draft — existence is hidden", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const other = await h.factory.author.create();
     const hidden = await h.factory.draft.create({
       authorId: other.id,
@@ -573,7 +573,7 @@ describe("entry.get", () => {
   });
 
   test("author can fetch their own draft when they have edit_own", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({ authAs: "author" });
     const mine = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "my-draft",
@@ -595,8 +595,8 @@ describe("entry.get", () => {
 
   // Preview overlays a pending draft, so it uses the edit gate. Denials always
   // name `edit_any`, or the message would reveal authorship of an unseen row.
-  test("a subscriber asking to preview their own published row is told edit_any", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("a member asking to preview their own published row is told edit_any", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const mine = await h.factory.published.create({ authorId: h.user.id });
     await expect(
       h.client.entry.get({ id: mine.id, preview: true }),
@@ -606,8 +606,8 @@ describe("entry.get", () => {
     });
   });
 
-  test("a contributor asking to preview another's published row is told the same", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+  test("an author asking to preview another's published row is told the same", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
     const other = await h.factory.author.create();
     const theirs = await h.factory.published.create({ authorId: other.id });
     await expect(
@@ -680,7 +680,7 @@ describe("an entry type with an access policy", () => {
     },
   });
 
-  async function harnessAs(role: "subscriber" | "editor") {
+  async function harnessAs(role: "member" | "editor") {
     const h = await createRpcHarness({
       authAs: role,
       plugins: await pooledEntryTypeRegistry(pagesWithAccess),
@@ -701,7 +701,7 @@ describe("an entry type with an access policy", () => {
   }
 
   test("entry.list leaves out a published entry its policy refuses the caller", async () => {
-    const { h } = await harnessAs("subscriber");
+    const { h } = await harnessAs("member");
 
     const rows = await h.client.entry.list({ type: "page" });
 
@@ -709,7 +709,7 @@ describe("an entry type with an access policy", () => {
   });
 
   test("entry.get answers not found for it", async () => {
-    const { h, staff } = await harnessAs("subscriber");
+    const { h, staff } = await harnessAs("member");
 
     await expect(h.client.entry.get({ id: staff.id })).rejects.toMatchObject({
       code: "NOT_FOUND",

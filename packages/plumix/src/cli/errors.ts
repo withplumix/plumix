@@ -31,6 +31,7 @@ type PlumixCliErrorCode =
   | "migrate_data_module_unresolved"
   | "migrate_data_duplicate_name"
   | "migrate_data_failed"
+  | "migrate_contributor_role_missing"
   | "config_not_found_explicit"
   | "config_not_found_default"
   | "config_load_failed"
@@ -418,6 +419,20 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
       `${ctx.owner}: the data migration "${ctx.name}" failed: ${ctx.cause instanceof Error ? ctx.cause.message : String(ctx.cause)}`,
       "It was not recorded and nothing after it ran. Fix the cause and run this again: the next run retries it, so its `up` must be safe to run again.",
       ctx.cause,
+    );
+  }
+
+  static migrateContributorRoleMissing(ctx: {
+    count: number;
+    snippet: string;
+  }): PlumixCliError {
+    const users =
+      ctx.count === 1 ? "1 user holds" : `${String(ctx.count)} users hold`;
+    return new PlumixCliError(
+      "migrate_contributor_role_missing",
+      `${users} the \`contributor\` role, which is no longer a default role, and this config declares no \`contributor\` role`,
+      `Nothing was changed. To keep their rights, add this role to \`roles\` in plumix.config.ts, then run this again:\n\n${ctx.snippet}\n\nIt grants core's rights only: a plugin's own grant to contributors, such as the media plugin's \`entry:media:delete\`, is added to it by hand.`,
+      undefined,
     );
   }
 

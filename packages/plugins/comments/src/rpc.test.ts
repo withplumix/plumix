@@ -202,7 +202,7 @@ describe("comments moderation RPC", () => {
   });
 
   test("a non-moderator is forbidden from every procedure", async () => {
-    const h = await buildHarness("subscriber");
+    const h = await buildHarness("member");
     // list/counts return the PII-bearing payload; the capability gate is
     // the only thing protecting it, so assert the read + a mutation deny.
     await expect(h.client.comments.counts()).rejects.toThrow();

@@ -156,7 +156,7 @@ describe("user.update concurrency token (ifMatch)", () => {
   });
 
   test("a save without ifMatch is refused with where to find the etag", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
 
     await expect(
       // @ts-expect-error -- the caller left out its copy's token
@@ -172,7 +172,7 @@ describe("user.update concurrency token (ifMatch)", () => {
   });
 
   test("an unauthorised caller with a stale copy still gets FORBIDDEN (no CONFLICT oracle)", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     const other = await h.factory.editor.create();
 
     await expect(

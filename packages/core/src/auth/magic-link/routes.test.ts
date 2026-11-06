@@ -199,7 +199,7 @@ describe("magic-link request route", () => {
     });
     await h.factory.user.create({
       email: "alice@example.com",
-      role: "subscriber",
+      role: "member",
     });
 
     const response = await h.dispatch(
@@ -222,7 +222,7 @@ describe("magic-link request route", () => {
     });
     await h.factory.user.create({
       email: "alice@example.com",
-      role: "subscriber",
+      role: "member",
     });
 
     await h.dispatch(
@@ -247,7 +247,7 @@ describe("magic-link request route", () => {
     });
     await h.factory.user.create({
       email: "alice@example.com",
-      role: "subscriber",
+      role: "member",
     });
 
     const response = await h.dispatch(
@@ -555,7 +555,7 @@ describe("magic-link verify route", () => {
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
-      role: "subscriber",
+      role: "member",
     });
     const token = (
       await h.factory.authToken.create({
@@ -584,7 +584,7 @@ describe("magic-link verify route", () => {
     });
     const user = await h.factory.user.create({
       email: "alice@example.com",
-      role: "subscriber",
+      role: "member",
     });
     const token = (
       await h.factory.authToken.create({
@@ -612,7 +612,7 @@ describe("magic-link verify route", () => {
     });
     await h.factory.user.create({
       email: "reader@example.com",
-      role: "subscriber",
+      role: "member",
     });
 
     const requestResp = await h.dispatch(
@@ -923,7 +923,7 @@ describe("magic-link verify route", () => {
         mailer,
         auth: {
           magicLink: { siteName: "Plumix Test" },
-          selfSignup: { defaultRole: "subscriber" },
+          selfSignup: { defaultRole: "member" },
         },
       },
     });
@@ -952,7 +952,7 @@ describe("magic-link verify route", () => {
     const created = await h.db.query.users.findFirst({
       where: eq(users.email, "visitor@anywhere.test"),
     });
-    expect(created?.role).toBe("subscriber");
+    expect(created?.role).toBe("member");
     expect(created?.emailVerifiedAt).not.toBeNull();
   });
 
@@ -963,7 +963,7 @@ describe("magic-link verify route", () => {
         mailer,
         auth: {
           magicLink: { siteName: "Plumix Test" },
-          selfSignup: { defaultRole: "subscriber" },
+          selfSignup: { defaultRole: "member" },
         },
         plugins: [
           definePlugin("profiles", {
@@ -1072,7 +1072,7 @@ describe("magic-link verify of a link issued to a new address", () => {
           magicLink: { siteName: "Plumix Test" },
           allowedDomains: { "example.com": "editor" },
           ...(options.selfSignup === true
-            ? { selfSignup: { defaultRole: "subscriber" } }
+            ? { selfSignup: { defaultRole: "member" } }
             : {}),
           ...(options.bootstrap === true
             ? { bootstrapVia: "first-method-wins" }
@@ -1138,7 +1138,7 @@ describe("magic-link verify of a link issued to a new address", () => {
     const bob = await h.db.query.users.findFirst({
       where: eq(users.email, "bob@other.com"),
     });
-    expect(bob?.role).toBe("subscriber");
+    expect(bob?.role).toBe("member");
   });
 
   test("without selfSignup an address on an unlisted domain is refused", async () => {
@@ -1178,7 +1178,7 @@ describe("magic-link verify of a link issued to a new address", () => {
     await h.seedUser("admin");
     const raced = await h.factory.user.create({
       email: "newcomer@example.com",
-      role: "subscriber",
+      role: "member",
     });
     const signedIn = h.spyEvent(auth.signedIn);
 
@@ -1239,7 +1239,7 @@ describe("magic-link verify failures land on auth.loginPath", () => {
 
   test("an expired token redirects to the theme login", async () => {
     const h = await themeLoginHarness();
-    const user = await h.factory.user.create({ role: "subscriber" });
+    const user = await h.factory.user.create({ role: "member" });
     const { token } = await h.factory.authToken.create({
       userId: user.id,
       email: user.email,
@@ -1256,7 +1256,7 @@ describe("magic-link verify failures land on auth.loginPath", () => {
 
   test("a spent token redirects to the theme login", async () => {
     const h = await themeLoginHarness();
-    const user = await h.factory.user.create({ role: "subscriber" });
+    const user = await h.factory.user.create({ role: "member" });
     const { token } = await h.factory.authToken.create({
       userId: user.id,
       email: user.email,

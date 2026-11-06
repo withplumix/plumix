@@ -142,7 +142,7 @@ describe("resolveExternalIdentity — default role", () => {
     const result = await resolveExternalIdentity(db, {
       meta: {},
       allowedDomains: { "example.com": "editor" },
-      defaultRole: "subscriber",
+      defaultRole: "member",
       email: "ann@example.com",
       emailVerified: true,
     });
@@ -158,7 +158,7 @@ describe("resolveExternalIdentity — default role", () => {
       meta: {},
       email: "first-admin@enterprise.example",
       emailVerified: true,
-      defaultRole: "subscriber",
+      defaultRole: "member",
       bootstrapAllowed: true,
     });
     expect(result.created).toBe(true);
@@ -175,13 +175,13 @@ describe("resolveExternalIdentity — race retry", () => {
     const [a, b] = await Promise.all([
       resolveExternalIdentity(db, {
         meta: {},
-        allowedDomains: { "example.com": "subscriber" },
+        allowedDomains: { "example.com": "member" },
         email: "newcomer@example.com",
         emailVerified: true,
       }),
       resolveExternalIdentity(db, {
         meta: {},
-        allowedDomains: { "example.com": "subscriber" },
+        allowedDomains: { "example.com": "member" },
         email: "newcomer@example.com",
         emailVerified: true,
       }),
@@ -329,7 +329,7 @@ describe("resolveExternalIdentity — provider account", () => {
 
     const result = await resolveExternalIdentity(db, {
       meta: {},
-      allowedDomains: { "example.com": "contributor" },
+      allowedDomains: { "example.com": "author" },
       email: "alice@example.com",
       emailVerified: true,
       name: "Alice",
@@ -341,7 +341,7 @@ describe("resolveExternalIdentity — provider account", () => {
     expect(result.user).toMatchObject({
       name: "Alice",
       avatarUrl: "https://example.com/a.png",
-      role: "contributor",
+      role: "author",
     });
     const link = await db.query.oauthAccounts.findFirst({
       where: eq(oauthAccounts.providerAccountId, "gh-123"),
@@ -356,14 +356,14 @@ describe("resolveExternalIdentity — provider account", () => {
     const [a, b] = await Promise.all([
       resolveExternalIdentity(db, {
         meta: {},
-        allowedDomains: { "example.com": "subscriber" },
+        allowedDomains: { "example.com": "member" },
         email: "alice@example.com",
         emailVerified: true,
         providerAccount: { provider: "github", accountId: "race-1" },
       }),
       resolveExternalIdentity(db, {
         meta: {},
-        allowedDomains: { "example.com": "subscriber" },
+        allowedDomains: { "example.com": "member" },
         email: "alice@example.com",
         emailVerified: true,
         providerAccount: { provider: "github", accountId: "race-2" },
@@ -393,7 +393,7 @@ describe("resolveExternalIdentity — provider account", () => {
 
     const result = await resolveExternalIdentity(db, {
       meta: {},
-      allowedDomains: { "example.com": "subscriber" },
+      allowedDomains: { "example.com": "member" },
       email: "alice@example.com",
       emailVerified: true,
       providerAccount: github,

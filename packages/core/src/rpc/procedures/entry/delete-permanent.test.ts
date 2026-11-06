@@ -59,8 +59,8 @@ describe("entry.deletePermanent", () => {
     });
   });
 
-  test("contributor cannot permanently delete (no post:delete cap)", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+  test("an author cannot permanently delete (no post:delete cap)", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
     const target = await h.factory.trashed.create({
       authorId: h.user.id,
       slug: "shielded",

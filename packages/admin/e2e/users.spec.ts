@@ -22,7 +22,7 @@ function user(overrides: Partial<User> & { id: number; email: string }): User {
     slug: `user-${String(overrides.id)}`,
     name: null,
     avatarUrl: null,
-    role: "subscriber",
+    role: "member",
     meta: {},
     emailVerifiedAt: new Date("2026-04-20T00:00:00Z"),
     disabledAt: null,
@@ -96,7 +96,7 @@ test.describe("/users", () => {
         user({
           id: 3,
           email: "sub@example.test",
-          role: "subscriber",
+          role: "member",
           disabledAt: new Date("2026-04-20T00:00:00Z"),
         }),
       ],
@@ -156,7 +156,7 @@ test.describe("/users", () => {
   test("non-admin session without user:list is redirected to the dashboard", async ({
     page,
   }) => {
-    // Subscriber-shaped session — no `user:list` capability.
+    // Member-shaped session — no `user:list` capability.
     await mockRpc(page, {
       "/auth/session": {
         user: {
@@ -164,7 +164,7 @@ test.describe("/users", () => {
           email: "sub@example.test",
           name: "Sub",
           avatarUrl: null,
-          role: "subscriber",
+          role: "member",
           capabilities: ["entry:post:read"],
         },
         needsBootstrap: false,
@@ -560,10 +560,10 @@ test.describe("/users/$id/edit", () => {
     expect(lastCall).not.toHaveProperty("role");
   });
 
-  test("subscriber can edit own row via /profile but not access /users/99", async ({
+  test("member can edit own row via /profile but not access /users/99", async ({
     page,
   }) => {
-    const subscriber: User = user({
+    const member: User = user({
       id: 5,
       email: "sub@example.test",
       name: "Sub",
@@ -575,13 +575,13 @@ test.describe("/users/$id/edit", () => {
           email: "sub@example.test",
           name: "Sub",
           avatarUrl: null,
-          role: "subscriber",
-          // Subscribers have `user:edit_own` by default but NOT `user:list`.
+          role: "member",
+          // Members have `user:edit_own` by default but NOT `user:list`.
           capabilities: ["user:edit_own", "entry:post:read"],
         },
         needsBootstrap: false,
       },
-      "/user/get": subscriber,
+      "/user/get": member,
     });
 
     // Own row: works.

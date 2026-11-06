@@ -93,7 +93,7 @@ test.describe("/terms/$name (hierarchical)", () => {
     await expect(page.getByTestId("not-found-page")).toBeVisible();
   });
 
-  test("subscriber without `category:read` is redirected away from the list", async ({
+  test("member without `category:read` is redirected away from the list", async ({
     page,
   }) => {
     await mockRpc(page, {
@@ -103,7 +103,7 @@ test.describe("/terms/$name (hierarchical)", () => {
           email: "sub@example.test",
           name: "Sub",
           avatarUrl: null,
-          role: "subscriber",
+          role: "member",
           capabilities: ["entry:post:read"],
         },
         needsBootstrap: false,

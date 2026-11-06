@@ -22,6 +22,7 @@ import type { NewSession, Session } from "../db/schema/sessions.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { NewTerm, Term } from "../db/schema/terms.js";
 import type { NewUser, User } from "../db/schema/users.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import { createApiToken } from "../auth/api-tokens.js";
 import { generateToken, hashToken } from "../auth/tokens.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
@@ -77,15 +78,17 @@ export const userFactory = Factory.define<
     email: params.email ?? `user-${sequence}-${processToken}@example.test`,
     slug: params.slug ?? `user-${sequence}-${processToken}`,
     name: params.name ?? null,
-    role: params.role ?? "subscriber",
+    role: params.role ?? "member",
   };
 });
+
+/** A default role, or a site role the test's registry declares. */
+export type SeededRole = DefaultRole | (string & {});
 
 export const adminUser = userFactory.params({ role: "admin" });
 export const editorUser = userFactory.params({ role: "editor" });
 export const authorUser = userFactory.params({ role: "author" });
-export const contributorUser = userFactory.params({ role: "contributor" });
-export const subscriberUser = userFactory.params({ role: "subscriber" });
+export const memberUser = userFactory.params({ role: "member" });
 
 /** No user has id 0, so `create` swaps it for a seeded author. */
 const NO_AUTHOR = 0;
@@ -484,8 +487,7 @@ export interface Factories {
   readonly admin: typeof adminUser;
   readonly editor: typeof editorUser;
   readonly author: typeof authorUser;
-  readonly contributor: typeof contributorUser;
-  readonly subscriber: typeof subscriberUser;
+  readonly member: typeof memberUser;
   readonly entry: typeof entryFactory;
   readonly draft: typeof draftEntry;
   readonly published: typeof publishedEntry;
@@ -511,8 +513,7 @@ export function factoriesFor(db: Db): Factories {
     admin: adminUser.transient({ db }),
     editor: editorUser.transient({ db }),
     author: authorUser.transient({ db }),
-    contributor: contributorUser.transient({ db }),
-    subscriber: subscriberUser.transient({ db }),
+    member: memberUser.transient({ db }),
     entry: entryFactory.transient({ db }),
     draft: draftEntry.transient({ db }),
     published: publishedEntry.transient({ db }),

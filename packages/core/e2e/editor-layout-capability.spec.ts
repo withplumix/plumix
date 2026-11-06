@@ -28,7 +28,8 @@ const EMPTY_GROUP = {
 } as const;
 const BLOCKS: readonly BlockNode[] = [TEXT, BUTTON, SEPARATOR, EMPTY_GROUP];
 
-// A contributor edits their own posts but holds no `entry:post:edit_layout`.
+// The playground's contributor role edits their own posts but holds no
+// `entry:post:edit_layout`.
 test.beforeEach(async ({ context, editor }) => {
   const db = await openPlaygroundDb({
     cwd: resolve(process.cwd(), "playground"),

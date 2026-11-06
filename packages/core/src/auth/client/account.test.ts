@@ -47,7 +47,7 @@ function clientOf(
 }
 
 async function signedInClient(
-  role: DefaultRole = "subscriber",
+  role: DefaultRole = "member",
   config?: CreateDispatcherHarnessOptions["config"],
 ) {
   const h = await createDispatcherHarness({ config });
@@ -143,7 +143,7 @@ describe("authClient.account.update", () => {
   });
 
   test("a meta key whose capability the user lacks resolves forbidden", async () => {
-    const { authClient } = await signedInClient("subscriber", {
+    const { authClient } = await signedInClient("member", {
       plugins: [profiles],
     });
     // Safety: core's own registry declares no user meta; the plugin above does.
@@ -155,7 +155,7 @@ describe("authClient.account.update", () => {
   });
 
   test("a meta key whose capability the user lacks changes nothing", async () => {
-    const { h, user, token, authClient } = await signedInClient("subscriber", {
+    const { h, user, token, authClient } = await signedInClient("member", {
       plugins: [profiles],
     });
     // Safety: core's own registry declares no user meta; the plugin above does.
@@ -169,7 +169,7 @@ describe("authClient.account.update", () => {
   });
 
   test("a meta value its field refuses resolves invalid_input", async () => {
-    const { authClient } = await signedInClient("subscriber", {
+    const { authClient } = await signedInClient("member", {
       plugins: [profiles],
     });
     // Safety: core's own registry declares no user meta; the plugin above does.
@@ -202,10 +202,7 @@ describe("authClient.account.setLocale", () => {
   const bilingual = { i18n: { defaultLocale: "en", locales: ["en", "ar"] } };
 
   test("stores an enabled locale on the session's user", async () => {
-    const { h, user, authClient } = await signedInClient(
-      "subscriber",
-      bilingual,
-    );
+    const { h, user, authClient } = await signedInClient("member", bilingual);
 
     const result = await authClient.account.setLocale("ar");
 
@@ -217,10 +214,7 @@ describe("authClient.account.setLocale", () => {
   });
 
   test("a code the site hasn't enabled resolves locale_not_supported and stores nothing", async () => {
-    const { h, user, authClient } = await signedInClient(
-      "subscriber",
-      bilingual,
-    );
+    const { h, user, authClient } = await signedInClient("member", bilingual);
 
     const result = await authClient.account.setLocale("de");
 
@@ -235,7 +229,7 @@ describe("authClient.account.setLocale", () => {
   });
 
   test("a profile save after it still lands, though the locale moved the token", async () => {
-    const { authClient } = await signedInClient("subscriber", bilingual);
+    const { authClient } = await signedInClient("member", bilingual);
     await authClient.account.update({ name: "Before" });
     await authClient.account.setLocale("ar");
 
@@ -247,7 +241,7 @@ describe("authClient.account.setLocale", () => {
 
   test("an account nobody loaded stays unloaded", async () => {
     const { authClient, procedures } = await signedInClient(
-      "subscriber",
+      "member",
       bilingual,
     );
 
@@ -257,7 +251,7 @@ describe("authClient.account.setLocale", () => {
   });
 
   test("an answer without a locale resolves unknown", async () => {
-    const { session } = await signedInClient("subscriber", bilingual);
+    const { session } = await signedInClient("member", bilingual);
     const store = createAccountStore(
       () => Promise.resolve(success({ json: {} })),
       session,
@@ -290,7 +284,7 @@ describe("the account useAccount reads", () => {
 
   test("a load the network dropped resolves the update's error and stays pending", async () => {
     const h = await createDispatcherHarness();
-    const user = await h.seedUser("subscriber");
+    const user = await h.seedUser("member");
     const { token } = await createSession(h.db, { userId: user.id });
     const { authClient, account } = clientOf(h, token, new Set(["user/get"]));
 
@@ -302,7 +296,7 @@ describe("the account useAccount reads", () => {
 
   test("an update after a dropped load loads again and saves", async () => {
     const h = await createDispatcherHarness();
-    const user = await h.seedUser("subscriber");
+    const user = await h.seedUser("member");
     const { token } = await createSession(h.db, { userId: user.id });
     const { authClient } = clientOf(h, token, new Set(["user/get"]));
     await authClient.account.update({ name: "Offline" });
@@ -315,7 +309,7 @@ describe("the account useAccount reads", () => {
 
   test("signing in on a page that loaded signed out gives it the account", async () => {
     const h = await createDispatcherHarness();
-    const user = await h.seedUser("subscriber");
+    const user = await h.seedUser("member");
     const { token } = await createSession(h.db, { userId: user.id });
     let cookie = "no-such-session";
     const { authClient, account, registerAuthMethodClients } = createAuthClient(

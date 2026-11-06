@@ -56,7 +56,7 @@ describe("user.lease.acquire", () => {
   });
 
   test("a user may lease their own profile", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
 
     const lease = await h.client.user.lease.acquire({ id: h.user.id });
 
@@ -64,7 +64,7 @@ describe("user.lease.acquire", () => {
   });
 
   test("a caller who can't edit the user can't lease them", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     const other = await h.factory.editor.create();
 
     await expect(

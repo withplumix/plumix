@@ -71,11 +71,11 @@ describe("lookup.list", () => {
 });
 
 describe("lookup capability gating", () => {
-  test("subscribers (no `user:list` capability) get FORBIDDEN on user lookup", async () => {
-    // Subscribers can authenticate but can't list users — picker access
+  test("members (no `user:list` capability) get FORBIDDEN on user lookup", async () => {
+    // Members can authenticate but can't list users — picker access
     // would otherwise enumerate every email + name across the system.
     const plugins = registryWithCoreAdapters();
-    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const h = await createRpcHarness({ authAs: "member", plugins });
     await userFactory
       .transient({ db: h.context.db })
       .create({ email: "leak@example.test", name: "Leak Target" });
@@ -83,12 +83,12 @@ describe("lookup capability gating", () => {
     await expect(h.client.lookup.list({ kind: "user" })).rejects.toThrow();
   });
 
-  test("subscribers can't reach unpublished entries through entry lookup", async () => {
-    // The entry adapter is `capability: null` and `subscriber` is
+  test("members can't reach unpublished entries through entry lookup", async () => {
+    // The entry adapter is `capability: null` and `member` is
     // public-reachable under `auth.selfSignup`, so the caller-supplied scope is
     // the whole gate.
     const plugins = registryWithCoreAdapters();
-    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const h = await createRpcHarness({ authAs: "member", plugins });
     const author = await adminUser.transient({ db: h.context.db }).create();
     const draft = await entryFactory
       .transient({ db: h.context.db })

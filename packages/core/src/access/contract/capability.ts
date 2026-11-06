@@ -1,8 +1,7 @@
 import type { DefaultRole } from "../../users/contract/roles.js";
 
-const MEMBERS = ["subscriber", "contributor", "author", "editor"] as const;
-const WRITERS = ["contributor", "author", "editor"] as const;
-const PUBLISHERS = ["author", "editor"] as const;
+const MEMBERS = ["member", "author", "editor"] as const;
+const AUTHORS = ["author", "editor"] as const;
 const EDITORS = ["editor"] as const;
 /** `admin` holds every capability, so a list never names it. */
 const ADMIN_ONLY = [] as const;
@@ -13,17 +12,17 @@ const ADMIN_ONLY = [] as const;
  * `promote` is split from `edit`: role escalation outranks a profile change.
  */
 export const CORE_CAPABILITIES = Object.freeze({
-  // `subscriber` is the theme-only open-signup role, which gets no admin.
-  "admin:access": WRITERS,
+  // `member` is the theme-only open-signup role, which gets no admin.
+  "admin:access": AUTHORS,
   "entry:post:read": MEMBERS,
-  "entry:post:create": WRITERS,
-  "entry:post:edit_own": WRITERS,
-  "entry:post:publish": PUBLISHERS,
+  "entry:post:create": AUTHORS,
+  "entry:post:edit_own": AUTHORS,
+  "entry:post:publish": AUTHORS,
   "entry:post:edit_any": EDITORS,
   "entry:post:delete": EDITORS,
   "entry:post:read_revisions": EDITORS,
   "entry:post:restore_revision": EDITORS,
-  "entry:post:edit_layout": PUBLISHERS,
+  "entry:post:edit_layout": AUTHORS,
   "user:list": EDITORS,
   "user:edit_own": MEMBERS,
   "user:create": ADMIN_ONLY,
@@ -38,9 +37,9 @@ export const CORE_CAPABILITIES = Object.freeze({
 
 export const POST_TYPE_CAPABILITY_ACTIONS = {
   read: MEMBERS,
-  create: WRITERS,
-  edit_own: WRITERS,
-  publish: PUBLISHERS,
+  create: AUTHORS,
+  edit_own: AUTHORS,
+  publish: AUTHORS,
   edit_any: EDITORS,
   delete: EDITORS,
   read_revisions: EDITORS,
@@ -48,12 +47,12 @@ export const POST_TYPE_CAPABILITY_ACTIONS = {
   restore_revision: EDITORS,
   // Structure and style; `edit_own`/`edit_any` alone change only the inputs a
   // block marks `content`.
-  edit_layout: PUBLISHERS,
+  edit_layout: AUTHORS,
 } as const satisfies Record<string, readonly DefaultRole[]>;
 
 export const TERM_TAXONOMY_CAPABILITY_ACTIONS = {
   read: MEMBERS,
-  assign: WRITERS,
+  assign: AUTHORS,
   edit: EDITORS,
   delete: EDITORS,
   manage: EDITORS,

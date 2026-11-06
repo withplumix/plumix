@@ -1586,14 +1586,7 @@ describe("buildManifest roles", () => {
   test("lists the default roles with their catalog labels when the config declares none", () => {
     const manifest = buildManifest(createPluginRegistry());
     expect(manifest.roles).toEqual([
-      {
-        name: "subscriber",
-        label: { id: "userRole.subscriber", message: "Subscriber" },
-      },
-      {
-        name: "contributor",
-        label: { id: "userRole.contributor", message: "Contributor" },
-      },
+      { name: "member", label: { id: "userRole.member", message: "Member" } },
       { name: "author", label: { id: "userRole.author", message: "Author" } },
       { name: "editor", label: { id: "userRole.editor", message: "Editor" } },
       {
@@ -1614,14 +1607,7 @@ describe("buildManifest roles", () => {
       }),
     );
     expect(manifest.roles).toEqual([
-      {
-        name: "subscriber",
-        label: { id: "userRole.subscriber", message: "Subscriber" },
-      },
-      {
-        name: "contributor",
-        label: { id: "userRole.contributor", message: "Contributor" },
-      },
+      { name: "member", label: { id: "userRole.member", message: "Member" } },
       // A redefined default keeps its label unless the config gives one.
       { name: "author", label: { id: "userRole.author", message: "Author" } },
       { name: "editor", label: "Desk editor" },

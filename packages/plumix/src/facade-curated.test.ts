@@ -70,6 +70,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "the contributor role `plumix migrate` prints when it refuses to run, " +
+      "which only `plumix`'s migrate command reads",
+    names: ["contributorRoleSnippet"],
+  },
+  {
+    reason:
       "which tables each core sync scope holds, which only `plumix`'s sync " +
       "command and core's sync contract read",
     names: ["CORE_SYNC_SCOPE_TABLES", "SYNC_AUTH_TABLES"],
@@ -383,6 +389,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
         reason:
           "core's own data migrations, which only `plumix`'s migrate runner reads",
         names: ["CORE_DATA_MIGRATIONS"],
+      },
+      {
+        reason:
+          "the contributor role `plumix migrate` prints when it refuses to " +
+          "run, which only `plumix`'s migrate command reads",
+        names: ["contributorRoleSnippet"],
       },
       {
         reason:

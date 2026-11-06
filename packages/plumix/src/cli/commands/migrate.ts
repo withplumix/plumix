@@ -20,6 +20,7 @@ import type {
   CommandDefinition,
   MigrationDatabase,
   MigrationOwner,
+  PluginRegistry,
   PlumixConfig,
   RuntimeMigrations,
   TargetOptionValues,
@@ -35,6 +36,7 @@ import {
   reportPending,
   reportStatus,
 } from "../migrate/apply.js";
+import { assertContributorRoleDeclared } from "../migrate/contributors.js";
 import { loadDataMigrations } from "../migrate/data-load.js";
 import {
   applyDataMigrations,
@@ -80,6 +82,7 @@ export const migrateCommand: CommandDefinition = {
       await checkSiteDrift(target);
       await withDatabase(target, database, async (db, owners, data, run) => {
         announce(db);
+        await assertContributorRoleDeclared(db, target.config, target.plugins);
         if (!(await confirmedPlan(db, owners, data, args))) return;
         await adoptAndApply(target, database)(db, owners, data, run);
       });
@@ -111,6 +114,8 @@ export interface MigrationTarget {
   readonly configPath: string;
   readonly config: PlumixConfig;
   readonly runtimeMigrations: RuntimeMigrations | undefined;
+  /** Read only to print a refusal; `plumix dev` builds it on demand. */
+  readonly plugins: () => Promise<PluginRegistry>;
 }
 
 function migrationTarget(ctx: CommandContext): MigrationTarget {
@@ -119,6 +124,7 @@ function migrationTarget(ctx: CommandContext): MigrationTarget {
     configPath: ctx.configPath,
     config: ctx.app.config,
     runtimeMigrations: ctx.runtimeMigrations,
+    plugins: () => Promise.resolve(ctx.app.plugins),
   };
 }
 
@@ -473,6 +479,7 @@ export async function migrateBeforeDeploy(
   await checkSiteDrift(site);
   await withDatabase(site, database, async (db, owners, data, migrations) => {
     announce(db);
+    await assertContributorRoleDeclared(db, site.config, site.plugins);
     await reportPlan(db, owners, data);
     await adoptAndApply(site, database)(db, owners, data, migrations);
   });
@@ -497,11 +504,10 @@ export async function migrateForDev(target: MigrationTarget): Promise<void> {
       report.success(`Wrote the site's next migration, ${written}: commit it.`);
     }
   }
-  await withDatabase(
-    target,
-    LOCAL_DATABASE,
-    adoptAndApply(target, LOCAL_DATABASE),
-  );
+  await withDatabase(target, LOCAL_DATABASE, async (db, ...rest) => {
+    await assertContributorRoleDeclared(db, target.config, target.plugins);
+    await adoptAndApply(target, LOCAL_DATABASE)(db, ...rest);
+  });
 }
 
 async function migrateGenerate(target: MigrationTarget): Promise<void> {

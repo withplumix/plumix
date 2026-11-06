@@ -574,12 +574,12 @@ describe("entry.get preview", () => {
   });
 
   test("preview=true without edit caps is rejected with FORBIDDEN", async () => {
-    // Subscribers can read published entries but not preview them —
+    // Members can read published entries but not preview them —
     // preview is an editorial concern gated by edit_own / edit_any.
     const h = await publishedPostFixture();
-    const subscriber = await h.actingAs("subscriber");
+    const member = await h.actingAs("member");
     await expect(
-      subscriber.client.entry.get({ id: h.entryId, preview: true }),
+      member.client.entry.get({ id: h.entryId, preview: true }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

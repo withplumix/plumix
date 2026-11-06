@@ -218,14 +218,14 @@ describe("dispatcher — routing", () => {
     expect(await response.text()).toBe(body);
   });
 
-  test("bounces a signed-in subscriber off the admin shell back to the theme", async () => {
+  test("bounces a signed-in member off the admin shell back to the theme", async () => {
     const h = await createDispatcherHarness({
       assets: htmlAssets("<!doctype html><title>admin</title>"),
     });
-    const subscriber = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
     const request = await h.authenticateRequest(
       plumixRequest("/_plumix/admin", { method: "GET" }),
-      subscriber.id,
+      member.id,
     );
 
     const response = await h.dispatch(request);
@@ -274,7 +274,7 @@ describe("dispatcher — routing", () => {
   test("serves the admin shell to a signed-in user whose role holds admin:access", async () => {
     const membersToo = definePlugin("members-too", {
       setup: (ctx) => {
-        ctx.registerCapability("admin:access", { grantTo: ["subscriber"] });
+        ctx.registerCapability("admin:access", { grantTo: ["member"] });
       },
     });
     const indexBody = "<!doctype html><title>admin</title>";
@@ -282,10 +282,10 @@ describe("dispatcher — routing", () => {
       assets: htmlAssets(indexBody),
       config: { plugins: [membersToo] },
     });
-    const subscriber = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
     const request = await h.authenticateRequest(
       plumixRequest("/_plumix/admin", { method: "GET" }),
-      subscriber.id,
+      member.id,
     );
 
     const response = await h.dispatch(request);
@@ -475,14 +475,14 @@ describe("dispatcher — routing", () => {
     // The authenticator captures its user before the harness exists, so the
     // db is built here rather than reached for through `h.seedUser()`.
     const db = await createTestDb();
-    const subscriber = await userFactory
+    const member = await userFactory
       .transient({ db })
-      .create({ role: "subscriber" });
+      .create({ role: "member" });
     const h = await createDispatcherHarness({
       db,
       assets,
       config: {
-        auth: { authenticator: tenantHeaderAuthenticator(subscriber) },
+        auth: { authenticator: tenantHeaderAuthenticator(member) },
       },
     });
 
@@ -966,7 +966,7 @@ describe("dispatcher — user-dependent render caching", () => {
   test("marks a signed-in visitor's render private, no-store with a Cookie Vary", async () => {
     const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     await seedHelloWorldPost(h);
-    const visitor = await h.seedUser("subscriber");
+    const visitor = await h.seedUser("member");
     const request = await h.authenticateRequest(
       new Request("https://cms.example/post/hello-world"),
       visitor.id,

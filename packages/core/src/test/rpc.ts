@@ -13,9 +13,8 @@ import type { ActionArgs, ActionName } from "../hooks/types.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
-import type { DefaultRole } from "../users/contract/roles.js";
 import type { TestConfigInput } from "./config.js";
-import type { Factories } from "./factories.js";
+import type { Factories, SeededRole } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import type { ActionSpy, BoundFilterSpy, EventSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
@@ -76,7 +75,7 @@ export interface BaseRpcHarnessOptions {
 }
 
 export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
-  readonly authAs: DefaultRole;
+  readonly authAs: SeededRole;
 }
 
 export interface RpcHarnessBase<TUser extends User | null> {
@@ -106,7 +105,7 @@ export interface RpcHarnessBase<TUser extends User | null> {
    * hooks, plugins and env so state survives the swap.
    */
   readonly actingAs: (
-    userOrRole: User | DefaultRole,
+    userOrRole: User | SeededRole,
   ) => Promise<AuthenticatedRpcHarness>;
 }
 
@@ -262,7 +261,7 @@ export function createRpcHarness(
   options?: BaseRpcHarnessOptions,
 ): Promise<RpcHarness>;
 export async function createRpcHarness(
-  options: BaseRpcHarnessOptions & { authAs?: DefaultRole } = {},
+  options: BaseRpcHarnessOptions & { authAs?: SeededRole } = {},
 ): Promise<RpcHarness> {
   const db = await createTestDb();
   const hooks = options.hooks ?? new HookRegistryImpl();

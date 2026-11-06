@@ -22,7 +22,7 @@ describe("signupRole", () => {
       signupRole({
         email: "ann@example.com",
         allowedDomains,
-        defaultRole: "subscriber",
+        defaultRole: "member",
       }),
     ).toBe("editor");
   });
@@ -32,9 +32,9 @@ describe("signupRole", () => {
       signupRole({
         email: "bob@other.com",
         allowedDomains,
-        defaultRole: "subscriber",
+        defaultRole: "member",
       }),
-    ).toBe("subscriber");
+    ).toBe("member");
   });
 
   test("refuses an unlisted domain with no default role", () => {
@@ -60,9 +60,9 @@ describe("signupRole", () => {
   });
 
   test("refuses an address with no domain, even with a default role", () => {
-    expect(
-      signupRole({ email: "not-an-email", defaultRole: "subscriber" }),
-    ).toBe(undefined);
+    expect(signupRole({ email: "not-an-email", defaultRole: "member" })).toBe(
+      undefined,
+    );
   });
 });
 

@@ -391,7 +391,7 @@ describe("auth events — passkey sign-in, sign-out and credentials", () => {
       config: {
         auth: {
           magicLink: { siteName: "Test" },
-          allowedDomains: { "allowed.test": "subscriber" },
+          allowedDomains: { "allowed.test": "member" },
         },
       },
     });

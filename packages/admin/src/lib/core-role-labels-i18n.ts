@@ -7,14 +7,7 @@ import { defineMessage } from "@lingui/core/macro";
  * Guarded by: packages/admin/src/lib/core-role-labels-i18n.test.ts
  */
 export const CORE_ROLE_LABEL_DESCRIPTORS = {
-  subscriber: defineMessage({
-    id: "userRole.subscriber",
-    message: "Subscriber",
-  }),
-  contributor: defineMessage({
-    id: "userRole.contributor",
-    message: "Contributor",
-  }),
+  member: defineMessage({ id: "userRole.member", message: "Member" }),
   author: defineMessage({ id: "userRole.author", message: "Author" }),
   editor: defineMessage({ id: "userRole.editor", message: "Editor" }),
   admin: defineMessage({ id: "userRole.admin", message: "Administrator" }),

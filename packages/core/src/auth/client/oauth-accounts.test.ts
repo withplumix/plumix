@@ -29,7 +29,7 @@ async function signedInClient(
   config?: CreateDispatcherHarnessOptions["config"],
 ) {
   const h = await createDispatcherHarness({ config });
-  const user = await h.seedUser("subscriber");
+  const user = await h.seedUser("member");
   const { token } = await createSession(h.db, { userId: user.id });
   return { h, user, authClient: clientOf(h, token) };
 }
@@ -123,7 +123,7 @@ describe("authClient.oauth.accounts and unlink", () => {
       userId: user.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
-    const other = await h.seedUser("subscriber");
+    const other = await h.seedUser("member");
     await h.factory.credential.create({
       userId: other.id,
       publicKey: Buffer.from([4, 5, 6]),

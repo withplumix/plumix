@@ -113,7 +113,7 @@ const TIERS = {
   nothing: { capabilities: [], sees: [] },
   reader: { capabilities: ["entry:post:read"], sees: PUBLISHED },
   "edit_own without read": { capabilities: ["entry:post:edit_own"], sees: [] },
-  contributor: {
+  writer: {
     capabilities: ["entry:post:read", "entry:post:edit_own"],
     sees: [
       "published-mine",
@@ -155,7 +155,7 @@ describe("readableEntryRows", () => {
 
   // `read` is all `readableEntryRows` asks on top, so a tier holding it must
   // not tell the two apart.
-  test.each(["reader", "contributor", "editor"] as const)(
+  test.each(["reader", "writer", "editor"] as const)(
     "matches referenceableEntryRows for a %s",
     async (tier) => {
       const ctx = viewer(TIERS[tier].capabilities);
@@ -167,7 +167,7 @@ describe("readableEntryRows", () => {
   );
 
   test("an anonymous caller holding edit_own is owed published rows only", async () => {
-    const ctx = viewer(TIERS.contributor.capabilities, null);
+    const ctx = viewer(TIERS.writer.capabilities, null);
 
     const byPredicate = await readableBy(ctx, rows);
 
@@ -228,8 +228,8 @@ describe("a type pooled onto another's capabilities", () => {
     return found.map((row) => row.slug);
   }
 
-  test("a contributor holding entry:post:edit_own sees their own draft and not another's", async () => {
-    const ctx = pooledViewer(TIERS.contributor.capabilities);
+  test("a writer holding entry:post:edit_own sees their own draft and not another's", async () => {
+    const ctx = pooledViewer(TIERS.writer.capabilities);
     const sees = [
       "news-published-mine",
       "news-draft-mine",
@@ -242,7 +242,7 @@ describe("a type pooled onto another's capabilities", () => {
     expect(await selectedOf(ctx, "news")).toEqual(sees);
   });
 
-  test("a subscriber holding only entry:post:read sees published rows and no drafts", async () => {
+  test("a member holding only entry:post:read sees published rows and no drafts", async () => {
     const ctx = pooledViewer(TIERS.reader.capabilities);
     const sees = ["news-published-mine", "news-published-theirs"];
 

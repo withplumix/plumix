@@ -62,7 +62,7 @@ Registration goes through a plugin's `setup`, alongside the entry types it class
 
 An entry type and a taxonomy each name the other, and the two declarations do different jobs.
 
-`termTaxonomies` on the entry type is what puts the pickers on the editor. The editor intersects that list with the taxonomies the current user holds `term:<taxonomy>:assign` for, so a contributor who cannot assign diets sees only the Cuisines picker rather than one that fails on save.
+`termTaxonomies` on the entry type is what puts the pickers on the editor. The editor intersects that list with the taxonomies the current user holds `term:<taxonomy>:assign` for, so a writer who cannot assign diets sees only the Cuisines picker rather than one that fails on save.
 
 `entryTypes` on the taxonomy decides what a term archive contains. The archive at `/cuisine/italian/sicilian` lists entries whose type appears in that array and is public. A taxonomy registered with no `entryTypes` lists the entries of every public type carrying the term. Creating or deleting a term purges the stored pages that showed it and every stored list of its taxonomy's terms, with or without `entryTypes`. Editing the Sicilian term purges only the pages that showed it.
 
@@ -140,19 +140,19 @@ Term archive routes compile ahead of entry-type routes, so a taxonomy prefix win
 
 Registering a taxonomy mints five capabilities named `term:<taxonomy>:<action>`, each granted to the default roles below. `admin` holds every one, and a role you declare grants them under `term`, such as `term: { cuisine: ["assign"] }`.
 
-| Capability            | Default roles                           | Gates                                     |
-| --------------------- | --------------------------------------- | ----------------------------------------- |
-| `term:cuisine:read`   | subscriber, contributor, author, editor | Listing and reading terms                 |
-| `term:cuisine:assign` | contributor, author, editor             | Attaching a term to an entry              |
-| `term:cuisine:edit`   | editor                                  | Creating and editing terms                |
-| `term:cuisine:delete` | editor                                  | Deleting a term                           |
-| `term:cuisine:manage` | editor                                  | Nothing in core; a gate plugins can claim |
+| Capability            | Default roles          | Gates                                     |
+| --------------------- | ---------------------- | ----------------------------------------- |
+| `term:cuisine:read`   | member, author, editor | Listing and reading terms                 |
+| `term:cuisine:assign` | author, editor         | Attaching a term to an entry              |
+| `term:cuisine:edit`   | editor                 | Creating and editing terms                |
+| `term:cuisine:delete` | editor                 | Deleting a term                           |
+| `term:cuisine:manage` | editor                 | Nothing in core; a gate plugins can claim |
 
 The `term:` prefix keeps the namespaces apart, so a `cuisine` taxonomy and a `cuisine` entry type would never share a capability. `capabilities` on the registration names the default roles that receive any of the five, the same way it does for an entry type.
 
 Core's own term procedures gate on `edit` and `delete`; `manage` is there for a plugin that wants one taxonomy-wide switch. The menu plugin uses it, gating every menu mutation on `term:menu:manage`.
 
-Assigning is deliberately a lower bar than editing. A contributor can tag a recipe Sicilian; adding Sicilian to the taxonomy in the first place takes an editor.
+Assigning is deliberately a lower bar than editing. An author can tag a recipe Sicilian; adding Sicilian to the taxonomy in the first place takes an editor.
 
 ## Assigning terms
 

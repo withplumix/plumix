@@ -176,17 +176,17 @@ Narrower flags cascade from it, and you set one when you want a single surface t
 
 Registering a type mints nine capabilities named `entry:<type>:<action>`, each granted to the default roles below. `admin` holds every one of them, and a role you declare in `plumix({ roles })` holds whichever its `can` names, such as `entry: { recipe: ["read", "edit_any"] }`.
 
-| Capability                      | Default roles                           |
-| ------------------------------- | --------------------------------------- |
-| `entry:recipe:read`             | subscriber, contributor, author, editor |
-| `entry:recipe:create`           | contributor, author, editor             |
-| `entry:recipe:edit_own`         | contributor, author, editor             |
-| `entry:recipe:publish`          | author, editor                          |
-| `entry:recipe:edit_any`         | editor                                  |
-| `entry:recipe:delete`           | editor                                  |
-| `entry:recipe:read_revisions`   | editor                                  |
-| `entry:recipe:restore_revision` | editor                                  |
-| `entry:recipe:edit_layout`      | author, editor                          |
+| Capability                      | Default roles          |
+| ------------------------------- | ---------------------- |
+| `entry:recipe:read`             | member, author, editor |
+| `entry:recipe:create`           | author, editor         |
+| `entry:recipe:edit_own`         | author, editor         |
+| `entry:recipe:publish`          | author, editor         |
+| `entry:recipe:edit_any`         | editor                 |
+| `entry:recipe:delete`           | editor                 |
+| `entry:recipe:read_revisions`   | editor                 |
+| `entry:recipe:restore_revision` | editor                 |
+| `entry:recipe:edit_layout`      | author, editor         |
 
 `capabilities` names, per action, the default roles that receive it. `admin` always does. `capabilityType` points a type's capabilities at another name, so two types sharing `capabilityType: "recipe"` pool one permission set rather than minting two. When pooled types name different roles for an action, the capability goes to every role either one names. The namespace is resolved once, at registration: the registered type always carries a `capabilityType`, the type's own name unless it pools, and every capability check reads it from there, so a pooled type is gated by `entry:recipe:*` on every surface.
 
@@ -198,13 +198,13 @@ export const recipes = definePlugin("recipes", {
     ctx.registerEntryType("recipe", {
       label: "Recipes",
       labels: { singular: "Recipe", plural: "Recipes" },
-      capabilities: { publish: ["editor"], create: ["author", "editor"] },
+      capabilities: { publish: ["editor"], delete: ["author", "editor"] },
     });
   },
 });
 ```
 
-With that registration a contributor can no longer create a recipe, and an author can no longer publish one.
+With that registration an author can no longer publish a recipe, and can delete one.
 
 ## Related
 

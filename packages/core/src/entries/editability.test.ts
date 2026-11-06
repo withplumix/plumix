@@ -19,7 +19,7 @@ import {
 const CALLER: AuthenticatedUser = {
   id: 1,
   email: "caller@example.com",
-  role: "contributor",
+  role: "author",
   meta: {},
 };
 const STRANGER_ID = 2;

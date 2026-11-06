@@ -23,12 +23,12 @@ function taxonomyRegistry(
     );
     registry.capabilities.set(`term:${name}:read`, {
       name: `term:${name}:read`,
-      grantTo: ["subscriber", "contributor", "author", "editor", "admin"],
+      grantTo: ["member", "author", "editor", "admin"],
       registeredBy: "test",
     });
     registry.capabilities.set(`term:${name}:assign`, {
       name: `term:${name}:assign`,
-      grantTo: opts.assignRoles ?? ["contributor", "author", "editor", "admin"],
+      grantTo: opts.assignRoles ?? ["author", "editor", "admin"],
       registeredBy: "test",
     });
     registry.capabilities.set(`term:${name}:edit`, {

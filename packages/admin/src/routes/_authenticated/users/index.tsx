@@ -66,7 +66,7 @@ const searchSchema = v.object({
 });
 
 /**
- * Admin / editor = strong; author / contributor = neutral; subscriber and any
+ * Admin / editor = strong; author = neutral; member and any
  * other role = muted; disabled overrides everything to destructive to signal
  * the blocked state (matches WordPress's greyed-out disabled user row).
  */
@@ -76,8 +76,7 @@ const ROLE_VARIANT: Readonly<
   admin: "default",
   editor: "default",
   author: "secondary",
-  contributor: "secondary",
-  subscriber: "outline",
+  member: "outline",
 };
 
 const M = {

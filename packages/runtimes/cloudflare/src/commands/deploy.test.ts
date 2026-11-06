@@ -285,7 +285,7 @@ describe("plumix deploy — data migrations", { timeout: 30_000 }, () => {
     });
     try {
       const { results } = await proxy.env.DB.prepare(
-        "SELECT owner, name FROM __plumix_data_migrations",
+        "SELECT owner, name FROM __plumix_data_migrations WHERE owner = 'site'",
       ).all();
       return results;
     } finally {

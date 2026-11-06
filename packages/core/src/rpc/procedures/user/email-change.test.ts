@@ -380,7 +380,7 @@ describe("GET /_plumix/auth/verify-email lands on auth.loginPath", () => {
     });
     const seeded = await h.factory.user.create({
       email: "alice@old.example",
-      role: "subscriber",
+      role: "member",
     });
     const { requestEmailChange } =
       await import("../../../auth/email-change/index.js");

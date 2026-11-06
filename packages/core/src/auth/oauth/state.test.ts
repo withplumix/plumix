@@ -100,7 +100,7 @@ describe("oauth state store", () => {
       hash,
       type: "invite",
       email: "x@y.z",
-      role: "subscriber",
+      role: "member",
       expiresAt: new Date(Date.now() + 60_000),
     });
     expect(await consumeOAuthState(db, raw)).toBeNull();

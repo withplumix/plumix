@@ -2,7 +2,7 @@ import type { drizzle } from "drizzle-orm/libsql";
 
 import type * as schema from "../../db/schema/index.js";
 import type { User } from "../../db/schema/users.js";
-import type { DefaultRole } from "../../users/contract/roles.js";
+import type { SeededRole } from "../factories.js";
 import { SESSION_COOKIE_NAME } from "../../auth/cookies.js";
 import { createSession } from "../../auth/sessions.js";
 import { userFactory } from "../factories.js";
@@ -33,7 +33,7 @@ export interface ActingAsResult {
  */
 export async function actingAs(
   db: PlaygroundDb,
-  userOrRole: User | DefaultRole,
+  userOrRole: User | SeededRole,
 ): Promise<ActingAsResult> {
   const user: User =
     typeof userOrRole === "string"

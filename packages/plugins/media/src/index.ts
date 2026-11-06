@@ -161,7 +161,7 @@ export function media(
         menuIcon: "image",
         // An owner deletes their own upload on `delete`, which every role
         // that uploads holds here; someone else's still takes `edit_any` on top.
-        capabilities: { delete: ["contributor", "author", "editor"] },
+        capabilities: { delete: ["author", "editor"] },
       });
 
       ctx.registerRpcRouter(

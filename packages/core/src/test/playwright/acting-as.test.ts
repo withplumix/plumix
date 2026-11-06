@@ -60,8 +60,8 @@ describe("actingAs (Playwright)", () => {
     const db = await createTestDb();
 
     userFactory.rewindSequence();
-    const first = await actingAs(db, "subscriber");
-    const second = await (await loadSecondProcess()).actingAs(db, "subscriber");
+    const first = await actingAs(db, "member");
+    const second = await (await loadSecondProcess()).actingAs(db, "member");
 
     expect(second.user.id).not.toBe(first.user.id);
     expect(second.user.slug).not.toBe(first.user.slug);

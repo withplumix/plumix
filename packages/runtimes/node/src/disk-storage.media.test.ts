@@ -27,7 +27,7 @@ test("an upload through the media plugin lands as a file and is served back with
     storage,
     config: { plugins: [media()] },
   });
-  const user = await h.seedUser("contributor");
+  const user = await h.seedUser("author");
   const rpc = async (procedure: string, input: Record<string, unknown>) => {
     const request = await h.authenticateRequest(
       plumixRequest(`/_plumix/rpc/${procedure}`, {

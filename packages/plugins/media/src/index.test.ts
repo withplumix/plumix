@@ -263,7 +263,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const { status, output } = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -287,7 +287,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const { status } = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -324,7 +324,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
         ],
       },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const { output } = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -346,7 +346,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     const { status, error } = await rpcDispatch<unknown>(
       h,
       "media/createUploadUrl",
@@ -369,7 +369,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       storage,
       config: { plugins: [media({ maxUploadSize: 4 })] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     const { status, error } = await rpcDispatch<unknown>(
       h,
       "media/createUploadUrl",
@@ -386,7 +386,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
     // Storage with `presignPut` removed: the R2 binding attached but no S3
     // credentials configured.
     const { h } = await setupBindingOnlyHarness();
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     const { status, output } = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -406,7 +406,7 @@ describe("@plumix/plugin-media — media.createUploadUrl", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("subscriber");
+    const user = await h.seedUser("member");
     const { status } = await rpcDispatch(
       h,
       "media/createUploadUrl",
@@ -439,7 +439,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -477,7 +477,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -511,7 +511,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -548,7 +548,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -589,7 +589,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -629,7 +629,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -670,7 +670,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const editor = await h.seedUser("editor");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -710,7 +710,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -740,7 +740,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -769,8 +769,8 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
-    const other = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
+    const other = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -800,7 +800,7 @@ describe("@plumix/plugin-media — media.confirm", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const editor = await h.seedUser("editor");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -887,7 +887,7 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -926,8 +926,8 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
-    const reader = await h.seedUser("subscriber");
+    const owner = await h.seedUser("author");
+    const reader = await h.seedUser("member");
     await seedPublishedMedia(h, storage, owner.id, "alpha.png");
     await seedPublishedMedia(h, storage, owner.id, "beta.png");
 
@@ -975,7 +975,7 @@ describe("@plumix/plugin-media — media.list", () => {
         storage,
         config: { plugins: [media()], imageDelivery: imageDelivery },
       });
-      const owner = await h.seedUser("contributor");
+      const owner = await h.seedUser("author");
       await seedPublishedMedia(h, storage, owner.id, "alpha.png");
 
       const result = await rpcDispatch<MediaListOutput>(
@@ -1041,7 +1041,7 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    // `entry:media:read` is granted to subscriber and up, so anonymous (no
+    // `entry:media:read` is granted to member and up, so anonymous (no
     // session) is denied.
     const { status } = await rpcDispatch<MediaListOutput>(
       h,
@@ -1058,7 +1058,7 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     await seedPublishedMedia(h, storage, user.id, "Sunset-Beach.png");
     await seedPublishedMedia(h, storage, user.id, "invoice.png");
 
@@ -1078,7 +1078,7 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, user.id, "img-001.png");
     await seedPublishedMedia(h, storage, user.id, "img-002.png");
     await rpcDispatch(
@@ -1108,7 +1108,7 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     await seedPublishedMedia(h, storage, user.id, "discount-50%.png");
     await seedPublishedMedia(h, storage, user.id, "discount-flat.png");
 
@@ -1128,7 +1128,7 @@ describe("@plumix/plugin-media — media.list", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
     for (let i = 0; i < 3; i++) {
       await seedPublishedMedia(h, storage, user.id, `n${String(i)}.png`);
     }
@@ -1271,7 +1271,7 @@ describe("@plumix/plugin-media — media.delete", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "kill.png");
     expect(await storage.head(seeded.storageKey)).not.toBeNull();
 
@@ -1292,8 +1292,8 @@ describe("@plumix/plugin-media — media.delete", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
-    const other = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
+    const other = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "x.png");
 
     const { status } = await rpcDispatch(
@@ -1313,7 +1313,7 @@ describe("@plumix/plugin-media — media.delete", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const editor = await h.seedUser("editor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "y.png");
 
@@ -1333,7 +1333,7 @@ describe("@plumix/plugin-media — media.delete", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "own.png");
     const token = await mintToken(h, owner.id, [
       "entry:media:read",
@@ -1406,7 +1406,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
     const copy = await rpcDispatch<MediaListOutput>(
       h,
@@ -1448,7 +1448,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
 
     const result = await rpcDispatch(
@@ -1492,7 +1492,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const editor = await h.seedUser("editor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
     const leased = await rpcDispatch(
@@ -1524,7 +1524,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
 
     const first = await rpcDispatch<{ etag: string }>(
@@ -1554,7 +1554,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -1605,7 +1605,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "cat.png");
 
     const result = await rpcDispatch<{
@@ -1645,12 +1645,12 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("subscriber");
+    const owner = await h.seedUser("member");
     const row = await h.factory.entry.create({
       type: "media",
       authorId: owner.id,
       status: "published",
-      slug: "subscriber-owned",
+      slug: "member-owned",
     });
 
     const result = await rpcDispatch(
@@ -1669,7 +1669,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const editor = await h.seedUser("editor");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "theirs.png");
 
@@ -1693,8 +1693,8 @@ describe("@plumix/plugin-media — media.update", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
-    const other = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
+    const other = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "x.png");
 
     const result = await rpcDispatch(
@@ -1721,7 +1721,7 @@ describe("@plumix/plugin-media — media.update", () => {
       storage: stub,
       config: { plugins: [media()] },
     });
-    const user = await h.seedUser("contributor");
+    const user = await h.seedUser("author");
 
     const before = await h.db.query.entries.findMany();
     const beforeCount = before.length;
@@ -1776,7 +1776,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
   // work end-to-end through the worker route.
   test("createUploadUrl → PUT to /_plumix/media/upload/<id> → confirm round-trips bytes through the worker", async () => {
     const { h, stub } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -1840,8 +1840,8 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
 
   test("non-owner without edit_any cannot PUT to another user's draft", async () => {
     const { h } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
-    const other = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
+    const other = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -1910,7 +1910,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
 
   test("an owner holding only create finishes their upload at the worker route and confirm", async () => {
     const { h } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const token = await mintToken(h, owner.id, ["entry:media:create"]);
 
     const draft = await draftFor(h, token);
@@ -1926,7 +1926,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
 
   test("an owner without create is refused at the worker route and confirm", async () => {
     const { h, stub } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const draft = await draftFor(h, owner.id);
     const token = await mintToken(h, owner.id, [
       "entry:media:read",
@@ -1952,7 +1952,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
 
   test("a non-owner is refused at the worker route and confirm, edit_any or not", async () => {
     const { h, stub } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const editor = await h.seedUser("editor");
     const draft = await draftFor(h, owner.id);
 
@@ -1975,7 +1975,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     // Anchored regex on the id segment: scientific notation, leading
     // zeros, non-numeric tails, and trailing path segments all fail.
     const { h } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const cases = ["1e3", "0", "01", "1.5", "abc", "-1", " 1"];
     for (const idStr of cases) {
       const response = await h.dispatch(
@@ -2000,7 +2000,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     // strict shape validation, `/upload/1/extra` would still hit the
     // handler. The handler enforces exact `/upload/<id>$`.
     const { h } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const response = await h.dispatch(
       await h.authenticateRequest(
         plumixRequest("/_plumix/media/upload/1/extra", {
@@ -2019,7 +2019,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     // mid-stream — and a chunked body could DOS the bucket. Require
     // it up front.
     const { h } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -2052,7 +2052,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
     // delivers up to CL bytes, and an honest CL is enforced by the
     // 413 check before any byte hits storage.
     const { h } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -2078,7 +2078,7 @@ describe("@plumix/plugin-media — worker-routed upload (presign-less mode)", ()
 
   test("declared content-type that doesn't match the draft's mime is rejected", async () => {
     const { h } = await setupBindingOnlyHarness();
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
 
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
@@ -2118,7 +2118,7 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "serve.png");
 
     const response = await h.dispatch(
@@ -2140,7 +2140,7 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     // Create a draft via createUploadUrl, PUT bytes, but DON'T confirm.
     // The bytes exist in storage at meta.storageKey, but the entry
     // is still `draft` — serve route MUST refuse it.
@@ -2198,7 +2198,7 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",
@@ -2232,7 +2232,7 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "etag.png");
     const path = `/_plumix/media/serve/${String(seeded.id)}`;
 
@@ -2267,7 +2267,7 @@ describe("@plumix/plugin-media — worker-proxied serve route", () => {
       storage,
       config: { plugins: [media()] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const seeded = await seedPublishedMedia(h, storage, owner.id, "pub.png");
     const response = await h.dispatch(
       plumixRequest(`/_plumix/media/serve/${String(seeded.id)}`),
@@ -2337,7 +2337,7 @@ describe("@plumix/plugin-media — purging the pages that show an item", () => {
       cdn,
       config: { plugins: [media(), publicLibrary] },
     });
-    const owner = await h.seedUser("contributor");
+    const owner = await h.seedUser("author");
     const created = await rpcDispatch<CreateUploadUrlOutput>(
       h,
       "media/createUploadUrl",

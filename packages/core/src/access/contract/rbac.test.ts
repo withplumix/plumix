@@ -8,9 +8,8 @@ import {
 
 /** The default roles each shipped action set grants, `admin` included. */
 const RECEIVERS = {
-  members: ["subscriber", "contributor", "author", "editor", "admin"],
-  writers: ["contributor", "author", "editor", "admin"],
-  publishers: ["author", "editor", "admin"],
+  members: ["member", "author", "editor", "admin"],
+  authors: ["author", "editor", "admin"],
   editors: ["editor", "admin"],
   admin: ["admin"],
 } as const;
@@ -22,11 +21,11 @@ describe("deriveEntryTypeCapabilities", () => {
     );
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
     expect(byName["entry:post:read"]).toEqual(RECEIVERS.members);
-    expect(byName["entry:post:edit_own"]).toEqual(RECEIVERS.writers);
-    expect(byName["entry:post:publish"]).toEqual(RECEIVERS.publishers);
+    expect(byName["entry:post:edit_own"]).toEqual(RECEIVERS.authors);
+    expect(byName["entry:post:publish"]).toEqual(RECEIVERS.authors);
     expect(byName["entry:post:edit_any"]).toEqual(RECEIVERS.editors);
     expect(byName["entry:post:delete"]).toEqual(RECEIVERS.editors);
-    expect(byName["entry:post:create"]).toEqual(RECEIVERS.writers);
+    expect(byName["entry:post:create"]).toEqual(RECEIVERS.authors);
   });
 
   test("`capabilities` override replaces the receiving roles on specified actions only", () => {
@@ -57,23 +56,23 @@ describe("deriveEntryTypeCapabilities", () => {
   });
 
   test("partial override leaves non-overridden actions at their default roles", () => {
-    // Media-shape: only `create` is remapped (authors and editors upload).
+    // Only `create` is remapped (editors alone create).
     const caps = deriveEntryTypeCapabilities(
       toRegisteredEntryType(
         "attachment",
         {
           label: "Attachments",
-          capabilities: { create: ["author", "editor"] },
+          capabilities: { create: ["editor"] },
         },
         null,
       ),
     );
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
-    expect(byName["entry:attachment:create"]).toEqual(RECEIVERS.publishers);
+    expect(byName["entry:attachment:create"]).toEqual(RECEIVERS.editors);
     // Other actions remain at defaults.
     expect(byName["entry:attachment:read"]).toEqual(RECEIVERS.members);
-    expect(byName["entry:attachment:edit_own"]).toEqual(RECEIVERS.writers);
-    expect(byName["entry:attachment:publish"]).toEqual(RECEIVERS.publishers);
+    expect(byName["entry:attachment:edit_own"]).toEqual(RECEIVERS.authors);
+    expect(byName["entry:attachment:publish"]).toEqual(RECEIVERS.authors);
   });
 
   test("overrides compose with capabilityType pooling", () => {
@@ -92,7 +91,7 @@ describe("deriveEntryTypeCapabilities", () => {
     );
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
     expect(byName["entry:post:delete"]).toEqual(RECEIVERS.admin);
-    expect(byName["entry:post:publish"]).toEqual(RECEIVERS.publishers);
+    expect(byName["entry:post:publish"]).toEqual(RECEIVERS.authors);
   });
 });
 
@@ -100,7 +99,7 @@ describe("deriveTermTaxonomyCapabilities", () => {
   test("defaults match TAXONOMY_CAPABILITY_ACTIONS when no override is set", () => {
     const caps = deriveTermTaxonomyCapabilities("category", {});
     const byName = Object.fromEntries(caps.map((c) => [c.name, c.grantTo]));
-    expect(byName["term:category:assign"]).toEqual(RECEIVERS.writers);
+    expect(byName["term:category:assign"]).toEqual(RECEIVERS.authors);
     expect(byName["term:category:manage"]).toEqual(RECEIVERS.editors);
     expect(byName["term:category:edit"]).toEqual(RECEIVERS.editors);
     expect(byName["term:category:delete"]).toEqual(RECEIVERS.editors);

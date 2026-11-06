@@ -38,7 +38,7 @@ describe("auth()", () => {
       authenticator: { authenticate: () => Promise.resolve(null) },
       bootstrapVia: "first-method-wins",
       allowedDomains: { "example.com": "editor" },
-      selfSignup: { defaultRole: "subscriber" },
+      selfSignup: { defaultRole: "member" },
       loginPath: "/login",
     };
     const config = auth(input);
@@ -415,9 +415,9 @@ describe("auth() — selfSignup", () => {
   test("accepts a default role", () => {
     const config = auth({
       passkey: validPasskey,
-      selfSignup: { defaultRole: "subscriber" },
+      selfSignup: { defaultRole: "member" },
     });
-    expect(config.selfSignup).toEqual({ defaultRole: "subscriber" });
+    expect(config.selfSignup).toEqual({ defaultRole: "member" });
   });
 
   test("accepts any role on the enum (operator's call)", () => {

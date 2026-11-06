@@ -430,6 +430,7 @@ describe("createNodeSite — migrations at startup", () => {
 
     expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
       "core: up to date\n",
+      "core: data migrations up to date\n",
     ]);
   });
 
@@ -510,6 +511,7 @@ describe("createNodeSite — migrations at startup", () => {
 
     expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
       "core: up to date\n",
+      "core: data migrations up to date\n",
       "@acme/plugin-flags: data migrations up to date\n",
     ]);
   });
@@ -535,7 +537,9 @@ describe("createNodeSite — migrations at startup", () => {
       "plumix: migrations failed; not serving",
       expect.objectContaining({ code: "migrate_data_failed" }),
     );
-    expect(recorded()).toEqual([]);
+    expect(recorded()).toEqual([
+      { owner: "core", name: "rename-subscriber-to-member" },
+    ]);
   });
 
   test("a failed apply exits non-zero without listening", async () => {

@@ -115,7 +115,7 @@ describe("entry.activity.list", () => {
     expect(result.users).toEqual([]);
   });
 
-  test("subscriber gets FORBIDDEN — same gate as entry.revisions.list", async () => {
+  test("member gets FORBIDDEN — same gate as entry.revisions.list", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithAutosave(),
@@ -125,9 +125,9 @@ describe("entry.activity.list", () => {
       slug: "l",
       status: "published",
     });
-    const subscriber = await h.actingAs("subscriber");
+    const member = await h.actingAs("member");
     await expect(
-      subscriber.client.entry.activity.list({ entryId: created.id }),
+      member.client.entry.activity.list({ entryId: created.id }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "entry:post:read_revisions" },

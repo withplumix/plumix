@@ -337,7 +337,7 @@ describe("entries under an access policy", () => {
     await publishPage("open", undefined);
     await publishPage("inside", "members");
     await index();
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const body = await (
       await h.fetch("/search/hydroponics", { as: member })
@@ -351,7 +351,7 @@ describe("entries under an access policy", () => {
   test("a member's results page is never stored for the next visitor", async () => {
     await publishPage("inside", "members");
     await index();
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const response = await h.fetch("/search/hydroponics", { as: member });
     await h.drainDeferred();

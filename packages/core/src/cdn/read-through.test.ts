@@ -178,7 +178,7 @@ describe("readThrough", () => {
     });
 
     // The stored/looked-up key folds the segment into the URL and carries no
-    // per-visitor cookie — so a second subscriber (different cookie) collides
+    // per-visitor cookie — so a second member (different cookie) collides
     // on the same entry.
     const matchKey = match.mock.calls[0]?.[0];
     const putKey = put.mock.calls[0]?.[0];

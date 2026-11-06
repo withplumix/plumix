@@ -55,8 +55,8 @@ describe("entry.createPreviewLink", () => {
     // caps canReadEntry consults — `registry.entryTypes.set` skips the
     // derivation `ctx.registerEntryType` does in the real flow.
     for (const [action, roles] of [
-      ["read", ["subscriber", "contributor", "author", "editor", "admin"]],
-      ["edit_own", ["contributor", "author", "editor", "admin"]],
+      ["read", ["member", "author", "editor", "admin"]],
+      ["edit_own", ["author", "editor", "admin"]],
       ["edit_any", ["editor", "admin"]],
     ] as const) {
       registry.capabilities.set(`entry:page:${action}`, {
@@ -84,10 +84,10 @@ describe("entry.createPreviewLink", () => {
 
   test("404s a draft the caller can't read (no link-minting for others' drafts)", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: postRegistry(),
     });
-    // A draft authored by someone else — a contributor has neither
+    // A draft authored by someone else — an author has neither
     // edit_any nor authorship, so canReadEntry is false.
     const other = await h.factory.user.create();
     const draft = await h.factory.draft.create({

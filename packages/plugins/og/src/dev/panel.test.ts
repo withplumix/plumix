@@ -103,7 +103,7 @@ describe("the og:image debug panel", () => {
   test("tells that reason apart from an entry no scraper may read", async () => {
     const harness = await createHarness({ renderer: rasterRenderer() });
     await seedEntry(harness, { slug: "locked", type: "gated" });
-    const member = await harness.seedUser("subscriber");
+    const member = await harness.seedUser("member");
 
     // The reader sees the page, but the anonymous scraper fetching the card is
     // gated; without the panel the head silently keeps the default.

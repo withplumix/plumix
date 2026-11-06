@@ -333,6 +333,7 @@ describe("the served process migrates before it listens", () => {
 
     expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
       "core: up to date\n",
+      "core: data migrations up to date\n",
     ]);
   });
 
@@ -398,6 +399,7 @@ describe("the served process migrates before it listens", () => {
 
     expect(stderr.mock.calls.map(([chunk]) => String(chunk))).toEqual([
       "core: up to date\n",
+      "core: data migrations up to date\n",
       "@acme/plugin-flags: data migrations up to date\n",
     ]);
   });
@@ -420,9 +422,9 @@ describe("the served process migrates before it listens", () => {
       "plumix: migrations failed; not serving",
       expect.objectContaining({ code: "migrate_data_failed" }),
     );
-    expect(rows("SELECT owner, name FROM __plumix_data_migrations")).toEqual(
-      [],
-    );
+    expect(rows("SELECT owner, name FROM __plumix_data_migrations")).toEqual([
+      { owner: "core", name: "rename-subscriber-to-member" },
+    ]);
   });
 
   test("a failed apply exits non-zero without listening", async () => {

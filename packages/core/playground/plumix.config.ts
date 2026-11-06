@@ -67,7 +67,7 @@ export default plumix({
     // The no-script sign-in page, where a form post's notice or error lands.
     loginPath: "/sign-in-no-script",
     // The email-code e2e signs a new reader up on this domain.
-    allowedDomains: { "allowed.test": "subscriber" },
+    allowedDomains: { "allowed.test": "member" },
     passkey: {
       rpName: "Plumix — Core playground",
       ...deployOrigin,
@@ -76,5 +76,16 @@ export default plumix({
   // No `storage:`, so a seeded media row's storage key is the URL it serves
   // from, and the editor's media picker lists factory-made rows.
   plugins: [content, media(), fixtureSignIn, emailCode, signInPages],
+  // The layout e2e's writer: edits their own posts, without `edit_layout`.
+  roles: {
+    contributor: {
+      label: "Contributor",
+      can: {
+        admin: ["access"],
+        user: ["edit_own"],
+        entry: { post: ["read", "create", "edit_own"] },
+      },
+    },
+  },
   theme,
 });

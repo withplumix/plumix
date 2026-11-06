@@ -461,6 +461,16 @@ msgstr ""
 #~ msgstr "مشترك — قراءة فقط"
 
 #. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.contributor"
+#~ msgstr "مساهم"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.subscriber"
+#~ msgstr "مشترك"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -1191,11 +1201,6 @@ msgstr ""
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.continueWith"
 msgstr "المتابعة بـ {label}"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.contributor"
-msgstr "مساهم"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2295,6 +2300,11 @@ msgstr "الإدارة"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.mastodon"
 msgstr "رابط Mastodon"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+msgid "userRole.member"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3455,11 +3465,6 @@ msgstr "الحالة"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.status"
 msgstr "الحالة"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.subscriber"
-msgstr "مشترك"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts

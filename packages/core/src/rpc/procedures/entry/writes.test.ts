@@ -5,6 +5,7 @@ import { ConflictError } from "../../../db/concurrency.js";
 import { acquireEditLease, LockedError } from "../../../db/edit-lease.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { editorUser } from "../../../test/factories.js";
+import { CONTRIBUTOR_ROLE } from "../../../test/roles.js";
 import { authedCtx, createRpcHarness } from "../../../test/rpc.js";
 
 describe("ctx.entries.update", () => {
@@ -111,7 +112,10 @@ describe("ctx.entries — a principal without edit_layout", () => {
   });
 
   test("update refuses a layout change, naming the node", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     const entry = await h.factory.draft.create({
       authorId: h.user.id,
       content: v2([text("p1")]),
@@ -134,7 +138,10 @@ describe("ctx.entries — a principal without edit_layout", () => {
   });
 
   test("create refuses content holding a block", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
 
     await expect(
       authedCtx(h).entries.create({

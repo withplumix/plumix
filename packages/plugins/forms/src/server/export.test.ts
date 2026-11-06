@@ -127,10 +127,10 @@ describe("the export route", () => {
 
   test("refuses a signed-in reader who cannot moderate submissions", async () => {
     const harness = await seeded();
-    const subscriber = await harness.seedUser("subscriber");
+    const member = await harness.seedUser("member");
 
     const response = await harness.fetch("/_plumix/forms/export", {
-      as: subscriber,
+      as: member,
     });
 
     response.assertStatus(403);

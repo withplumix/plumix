@@ -231,7 +231,7 @@ describe("the submissions RPC", () => {
   });
 
   test("answers nobody without the capability", async () => {
-    const h = await harness("subscriber");
+    const h = await harness("member");
 
     await expect(h.client.forms.list()).rejects.toThrow();
     await expect(h.client.forms.counts()).rejects.toThrow();

@@ -18,10 +18,10 @@ import {
   trackPrincipalReads,
 } from "./personal-render.js";
 
-const subscriber: AuthenticatedUser = {
+const member: AuthenticatedUser = {
   id: 7,
   email: "member@cms.example",
-  role: "subscriber",
+  role: "member",
   meta: {},
 };
 
@@ -60,7 +60,7 @@ describe("trackPrincipalReads", () => {
   });
 
   test("a member's render is shared until something reads the principal", () => {
-    const ctx = contextFor(subscriber);
+    const ctx = contextFor(member);
 
     const tracked = trackPrincipalReads(ctx);
 
@@ -75,7 +75,7 @@ describe("trackPrincipalReads", () => {
     ["reading ctx.apiToken", (ctx) => ctx.apiToken],
     ["calling ctx.auth.can()", (ctx) => ctx.auth.can("entry:post:read")],
   ])("%s marks the render personal", (_read, read) => {
-    const ctx = contextFor(subscriber);
+    const ctx = contextFor(member);
     const tracked = trackPrincipalReads(ctx);
 
     read(tracked);
@@ -86,11 +86,11 @@ describe("trackPrincipalReads", () => {
   });
 
   test("the tracked context answers with the principal it tracks", () => {
-    const ctx = contextFor(subscriber);
+    const ctx = contextFor(member);
 
     const tracked = trackPrincipalReads(ctx);
 
-    expect(tracked.user).toBe(subscriber);
+    expect(tracked.user).toBe(member);
     expect(tracked.tokenScopes).toBeNull();
     expect(tracked.auth.can("entry:post:read")).toBe(
       ctx.auth.can("entry:post:read"),
@@ -115,7 +115,7 @@ describe("trackPrincipalReads", () => {
         }),
       ],
     });
-    const ctx = createTestContext({ db: {} as Db, user: subscriber, hooks });
+    const ctx = createTestContext({ db: {} as Db, user: member, hooks });
     const tracked = trackPrincipalReads(ctx);
     expect(renderIsPersonal(ctx)).toBe(false);
 
@@ -128,7 +128,7 @@ describe("trackPrincipalReads", () => {
   });
 
   test("a staff principal's render is personal before anything reads it", () => {
-    const ctx = contextFor({ ...subscriber, role: "editor" });
+    const ctx = contextFor({ ...member, role: "editor" });
 
     trackPrincipalReads(ctx);
 
@@ -138,7 +138,7 @@ describe("trackPrincipalReads", () => {
 
 describe("adminBarViewer", () => {
   test("is the staff principal the render phase decided on", () => {
-    const editor: AuthenticatedUser = { ...subscriber, role: "editor" };
+    const editor: AuthenticatedUser = { ...member, role: "editor" };
     const ctx = contextFor(editor);
 
     const tracked = trackPrincipalReads(ctx);
@@ -148,8 +148,8 @@ describe("adminBarViewer", () => {
     expect(renderIsPersonal(tracked)).toBe(true);
   });
 
-  test("is null for a subscriber, and asking does not read the principal", () => {
-    const ctx = contextFor(subscriber);
+  test("is null for a member, and asking does not read the principal", () => {
+    const ctx = contextFor(member);
     const tracked = trackPrincipalReads(ctx);
 
     expect(adminBarViewer(tracked)).toBeNull();
@@ -157,15 +157,15 @@ describe("adminBarViewer", () => {
   });
 
   test("follows the principal on a render no render phase began for", () => {
-    const admin: AuthenticatedUser = { ...subscriber, role: "admin" };
+    const admin: AuthenticatedUser = { ...member, role: "admin" };
 
     expect(adminBarViewer(contextFor(admin))).toBe(admin);
-    expect(adminBarViewer(contextFor(subscriber))).toBeNull();
+    expect(adminBarViewer(contextFor(member))).toBeNull();
     expect(adminBarViewer(contextFor(null))).toBeNull();
   });
 
   test("is null for a viewer whose role lacks admin:access", async () => {
-    const editor: AuthenticatedUser = { ...subscriber, role: "editor" };
+    const editor: AuthenticatedUser = { ...member, role: "editor" };
 
     const ctx = contextFor(editor, await adminAccessFrom([]));
 
@@ -173,8 +173,8 @@ describe("adminBarViewer", () => {
   });
 
   test("is a viewer whose role holds admin:access", async () => {
-    const ctx = contextFor(subscriber, await adminAccessFrom(["subscriber"]));
+    const ctx = contextFor(member, await adminAccessFrom(["member"]));
 
-    expect(adminBarViewer(trackPrincipalReads(ctx))).toBe(subscriber);
+    expect(adminBarViewer(trackPrincipalReads(ctx))).toBe(member);
   });
 });

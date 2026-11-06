@@ -18,9 +18,8 @@ import type {
   ConnectedObjectStorage,
 } from "../runtime/contract/slots.js";
 import type { BoundSlots } from "../runtime/handler.js";
-import type { DefaultRole } from "../users/contract/roles.js";
 import type { TestConfigInput } from "./config.js";
-import type { Factories } from "./factories.js";
+import type { Factories, SeededRole } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import type { HarnessFetchOptions } from "./request.js";
 import type { ActionSpy, BoundFilterSpy, EventSpy } from "./spies.js";
@@ -143,7 +142,7 @@ export interface DispatcherHarness {
     request: Request,
     userId: number,
   ) => Promise<Request>;
-  readonly seedUser: (role?: DefaultRole) => Promise<User>;
+  readonly seedUser: (role?: SeededRole) => Promise<User>;
   /**
    * A `?preview=` token granting `userId`'s preview of `entryId`, as the
    * editor's preview link mints one — so a render carrying it overlays that
@@ -274,7 +273,7 @@ export async function createDispatcherHarness(
       appendCookie(headers, `${SESSION_COOKIE_NAME}=${token}`);
       return new Request(request, { headers });
     },
-    seedUser: async (role = "subscriber") =>
+    seedUser: async (role = "member") =>
       userFactory.transient({ db }).create({ role }),
     mintPreviewToken: (args) => createPreviewToken(db, args),
     factory: factoriesFor(db),

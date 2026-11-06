@@ -10,7 +10,7 @@ import { previewableEntry } from "./previewable.js";
 const errors = createORPCErrorConstructorMap(RPC_ERRORS);
 
 /** The gate as a plugin's `.use(authenticated)` handler reaches it. */
-async function harnessAs(role: "editor" | "contributor" | "subscriber") {
+async function harnessAs(role: "editor" | "author" | "member") {
   const h = await createRpcHarness({ authAs: role });
   return { h, ctx: withUser(h.context, h.user) };
 }
@@ -54,7 +54,7 @@ describe("previewableEntry", () => {
   });
 
   test("refuses a caller who may not edit the entry", async () => {
-    const { h, ctx } = await harnessAs("subscriber");
+    const { h, ctx } = await harnessAs("member");
     const author = await h.factory.author.create();
     const entry = await h.factory.published.create({ authorId: author.id });
 
@@ -71,7 +71,7 @@ describe("previewableEntry", () => {
   });
 
   test("refuses edit_own on someone else's entry, and allows it on your own", async () => {
-    const { h, ctx } = await harnessAs("contributor");
+    const { h, ctx } = await harnessAs("author");
     const other = await h.factory.author.create();
     const theirs = await h.factory.draft.create({ authorId: other.id });
     const mine = await h.factory.draft.create({ authorId: h.user.id });

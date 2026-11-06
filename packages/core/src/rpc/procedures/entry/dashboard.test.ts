@@ -76,10 +76,10 @@ describe("entry.stats", () => {
   });
 
   test("a read-only caller sees published counts but not drafts or trash", async () => {
-    // Subscriber has entry:post:read but not edit_any — draft/trash counts
+    // Member has entry:post:read but not edit_any — draft/trash counts
     // must stay hidden, matching entry.list / entry.get visibility.
     const h = await createRpcHarness({
-      authAs: "subscriber",
+      authAs: "member",
       plugins: postRegistry(),
     });
     await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
@@ -95,12 +95,12 @@ describe("entry.stats", () => {
     expect(byStatus.trash).toBeUndefined();
   });
 
-  test("a contributor counts their own drafts but not another author's", async () => {
+  test("an author counts their own drafts but not another author's", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: postRegistry(),
     });
-    const other = await h.factory.contributor.create();
+    const other = await h.factory.author.create();
     await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
     await h.factory.trashed.create({ authorId: h.user.id, slug: "binned" });
     await h.factory.draft.create({ authorId: other.id, slug: "theirs" });
@@ -132,12 +132,12 @@ describe("entry.recentActivity", () => {
     expect(recent[0]?.slug).toBe("new");
   });
 
-  test("a contributor sees their own drafts but not another author's, and never trash", async () => {
+  test("an author sees their own drafts but not another author's, and never trash", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: postRegistry(),
     });
-    const other = await h.factory.contributor.create();
+    const other = await h.factory.author.create();
     await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
     await h.factory.trashed.create({ authorId: h.user.id, slug: "binned" });
     await h.factory.draft.create({ authorId: other.id, slug: "theirs" });

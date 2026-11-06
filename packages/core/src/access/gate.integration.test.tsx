@@ -112,10 +112,8 @@ describe("access gate — hard gate through the dispatcher", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [gatedPlugin], theme: gatedTheme },
     });
-    const subscriber = await h.seedUser("subscriber");
-    const response = await h.dispatch(
-      await authed(h, "/members", subscriber.id),
-    );
+    const member = await h.seedUser("member");
+    const response = await h.dispatch(await authed(h, "/members", member.id));
     expect(response.status).toBe(200);
     expect(await response.text()).toContain('data-testid="members"');
   });
@@ -124,8 +122,8 @@ describe("access gate — hard gate through the dispatcher", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [gatedPlugin], theme: gatedTheme },
     });
-    const subscriber = await h.seedUser("subscriber");
-    const response = await h.dispatch(await authed(h, "/staff", subscriber.id));
+    const member = await h.seedUser("member");
+    const response = await h.dispatch(await authed(h, "/staff", member.id));
     expect(response.status).toBe(403);
     expect(response.headers.get("x-plumix-challenge")).toBe("forbidden");
   });
@@ -199,9 +197,9 @@ describe("access gate — entry-type-level policy", () => {
       config: { plugins: [articlesPlugin] },
     });
     await seedArticle(h);
-    const subscriber = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
     const response = await h.dispatch(
-      await authed(h, "/article/gated", subscriber.id),
+      await authed(h, "/article/gated", member.id),
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("Gated Article");
@@ -272,7 +270,7 @@ const membersPlugin = definePlugin("member-articles", {
  */
 const briefingsPlugin = definePlugin("briefings", {
   setup: (ctx) => {
-    ctx.registerCapability("briefing:read", { grantTo: ["subscriber"] });
+    ctx.registerCapability("briefing:read", { grantTo: ["member"] });
     ctx.registerEntryType("briefing", {
       label: "Briefings",
       isPublic: true,
@@ -328,15 +326,15 @@ async function authed(
 }
 
 describe("access gate — segment-keyed caching (#1740)", () => {
-  test("two subscribers in one segment share a single cdn entry keyed by segment", async () => {
+  test("two members in one segment share a single cdn entry keyed by segment", async () => {
     const { cdn, store } = memoryCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [membersPlugin] },
     });
     await seedEntry(h, "article", "gated");
-    const alice = await h.seedUser("subscriber");
-    const bob = await h.seedUser("subscriber");
+    const alice = await h.seedUser("member");
+    const bob = await h.seedUser("member");
 
     const first = await h.dispatch(await authed(h, "/article/gated", alice.id));
     await h.drainDeferred();
@@ -350,7 +348,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       "authenticated",
     );
 
-    // Swap the stored body for a sentinel; a second subscriber (a different
+    // Swap the stored body for a sentinel; a second member (a different
     // session cookie) must read that same entry rather than re-render.
     store.set(key, {
       response: new Response("SHARED-VARIANT", { status: 200 }),
@@ -368,8 +366,8 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       config: { plugins: [briefingsPlugin] },
     });
     await seedEntry(h, "briefing", "weekly");
-    const alice = await h.seedUser("subscriber");
-    const bob = await h.seedUser("subscriber");
+    const alice = await h.seedUser("member");
+    const bob = await h.seedUser("member");
 
     const first = await h.dispatch(
       await authed(h, "/briefing/weekly", alice.id),
@@ -402,7 +400,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       config: { plugins: [briefingsPlugin] },
     });
     await seedEntry(h, "briefing", "weekly");
-    const alice = await h.seedUser("subscriber");
+    const alice = await h.seedUser("member");
     const author = await h.seedUser("author");
     await h.dispatch(await authed(h, "/briefing/weekly", alice.id));
     await h.drainDeferred();
@@ -423,7 +421,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       config: { plugins: [membersPlugin] },
     });
     const entry = await seedEntry(h, "article", "tagged");
-    const sub = await h.seedUser("subscriber");
+    const sub = await h.seedUser("member");
 
     await h.dispatch(await authed(h, "/article/tagged", sub.id));
     await h.drainDeferred();
@@ -442,7 +440,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       config: { plugins: [membersPlugin] },
     });
     await seedEntry(h, "article", "gated");
-    const sub = await h.seedUser("subscriber");
+    const sub = await h.seedUser("member");
 
     const response = await h.dispatch(
       await authed(h, "/article/gated", sub.id),
@@ -463,7 +461,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       config: { plugins: [privatePlugin] },
     });
     await seedEntry(h, "memo", "secret");
-    const sub = await h.seedUser("subscriber");
+    const sub = await h.seedUser("member");
 
     const response = await h.dispatch(await authed(h, "/memo/secret", sub.id));
     await h.drainDeferred();
@@ -481,7 +479,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
       cdn,
       config: { plugins: [membersPlugin] },
     });
-    const sub = await h.seedUser("subscriber");
+    const sub = await h.seedUser("member");
 
     // The front page carries no policy: a signed-in visitor bypasses the shared
     // cdn entirely, exactly as before this slice (no opt-in ⇒ private).
@@ -581,7 +579,7 @@ describe("access gate — an anonymous grant to a privileged request (#2914)", (
         },
       });
       await seedEntry(h, "note", "open");
-      const sub = await h.seedUser("subscriber");
+      const sub = await h.seedUser("member");
 
       const signedIn = await h.dispatch(await authed(h, "/note/open", sub.id));
       await h.drainDeferred();
@@ -735,7 +733,7 @@ describe("access gate — soft gate / paywall (#1741)", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [plugin], theme: theme },
     });
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
     entitled.add(member.id);
 
     const response = await h.dispatch(await authed(h, "/premium", member.id));
@@ -754,8 +752,8 @@ describe("access gate — soft gate / paywall (#1741)", () => {
       cdn,
       config: { plugins: [plugin], theme: theme },
     });
-    const alice = await h.seedUser("subscriber");
-    const bob = await h.seedUser("subscriber");
+    const alice = await h.seedUser("member");
+    const bob = await h.seedUser("member");
     entitled.add(alice.id);
     entitled.add(bob.id);
 
@@ -787,7 +785,7 @@ describe("access gate — soft gate / paywall (#1741)", () => {
       cdn,
       config: { plugins: [plugin], theme: theme },
     });
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
     entitled.add(member.id);
 
     // An anonymous crawler gets a publicly cacheable teaser, so the protected
@@ -830,7 +828,7 @@ describe("access gate — soft gate / paywall (#1741)", () => {
       cdn,
       config: { plugins: [plugin], theme: theme },
     });
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
     entitled.add(member.id);
 
     // While entitled: the full variant renders and is cached.
@@ -922,10 +920,10 @@ describe("access gate — per-entry visibility (#1742)", () => {
       config: { plugins: [perEntryPlugin] },
     });
     await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
-    const subscriber = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const response = await h.dispatch(
-      await authed(h, "/column/locked", subscriber.id),
+      await authed(h, "/column/locked", member.id),
     );
     expect(response.status).toBe(200);
     expect(await response.text()).toContain("locked title");
@@ -959,13 +957,13 @@ describe("access gate — per-entry visibility (#1742)", () => {
       config: { plugins: [perEntryPlugin, featured] },
     });
     await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
-    const subscriber = await h.seedUser("subscriber");
+    const reader = await h.seedUser("member");
 
     const anonymous = await h.dispatch(
       new Request("https://cms.example/featured/abc"),
     );
     const member = await h.dispatch(
-      await authed(h, "/featured/abc", subscriber.id),
+      await authed(h, "/featured/abc", reader.id),
     );
 
     expect(anonymous.status).toBe(302);
@@ -1032,7 +1030,7 @@ describe("access gate — per-entry visibility (#1742)", () => {
       config: { plugins: [perEntryPlugin] },
     });
     await seedColumn(h, "locked", { [ACCESS_POLICY_META_KEY]: "members" });
-    const sub = await h.seedUser("subscriber");
+    const sub = await h.seedUser("member");
 
     await h.dispatch(await authed(h, "/column/locked", sub.id));
     await h.drainDeferred();
@@ -1177,8 +1175,8 @@ describe("access gate — a render that reads the principal is personal (#2915)"
         config: { plugins: [memberArticles([whoamiBlock])], theme, telemetry },
       });
       await seedArticleWith(h, blockName);
-      const alice = await h.seedUser("subscriber");
-      const bob = await h.seedUser("subscriber");
+      const alice = await h.seedUser("member");
+      const bob = await h.seedUser("member");
 
       const first = await h.dispatch(
         await authed(h, "/article/gated", alice.id),
@@ -1228,8 +1226,8 @@ describe("access gate — a render that reads the principal is personal (#2915)"
       config: { plugins: [memberArticles([]), headWriter] },
     });
     await seedArticleWith(h);
-    const alice = await h.seedUser("subscriber");
-    const bob = await h.seedUser("subscriber");
+    const alice = await h.seedUser("member");
+    const bob = await h.seedUser("member");
 
     const first = await h.dispatch(await authed(h, "/article/gated", alice.id));
     await h.drainDeferred();
@@ -1264,7 +1262,7 @@ describe("access gate — a render that reads the principal is personal (#2915)"
       config: { plugins: [memberArticles([])], theme },
     });
     await seedArticleWith(h);
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const response = await h.dispatch(
       await authed(h, "/article/gated", member.id),
@@ -1289,8 +1287,8 @@ describe("access gate — a render that reads the principal is personal (#2915)"
       },
     });
     await seedArticleWith(h, "acme/plain");
-    const alice = await h.seedUser("subscriber");
-    const bob = await h.seedUser("subscriber");
+    const alice = await h.seedUser("member");
+    const bob = await h.seedUser("member");
 
     const first = await h.dispatch(await authed(h, "/article/gated", alice.id));
     await h.drainDeferred();
@@ -1345,7 +1343,7 @@ describe("access gate — a render that reads the principal is personal (#2915)"
       config: { plugins: [readers], theme: blocksTheme },
     });
     await seedArticleWith(h, "acme/plain");
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const response = await h.dispatch(
       await authed(h, "/article/gated", member.id),
@@ -1406,14 +1404,14 @@ describe("access gate — a render that reads the principal is personal (#2915)"
     expect(store.size).toBe(1);
   });
 
-  test("a subscriber's render carries no admin bar and fills the shared entry", async () => {
+  test("a member's render carries no admin bar and fills the shared entry", async () => {
     const { cdn, store } = memoryCdn();
     const h = await createDispatcherHarness({
       cdn,
       config: { plugins: [memberArticles([])] },
     });
     await seedArticleWith(h);
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const response = await h.dispatch(
       await authed(h, "/article/gated", member.id),
@@ -1450,7 +1448,7 @@ describe("access gate — a render that reads the principal is personal (#2915)"
     });
     await seedArticleWith(h);
     const member = await h.factory.user.create({
-      role: "subscriber",
+      role: "member",
       meta: { locale: "de" },
     });
 
@@ -1474,7 +1472,7 @@ describe("access gate — a render that reads the principal is personal (#2915)"
     });
     await seedArticleWith(h);
     const member = await h.factory.user.create({
-      role: "subscriber",
+      role: "member",
       meta: { locale: "en" },
     });
 
@@ -1638,7 +1636,7 @@ describe("access on every listing", () => {
         config: { plugins: [pagesWithAccess], theme: listingTheme },
       });
       const author = await seedPages(h);
-      const member = await h.seedUser("subscriber");
+      const member = await h.seedUser("member");
 
       const response = await h.dispatch(
         await authed(h, path(author.slug), member.id),
@@ -1689,7 +1687,7 @@ describe("access on every listing", () => {
       config: { plugins: [pagesWithAccess], theme: listingTheme },
     });
     await seedPages(h);
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const html = await (
       await h.dispatch(await authed(h, "/page", member.id))
@@ -1729,7 +1727,7 @@ describe("access on every listing", () => {
       config: { plugins: [pagesWithAccess], theme: listingTheme },
     });
     await seedPages(h);
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const memberListing = await h.dispatch(
       await authed(h, "/library", member.id),

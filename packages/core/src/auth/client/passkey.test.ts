@@ -283,7 +283,7 @@ function enrolsPasskey(): void {
 /** A signed-in auth client whose every request reaches core's real handlers. */
 async function signedInClient() {
   const h = await createDispatcherHarness();
-  const user = await h.seedUser("subscriber");
+  const user = await h.seedUser("member");
   const { token } = await createSession(h.db, { userId: user.id });
   const { authClient } = createAuthClient({
     basePath: () => "",
@@ -382,7 +382,7 @@ describe("authClient.passkey.remove", () => {
 describe("another user's passkey", () => {
   test("resolves not_found to rename", async () => {
     const { h, authClient } = await signedInClient();
-    const other = await h.seedUser("subscriber");
+    const other = await h.seedUser("member");
     const theirs = await h.factory.credential.create({
       userId: other.id,
       publicKey: Buffer.from([1, 2, 3]),
@@ -397,7 +397,7 @@ describe("another user's passkey", () => {
 
   test("resolves not_found to remove", async () => {
     const { h, authClient } = await signedInClient();
-    const other = await h.seedUser("subscriber");
+    const other = await h.seedUser("member");
     const theirs = await h.factory.credential.create({
       userId: other.id,
       publicKey: Buffer.from([1, 2, 3]),

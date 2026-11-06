@@ -35,7 +35,7 @@ export const userGetInputSchema = v.object({ id: idParam });
 
 export const userInviteInputSchema = v.object({
   email: emailField,
-  role: v.optional(roleSchema, "subscriber"),
+  role: v.optional(roleSchema, "member"),
   name: v.optional(v.nullable(nameField)),
 });
 
