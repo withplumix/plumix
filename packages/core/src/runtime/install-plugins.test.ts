@@ -359,12 +359,11 @@ describe("installPlugins", () => {
     ).resolves.toBeDefined();
   });
 
-  test("registerCapability records a grantTo list, or admin alone without one", async () => {
+  test("registerCapability grants a grantTo list plus admin", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("menus", {
       setup: (ctx) => {
         ctx.registerCapability("menu:manage", { grantTo: ["editor"] });
-        ctx.registerCapability("menu:delete");
       },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -372,6 +371,16 @@ describe("installPlugins", () => {
       "editor",
       "admin",
     ]);
+  });
+
+  test("registerCapability without a grant goes to admin alone", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerCapability("menu:delete");
+      },
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
     expect(registry.capabilities.get("menu:delete")?.grantTo).toEqual([
       "admin",
     ]);

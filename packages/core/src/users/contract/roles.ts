@@ -10,4 +10,5 @@ export const DEFAULT_ROLES = [
   "admin",
 ] as const;
 
+/** The roles core ships; `admin` always holds every capability. */
 export type DefaultRole = (typeof DEFAULT_ROLES)[number];

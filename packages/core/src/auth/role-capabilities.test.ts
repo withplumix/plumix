@@ -209,19 +209,13 @@ describe("the resolved role table", () => {
   );
 
   test.each(DEFAULT_ROLES)(
-    "%s keeps the capabilities it was granted before roles became capability sets",
+    "%s holds exactly its pinned capabilities",
     async (role) => {
       const registry = await installPinnedSite();
 
       expect(capabilitiesForRole(role, registry)).toEqual(PINNED_GRANTS[role]);
     },
   );
-});
-
-test.each(DEFAULT_ROLES)("%s does not hold plugin:manage", async (role) => {
-  const registry = await installPinnedSite();
-  const resolver = getCapabilityResolver(registry);
-  expect(resolver.hasCapability(role, "plugin:manage")).toBe(false);
 });
 
 async function rolesHolding(

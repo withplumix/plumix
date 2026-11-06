@@ -62,7 +62,8 @@ describe("resolveApiTokenPreset", () => {
   });
 
   test("a role with no capabilities resolves to an empty list, not to everything", () => {
-    // A stored role the config no longer declares.
+    // Safety: a stored role the capability table doesn't know reaches the
+    // resolver only at runtime; the type admits none.
     const unknownRole = "nobody";
     expect(resolveApiTokenPreset("read_only", unknownRole, plugins)).toEqual(
       [],

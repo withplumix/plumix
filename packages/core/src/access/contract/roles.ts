@@ -12,9 +12,6 @@ import type {
   TermTaxonomyCapabilityAction,
 } from "./capability.js";
 
-/** The roles core ships; `admin` always holds every capability. */
-export type { DefaultRole };
-
 /** What the admin shows for a default the config gives no label. */
 export const DEFAULT_ROLE_LABELS: Readonly<
   Record<DefaultRole, MessageDescriptor>

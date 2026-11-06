@@ -127,7 +127,7 @@ const locationIdSchema = v.pipe(
 
 /**
  * Capability used for every mutating menu RPC. `registerTermTaxonomy`
- * auto-derives the taxonomy's `manage` at the editor tier; reusing it here
+ * auto-derives the taxonomy's `manage` for the editor role; reusing it here
  * keeps the gate consistent with WP-style "manage taxonomy" semantics.
  */
 export const MENU_MANAGE_CAPABILITY = termCapability("menu", "manage");

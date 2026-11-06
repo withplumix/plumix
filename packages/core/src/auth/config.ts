@@ -1,11 +1,11 @@
 import * as v from "valibot";
 
-import type { DefaultRole } from "../access/contract/roles.js";
 import type {
   PlumixAuthConfig,
   PlumixAuthInput,
 } from "../context/auth-config.js";
 import type { EnvInput } from "../runtime/contract/env-input.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { OAuthProviderClient } from "./contract/oauth.js";
 import { OAUTH_PROVIDER_KEY_PATTERN } from "./contract/oauth.js";
 import { HTTPS_WILDCARD_PREFIX } from "./passkey/origin-policy.js";

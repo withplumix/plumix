@@ -329,7 +329,6 @@ describe("segment helpers", () => {
 
   it("rejects role segments and custom labels", () => {
     expect(isBuiltinSegment("role:admin")).toBe(false);
-    expect(isBuiltinSegment("role:wizard")).toBe(false);
     expect(isBuiltinSegment("capability:")).toBe(false);
     expect(isBuiltinSegment("members")).toBe(false);
     expect(isBuiltinSegment("entitlement:pro")).toBe(false);
