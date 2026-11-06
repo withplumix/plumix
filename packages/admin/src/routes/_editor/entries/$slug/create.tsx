@@ -14,6 +14,7 @@ import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { Button } from "@plumix/admin-ui/button";
 import { entryTypeCapability } from "@plumix/core/manifest";
 import { slugify } from "@plumix/core/slugify";
+import { now } from "@plumix/core/support";
 
 const M = {
   // Noun-less pending indicator — replaces the "Creating new {singular}…"
@@ -70,7 +71,7 @@ function CreateEntryRoute(): ReactNode {
         // Untitled so the editor shows its placeholder. The random suffix stops
         // same-millisecond creates (double-click) from colliding on the slug.
         slug: slugify(
-          `untitled-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+          `untitled-${now().getTime().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
         ),
         status: "draft",
       }),

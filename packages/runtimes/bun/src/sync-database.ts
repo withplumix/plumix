@@ -1,5 +1,6 @@
 import { basename, dirname, join, resolve } from "node:path";
 import type { SyncDatabase, SyncRow, SyncSqlExecutor, SyncValue } from "plumix";
+import { now as currentTime } from "plumix/support";
 
 import type { BunSqliteClient } from "./bun-sqlite-client.js";
 import { openBunSqlite } from "./bun-sqlite-client.js";
@@ -64,7 +65,7 @@ export function openBunSyncDatabase(path: string): SyncDatabase {
       settle(() => {
         const copy = join(
           dirname(file),
-          `${basename(file)}.snapshot-${stamp(new Date())}`,
+          `${basename(file)}.snapshot-${stamp(currentTime())}`,
         );
         client.prepare("VACUUM INTO ?").run(copy);
         return {

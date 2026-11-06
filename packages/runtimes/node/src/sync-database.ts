@@ -1,5 +1,6 @@
 import { basename, dirname, join, resolve } from "node:path";
 import type { SyncDatabase, SyncRow, SyncSqlExecutor } from "plumix";
+import { now as currentTime } from "plumix/support";
 
 import type { NodeSqliteClient } from "./node-sqlite-client.js";
 import { openNodeSqlite } from "./node-sqlite-client.js";
@@ -57,7 +58,7 @@ export function openNodeSyncDatabase(path: string): SyncDatabase {
       settle(() => {
         const copy = join(
           dirname(file),
-          `${basename(file)}.snapshot-${stamp(new Date())}`,
+          `${basename(file)}.snapshot-${stamp(currentTime())}`,
         );
         client.prepare("VACUUM INTO ?").run(copy);
         return {

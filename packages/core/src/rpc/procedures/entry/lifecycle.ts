@@ -8,6 +8,7 @@ import type {
   NewEntry,
 } from "../../../db/schema/entries.js";
 import type { GatedLookupErrors } from "../../../rpc-errors.js";
+import { now } from "../../../clock.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import {
@@ -65,7 +66,7 @@ export async function fireEntryPublished(
 export function publishedAtForTransition(
   existing: Date | null,
 ): Date | undefined {
-  if (existing === null || existing.getTime() > Date.now()) return new Date();
+  if (existing === null || existing.getTime() > now().getTime()) return now();
   return undefined;
 }
 

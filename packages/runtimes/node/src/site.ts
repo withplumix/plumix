@@ -24,6 +24,7 @@ import {
   DRAIN_DEADLINE_MS,
   renderDevBootErrorResponse,
 } from "plumix/runtime";
+import { now as currentTime } from "plumix/support";
 
 import type { NodeConfig } from "./adapter.js";
 import type { RequestHandler, RequestListener } from "./http/bridge.js";
@@ -380,7 +381,7 @@ export function serveProcess({
  * pending tick must not be what keeps the process alive.
  */
 const processClock: SchedulerClock = {
-  now: () => Date.now(),
+  now: () => currentTime().getTime(),
   sleep: (ms) => sleep(ms, undefined, { ref: false }),
 };
 

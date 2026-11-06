@@ -1,4 +1,5 @@
 import { invalidateAllSessionsForUser } from "../../../auth/sessions.js";
+import { now } from "../../../clock.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { and, eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
@@ -41,7 +42,7 @@ export const disable = base
 
     const [updated] = await context.db
       .update(users)
-      .set({ disabledAt: new Date() })
+      .set({ disabledAt: now() })
       .where(whereClause)
       .returning();
     if (!updated) {

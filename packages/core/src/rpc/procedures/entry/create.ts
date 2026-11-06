@@ -7,6 +7,7 @@ import {
   entryCapabilityNamespace,
   namespacedEntryCapability,
 } from "../../../access/contract/entry-capabilities.js";
+import { now } from "../../../clock.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { entries } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
@@ -175,7 +176,7 @@ export async function createEntry(
   // anything else has no publish time.
   let publishedAt: Date | null = null;
   if (filtered.status === "published") {
-    publishedAt = new Date();
+    publishedAt = now();
   } else if (filtered.status === "scheduled") {
     publishedAt = filtered.publishedAt ?? null;
   }

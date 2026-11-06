@@ -1,4 +1,5 @@
 import type { Db } from "../../context/app-context.js";
+import { now } from "../../clock.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { hashToken } from "../tokens.js";
@@ -27,7 +28,7 @@ export async function consumeMagicLinkToken(
     .returning();
 
   if (!row) throw MagicLinkError.tokenInvalid();
-  if (row.expiresAt.getTime() < Date.now()) {
+  if (row.expiresAt.getTime() < now().getTime()) {
     throw MagicLinkError.tokenExpired();
   }
   // Every row `requestMagicLink` writes sets an email; a null one is

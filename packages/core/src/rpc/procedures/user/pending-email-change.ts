@@ -1,3 +1,4 @@
+import { now } from "../../../clock.js";
 import { and, eq } from "../../../db/index.js";
 import { authTokens } from "../../../db/schema/auth_tokens.js";
 import { users } from "../../../db/schema/users.js";
@@ -45,7 +46,7 @@ export const pendingEmailChange = base
       .get();
 
     if (row?.email == null) return { pending: null };
-    if (row.expiresAt.getTime() < Date.now()) {
+    if (row.expiresAt.getTime() < now().getTime()) {
       // Expired but not pruned — surface as no-pending so the UI
       // doesn't show stale state. Cleanup runs lazily via the
       // `requestEmailChange` purge or a future prune sweep.

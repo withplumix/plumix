@@ -5,6 +5,7 @@ import type { TelemetryCollector } from "../../context/telemetry.js";
 import type { JsonValue } from "../../json.js";
 import type { SentMail } from "../../mail/sender.js";
 import { consoleMailer } from "../../auth/mailer/console.js";
+import { now } from "../../clock.js";
 import { DEBUG_MAIL_PANEL_ID } from "./path.js";
 
 interface DevMailInput {
@@ -36,7 +37,11 @@ export function devMail(input: DevMailInput): DevMail {
       } satisfies RecordedMail;
       input.telemetry().record(DEBUG_MAIL_PANEL_ID, recorded);
       if (configured === undefined) {
-        dev.mail.save({ id: crypto.randomUUID(), at: Date.now(), ...recorded });
+        dev.mail.save({
+          id: crypto.randomUUID(),
+          at: now().getTime(),
+          ...recorded,
+        });
       }
     },
   };

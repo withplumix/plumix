@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import type { PlumixFetch } from "../../context/app-context.js";
+import { now } from "../../clock.js";
 
 export interface OAuthClient {
   /** The document's URL, which is also its `client_id`. */
@@ -152,7 +153,7 @@ export function createClientMetadataResolver(deps: {
   return {
     async resolve(clientId) {
       const cached = cache.get(clientId);
-      if (cached && cached.expiresAt > Date.now()) return cached.client;
+      if (cached && cached.expiresAt > now().getTime()) return cached.client;
       if (URL.parse(clientId)?.protocol !== "https:") {
         throw new ClientMetadataError("insecure_url");
       }
@@ -161,7 +162,10 @@ export function createClientMetadataResolver(deps: {
         throw new ClientMetadataError("client_id_mismatch");
       }
       const client = toOAuthClient(clientId, document);
-      cache.set(clientId, { client, expiresAt: Date.now() + CACHE_TTL_MS });
+      cache.set(clientId, {
+        client,
+        expiresAt: now().getTime() + CACHE_TTL_MS,
+      });
       return client;
     },
   };

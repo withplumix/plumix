@@ -1,5 +1,6 @@
 import type { AppContext } from "plumix/plugin";
 import { and, count, eq, gte } from "drizzle-orm";
+import { now } from "plumix/support";
 
 import type { RateLimitConfig } from "../types.js";
 import { comments } from "../db/schema.js";
@@ -21,7 +22,7 @@ export async function checkRateLimit(
   ipHash: string,
   limit: RateLimitConfig,
 ): Promise<boolean> {
-  const since = new Date(Date.now() - limit.windowMin * 60 * 1000);
+  const since = new Date(now().getTime() - limit.windowMin * 60 * 1000);
   const [row] = await ctx.db
     .select({ value: count() })
     .from(comments)

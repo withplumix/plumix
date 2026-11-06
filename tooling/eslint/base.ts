@@ -155,6 +155,7 @@ export const baseConfig = defineConfig(
     ignores: TEST_SOURCE,
     rules: {
       "plumix/dynamic-import-in-load-once": "error",
+      "plumix/no-bare-date": "error",
       "plumix/no-bare-object-input": "error",
       "plumix/no-chained-type-assertion": "error",
       "plumix/no-reflect-apply": "error",

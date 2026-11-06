@@ -1,4 +1,5 @@
 import type { Db } from "../../context/app-context.js";
+import { now } from "../../clock.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
@@ -33,7 +34,7 @@ export async function issueOAuthState(
 ): Promise<IssuedOAuthState> {
   const state = generateToken();
   const hash = await hashToken(state);
-  const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+  const expiresAt = new Date(now().getTime() + ttlSeconds * 1000);
   await db.insert(authTokens).values({
     hash,
     type: "oauth_state",
@@ -57,7 +58,7 @@ export async function consumeOAuthState(
     .returning();
 
   if (!row) return null;
-  if (row.expiresAt.getTime() < Date.now()) return null;
+  if (row.expiresAt.getTime() < now().getTime()) return null;
 
   const payload = row.payload as Partial<OAuthStatePayload> | null;
   if (

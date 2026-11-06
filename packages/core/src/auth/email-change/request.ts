@@ -1,6 +1,7 @@
 import type { Db, Logger } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
 import type { MailSender } from "../../mail/contract/registry.js";
+import { now } from "../../clock.js";
 import { and, eq, ne } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { users } from "../../db/schema/users.js";
@@ -90,7 +91,7 @@ export async function requestEmailChange(
 
   const token = generateToken();
   const hash = await hashToken(token);
-  const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+  const expiresAt = new Date(now().getTime() + ttlSeconds * 1000);
 
   await db.insert(authTokens).values({
     hash,

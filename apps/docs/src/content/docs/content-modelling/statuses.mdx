@@ -91,6 +91,7 @@ A scheduled entry is invisible in public. It is not on its archive, and its URL 
 
 ```ts
 import { definePlugin } from "plumix/plugin";
+import { now } from "plumix/support";
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
@@ -98,7 +99,7 @@ export const recipes = definePlugin("recipes", {
 
     ctx.events.on(recipe.transition, ({ entry, previousStatus }) => {
       if (entry.status !== "scheduled") return;
-      const waitMs = (entry.publishedAt?.getTime() ?? 0) - Date.now();
+      const waitMs = (entry.publishedAt?.getTime() ?? 0) - now().getTime();
       console.info(
         `[recipes] ${entry.slug} left ${previousStatus}, publishing in ${String(
           Math.round(waitMs / 60_000),

@@ -1,5 +1,6 @@
 import type { RequestAuthenticator } from "plumix";
 import type { User } from "plumix/schema";
+import { now } from "plumix/support";
 
 import { hasDemoSession, readDemoToken } from "./session.js";
 
@@ -17,7 +18,7 @@ export const DEMO_ADMIN = {
  * Stable synthetic timestamps: the demo admin isn't a real account, so its
  * "created"/"verified" instants shouldn't advance on every request.
  */
-const DEMO_ADMIN_TIMESTAMP = new Date();
+const DEMO_ADMIN_TIMESTAMP = now();
 
 /**
  * Any visitor with the session cookie is admin, with no database read.

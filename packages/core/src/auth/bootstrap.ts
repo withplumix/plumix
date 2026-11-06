@@ -1,6 +1,7 @@
 import type { Db } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
+import { now } from "../clock.js";
 import { isUniqueConstraintErrorOn, sql } from "../db/index.js";
 import { users } from "../db/schema/users.js";
 import { deriveUserSlug, MAX_SLUG_ATTEMPTS } from "../users/slug.js";
@@ -41,7 +42,7 @@ export async function provisionUser(
           name: input.name ?? null,
           avatarUrl: input.avatarUrl ?? null,
           role: sql<string>`CASE WHEN (SELECT COUNT(*) FROM ${users}) = 0 THEN 'admin' ELSE ${defaultRole} END`,
-          emailVerifiedAt: input.emailVerified ? new Date() : null,
+          emailVerifiedAt: input.emailVerified ? now() : null,
           meta: input.meta,
         })
         .returning();

@@ -3,6 +3,7 @@ import {
   isSecureRequest,
   readSessionCookie,
 } from "plumix/auth";
+import { now } from "plumix/support";
 
 import type { DemoDB } from "./demo-db.js";
 import { DemoError } from "../errors.js";
@@ -54,7 +55,7 @@ export function demoSessionCookie(token: string, request: Request): string {
  * countdown. Not HttpOnly on purpose — the client script reads it.
  */
 export function demoExpiresCookie(request: Request): string {
-  const expiresAt = Date.now() + DEMO_TTL_SECONDS * 1000;
+  const expiresAt = now().getTime() + DEMO_TTL_SECONDS * 1000;
   const secure = isSecureRequest(request) ? "; Secure" : "";
   return `${DEMO_EXPIRES_COOKIE_NAME}=${expiresAt}; SameSite=Lax; Path=/; Max-Age=${DEMO_TTL_SECONDS}${secure}`;
 }

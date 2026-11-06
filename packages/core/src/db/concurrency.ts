@@ -5,6 +5,7 @@ import * as v from "valibot";
 
 import type { JsonValue } from "../json.js";
 import type { LeaseResource } from "./edit-lease.js";
+import { now as currentTime } from "../clock.js";
 import { isJsonObject } from "../json.js";
 
 /**
@@ -48,7 +49,7 @@ export function nextToken(ifMatch: Date, now: Date): Date {
 export function claim(
   updatedAt: SQLiteColumn,
   ifMatch: Date,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): { readonly where: SQL; readonly set: { readonly updatedAt: Date } } {
   return {
     where: eq(updatedAt, ifMatch),

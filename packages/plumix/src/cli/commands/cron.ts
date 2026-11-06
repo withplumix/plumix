@@ -16,7 +16,7 @@ import {
   scheduledTasksFor,
   scheduledTaskTimeoutMs,
 } from "@plumix/core/cli";
-import { loadOnce } from "@plumix/core/support";
+import { loadOnce, now } from "@plumix/core/support";
 
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
@@ -170,7 +170,7 @@ async function fireSchedule(
 ): Promise<void> {
   // One reading, so the minute claimed and the time the task is told cannot
   // straddle a boundary.
-  const scheduledTime = Date.now();
+  const scheduledTime = now().getTime();
   // `scheduled` may answer nothing — an adapter that does not report.
   let runReport: ScheduledRunReport | undefined;
   const outcome = await runGuarded(guard, fired, scheduledTime, async () => {

@@ -3,6 +3,7 @@ import type {
   TelemetryRequestEnvelope,
   TelemetrySnapshot,
 } from "../context/telemetry.js";
+import { now } from "../clock.js";
 import { logErrorSafely } from "../context/log.js";
 
 /**
@@ -34,7 +35,7 @@ export function deliverTelemetrySnapshot(
     url: ctx.request.url,
     status,
     startedAt,
-    durationMs: Date.now() - startedAt,
+    durationMs: now().getTime() - startedAt,
   };
   const { shutdown } = delivery;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -47,7 +48,7 @@ export function deliverTelemetrySnapshot(
       shutdown?.removeEventListener("abort", deliver);
       const snapshot: TelemetrySnapshot = {
         request,
-        spans: delivery.spansAt(Date.now()),
+        spans: delivery.spansAt(now().getTime()),
         records: ctx.telemetry.getRecords(),
         dropped: ctx.telemetry.getDropped(),
       };

@@ -1,5 +1,6 @@
 import type { Db } from "../context/app-context.js";
 import type { DeviceCode } from "../db/schema/device_codes.js";
+import { now } from "../clock.js";
 import { and, eq } from "../db/index.js";
 import { deviceCodes } from "../db/schema/device_codes.js";
 import { encodeBase64url } from "../encoding.js";
@@ -29,7 +30,7 @@ export async function requestDeviceCode(db: Db): Promise<DeviceCodeRequest> {
   const deviceCode = generateDeviceCode();
   const userCode = generateUserCode();
   const id = await hashToken(deviceCode);
-  const expiresAt = new Date(Date.now() + DEVICE_CODE_TTL_SECONDS * 1000);
+  const expiresAt = new Date(now().getTime() + DEVICE_CODE_TTL_SECONDS * 1000);
 
   await db.insert(deviceCodes).values({
     id,
@@ -62,7 +63,7 @@ export async function lookupDeviceCodeByUserCode(
     .where(eq(deviceCodes.userCode, userCode))
     .get();
   if (!row) return { outcome: "not_found" };
-  if (row.expiresAt.getTime() < Date.now()) {
+  if (row.expiresAt.getTime() < now().getTime()) {
     return { outcome: "expired" };
   }
   if (row.status === "approved") return { outcome: "already_approved" };
@@ -141,7 +142,7 @@ export async function exchangeDeviceCode(
     .get();
 
   if (!row) return { outcome: "invalid" };
-  if (row.expiresAt.getTime() < Date.now()) {
+  if (row.expiresAt.getTime() < now().getTime()) {
     // Reap eagerly so the row doesn't sit until the prune pass.
     await db.delete(deviceCodes).where(eq(deviceCodes.id, id));
     return { outcome: "expired" };

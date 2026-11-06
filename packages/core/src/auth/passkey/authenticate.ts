@@ -4,6 +4,7 @@ import type { Db } from "../../context/app-context.js";
 import type { Credential } from "../../db/schema/credentials.js";
 import type { ResolvedPasskeyConfig } from "./config.js";
 import type { AuthenticationOptions, AuthenticationResponse } from "./types.js";
+import { now } from "../../clock.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { decodeBase64url } from "../../encoding.js";
 import { consumeChallenge, issueChallenge } from "./challenges.js";
@@ -120,7 +121,7 @@ export async function finishAuthentication(
     .update(credentials)
     .set({
       counter: authenticatorData.signatureCounter,
-      lastUsedAt: new Date(),
+      lastUsedAt: now(),
     })
     .where(eq(credentials.id, credential.id));
 

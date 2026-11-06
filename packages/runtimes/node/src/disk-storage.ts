@@ -24,6 +24,7 @@ import type {
   ObjectStorage,
   PutOptions,
 } from "plumix";
+import { now } from "plumix/support";
 
 import { StorageError } from "./errors.js";
 
@@ -159,7 +160,7 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
     const sidecar: Sidecar = {
       size,
       etag: `"${hash.digest("hex")}"`,
-      uploaded: new Date().toISOString(),
+      uploaded: now().toISOString(),
       contentType: opts?.contentType,
       customMetadata: opts?.customMetadata,
     };

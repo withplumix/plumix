@@ -1,4 +1,5 @@
 import type { AppContext } from "plumix/plugin";
+import { now as currentTime } from "plumix/support";
 
 import type { AuditLogStorage } from "../types.js";
 import { AuditLogConfigError } from "./errors.js";
@@ -47,7 +48,7 @@ export interface RunRetentionPurgeArgs {
   readonly storage: AuditLogStorage;
   readonly retention: AuditLogRetentionConfig;
   /**
-   * Override the clock; defaults to `new Date()`. Tests pass an explicit value.
+   * Override the clock; defaults to `now()`. Tests pass an explicit value.
    */
   readonly now?: Date;
 }
@@ -67,6 +68,9 @@ export async function runRetentionPurge(
     );
     return { deleted: 0 };
   }
-  const cutoff = computeRetentionCutoff(args.now ?? new Date(), args.retention);
+  const cutoff = computeRetentionCutoff(
+    args.now ?? currentTime(),
+    args.retention,
+  );
   return args.storage.purge(ctx, { cutoff });
 }

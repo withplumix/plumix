@@ -22,6 +22,7 @@ import type {
 import { requestHasSession } from "../auth/authenticator.js";
 import { isSafeMethod } from "../auth/csrf.js";
 import { flushPurgeTags } from "../cdn/purge.js";
+import { now } from "../clock.js";
 import { createAppContext, withSignal } from "../context/app.js";
 import { logErrorSafely } from "../context/log.js";
 import { requestStore } from "../context/stores.js";
@@ -205,12 +206,12 @@ export function createPlumixHandler(
         call?.timeoutMs ??
         options.disposeTimeoutMs ??
         DEFAULT_DISPOSE_TIMEOUT_MS;
-      const deadline = Date.now() + timeoutMs;
+      const deadline = now().getTime() + timeoutMs;
       // Deferred work defers more; the absolute deadline stops a chain of quick
       // tasks extending shutdown.
       const drain = async (): Promise<void> => {
-        while (pending.size > 0 && Date.now() < deadline) {
-          await settleWithin([...pending], deadline - Date.now());
+        while (pending.size > 0 && now().getTime() < deadline) {
+          await settleWithin([...pending], deadline - now().getTime());
         }
       };
       await drain();

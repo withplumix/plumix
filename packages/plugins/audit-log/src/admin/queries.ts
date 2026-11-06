@@ -2,6 +2,7 @@ import type { UseInfiniteQueryResult } from "@tanstack/react-query";
 import type { PluginRpcInputs, PluginRpcOutputs } from "plumix/admin";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createPluginRpcClient } from "plumix/admin";
+import { now as currentTime } from "plumix/support";
 
 import type { AuditLogRouter } from "../rpc.js";
 
@@ -44,7 +45,7 @@ export type DateRangePreset = "today" | "last7" | "last30" | "custom";
  */
 export function presetToRange(
   preset: DateRangePreset,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): { occurredAfter?: number; occurredBefore?: number } {
   if (preset === "custom") return {};
   const occurredBefore = Math.floor(now.getTime() / 1000);

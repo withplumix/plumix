@@ -1,3 +1,4 @@
+import { now } from "../../../../clock.js";
 import { and, eq, isNull } from "../../../../db/index.js";
 import { apiTokens } from "../../../../db/schema/api_tokens.js";
 import { auth } from "../../../../hooks/auth.js";
@@ -19,7 +20,7 @@ export const adminRevoke = base
   .handler(async ({ input, context, errors }) => {
     const result = await context.db
       .update(apiTokens)
-      .set({ revokedAt: new Date() })
+      .set({ revokedAt: now() })
       .where(and(eq(apiTokens.id, input.id), isNull(apiTokens.revokedAt)))
       .returning({ id: apiTokens.id, userId: apiTokens.userId });
 

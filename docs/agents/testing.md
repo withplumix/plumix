@@ -7,7 +7,7 @@ How the test suites run and where their shared helpers live. The rules for writi
 
 A consumer package imports its unit-test kit from `plumix/test`: `testSite`, which boots a whole site
 for a test, calls any procedure through `site.actingAs(role | user).rpc` and moves its own clock
-with `site.travel` and `site.freezeTime` (session expiry and scheduled publishing read time through `now()` from `plumix/support`),
+with `site.travel` and `site.freezeTime` (package source reads time through `now()` from `plumix/support`, and the `plumix/no-bare-date` lint rule reports a bare `Date.now()` or `new Date()`; a column's SQL `unixepoch()` default still stamps real time),
 the older harnesses
 (`createRpcHarness`, the dispatcher), the fishery factories, `stubPluginRpc`, the block render
 helpers, the `fakeFile`/`fakeImage` upload fakes, the mail kit: `fakeMail`, which both harnesses

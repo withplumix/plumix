@@ -1,4 +1,5 @@
 import type { AppContext } from "plumix/plugin";
+import { now } from "plumix/support";
 
 import { sign, verify } from "./signing.js";
 
@@ -12,7 +13,7 @@ const MIN_FILL_MS = 1000;
  * can carry nothing per visitor.
  */
 export async function issueTimingToken(ctx: AppContext): Promise<string> {
-  const issuedAt = String(Date.now());
+  const issuedAt = String(now().getTime());
   return `${issuedAt}.${await sign(ctx, SECRET, issuedAt)}`;
 }
 
@@ -33,5 +34,5 @@ export async function isImplausiblyFast(
   }
   if (!/^\d+$/.test(issuedAt)) return true;
   if (!(await verify(ctx, SECRET, issuedAt, signature))) return true;
-  return Date.now() - Number(issuedAt) < MIN_FILL_MS;
+  return now().getTime() - Number(issuedAt) < MIN_FILL_MS;
 }

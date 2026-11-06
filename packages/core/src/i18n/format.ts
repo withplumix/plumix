@@ -1,5 +1,7 @@
 import { formats } from "@lingui/core";
 
+import { now as currentTime } from "../clock.js";
+
 /**
  * Lingui ships no relative-time formatter. The others are re-exported under
  * narrowed signatures to keep Lingui-internal types off the public surface.
@@ -17,7 +19,7 @@ export const formatNumber: (
 ) => string = formats.number;
 
 export interface FormatRelativeOptions extends Intl.RelativeTimeFormatOptions {
-  /** Reference point for the diff. Defaults to `new Date()`; pass an
+  /** Reference point for the diff. Defaults to `now()`; pass an
    *  explicit `now` for deterministic tests. */
   readonly now?: Date;
 }
@@ -45,7 +47,7 @@ export function formatRelative(
   options?: FormatRelativeOptions,
 ): string {
   const { now, ...intlOptions } = options ?? {};
-  const reference = (now ?? new Date()).getTime();
+  const reference = (now ?? currentTime()).getTime();
   const diffMs = value.getTime() - reference;
   const absMs = Math.abs(diffMs);
   const sign = diffMs < 0 ? -1 : 1;

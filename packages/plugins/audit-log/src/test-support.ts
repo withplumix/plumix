@@ -3,6 +3,7 @@ import type { AppContext } from "plumix/plugin";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { Factory } from "fishery";
+import { now } from "plumix/support";
 import { applyTestSchema, createTestContext } from "plumix/test";
 
 import type { NewAuditLogRow } from "./db/schema.js";
@@ -61,6 +62,6 @@ export const auditLogFactory = Factory.define<
     actorId: params.actorId ?? 1,
     actorLabel: params.actorLabel ?? "alice@example.com",
     properties: params.properties ?? {},
-    occurredAt: params.occurredAt ?? new Date(),
+    occurredAt: params.occurredAt ?? now(),
   };
 });

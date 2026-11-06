@@ -2,6 +2,7 @@ import type { ScheduledRunReport } from "../context/runtime-adapter.js";
 import type { PlumixApp } from "./app.js";
 import type { CronSchedule } from "./contract/cron.js";
 import type { ScheduledRunGuard } from "./scheduled-guard.js";
+import { now as currentTime } from "../clock.js";
 import { parseCron } from "./contract/cron.js";
 import { declaredSchedules } from "./contract/schedules.js";
 
@@ -54,7 +55,7 @@ export interface Scheduler {
 }
 
 const systemClock: SchedulerClock = {
-  now: () => Date.now(),
+  now: () => currentTime().getTime(),
   sleep: (ms) =>
     new Promise((resolve) => {
       const timer = setTimeout(resolve, ms);

@@ -14,6 +14,7 @@ import type {
   SyncSqlTransaction,
   SyncValue,
 } from "../runtime/contract/slots.js";
+import { now as currentTime } from "../clock.js";
 import { assertSameHeads, SyncError } from "./sync.js";
 
 type Executor = SyncSqlExecutor;
@@ -689,7 +690,7 @@ export async function importScopes(
   const transaction = await database.begin();
   let report: SyncImportReport;
   try {
-    report = await replaceTables(transaction, from, scopes, new Date());
+    report = await replaceTables(transaction, from, scopes, currentTime());
   } catch (error) {
     await transaction.rollback();
     throw error;

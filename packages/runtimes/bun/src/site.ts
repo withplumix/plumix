@@ -25,6 +25,7 @@ import {
   startScheduledRunner,
   trustRequest,
 } from "plumix/runtime";
+import { now as currentTime } from "plumix/support";
 
 import type { ResolvedBunConfig } from "./adapter.js";
 import { bun, isBunRuntime } from "./adapter.js";
@@ -389,7 +390,7 @@ export async function serveProcess(
  * pending tick must not be what keeps the process alive.
  */
 const processClock: SchedulerClock = {
-  now: () => Date.now(),
+  now: () => currentTime().getTime(),
   sleep: (ms) => sleep(ms, undefined, { ref: false }),
 };
 

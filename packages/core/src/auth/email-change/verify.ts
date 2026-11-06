@@ -1,5 +1,6 @@
 import type { Db } from "../../context/app-context.js";
 import type { User } from "../../db/schema/users.js";
+import { now } from "../../clock.js";
 import { and, eq, isNull, isUniqueConstraintError } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
@@ -32,7 +33,7 @@ export async function verifyEmailChange(
     .returning();
 
   if (!tokenRow) throw EmailChangeError.tokenInvalid();
-  if (tokenRow.expiresAt.getTime() < Date.now()) {
+  if (tokenRow.expiresAt.getTime() < now().getTime()) {
     throw EmailChangeError.tokenExpired();
   }
   if (tokenRow.userId === null || tokenRow.email === null) {
@@ -55,7 +56,7 @@ export async function verifyEmailChange(
     // write can't slip a commit through.
     const [row] = await db
       .update(users)
-      .set({ email: tokenRow.email, emailVerifiedAt: new Date() })
+      .set({ email: tokenRow.email, emailVerifiedAt: now() })
       .where(and(eq(users.id, target.id), isNull(users.disabledAt)))
       .returning();
     if (!row) throw EmailChangeError.accountDisabled();

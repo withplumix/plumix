@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { now } from "plumix/support";
 
 /**
  * Entries and terms share one table because bm25 scores are not comparable
@@ -80,7 +81,7 @@ export const searchReindexRuns = sqliteTable("search_reindex_runs", (t) => ({
     .integer({ mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`)
-    .$onUpdate(() => sql`(unixepoch())`),
+    .$onUpdate(now),
   finishedAt: t.integer({ mode: "timestamp" }),
 }));
 

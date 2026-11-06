@@ -1,6 +1,7 @@
 import type { Db } from "../context/app-context.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { User } from "../db/schema/users.js";
+import { now as currentTime } from "../clock.js";
 import { and, eq, gt, isNull, or } from "../db/index.js";
 import { apiTokens } from "../db/schema/api_tokens.js";
 import { users } from "../db/schema/users.js";
@@ -100,7 +101,7 @@ export async function validateApiToken(
   }
 
   const id = await hashToken(rawToken);
-  const now = new Date();
+  const now = currentTime();
 
   // Single statement: row exists AND not revoked AND (no expiry OR
   // not yet expired). Hits the PK index for the lookup; the WHERE
@@ -141,7 +142,7 @@ export async function revokeApiToken(
 ): Promise<boolean> {
   const result = await db
     .update(apiTokens)
-    .set({ revokedAt: new Date() })
+    .set({ revokedAt: currentTime() })
     .where(
       and(
         eq(apiTokens.id, input.id),

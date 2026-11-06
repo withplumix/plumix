@@ -3,6 +3,7 @@ import type { JsonObject } from "plumix";
 import { sql } from "drizzle-orm";
 import { index, sqliteTable } from "drizzle-orm/sqlite-core";
 import { entries, users } from "plumix/schema";
+import { now } from "plumix/support";
 
 import { COMMENT_STATUSES } from "../types.js";
 
@@ -42,7 +43,7 @@ export const comments = sqliteTable(
       .integer({ mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`)
-      .$onUpdate(() => sql`(unixepoch())`),
+      .$onUpdate(now),
   }),
   (table) => [
     // The thread query: roots + status for one entry, newest-first.

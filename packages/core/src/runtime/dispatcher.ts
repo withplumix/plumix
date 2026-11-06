@@ -36,6 +36,7 @@ import {
 import { flushPurgeTags } from "../cdn/purge.js";
 import { readThrough, readThroughRoute } from "../cdn/read-through.js";
 import { pageTags } from "../cdn/tags.js";
+import { now } from "../clock.js";
 import { interfaceEnabled } from "../config.js";
 import { rebindSettings } from "../context/settings-namespace.js";
 import { requestStore } from "../context/stores.js";
@@ -135,7 +136,7 @@ export type PlumixDispatcher = (ctx: AppContext) => Promise<Response>;
 
 export function createPlumixDispatcher(app: PlumixApp): PlumixDispatcher {
   return async (ctx) => {
-    const startedAt = Date.now();
+    const startedAt = now().getTime();
     let response: Response;
     try {
       response = await ctx.telemetry.span("dispatch", async (s) => {

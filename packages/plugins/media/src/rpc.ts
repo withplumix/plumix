@@ -9,7 +9,7 @@ import {
   resolveCapability,
 } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { withBasePath } from "plumix/support";
+import { now, withBasePath } from "plumix/support";
 import * as v from "valibot";
 
 import {
@@ -142,10 +142,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
         const id = crypto.randomUUID();
         const ext =
           sanitizeExtension(input.filename) ?? extensionForMime(normalizedMime);
-        const datePrefix = new Date()
-          .toISOString()
-          .slice(0, 7)
-          .replace("-", "/");
+        const datePrefix = now().toISOString().slice(0, 7).replace("-", "/");
         const storageKey =
           ext === undefined
             ? `${datePrefix}/${id}`
@@ -202,7 +199,7 @@ export function createMediaRouter(options: MediaRpcOptions) {
           headers: { "content-type": normalizedMime },
           mediaId: created.id,
           storageKey,
-          expiresAt: Math.floor(Date.now() / 1000) + 60,
+          expiresAt: Math.floor(now().getTime() / 1000) + 60,
         };
       },
     );
