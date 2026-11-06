@@ -3,15 +3,14 @@ import { DEFAULT_TIMEOUT_MS, timeoutError } from "../context/traced-fetch.js";
 import { deepEqual } from "./match.js";
 
 /**
- * What a route answers: a response, one built from the request, or a failure
- * rejected as the real `ctx.fetch` rejects it, at once.
+ * What a route answers: a response, or a failure rejected as the real
+ * `ctx.fetch` rejects it, at once.
  */
 export type FetchAnswer =
   | Response
-  | ((request: Request) => Response | Promise<Response>)
   /** The `TypeError` the platform's `fetch` rejects with when it gets no answer. */
   | "network error"
-  /** The `TimeoutError` `ctx.fetch` rejects with once the call's bound runs out. */
+  /** The `TimeoutError` `ctx.fetch` rejects with once the call's `timeout` runs out. */
   | "timeout";
 
 interface Route {
@@ -41,8 +40,8 @@ interface FetchFilter {
  */
 export interface FetchFake {
   /**
-   * Answers `method` requests to `url`. A `*` method answers any, and each `*`
-   * in `url` matches any run of characters.
+   * Answers `method` requests to `url`, in which each `*` matches any run of
+   * characters.
    */
   readonly route: (method: string, url: string, answer: FetchAnswer) => void;
   /** Throws unless a request to `url`, a pattern as `route` takes, matched. */
@@ -112,7 +111,7 @@ export function fakeFetch(): FetchFake {
       });
       const route = routes.find(
         (candidate) =>
-          (candidate.method === "*" || candidate.method === request.method) &&
+          candidate.method === request.method &&
           candidate.pattern.test(request.url),
       );
       if (route === undefined) {
@@ -126,20 +125,15 @@ export function fakeFetch(): FetchFake {
       }
       const { answer } = route;
       if (answer === "network error") throw new TypeError("fetch failed");
-      if (answer === "timeout") throw timedOut(request, init?.timeout);
-      return answer instanceof Response ? answer.clone() : answer(request);
+      if (answer === "timeout") {
+        const timeout = init?.timeout;
+        throw timeoutError(
+          typeof timeout === "number" ? timeout : DEFAULT_TIMEOUT_MS,
+        );
+      }
+      return answer.clone();
     },
   };
-}
-
-function timedOut(
-  request: Request,
-  timeout: number | false = DEFAULT_TIMEOUT_MS,
-): Error {
-  if (timeout !== false) return timeoutError(timeout);
-  return new Error(
-    `fetch: ${request.method} ${request.url} is declared to time out, but the call passes { timeout: false }, so it would wait forever.`,
-  );
 }
 
 /** A URL with no `*` is matched as `Request` spells it, so `https://a.example` meets `https://a.example/`. */

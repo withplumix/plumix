@@ -14,15 +14,15 @@ describe("a declared route", () => {
 
   test("matches a URL pattern, each * standing for any run of characters", async () => {
     const fetch = fakeFetch();
-    fetch.route("GET", "https://api.example/users/*?fields=*", (request) =>
-      Response.json({ url: request.url }),
+    fetch.route(
+      "GET",
+      "https://api.example/users/*?fields=*",
+      new Response("user"),
     );
 
     const response = await fetch.send("https://api.example/users/7?fields=a.b");
 
-    expect(await response.json()).toEqual({
-      url: "https://api.example/users/7?fields=a.b",
-    });
+    expect(await response.text()).toBe("user");
   });
 
   test("does not match a URL the pattern's literal parts do not cover", async () => {
@@ -98,7 +98,9 @@ describe("an undeclared request", () => {
 
 function pingRoute(): ReturnType<typeof fakeFetch> {
   const fetch = fakeFetch();
-  fetch.route("*", "https://api.example/*", new Response(null));
+  for (const method of ["GET", "POST", "PUT", "DELETE"]) {
+    fetch.route(method, "https://api.example/*", new Response(null));
+  }
   return fetch;
 }
 
@@ -190,19 +192,6 @@ describe("assertNotFetched", () => {
       "Expected https://api.example/* not to be fetched, but it was 1 time.\n" +
         "Fetched:\n" +
         "  - DELETE https://api.example/ping",
-    );
-  });
-});
-
-describe("a route declared to time out", () => {
-  test("refuses a call that lifts the bound, which would wait forever", async () => {
-    const fetch = fakeFetch();
-    fetch.route("GET", "https://download.example/*", "timeout");
-
-    await expect(
-      fetch.send("https://download.example/big", { timeout: false }),
-    ).rejects.toThrow(
-      "fetch: GET https://download.example/big is declared to time out, but the call passes { timeout: false }, so it would wait forever.",
     );
   });
 });
