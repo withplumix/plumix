@@ -98,9 +98,15 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "a comment's status, which a theme and a `comment:*` subscriber " +
+          "a comment's status, which a theme and a `comment` subscriber " +
           "branch on",
         names: ["CommentStatus", "COMMENT_STATUSES"],
+      },
+      {
+        reason:
+          "the plugin's events and filters, which another plugin subscribes " +
+          "to with `ctx.events.on` and `ctx.filters.add`",
+        names: ["comment"],
       },
     ],
     "./server": [
@@ -117,8 +123,8 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "the payload of the `comment:moderate` filter, for a moderation " +
-          "plugin subscribing to it",
+          "the input of the `comment.moderate` filter, for a moderation " +
+          "plugin typing a handler apart from the call that subscribes it",
         names: ["CommentModerationCandidate"],
       },
     ],
@@ -367,6 +373,13 @@ export const ROSTER: Readonly<
           "MenuItemTermMeta",
           "MenuItemDisplayAttrs",
         ],
+      },
+      {
+        reason:
+          "the plugin's events and filters, which another plugin subscribes " +
+          "to with `ctx.events.on` and `ctx.filters.add`, apart from the " +
+          "root's `menu()` factory it would otherwise collide with",
+        names: ["menu"],
       },
     ],
   },

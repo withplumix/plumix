@@ -17,7 +17,7 @@ export function decideBaselineStatus(input: {
 }
 
 /**
- * Higher rank = more restrictive. The `comment:moderate` chain may only
+ * Higher rank = more restrictive. The `comment.moderate` filter may only
  * push a comment toward the restrictive end, so detectors compose without
  * caring about order: spam > trash > pending > approved.
  */

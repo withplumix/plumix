@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { ModerationCommentDTO } from "./rpc.js";
 import type { CommentStatus } from "./types.js";
-import { comments } from "./index.js";
+import { comment, comments } from "./index.js";
 import { createCommentsTestDb, seedPublishedPost } from "./test/db.js";
 import { commentFactory } from "./test/factories.js";
 
@@ -97,41 +97,43 @@ describe("comments moderation RPC", () => {
     expect((await h.client.comments.counts()).pending).toBe(2);
   });
 
-  test("approve transitions the comment and fires comment:approved", async () => {
+  test("approve transitions the comment and emits comment.approved with it", async () => {
     const h = await buildHarness();
     const entry = await seedPublishedPost(h.db);
     const c = await commentFactory
       .transient({ db: h.db })
       .create({ entryId: entry.id, status: "pending" });
-    let fired = 0;
-    h.hooks.addAction("comment:approved", () => {
-      fired += 1;
+    const approved: string[] = [];
+    h.hooks.on(comment.approved, ({ comment: row }) => {
+      approved.push(`${String(row.id)}:${row.status}`);
     });
 
     const res = await h.client.comments.approve({ id: c.id });
     expect(res.status).toBe("approved");
-    expect(fired).toBe(1);
+    expect(approved).toEqual([`${String(c.id)}:approved`]);
     expect((await h.client.comments.counts()).approved).toBe(1);
   });
 
-  test("spam and trash fire their actions", async () => {
+  test("spam and trash emit their events with the comment", async () => {
     const h = await buildHarness();
     const entry = await seedPublishedPost(h.db);
     const seed = commentFactory.transient({ db: h.db });
     const a = await seed.create({ entryId: entry.id, status: "pending" });
     const b = await seed.create({ entryId: entry.id, status: "pending" });
-    let spam = 0;
-    let trashed = 0;
-    h.hooks.addAction("comment:spam", () => {
-      spam += 1;
+    const heard: string[] = [];
+    h.hooks.on(comment.spam, ({ comment: row }) => {
+      heard.push(`spam ${String(row.id)}:${row.status}`);
     });
-    h.hooks.addAction("comment:trashed", () => {
-      trashed += 1;
+    h.hooks.on(comment.trashed, ({ comment: row }) => {
+      heard.push(`trashed ${String(row.id)}:${row.status}`);
     });
 
     await h.client.comments.spam({ id: a.id });
     await h.client.comments.trash({ id: b.id });
-    expect([spam, trashed]).toEqual([1, 1]);
+    expect(heard).toEqual([
+      `spam ${String(a.id)}:spam`,
+      `trashed ${String(b.id)}:trash`,
+    ]);
   });
 
   test("restore returns a comment to the approved queue", async () => {
@@ -181,14 +183,14 @@ describe("comments moderation RPC", () => {
     ).toHaveLength(1);
   });
 
-  test("bulk approves many comments and fires the action per row", async () => {
+  test("bulk approves many comments and emits the event per row", async () => {
     const h = await buildHarness();
     const entry = await seedPublishedPost(h.db);
     const seed = commentFactory.transient({ db: h.db });
     const a = await seed.create({ entryId: entry.id, status: "pending" });
     const b = await seed.create({ entryId: entry.id, status: "pending" });
     let fired = 0;
-    h.hooks.addAction("comment:approved", () => {
+    h.hooks.on(comment.approved, () => {
       fired += 1;
     });
 

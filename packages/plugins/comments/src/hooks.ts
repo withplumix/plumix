@@ -42,7 +42,7 @@ export interface PlumixCommentFormState {
   errorFor(field: string): string | undefined;
   /**
    * Posts to the rendered form's endpoint, so the same rate limit, trust policy
-   * and `comment:moderate` chain apply.
+   * and `comment.moderate` filter apply.
    */
   submit(draft: CommentDraft): Promise<CommentStatus | null>;
 }

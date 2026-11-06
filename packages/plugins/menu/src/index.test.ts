@@ -1,5 +1,11 @@
 import type { testSite } from "plumix/test";
-import { buildManifest, HookRegistry, installPlugins } from "plumix/plugin";
+import {
+  buildManifest,
+  defineEvent,
+  definePlugin,
+  HookRegistry,
+  installPlugins,
+} from "plumix/plugin";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { menu } from "./index.js";
@@ -73,6 +79,27 @@ describe("@plumix/plugin-menu", () => {
   test("declares the adminEntry chunk path the plumix vite plugin loads", () => {
     expect(menu().adminEntry).toBe(ADMIN_ENTRY_PATH);
   });
+});
+
+describe("menu namespace", () => {
+  test.each(["menu:tree", "menu:item", "menu:saved", "menu:deleted"] as const)(
+    "a plugin declaring %s again fails boot",
+    async (id) => {
+      const rival = definePlugin("rival", {
+        events: [defineEvent<undefined>(id)],
+        setup: () => undefined,
+      });
+
+      const install = installPlugins({
+        hooks: new HookRegistry(),
+        plugins: [menu(), rival],
+      });
+
+      await expect(install).rejects.toThrow(
+        `Plugin "rival" registers event "${id}" already registered by "menu".`,
+      );
+    },
+  );
 });
 
 describe("the plugin's procedures on a test site", () => {

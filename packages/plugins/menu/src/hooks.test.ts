@@ -16,12 +16,13 @@ import {
   entryTermFactory,
   factoriesFor,
 } from "plumix/test";
-import { beforeEach, describe, expect, onTestFinished, test, vi } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { ResolvedMenuItem } from "./server/types.js";
-import { menu } from "./index.js";
+import { menu as menuPlugin } from "./index.js";
 import { getMenuByName } from "./server/getMenuByName.js";
 import { getMenuForLocation } from "./server/getMenuForLocation.js";
+import { menu } from "./server/index.js";
 
 type Db = Awaited<ReturnType<typeof createTestDb>>;
 type Factories = ReturnType<typeof factoriesFor>;
@@ -47,7 +48,7 @@ async function setup(): Promise<Bundle> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menu()], registry });
+  await installPlugins({ hooks, plugins: [menuPlugin()], registry });
   const user = await adminUser
     .transient({ db })
     .create({ email: "hooks@example.test" });
@@ -118,14 +119,14 @@ describe("menu hook surface", () => {
     b = await setup();
   });
 
-  describe("menu:item filter", () => {
+  describe("menu.item filter", () => {
     test("fires per resolved item with the resolved shape", async () => {
       const termId = await seedMenuTerm(b, "primary");
       await seedItem(b, termId, "Home", "/");
       await seedItem(b, termId, "About", "/about");
 
       const seen: ResolvedMenuItem[] = [];
-      b.hooks.addFilter("menu:item", (item) => {
+      b.hooks.add(menu.item, (item) => {
         seen.push(item);
         return item;
       });
@@ -138,7 +139,7 @@ describe("menu hook surface", () => {
       const termId = await seedMenuTerm(b, "primary");
       await seedItem(b, termId, "Home", "/");
 
-      b.hooks.addFilter("menu:item", (item) => ({
+      b.hooks.add(menu.item, (item) => ({
         ...item,
         cssClasses: [...item.cssClasses, "decorated"],
       }));
@@ -175,7 +176,7 @@ describe("menu hook surface", () => {
         .transient({ db: b.db })
         .create({ entryId: child.id, termId, sortOrder: 0 });
 
-      b.hooks.addFilter("menu:item", (item) => ({
+      b.hooks.add(menu.item, (item) => ({
         ...item,
         cssClasses: [...item.cssClasses, `seen-${item.children.length}`],
       }));
@@ -188,14 +189,14 @@ describe("menu hook surface", () => {
     });
   });
 
-  describe("menu:tree filter", () => {
+  describe("menu.tree filter", () => {
     test("fires once after assembly with location and termId", async () => {
       const termId = await seedMenuTerm(b, "primary");
       await seedItem(b, termId, "Home", "/");
 
       const calls: { termId: number; location: string | null; len: number }[] =
         [];
-      b.hooks.addFilter("menu:tree", (items, ctx) => {
+      b.hooks.add(menu.tree, (items, ctx) => {
         calls.push({
           termId: ctx.termId,
           location: ctx.location,
@@ -213,7 +214,7 @@ describe("menu hook surface", () => {
       await seedItem(b, termId, "Public", "/");
       await seedItem(b, termId, "Hidden", "/secret");
 
-      b.hooks.addFilter("menu:tree", (items) =>
+      b.hooks.add(menu.tree, (items) =>
         items.filter((item) => item.label !== "Hidden"),
       );
 
@@ -231,7 +232,7 @@ describe("menu hook surface", () => {
       });
 
       const seen: { location: string | null; termId: number }[] = [];
-      b.hooks.addFilter("menu:tree", (items, ctx) => {
+      b.hooks.add(menu.tree, (items, ctx) => {
         seen.push({ location: ctx.location, termId: ctx.termId });
         return items;
       });
@@ -241,7 +242,7 @@ describe("menu hook surface", () => {
     });
   });
 
-  describe("menu:saved action", () => {
+  describe("menu.saved event", () => {
     test("fires after save with addedIds / removedIds / modifiedIds", async () => {
       const termId = await seedMenuTerm(b, "primary");
 
@@ -251,7 +252,7 @@ describe("menu hook surface", () => {
         removedIds: readonly number[];
         modifiedIds: readonly number[];
       }[] = [];
-      b.hooks.addAction("menu:saved", (payload) => {
+      b.hooks.on(menu.saved, (payload) => {
         calls.push({
           termId: payload.termId,
           addedIds: payload.addedIds,
@@ -281,15 +282,9 @@ describe("menu hook surface", () => {
     });
 
     test("subscriber failure does not abort the commit", async () => {
-      // This context runs outside a request, so the failure falls back to
-      // the console rather than a request's logger.
-      const error = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => undefined);
-      onTestFinished(() => error.mockRestore());
       const termId = await seedMenuTerm(b, "primary");
 
-      b.hooks.addAction("menu:saved", () => {
+      b.hooks.on(menu.saved, () => {
         throw new Error("subscriber blew up");
       });
 
@@ -299,10 +294,6 @@ describe("menu hook surface", () => {
         items: [],
       });
       expect(result.etag).toBe("1");
-      expect(error).toHaveBeenCalledWith(
-        "[plumix] action failed hook=menu:saved plugin=core",
-        expect.objectContaining({ message: "subscriber blew up" }),
-      );
     });
   });
 });

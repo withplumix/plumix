@@ -39,6 +39,7 @@ import type { RegisteredMenuLocation } from "./server/types.js";
 import { MenuPluginError } from "./errors.js";
 import { MENU_DEPTH_HARD_CAP, menuDepthLimit } from "./server/depth.js";
 import { getEligibleMenuKinds, isMenuEligible } from "./server/eligibility.js";
+import { menu } from "./server/events.js";
 import { parseMenuItemMeta } from "./server/parseMeta.js";
 import {
   lookupMenuTargets,
@@ -497,16 +498,12 @@ export function createMenuRouter(
 
       // Fires even for no-op saves so cache invalidators needn't sniff the
       // payload. Subscriber failures don't roll back the commit.
-      await context.hooks.doAction(
-        "menu:saved",
-        {
-          termId: term.id,
-          addedIds: added,
-          removedIds: removed,
-          modifiedIds: modified,
-        },
-        context,
-      );
+      await context.events.emit(menu.saved, {
+        termId: term.id,
+        addedIds: added,
+        removedIds: removed,
+        modifiedIds: modified,
+      });
 
       return {
         termId: term.id,
@@ -554,11 +551,10 @@ export function createMenuRouter(
       await context.db.delete(terms).where(eq(terms.id, term.id));
       // Leaving bindings to a deleted menu is a known WP pain point.
       await context.settings.removeValue(MENU_LOCATIONS_GROUP, term.slug);
-      await context.hooks.doAction(
-        "menu:deleted",
-        { termId: term.id, slug: term.slug },
-        context,
-      );
+      await context.events.emit(menu.deleted, {
+        termId: term.id,
+        slug: term.slug,
+      });
       return { id: input.termId };
     });
 

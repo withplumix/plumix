@@ -13,9 +13,10 @@ import {
 } from "plumix/plugin";
 
 import type { MenuRouter } from "./rpc.js";
-import type { MenuLocationOptions, ResolvedMenuItem } from "./server/types.js";
+import type { MenuLocationOptions } from "./server/types.js";
 import { createMenuRouter, MENU_MANAGE_CAPABILITY } from "./rpc.js";
 import { menuTag } from "./server/cache-tags.js";
+import { menu as menuSubject } from "./server/events.js";
 import {
   getMenusForLocations,
   rememberDeclaredLocations,
@@ -134,41 +135,6 @@ declare module "plumix" {
      */
     readonly menuPicker?: { readonly tabLabel: string };
   }
-
-  /**
-   * `menu:item` runs children first, so subscribers see the transformed
-   * subtree. `menu:saved` fires on every successful save, including no-ops.
-   */
-  interface FilterRegistry {
-    "menu:tree": (
-      items: readonly ResolvedMenuItem[],
-      context: {
-        readonly location: string | null;
-        readonly termId: number;
-      },
-    ) => readonly ResolvedMenuItem[] | Promise<readonly ResolvedMenuItem[]>;
-
-    "menu:item": (
-      item: ResolvedMenuItem,
-    ) => ResolvedMenuItem | Promise<ResolvedMenuItem>;
-  }
-
-  interface ActionRegistry {
-    "menu:saved": (
-      payload: {
-        readonly termId: number;
-        readonly addedIds: readonly number[];
-        readonly removedIds: readonly number[];
-        readonly modifiedIds: readonly number[];
-      },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    "menu:deleted": (
-      payload: { readonly termId: number; readonly slug: string },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-  }
 }
 
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-menu");
@@ -191,6 +157,8 @@ export function menu(
   return definePlugin("menu", {
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
+    events: [menuSubject.saved, menuSubject.deleted],
+    filters: [menuSubject.tree, menuSubject.item],
     setup: (ctx) => {
       const registered = declareLocations(options.locations ?? {});
 
@@ -228,8 +196,8 @@ export function menu(
       ) => {
         enqueuePurgeTags(appCtx, [menuTag(termId)]);
       };
-      ctx.addAction("menu:saved", purgeMenu);
-      ctx.addAction("menu:deleted", purgeMenu);
+      ctx.events.on(menuSubject.saved, purgeMenu);
+      ctx.events.on(menuSubject.deleted, purgeMenu);
 
       ctx.registerAdminPage({
         path: "/menus",

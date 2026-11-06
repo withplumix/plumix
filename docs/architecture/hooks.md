@@ -178,7 +178,16 @@ Core's hook names, by the module that declares them (paths under `packages/core/
 | `rpc/hooks.ts` | `rpc:settings.<proc>:input` / `:output` filters | `rpc/procedures/**` |
 | `rpc/hooks.ts` | `settings:group_changed`                        | `settings/write.ts` |
 
-First-party plugins declare their own the same way: `comment:*` (`plugins/comments/src/server/hooks.ts`), `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `menu:tree`, `menu:item`, `menu:saved`, `menu:deleted` (`plugins/menu`), `seo:*` (`plugins/seo/src/`).
+First-party plugins still declare string names the same way: `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `seo:*` (`plugins/seo/src/`).
+
+Others declare their own events and filters with `defineEvent` and `defineFilter`, list them in their descriptor's `events` and `filters`, and export them as one namespace named after their subject:
+
+| Namespace | Exported from                | Events and filters                                                            | Declared in                             |
+| --------- | ---------------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `comment` | `@plumix/plugin-comments`    | `created`, `approved`, `spam`, `trashed`, `deleted` events; `moderate` filter | `plugins/comments/src/server/events.ts` |
+| `menu`    | `@plumix/plugin-menu/server` | `saved`, `deleted` events; `tree`, `item` filters                             | `plugins/menu/src/server/events.ts`     |
+
+`menu` is exported from `./server` because the package root's `menu()` factory already takes the name, as the media plugin's field builder is exported from `./fields`.
 
 ## How it works
 

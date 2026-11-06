@@ -172,7 +172,7 @@ export interface StatusChange {
 }
 
 /** Apply a status to many comments at once (bulk moderation). Returns the
- * changes so the caller can fire per-comment lifecycle actions. */
+ * changes so the caller can emit per-comment lifecycle events. */
 export async function setStatusMany(
   ctx: AppContext,
   ids: readonly number[],

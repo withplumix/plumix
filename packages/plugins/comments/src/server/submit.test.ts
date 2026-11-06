@@ -1,6 +1,8 @@
+import { definePlugin } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import type { Harness } from "../test/harness.js";
+import { comment } from "../index.js";
 import {
   gatedBlog,
   harnessWith,
@@ -152,9 +154,9 @@ describe("POST /_plumix/comments/submit", () => {
     expect(await rows(harness)).toHaveLength(3);
   });
 
-  test("a comment:moderate filter can demote to spam", async () => {
+  test("a comment.moderate handler can demote to spam", async () => {
     const harness = await harnessWith({ entryTypes: ["post"], mode: "none" });
-    harness.spyFilter("comment:moderate").override(() => "spam");
+    harness.spyFilter(comment.moderate).override(() => "spam");
     const entry = await seedPost(harness);
 
     const res = await submit(harness, entry.id);
@@ -162,14 +164,39 @@ describe("POST /_plumix/comments/submit", () => {
     expect(await res.json()).toEqual({ status: "spam" });
   });
 
-  test("fires comment:created with the stored row", async () => {
+  test("another plugin's comment.moderate handler reads the candidate", async () => {
+    const casinoGuard = definePlugin("casino_guard", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", {
+          label: "Posts",
+          isPublic: true,
+          rewrite: { slug: "posts" },
+        });
+        ctx.filters.add(comment.moderate, (status, candidate) =>
+          candidate.bodyMd.includes("casino") ? "spam" : status,
+        );
+      },
+    });
+    const harness = await harnessWith(
+      { entryTypes: ["post"], mode: "none" },
+      { blog: casinoGuard },
+    );
+    const entry = await seedPost(harness);
+
+    const res = await submit(harness, entry.id, { body: "win at the casino" });
+
+    expect(await res.json()).toEqual({ status: "spam" });
+  });
+
+  test("emits comment.created with the stored row", async () => {
     const harness = await harnessWith({ entryTypes: ["post"], mode: "none" });
-    const spy = harness.spyAction("comment:created");
+    const spy = harness.spyEvent(comment.created);
     const entry = await seedPost(harness);
 
     await submit(harness, entry.id);
 
     spy.assertCalledOnce();
+    expect(spy.lastPayload?.comment).toEqual((await rows(harness))[0]);
   });
 
   test("stores a salted ip hash, never the cleartext ip", async () => {

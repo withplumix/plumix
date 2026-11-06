@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 
 import type { Harness } from "./test/harness.js";
 import type { CommentsConfig, CommentStatus } from "./types.js";
+import { comment } from "./index.js";
 import { commentFactory } from "./test/factories.js";
 import { harnessWith } from "./test/harness.js";
 
@@ -228,21 +229,21 @@ describe("@plumix/plugin-comments — CDN", () => {
     s.cdn.assertStored("/posts/hello");
   });
 
-  test("purge on an approved leaf deletes it, fires comment:deleted and purges its entry page", async () => {
+  test("purge on an approved leaf deletes it, emits comment.deleted and purges its entry page", async () => {
     const s = await site();
     const post = await seedPost(s, "hello");
     const leaf = await seedComment(s, { entryId: post.id, status: "approved" });
-    const deleted = s.h.spyAction("comment:deleted");
+    const deleted = s.h.spyEvent(comment.deleted);
     await render(s, "/posts/hello");
 
     await rpc(s, "purge", { id: leaf.id });
 
     deleted.assertCalledOnce();
-    expect(deleted.lastArgs?.[0]).toEqual(leaf);
+    expect(deleted.lastPayload).toEqual({ comment: leaf });
     s.cdn.assertNotStored("/posts/hello");
   });
 
-  test("purge on an approved comment with replies tombstones it, fires comment:deleted and purges its entry page", async () => {
+  test("purge on an approved comment with replies tombstones it, emits comment.deleted and purges its entry page", async () => {
     const s = await site();
     const post = await seedPost(s, "hello");
     const parent = await seedComment(s, {
@@ -254,13 +255,13 @@ describe("@plumix/plugin-comments — CDN", () => {
       status: "approved",
       parentId: parent.id,
     });
-    const deleted = s.h.spyAction("comment:deleted");
+    const deleted = s.h.spyEvent(comment.deleted);
     await render(s, "/posts/hello");
 
     await rpc(s, "purge", { id: parent.id });
 
     deleted.assertCalledOnce();
-    expect(deleted.lastArgs?.[0]).toEqual(parent);
+    expect(deleted.lastPayload).toEqual({ comment: parent });
     s.cdn.assertNotStored("/posts/hello");
   });
 
@@ -278,7 +279,7 @@ describe("@plumix/plugin-comments — CDN", () => {
   test("purge on an unknown id fires nothing and leaves the entry page stored", async () => {
     const s = await site();
     await seedPost(s, "hello");
-    const deleted = s.h.spyAction("comment:deleted");
+    const deleted = s.h.spyEvent(comment.deleted);
     await render(s, "/posts/hello");
 
     await rpc(s, "purge", { id: 999 });
@@ -310,7 +311,7 @@ describe("@plumix/plugin-comments — CDN", () => {
   test("submitting a comment a filter demotes to spam leaves its entry page stored", async () => {
     const s = await site({ mode: "none" });
     const post = await seedPost(s, "hello");
-    s.h.spyFilter("comment:moderate").override(() => "spam");
+    s.h.spyFilter(comment.moderate).override(() => "spam");
     await render(s, "/posts/hello");
 
     expect(await submit(s, post.id)).toEqual({ status: "spam" });

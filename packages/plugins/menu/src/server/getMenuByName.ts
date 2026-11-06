@@ -15,6 +15,7 @@ import { buildTree } from "./buildTree.js";
 import { menuTag } from "./cache-tags.js";
 import { MENU_DEPTH_HARD_CAP } from "./depth.js";
 import { isMenuEligible } from "./eligibility.js";
+import { menu } from "./events.js";
 import { itemOwnLabel } from "./label.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 import { sanitizeMenuHref } from "./url.js";
@@ -107,7 +108,7 @@ export async function resolveMenus(
         (item): item is ResolvedMenuItem => item !== null,
       );
 
-      const filtered = await ctx.hooks.applyFilter("menu:tree", items, {
+      const filtered = await ctx.filters.apply(menu.tree, items, {
         location,
         termId: data.term.id,
       });
@@ -321,7 +322,7 @@ async function toResolvedItem(
     (child): child is ResolvedMenuItem => child !== null,
   );
 
-  // Entity-tree ancestry is left to `menu:item` filters: it needs a parent_id
+  // Entity-tree ancestry is left to `menu.item` handlers: it needs a parent_id
   // walk at render time.
   const isAncestor = children.some(
     (child) => child.isCurrent || child.isAncestor,
@@ -330,7 +331,7 @@ async function toResolvedItem(
   // Per-item filter runs after children resolve so subscribers see the
   // already-transformed subtree. Tree-level filter still runs once on
   // the full assembled array in `getMenuByName`.
-  return ctx.hooks.applyFilter("menu:item", {
+  return ctx.filters.apply(menu.item, {
     ...resolved,
     isAncestor,
     children,

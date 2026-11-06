@@ -13,6 +13,7 @@ import { resolveConfig } from "./config.js";
 import { LIST_ROUTE_PATH, SUBMIT_ROUTE_PATH } from "./contract.js";
 import * as schema from "./db/schema.js";
 import { COMMENT_MODERATE_CAPABILITY, createCommentsRouter } from "./rpc.js";
+import { comment } from "./server/events.js";
 import { createListHandler } from "./server/list.js";
 import { commentAwaitingModerationMail } from "./server/mail.js";
 import { notifyModeratorOfPending } from "./server/notify.js";
@@ -26,6 +27,7 @@ import { createCommentsThreadLoader } from "./server/template-dep.js";
 
 export type { CommentsConfig, CommentStatus, ModerationMode } from "./types.js";
 export { COMMENT_STATUSES } from "./types.js";
+export { comment } from "./server/events.js";
 
 declare module "plumix" {
   interface AppContextExtensions {
@@ -64,6 +66,14 @@ export function comments(
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
     mails: [commentAwaitingModerationMail],
+    events: [
+      comment.created,
+      comment.approved,
+      comment.spam,
+      comment.trashed,
+      comment.deleted,
+    ],
+    filters: [comment.moderate],
     provides: (ctx) => {
       ctx.extendAppContext("comments", { requireEmail: config.requireEmail });
     },
@@ -121,8 +131,8 @@ export function comments(
 
       if (config.notifyEmail) {
         const recipient = config.notifyEmail;
-        ctx.addAction("comment:created", (comment, appCtx) =>
-          notifyModeratorOfPending(appCtx, comment, recipient),
+        ctx.events.on(comment.created, ({ comment: row }, appCtx) =>
+          notifyModeratorOfPending(appCtx, row, recipient),
         );
       }
     },

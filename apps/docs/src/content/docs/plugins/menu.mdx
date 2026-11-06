@@ -21,7 +21,7 @@ What it registers:
 - An admin page at `/menus`, under Appearance, for building menus and assigning them to locations.
 - A `menus` template dep, so a template can declare the locations it renders.
 - Server functions, `getMenuForLocation` and `getMenuByName`, for code that resolves a menu outside a template.
-- Two filters, `menu:item` and `menu:tree`, and two actions, `menu:saved` and `menu:deleted`.
+- Two filters, `menu.item` and `menu.tree`, and two events, `menu.saved` and `menu.deleted`.
 
 Every screen and procedure checks `term:menu:manage`, the `manage` capability the `menu` taxonomy mints. It maps to the editor role, so editors and admins can change the site's navigation.
 
@@ -232,7 +232,7 @@ A `ResolvedMenu` carries the menu's `termId`, `name`, `slug` and `items`. Each i
 - `source`, which says whether the item links to an `entry` or `term` (with its `id`) or is `custom`.
 - `isCurrent`, which is true when the item points at the page being rendered. A custom URL counts when it matches the request's path.
 - `isAncestor`, which is true when any item below it in this menu is current.
-- `target`, `rel` and `cssClasses`, from the stored item. The admin does not edit these today, and a `menu:item` filter can set them.
+- `target`, `rel` and `cssClasses`, from the stored item. The admin does not edit these today, and a `menu.item` handler can set them.
 - `children`, the nested items, already resolved the same way.
 
 A location renders as many levels as its `maxDepth` says. The plugin doesn't resolve the items below that, so they cost nothing, and the template never receives them. A location with no `maxDepth`, and a menu looked up by name, render every level.
@@ -245,7 +245,7 @@ With a [CDN](/deployment/cdn/) configured, a cached page that renders a menu is 
 
 ## Resolving a menu in server code
 
-Outside a template, the `/server` entry resolves menus from any code holding the request context, such as a route handler, a block loader or a hook listener. It imports no admin code.
+Outside a template, the `/server` entry resolves menus from any code holding the request context, such as a route handler, a block loader or an event handler. It imports no admin code.
 
 ```ts no-typecheck
 import type { AppContext } from "plumix/plugin";
@@ -261,16 +261,20 @@ export async function navFor(ctx: AppContext) {
 
 `getMenuForLocation` returns the menu assigned to a location, or `null`. `getMenuByName` looks a menu up by its slug, not its display name, and returns `null` when no menu has that slug. Both have batched forms, `getMenusForLocations(ctx, locations)` and `getMenusByName(ctx, slugs)`, that return a record keyed by what you passed.
 
-## Hooks
+## Events and filters
 
-`menu:item` runs once for each resolved item. Children are resolved first, so a listener sees an item's subtree already filtered. Opening every external link in a new tab:
+The `/server` entry exports the plugin's events and filters as one namespace, `menu`, so another plugin subscribes with `ctx.filters.add(menu.tree, …)` or `ctx.events.on(menu.saved, …)` with no `declare module`. It lives there rather than on the package root because the root's `menu()` factory already takes the name.
+
+`menu.item` runs once for each resolved item. Children are resolved first, so a handler sees an item's subtree already filtered. Opening every external link in a new tab:
 
 ```ts no-typecheck
 import { definePlugin } from "plumix/plugin";
 
+import { menu } from "@plumix/plugin-menu/server";
+
 export const externalLinks = definePlugin("external-links", {
   setup: (ctx) => {
-    ctx.addFilter("menu:item", (item) =>
+    ctx.filters.add(menu.item, (item) =>
       item.source.kind === "custom" && item.href.startsWith("http")
         ? { ...item, target: "_blank", rel: "noopener" }
         : item,
@@ -279,13 +283,11 @@ export const externalLinks = definePlugin("external-links", {
 });
 ```
 
-`menu:tree` runs once on the whole list of top-level items after assembly. Its second argument is `{ location, termId }`, where `location` is the slot being rendered, or `null` when the menu was looked up by name. One listener can therefore treat the footer differently from the header.
+`menu.tree` runs once on the whole list of top-level items after assembly. Its second argument is `{ location, termId }`, where `location` is the slot being rendered, or `null` when the menu was looked up by name. One handler can therefore treat the footer differently from the header.
 
-`menu:saved` is an action that fires after every successful save, including a save that changed nothing, with `{ termId, addedIds, removedIds, modifiedIds }` and the request context. A listener that clears a cache can run on every call without inspecting the payload. A listener that throws does not undo the save.
+`menu.saved` is an event emitted after every successful save, including a save that changed nothing, with `{ termId, addedIds, removedIds, modifiedIds }` and the request context. A handler that clears a cache can run on every call without inspecting the payload. A handler that throws does not undo the save.
 
-`menu:deleted` is an action that fires after a menu and its items are deleted, with `{ termId, slug }` and the request context. Assigning or clearing a location, and deleting a menu that was assigned to one, fire core's `settings:group_changed` for the `menu_locations` group.
-
-The plugin's package declares all four, so their names type-check once `@plumix/plugin-menu` is a dependency.
+`menu.deleted` is an event emitted after a menu and its items are deleted, with `{ termId, slug }` and the request context. Assigning or clearing a location, and deleting a menu that was assigned to one, fire core's `settings:group_changed` for the `menu_locations` group.
 
 ## Related
 
