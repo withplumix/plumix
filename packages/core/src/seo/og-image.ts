@@ -1,6 +1,6 @@
 /**
- * In core so `@plumix/plugin-og` can subscribe to `seo:og_image` without
- * depending on `@plumix/plugin-seo`.
+ * In core so the plugins that produce or subscribe to the page's og image
+ * share one shape.
  */
 export interface OgImage {
   readonly url: string;
