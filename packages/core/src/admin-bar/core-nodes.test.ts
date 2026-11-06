@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../db/schema/users.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { BarRenderContext } from "./types.js";
 import { deriveEntryTypeCapabilities } from "../access/contract/rbac.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -39,7 +39,7 @@ function ctx(overrides: Partial<BarRenderContext> = {}): BarRenderContext {
  * `types` derive.
  */
 function roleCan(
-  role: UserRole,
+  role: DefaultRole,
   types: BarRenderContext["entryTypes"],
 ): (capability: string) => boolean {
   const receivers = new Map(
@@ -95,7 +95,7 @@ describe("core admin bar nodes — +New group", () => {
         "notice",
         toRegisteredEntryType(
           "notice",
-          { label: "Notice", capabilities: { create: "editor" } },
+          { label: "Notice", capabilities: { create: ["editor"] } },
           "test",
         ),
       ],
@@ -201,7 +201,7 @@ describe("core admin bar nodes — +New group", () => {
         "notice",
         toRegisteredEntryType(
           "notice",
-          { label: "Notice", capabilities: { create: "editor" } },
+          { label: "Notice", capabilities: { create: ["editor"] } },
           "test",
         ),
       ],

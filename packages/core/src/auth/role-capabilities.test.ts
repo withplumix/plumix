@@ -1,46 +1,43 @@
 import { describe, expect, test } from "vitest";
 
 import type { SiteRoles } from "../access/contract/roles.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
-import { USER_ROLES } from "../db/schema/users.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
+import { DEFAULT_ROLES } from "../users/contract/roles.js";
 import {
   capabilitiesForRole,
   getCapabilityResolver,
   unknownRoleGrants,
 } from "./rbac.js";
 
-const ladderSite = definePlugin("ladder", {
+const pinnedSite = definePlugin("pinned", {
   setup: (ctx) => {
     ctx.registerEntryType("page", { label: "Pages" });
     ctx.registerEntryType("product", {
       label: "Products",
-      capabilities: { delete: "admin", publish: "editor" },
+      capabilities: { delete: ["admin"], publish: ["editor"] },
     });
     ctx.registerEntryType("story", {
       label: "Stories",
       capabilityType: "post",
-      capabilities: { delete: "admin" },
+      capabilities: { delete: ["admin"] },
     });
     ctx.registerTermTaxonomy("category", { label: "Categories" });
     ctx.registerTermTaxonomy("region", {
       label: "Regions",
-      capabilities: { assign: "author" },
+      capabilities: { assign: ["author", "editor"] },
     });
-    ctx.registerCapability("seo:manage", "editor");
-    ctx.registerCapability("menu:manage", {
-      minRole: "admin",
-      defaultGrants: ["contributor"],
-    });
+    ctx.registerCapability("seo:manage", { grantTo: ["editor"] });
+    ctx.registerCapability("menu:manage", { grantTo: ["contributor"] });
   },
 });
 
 /** Change this only in a change that changes someone's rights. */
-const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
+const PINNED_GRANTS: Readonly<Record<DefaultRole, readonly string[]>> = {
   subscriber: [
     "entry:page:read",
     "entry:post:read",
@@ -159,7 +156,6 @@ const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
     "entry:product:read_revisions",
     "entry:product:restore_revision",
     "menu:manage",
-    "plugin:manage",
     "seo:manage",
     "settings:manage",
     "term:category:assign",
@@ -182,10 +178,10 @@ const LADDER_GRANTS: Readonly<Record<UserRole, readonly string[]>> = {
   ],
 };
 
-async function installLadderSite(): Promise<PluginRegistry> {
+async function installPinnedSite(): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
-    plugins: [ladderSite],
+    plugins: [pinnedSite],
   });
   return registry;
 }
@@ -193,16 +189,16 @@ async function installLadderSite(): Promise<PluginRegistry> {
 function allCapabilityNames(registry: PluginRegistry): readonly string[] {
   return [
     ...new Set(
-      USER_ROLES.flatMap((role) => capabilitiesForRole(role, registry)),
+      DEFAULT_ROLES.flatMap((role) => capabilitiesForRole(role, registry)),
     ),
   ].sort();
 }
 
 describe("the resolved role table", () => {
-  test.each(USER_ROLES)(
+  test.each(DEFAULT_ROLES)(
     "the session's capability list and hasCapability agree for %s",
     async (role) => {
-      const registry = await installLadderSite();
+      const registry = await installPinnedSite();
       const resolver = getCapabilityResolver(registry);
       const names = allCapabilityNames(registry);
 
@@ -212,26 +208,34 @@ describe("the resolved role table", () => {
     },
   );
 
-  test.each(USER_ROLES)(
-    "keeps the capabilities the ladder granted %s",
+  test.each(DEFAULT_ROLES)(
+    "%s keeps the capabilities it was granted before roles became capability sets",
     async (role) => {
-      const registry = await installLadderSite();
+      const registry = await installPinnedSite();
 
-      expect(capabilitiesForRole(role, registry)).toEqual(LADDER_GRANTS[role]);
+      expect(capabilitiesForRole(role, registry)).toEqual(PINNED_GRANTS[role]);
     },
   );
+});
+
+test.each(DEFAULT_ROLES)("%s does not hold plugin:manage", async (role) => {
+  const registry = await installPinnedSite();
+  const resolver = getCapabilityResolver(registry);
+  expect(resolver.hasCapability(role, "plugin:manage")).toBe(false);
 });
 
 async function rolesHolding(
   capability: string,
   ...plugins: Parameters<typeof installPlugins>[0]["plugins"]
-): Promise<readonly UserRole[]> {
+): Promise<readonly DefaultRole[]> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins,
   });
   const resolver = getCapabilityResolver(registry);
-  return USER_ROLES.filter((role) => resolver.hasCapability(role, capability));
+  return DEFAULT_ROLES.filter((role) =>
+    resolver.hasCapability(role, capability),
+  );
 }
 
 describe("a plugin naming the default roles that receive its capability", () => {

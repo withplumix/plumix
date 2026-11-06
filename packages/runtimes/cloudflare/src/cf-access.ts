@@ -1,6 +1,5 @@
 import type { JWTPayload } from "jose";
 import type { RequestAuthenticator } from "plumix/auth";
-import type { UserRole } from "plumix/schema";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { ExternalIdentityError, resolveExternalIdentity } from "plumix/auth";
 
@@ -49,9 +48,9 @@ export interface CfAccessConfig {
   readonly audience: string | readonly string[];
   /**
    * The CF Access JWT carries no plumix role; wrap `cfAccess()` to map IdP
-   * groups to roles.
+   * groups to roles. Names a default role or one the config declares.
    */
-  readonly defaultRole: UserRole;
+  readonly defaultRole: string;
   /**
    * Makes the first CF Access user admin. Independent of `auth.bootstrapVia`,
    * which gates only the built-in flows. Default false.

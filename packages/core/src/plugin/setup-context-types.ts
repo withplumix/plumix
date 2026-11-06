@@ -15,7 +15,6 @@ import type {
   DevErrorPanel,
 } from "../context/dev-runtime.js";
 import type { McpTool } from "../context/mcp-tool.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { DocumentManifest } from "../document-manifest.js";
 import type { SetupEvents, SetupFilters } from "../hooks/define.js";
 import type {
@@ -34,6 +33,7 @@ import type { RedirectRule } from "../route/contract/redirects.js";
 import type { TemplateDepLoader } from "../template-deps.js";
 import type { ViewResolvedDataOf } from "../template-registry.js";
 import type { ThemeDescriptor } from "../theme.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { AdminBarNodeOptions } from "./admin-bar-node.js";
 import type {
   EntryMetaBoxDrift,
@@ -140,15 +140,7 @@ export interface PluginSetupContextBase {
    */
   registerCapability(
     name: string,
-    options?: { readonly grantTo?: readonly UserRole[] },
-  ): void;
-  registerCapability(name: string, minRole: UserRole): void;
-  registerCapability(
-    name: string,
-    options: {
-      readonly minRole: UserRole;
-      readonly defaultGrants?: readonly UserRole[];
-    },
+    options?: { readonly grantTo?: readonly DefaultRole[] },
   ): void;
 
   /**

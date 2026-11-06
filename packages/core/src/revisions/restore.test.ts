@@ -444,7 +444,7 @@ describe("entry.revisions.restore — a writer without edit_layout", () => {
       {
         label: "Posts",
         supports: ["revisions"],
-        capabilities: { edit_layout: "admin" },
+        capabilities: { edit_layout: ["admin"] },
       },
       "test",
     );

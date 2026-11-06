@@ -6,13 +6,14 @@ import type { PlumixAuthConfig } from "../auth/config.js";
 import type { BlockRegistry, MarkSpec } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app-context.js";
-import type { User, UserRole } from "../db/schema/users.js";
+import type { User } from "../db/schema/users.js";
 import type { EventDefinition } from "../hooks/define.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { ActionArgs, ActionName } from "../hooks/types.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
@@ -75,7 +76,7 @@ export interface BaseRpcHarnessOptions {
 }
 
 export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
-  readonly authAs: UserRole;
+  readonly authAs: DefaultRole;
 }
 
 export interface RpcHarnessBase<TUser extends User | null> {
@@ -105,7 +106,7 @@ export interface RpcHarnessBase<TUser extends User | null> {
    * hooks, plugins and env so state survives the swap.
    */
   readonly actingAs: (
-    userOrRole: User | UserRole,
+    userOrRole: User | DefaultRole,
   ) => Promise<AuthenticatedRpcHarness>;
 }
 
@@ -261,7 +262,7 @@ export function createRpcHarness(
   options?: BaseRpcHarnessOptions,
 ): Promise<RpcHarness>;
 export async function createRpcHarness(
-  options: BaseRpcHarnessOptions & { authAs?: UserRole } = {},
+  options: BaseRpcHarnessOptions & { authAs?: DefaultRole } = {},
 ): Promise<RpcHarness> {
   const db = await createTestDb();
   const hooks = options.hooks ?? new HookRegistryImpl();

@@ -1,11 +1,11 @@
 import type { MessageDescriptor } from "@lingui/core";
 
-import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
 import type {
   EntryTypeName,
   TermTaxonomyName,
 } from "../../template-registry.js";
+import type { DefaultRole } from "../../users/contract/roles.js";
 import type {
   CoreCapability,
   PostCapabilityAction,
@@ -13,7 +13,7 @@ import type {
 } from "./capability.js";
 
 /** The roles core ships; `admin` always holds every capability. */
-export type DefaultRole = UserRole;
+export type { DefaultRole };
 
 /** What the admin shows for a default the config gives no label. */
 export const DEFAULT_ROLE_LABELS: Readonly<

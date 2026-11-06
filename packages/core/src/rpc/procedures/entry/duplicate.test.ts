@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../../../db/schema/users.js";
-import { rolesFromRank } from "../../../access/contract/rbac.js";
+import type { DefaultRole } from "../../../users/contract/roles.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { text } from "../../../plugin/fields/index.js";
@@ -19,14 +18,14 @@ function categoryRegistry() {
     name,
     toRegisteredTermTaxonomy(name, { label: name }, "test"),
   );
-  for (const [action, minRole] of [
-    ["read", "subscriber"],
-    ["assign", "contributor"],
-    ["edit", "editor"],
-  ] as const satisfies readonly [string, UserRole][]) {
+  for (const [action, roles] of [
+    ["read", ["subscriber", "contributor", "author", "editor", "admin"]],
+    ["assign", ["contributor", "author", "editor", "admin"]],
+    ["edit", ["editor", "admin"]],
+  ] as const satisfies readonly [string, readonly DefaultRole[]][]) {
     registry.capabilities.set(`term:${name}:${action}`, {
       name: `term:${name}:${action}`,
-      grantTo: rolesFromRank(minRole),
+      grantTo: roles,
       registeredBy: "test",
     });
   }

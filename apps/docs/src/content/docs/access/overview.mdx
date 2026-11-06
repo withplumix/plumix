@@ -17,13 +17,36 @@ Four nouns carry the access model.
 - A **principal** is the actor a request resolved to. Handlers read it as `ctx.user`, which is an authenticated user or `null`.
 - A **session** is a server-issued credential a browser carries in a cookie. One row in `sessions`, one `plumix_session` cookie, one user.
 - An **authenticator** decides who a request is. It reads credentials and returns a user or `null`. It never mints a session and never sets a cookie.
-- A **capability** is a permission string mapped to a minimum role. Code asks `ctx.auth.can(entryCapability("recipe", "publish"))` instead of comparing roles by hand.
+- A **capability** is a permission string a role grants. Code asks `ctx.auth.can(entryCapability("recipe", "publish"))` instead of comparing roles by hand.
 
-Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote`, `plugin:manage` and `settings:manage`. Core ships nineteen. Nine are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other ten are flat.
+Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote` and `settings:manage`. Core ships eighteen. Nine are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other nine are flat.
 
 `ctx.user` is a projection of the user row rather than the row itself, carrying `id`, `email`, `name`, `role` and the stored `meta` bag. Nothing on it is a credential. It is still personal data, and core's own hook documentation says so, so keep the whole object out of third-party logging and analytics. `email`, `name` and whatever a plugin wrote into `meta` all ride along.
 
-Roles are one ordered ladder, `subscriber`, `contributor`, `author`, `editor`, `admin`. A capability names the lowest role that holds it, and every role above that holds it too, so there is no per-user permission list to maintain. Registering the `recipe` entry type mints nine capabilities for it, from `entry:recipe:read` up to `entry:recipe:restore_revision`; registering the `cuisine` taxonomy mints five.
+A role is a named set of capabilities, and nothing ranks one role above another. A user holds one role, so there is no per-user permission list to maintain. Core ships five default roles, `subscriber`, `contributor`, `author`, `editor` and `admin`, and `admin` holds every capability there is, one a plugin registers included. Registering the `recipe` entry type mints nine capabilities for it, from `entry:recipe:read` up to `entry:recipe:restore_revision`, and registering the `cuisine` taxonomy mints five. Each goes to the default roles core's action table names for it, so an `author` publishes recipes and an `editor` also deletes them. A plugin that registers a capability of its own names the default roles that receive it with `grantTo`, and one it registers without `grantTo` is `admin`'s alone.
+
+A site declares its own roles in `plumix({ roles })`, keyed by role name. `can` groups the capabilities a role grants by what they guard: `entry` and `term` are keyed by entry type and taxonomy, and every other capability sits under its prefix. `extends` adds another role's capabilities, and `label` is what the admin shows:
+
+```ts
+import { plumix } from "plumix";
+
+export default plumix({
+  // …runtime, database, auth, plugins
+  roles: {
+    designer: {
+      label: "Designer",
+      extends: "author",
+      can: {
+        admin: ["access"],
+        entry: { page: ["read", "edit_any"] },
+        term: { category: ["assign"] },
+      },
+    },
+  },
+});
+```
+
+A role you add holds only what its `can` and `extends` grant. Declaring a default role's name replaces that default's grants, so an `editor` entry that leaves out `delete` stops editors deleting. `admin` cannot be declared, which keeps someone able to fix the site. An action that doesn't exist fails to compile, and a grant, entry type, taxonomy or `extends` target that nothing registers fails `plumix build` and `plumix dev` with a message naming it. A running site ignores such a grant rather than going down, and a user whose stored role the config no longer declares holds no capabilities.
 
 Code names an entry or term capability by what it guards, with `entryCapability(type, action)` or `termCapability(taxonomy, action)` from `plumix/plugin`, and never spells the string. A type registered with `capabilityType` pools its permissions under another type's namespace, and the reference resolves to that namespace wherever it is checked: `auth.can`, `requireCapability`, a route's `auth`, a lookup adapter, a field or admin page. What reaches the admin or a `FORBIDDEN` payload is still the resolved string. Flat capabilities such as `settings:manage` stay strings.
 
@@ -178,13 +201,13 @@ export const authenticator = chainAuthenticators(
 
 ## Capabilities and the staff boundary
 
-`ctx.auth.can(capability)` is the one place a capability decision happens. It resolves the capability's minimum role from core's table plus every capability plugins registered, compares it against the principal's role, and intersects the result with the request's token scopes. Every capability check in core and in plugins reads through it, which is why an authenticator that returns scopes narrows all of them at once.
+`ctx.auth.can(capability)` is the one place a capability decision happens. At boot core resolves one table from each role to the capabilities it holds, from the default roles, the config's `roles` and every capability plugins registered. `can` asks whether the principal's role holds the capability in that table, and intersects the answer with the request's token scopes. Every capability check in core and in plugins reads through it, which is why an authenticator that returns scopes narrows all of them at once.
 
-Opening the admin is the `admin:access` capability. Serving the admin shell and showing the admin bar on a public page both check that the principal's role holds it, and token scopes do not narrow either check. One role check still sits outside `ctx.auth.can`: `rolePolicy(required)` compares the role's level against a tier on the ladder for an access policy, so a scoped credential whose owner holds the tier still passes it.
+One check sits outside it, and token scopes do not reach it. The admin shell and the admin bar ask whether the principal's role holds `admin:access`, so a scoped credential whose owner's role holds it still passes.
 
-Gate content on a capability instead. `capabilityPolicy(capability)` reads through `ctx.auth.can`, so token scopes narrow it too. It grants a viewer who holds the capability the `capability:<name>` segment, answers 403 to a signed-in viewer without it, and sends an anonymous visitor to sign-in. Everyone holding the capability shares one cached copy of the page, whatever role grants it.
+Gate content on a capability. `capabilityPolicy(capability)` from `plumix/auth` reads through `ctx.auth.can`, so token scopes narrow it too. It grants a viewer who holds the capability the `capability:<name>` segment, answers 403 to a signed-in viewer without it, and sends an anonymous visitor to sign-in. Everyone holding the capability shares one cached copy of the page, whatever role grants it.
 
-Not every signed-in principal is staff. Core grants `admin:access` to `contributor` and up, so Plumix redirects a signed-in `subscriber` to the site root rather than hand over a shell whose every call would answer 403. That is the tier open signup hands out, and it is the tier a theme's own membership area is built on.
+Not every signed-in principal is staff. `contributor`, `author`, `editor` and `admin` hold `admin:access`, and a role you declare opens the admin only when its `can` grants `admin: ["access"]`. Plumix redirects a signed-in user without it, such as a `subscriber`, to the site root rather than hand over a shell whose every call would answer 403. `subscriber` is the role open signup hands out, and the one a theme's own membership area is built on.
 
 ## Gated entries on every surface
 
@@ -221,6 +244,6 @@ The capabilities above are not written by hand. [Content Modelling](/content-mod
 
 Read [Passkeys](/access/passkeys/) next. It is the sign-in method the config above turned on, the only one available on a fresh install, and the path the first admin takes.
 
-Seven pages in this section are not written yet, though everything they cover already ships. Roles is the exhaustive listing of the five roles and the staff boundary. Magic Links covers email sign-in and the mailer slot it needs; OAuth covers third-party providers and the `oauth_accounts` rows they create; both are optional blocks in the same `auth()` call. Capabilities lists every core capability and the per-type actions derived from your registrations. API Tokens covers the `pl_pat_` bearer credentials, their scopes, and the device flow a CLI uses to obtain one. Access Policy covers `definePolicy`, the audience segments a policy may grant, and the three gate outcomes. Gating Content builds on it for teasers, paywalls and what a gated page tells a crawler.
+Seven pages in this section are not written yet, though everything they cover already ships. Roles lists every capability each default role holds, and the staff boundary. Magic Links covers email sign-in and the mailer slot it needs; OAuth covers third-party providers and the `oauth_accounts` rows they create; both are optional blocks in the same `auth()` call. Capabilities lists every core capability and the per-type actions derived from your registrations. API Tokens covers the `pl_pat_` bearer credentials, their scopes, and the device flow a CLI uses to obtain one. Access Policy covers `definePolicy`, the audience segments a policy may grant, and the three gate outcomes. Gating Content builds on it for teasers, paywalls and what a gated page tells a crawler.
 
 After that, the [Deployment](/deployment/overview/) section covers what changes when the site stops running on localhost, starting with the origins a passkey is anchored to.

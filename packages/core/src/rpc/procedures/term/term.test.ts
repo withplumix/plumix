@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../../../db/schema/users.js";
 import type { MutablePluginRegistry } from "../../../plugin/manifest.js";
-import { rolesFromRank } from "../../../access/contract/rbac.js";
+import type { DefaultRole } from "../../../users/contract/roles.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { eq, inArray } from "../../../db/index.js";
@@ -27,16 +26,22 @@ function taxonomyRegistry() {
       "test",
     ),
   );
-  const caps: Record<string, UserRole> = {
-    "term:category:read": "subscriber",
-    "term:category:assign": "contributor",
-    "term:category:edit": "editor",
-    "term:category:delete": "editor",
+  const caps: Record<string, readonly DefaultRole[]> = {
+    "term:category:read": [
+      "subscriber",
+      "contributor",
+      "author",
+      "editor",
+      "admin",
+    ],
+    "term:category:assign": ["contributor", "author", "editor", "admin"],
+    "term:category:edit": ["editor", "admin"],
+    "term:category:delete": ["editor", "admin"],
   };
-  for (const [name, minRole] of Object.entries(caps)) {
+  for (const [name, roles] of Object.entries(caps)) {
     registry.capabilities.set(name, {
       name,
-      grantTo: rolesFromRank(minRole),
+      grantTo: roles,
       registeredBy: "test",
     });
   }
@@ -209,7 +214,7 @@ describe("term.create", () => {
     );
     plugins.capabilities.set("term:post_tag:edit", {
       name: "term:post_tag:edit",
-      grantTo: rolesFromRank("editor"),
+      grantTo: ["editor", "admin"],
       registeredBy: "test",
     });
     const h = await createRpcHarness({ authAs: "editor", plugins });

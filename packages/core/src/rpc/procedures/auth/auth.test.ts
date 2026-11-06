@@ -88,7 +88,7 @@ describe("auth.session", () => {
         "entry:post:read",
         "entry:post:edit_any",
         "user:list",
-        "plugin:manage",
+        "settings:manage",
       ]),
     );
   });

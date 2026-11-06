@@ -25,5 +25,3 @@ export { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
 export { ENTRY_LIST_ORDER_COLUMNS } from "../entries/contract/list-order.js";
 export type { EntryStatus } from "../entries/contract/status.js";
 export { ENTRY_STATUSES } from "../entries/contract/status.js";
-export type { UserRole } from "../users/contract/roles.js";
-export { USER_ROLES } from "../users/contract/roles.js";

@@ -21,7 +21,6 @@ import type {
 import type { AppContext } from "../context/app-context.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { Entry } from "../db/schema/entries.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { DocumentManifest } from "../document-manifest.js";
 import type { EntryQuery } from "../entries/contract/query.js";
 import type { Label } from "../i18n/label.js";
@@ -32,6 +31,7 @@ import type { RouteIntent } from "../route/contract/intent.js";
 import type { RedirectRule } from "../route/contract/redirects.js";
 import type { ArchiveTypeData } from "../route/contract/resolved-entry.js";
 import type { RegisteredTemplateDep } from "../template-deps.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { RegisteredAdminBarNode } from "./admin-bar-node.js";
 import type {
   MetaBoxField,
@@ -410,8 +410,8 @@ export interface RegisteredSettingsPage extends SettingsPageOptions {
 
 export interface RegisteredCapability {
   readonly name: string;
-  /** The default roles that receive it, in ladder order, `admin` included. */
-  readonly grantTo: readonly UserRole[];
+  /** The default roles that receive it, `admin` included. */
+  readonly grantTo: readonly DefaultRole[];
   readonly registeredBy: string | null;
 }
 

@@ -1,4 +1,3 @@
-import type { UserRole } from "../../db/schema/users.js";
 import { ReferenceFieldBuilder } from "./reference.js";
 
 /**
@@ -9,10 +8,10 @@ import { ReferenceFieldBuilder } from "./reference.js";
  */
 export interface UserFieldScope {
   /**
-   * Restrict matches to these roles. Empty/absent → any role. Set via
-   * `.roles()`.
+   * Restrict matches to these roles, default or declared in config.
+   * Empty/absent → any role. Set via `.roles()`.
    */
-  readonly roles?: readonly UserRole[];
+  readonly roles?: readonly string[];
   /**
    * Whether to surface disabled accounts. Default `false` — disabled
    * users are usually invalid reference targets even though the row

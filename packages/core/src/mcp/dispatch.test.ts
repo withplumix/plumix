@@ -9,8 +9,8 @@ import type { AllowCustomStyles } from "../blocks/styles/style-policy.js";
 import type { ThemeTokens } from "../blocks/styles/types.js";
 import type { McpTool } from "../context/mcp-tool.js";
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import corePackage from "../../package.json" with { type: "json" };
 import { defineBlock } from "../blocks/block-registry.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
@@ -163,7 +163,7 @@ async function mintPat(
   {
     role = "editor",
     scopes = null,
-  }: { role?: UserRole; scopes?: string[] | null } = {},
+  }: { role?: DefaultRole; scopes?: string[] | null } = {},
 ): Promise<string> {
   const user = await h.factory.user.create({ role });
   const { secret } = await h.factory.apiToken.create({

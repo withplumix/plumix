@@ -5,7 +5,7 @@ import { rebindSettings } from "../context/settings-namespace.js";
 import { rebindDispatch } from "../hooks/dispatch.js";
 
 /**
- * Anonymous requests hold the lowest role's capabilities, so the entry
+ * Anonymous requests hold the `subscriber` role's capabilities, so the entry
  * services' clamping applies unchanged. The principal stays nobody, which an
  * access policy reads.
  */

@@ -3,7 +3,6 @@ import { os } from "@orpc/server";
 import type { DerivedCapability } from "../access/contract/rbac.js";
 import type { AppContext } from "../context/app-context.js";
 import type { MutableDevRuntime } from "../context/dev-runtime.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { HookRegistry } from "../hooks/registry.js";
 import type { ActionName, FilterFn, FilterName } from "../hooks/types.js";
 import type {
@@ -27,7 +26,6 @@ import {
   deriveEntryTypeCapabilities,
   deriveTermTaxonomyCapabilities,
   grantedRoles,
-  rolesFromRank,
 } from "../access/contract/rbac.js";
 import { coreMarks, isReservedBlockName } from "../blocks/index.js";
 import { pluginStore } from "../context/stores.js";
@@ -79,22 +77,6 @@ export function createPluginAfterSetupContext(
     { ...createContextBase(args), plugins: args.registry },
     args.extensions,
   );
-}
-
-/** The ladder forms still name a minimum rung until the ladder goes (#3366). */
-function rolesOfRegistration(
-  grant:
-    | UserRole
-    | { minRole: UserRole; defaultGrants?: readonly UserRole[] }
-    | { grantTo?: readonly UserRole[] }
-    | undefined,
-): readonly UserRole[] {
-  if (grant === undefined) return [];
-  if (typeof grant === "string") return rolesFromRank(grant);
-  if ("minRole" in grant) {
-    return [...rolesFromRank(grant.minRole), ...(grant.defaultGrants ?? [])];
-  }
-  return grant.grantTo ?? [];
 }
 
 function createContextBase({
@@ -196,16 +178,10 @@ function createContextBase({
       pluginId,
     ),
 
-    registerCapability: (
-      name: string,
-      grant?:
-        | UserRole
-        | { minRole: UserRole; defaultGrants?: readonly UserRole[] }
-        | { grantTo?: readonly UserRole[] },
-    ) => {
+    registerCapability: (name, options) => {
       claimKey(registry.capabilities, "capability", name, pluginId, () => ({
         name,
-        grantTo: grantedRoles(rolesOfRegistration(grant)),
+        grantTo: grantedRoles(options?.grantTo ?? []),
         registeredBy: pluginId,
       }));
     },

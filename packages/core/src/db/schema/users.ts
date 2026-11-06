@@ -4,9 +4,6 @@ import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import type { JsonObject } from "../../json.js";
 
-export type { UserRole } from "../../users/contract/roles.js";
-export { USER_ROLES } from "../../users/contract/roles.js";
-
 export const users = sqliteTable(
   "users",
   (t) => ({

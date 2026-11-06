@@ -95,7 +95,7 @@ authors the rows reference; `objects/index.ndjson` maps each storage key to its 
 ## Invariants
 
 - A sync replaces whole tables per sync scope, never merges, and requires equal heads on both ends. [ADR 0039](../adr/0039-a-sync-replaces-a-scope-and-never-merges.md); `packages/core/src/test/conformance/sync.ts` (run by each runtime's `commands/sync.test.ts` and `core/src/test/sync/memory-sync.test.ts`).
-- A sync between ends at equal heads never lands a user whose role the target lacks.
+- A user's role crosses a sync as stored text. A role the target's config doesn't declare holds no capabilities there (`auth/rbac.ts`), so a sync never grants a right the target's config doesn't.
 - `plumix export` writes every sync scope, and `plumix import` reads its output back unchanged.
 - No auth table is ever written to a dump. The `describeSyncContract` case "no auth table is ever written to a dump".
 - An import at other heads fails before any write. A contract case, and "a head mismatch fails before the export" in `packages/plumix/src/cli/commands/sync.test.ts`.

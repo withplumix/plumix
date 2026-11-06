@@ -248,10 +248,10 @@ describe("dispatcher — routing", () => {
     expect(await response.text()).toBe(indexBody);
   });
 
-  test("bounces a signed-in user whose role lacks admin:access, whatever its rank", async () => {
+  test("bounces a signed-in user whose role lacks admin:access", async () => {
     const adminOnly = definePlugin("admin-only", {
       setup: (ctx) => {
-        ctx.registerCapability("admin:access", "admin");
+        ctx.registerCapability("admin:access");
       },
     });
     const h = await createDispatcherHarness({
@@ -270,10 +270,10 @@ describe("dispatcher — routing", () => {
     expect(response.headers.get("location")).toBe("/");
   });
 
-  test("serves the admin shell to a signed-in user whose role holds admin:access, whatever its rank", async () => {
+  test("serves the admin shell to a signed-in user whose role holds admin:access", async () => {
     const membersToo = definePlugin("members-too", {
       setup: (ctx) => {
-        ctx.registerCapability("admin:access", "subscriber");
+        ctx.registerCapability("admin:access", { grantTo: ["subscriber"] });
       },
     });
     const indexBody = "<!doctype html><title>admin</title>";
@@ -1354,10 +1354,10 @@ describe("dispatcher — plugin raw routes", () => {
     expect(await response.text()).toBe(user.email);
   });
 
-  test("capability gate returns 403 when the role is below the minimum", async () => {
+  test("capability gate returns 403 when the role lacks the capability", async () => {
     const plugin = definePlugin("menus", {
       setup: (ctx) => {
-        ctx.registerCapability("menu:manage", "admin");
+        ctx.registerCapability("menu:manage");
         ctx.registerRoute({
           method: "POST",
           path: "/sync",
@@ -1416,10 +1416,10 @@ describe("dispatcher — plugin raw routes", () => {
     expect(allowed.status).toBe(200);
   });
 
-  test("capability gate dispatches when the role meets the minimum", async () => {
+  test("capability gate dispatches when the role holds the capability", async () => {
     const plugin = definePlugin("menus", {
       setup: (ctx) => {
-        ctx.registerCapability("menu:manage", "admin");
+        ctx.registerCapability("menu:manage");
         ctx.registerRoute({
           method: "POST",
           path: "/sync",

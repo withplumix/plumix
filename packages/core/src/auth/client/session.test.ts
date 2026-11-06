@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../../db/schema/users.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
+import type { DefaultRole } from "../../users/contract/roles.js";
 import {
   createDispatcherHarness,
   plumixRequest,
@@ -25,7 +25,7 @@ function clientOf(h: DispatcherHarness, token: string | null) {
   });
 }
 
-async function signedInAs(role: UserRole) {
+async function signedInAs(role: DefaultRole) {
   const h = await createDispatcherHarness();
   const user = await h.seedUser(role);
   const { token } = await createSession(h.db, { userId: user.id });

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 
+import type { UserFieldScope } from "../../../plugin/fields/user.js";
 import { adminUser, userFactory } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { userLookupAdapter } from "./lookup.js";
@@ -12,10 +13,7 @@ import { userLookupAdapter } from "./lookup.js";
 async function existsViaList(
   h: Awaited<ReturnType<typeof createRpcHarness>>,
   id: string,
-  scope?: {
-    roles?: readonly ("admin" | "editor" | "author")[];
-    includeDisabled?: boolean;
-  },
+  scope?: UserFieldScope,
 ): Promise<boolean> {
   const rows = await userLookupAdapter.list(h.context, {
     ids: [id],
@@ -58,6 +56,16 @@ describe("userLookupAdapter", () => {
     ).toBe(false);
     expect(
       await existsViaList(h, String(author.id), { roles: ["author"] }),
+    ).toBe(true);
+  });
+
+  test("list({ ids }) scopes to a role the config declares", async () => {
+    const h = await createRpcHarness();
+    const designer = await userFactory
+      .transient({ db: h.context.db })
+      .create({ role: "designer" });
+    expect(
+      await existsViaList(h, String(designer.id), { roles: ["designer"] }),
     ).toBe(true);
   });
 

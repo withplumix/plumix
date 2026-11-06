@@ -173,26 +173,26 @@ SVG is not in the list. An SVG file is XML and can carry script, and checking th
 
 ## Capabilities
 
-Registering the `media` type derives the same nine capabilities as any entry type, with one default changed. `delete` starts at contributor rather than editor.
+Registering the `media` type derives the same nine capabilities as any entry type, with one default changed. `delete` goes to contributor, author and editor rather than to editor alone. `admin` holds all of them.
 
-| Capability                     | Minimum role |
-| ------------------------------ | ------------ |
-| `entry:media:read`             | subscriber   |
-| `entry:media:create`           | contributor  |
-| `entry:media:edit_own`         | contributor  |
-| `entry:media:delete`           | contributor  |
-| `entry:media:publish`          | author       |
-| `entry:media:edit_any`         | editor       |
-| `entry:media:read_revisions`   | editor       |
-| `entry:media:restore_revision` | editor       |
-| `entry:media:edit_layout`      | author       |
+| Capability                     | Default roles                           |
+| ------------------------------ | --------------------------------------- |
+| `entry:media:read`             | subscriber, contributor, author, editor |
+| `entry:media:create`           | contributor, author, editor             |
+| `entry:media:edit_own`         | contributor, author, editor             |
+| `entry:media:delete`           | contributor, author, editor             |
+| `entry:media:publish`          | author, editor                          |
+| `entry:media:edit_any`         | editor                                  |
+| `entry:media:read_revisions`   | editor                                  |
+| `entry:media:restore_revision` | editor                                  |
+| `entry:media:edit_layout`      | author, editor                          |
 
 Here is what each operation asks for:
 
 - **Opening the library and listing media** takes `read`, and so does resolving a `media` field in the editor.
 - **Uploading** takes `create`. Only the user who started an upload can PUT its bytes or confirm it, so nobody else can take over a half-finished upload, whatever their role.
 - **Editing alt text or the title** takes `edit_own` on your own uploads and `edit_any` on anyone else's.
-- **Deleting** takes `delete` on your own uploads, and `edit_any` on top of it for anyone else's. A contributor can therefore remove what they uploaded, and only an editor or above can remove someone else's.
+- **Deleting** takes `delete` on your own uploads, and `edit_any` on top of it for anyone else's. A contributor can therefore remove what they uploaded, and only an editor or an admin can remove someone else's.
 
 The upload does not check `publish`. Confirming an upload publishes it, and the gate on that step is `create` plus ownership. The media type does not declare revisions, so the two revision capabilities exist but nothing reads them.
 

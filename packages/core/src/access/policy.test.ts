@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { JsonObject } from "../json.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import { entryCapability } from "./contract/capability.js";
@@ -21,10 +21,9 @@ import {
   principalSegment,
   redirectToLogin,
   resolveAccess,
-  rolePolicy,
 } from "./policy.js";
 
-function user(role: UserRole, meta: JsonObject = {}): AuthenticatedUser {
+function user(role: DefaultRole, meta: JsonObject = {}): AuthenticatedUser {
   return { id: 1, email: "u@site.test", name: null, role, meta };
 }
 
@@ -77,30 +76,6 @@ describe("resolveAccess — built-in policies", () => {
   it("redirects an anonymous visitor to sign-in under the authenticated policy", async () => {
     await expect(
       resolveAccess(ctx(null), authenticatedPolicy),
-    ).resolves.toEqual({ segment: "anonymous", gate: { type: "redirect" } });
-  });
-
-  it("grants a sufficiently-privileged principal the required role segment", async () => {
-    // An admin meets an `editor` gate; the segment is the required audience
-    // tier (`role:editor`), not the principal's own role, so every
-    // sufficiently-privileged visitor shares one variant.
-    await expect(
-      resolveAccess(ctx(user("admin")), rolePolicy("editor")),
-    ).resolves.toEqual({ segment: "role:editor", gate: { type: "allow" } });
-  });
-
-  it("denies an under-privileged principal at a role gate", async () => {
-    await expect(
-      resolveAccess(ctx(user("subscriber")), rolePolicy("editor")),
-    ).resolves.toEqual({
-      segment: "authenticated",
-      gate: { type: "challenge", kind: "forbidden" },
-    });
-  });
-
-  it("redirects an anonymous visitor at a role gate", async () => {
-    await expect(
-      resolveAccess(ctx(null), rolePolicy("editor")),
     ).resolves.toEqual({ segment: "anonymous", gate: { type: "redirect" } });
   });
 });
@@ -349,12 +324,11 @@ describe("segment helpers", () => {
     expect(isBuiltinSegment("anonymous")).toBe(true);
     expect(isBuiltinSegment("authenticated")).toBe(true);
     expect(isBuiltinSegment("private")).toBe(true);
-    expect(isBuiltinSegment("role:admin")).toBe(true);
-    expect(isBuiltinSegment("role:subscriber")).toBe(true);
     expect(isBuiltinSegment("capability:entry:post:edit_any")).toBe(true);
   });
 
-  it("rejects unknown roles and custom labels", () => {
+  it("rejects role segments and custom labels", () => {
+    expect(isBuiltinSegment("role:admin")).toBe(false);
     expect(isBuiltinSegment("role:wizard")).toBe(false);
     expect(isBuiltinSegment("capability:")).toBe(false);
     expect(isBuiltinSegment("members")).toBe(false);

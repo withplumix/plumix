@@ -20,6 +20,7 @@ export type { ImportedMeta, ImportedMetaOwner } from "./cli/import-meta.js";
 export * from "./config.js";
 export { defineConfig, plumix } from "./runtime/define-config.js";
 export type {
+  DefaultRole,
   RoleDeclaration,
   RoleGrants,
   RoleNameOf,

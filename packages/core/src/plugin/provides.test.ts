@@ -413,7 +413,7 @@ describe("provides phase", () => {
   test("plugin without provides still installs (back-compat)", async () => {
     const plain = definePlugin("plain", {
       setup: (ctx) => {
-        ctx.registerCapability("plain:cap", "admin");
+        ctx.registerCapability("plain:cap");
       },
     });
 

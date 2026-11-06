@@ -5,8 +5,8 @@ import type {
   AuthenticatedUser,
   Db,
 } from "../../context/app-context.js";
-import type { UserRole } from "../../db/schema/users.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
+import type { DefaultRole } from "../../users/contract/roles.js";
 import { block } from "../../hooks/block-render.js";
 import { HookRegistry } from "../../hooks/registry.js";
 import { definePlugin } from "../../plugin/define.js";
@@ -32,13 +32,15 @@ function contextFor(
   return createTestContext({ db: {} as Db, user, plugins });
 }
 
-async function adminAccessFrom(minRole: UserRole): Promise<PluginRegistry> {
+async function adminAccessFrom(
+  grantTo: readonly DefaultRole[],
+): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
     hooks: new HookRegistry(),
     plugins: [
       definePlugin("admin-access", {
         setup: (ctx) => {
-          ctx.registerCapability("admin:access", minRole);
+          ctx.registerCapability("admin:access", { grantTo });
         },
       }),
     ],
@@ -162,16 +164,16 @@ describe("adminBarViewer", () => {
     expect(adminBarViewer(contextFor(null))).toBeNull();
   });
 
-  test("is null for a viewer whose role lacks admin:access, whatever its rank", async () => {
+  test("is null for a viewer whose role lacks admin:access", async () => {
     const editor: AuthenticatedUser = { ...subscriber, role: "editor" };
 
-    const ctx = contextFor(editor, await adminAccessFrom("admin"));
+    const ctx = contextFor(editor, await adminAccessFrom([]));
 
     expect(adminBarViewer(trackPrincipalReads(ctx))).toBeNull();
   });
 
-  test("is a viewer whose role holds admin:access, whatever its rank", async () => {
-    const ctx = contextFor(subscriber, await adminAccessFrom("subscriber"));
+  test("is a viewer whose role holds admin:access", async () => {
+    const ctx = contextFor(subscriber, await adminAccessFrom(["subscriber"]));
 
     expect(adminBarViewer(trackPrincipalReads(ctx))).toBe(subscriber);
   });
