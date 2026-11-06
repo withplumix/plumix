@@ -416,6 +416,8 @@ export function requestContextArgs({
     dev: app.dev,
     // A deployed site reads real time; a test site sets its own clock.
     clock: undefined,
+    // The platform's `fetch`; a test site answers with its fake.
+    fetch: undefined,
     authMethods: app.authMethods,
     authenticator: app.authenticator,
     bootstrapAllowed: app.bootstrapAllowed,
