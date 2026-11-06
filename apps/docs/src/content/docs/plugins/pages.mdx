@@ -190,19 +190,19 @@ With `hasArchive: false` on top of that, pages appear only where you link them. 
 
 ## Capabilities it mints
 
-Registering `page` derives nine capabilities under the `page` family, each mapped to a minimum role on the ladder from subscriber up to admin.
+Registering `page` derives nine capabilities under the `page` family, each granted to the default roles below. `admin` holds all of them.
 
-| Capability                    | Minimum role |
-| ----------------------------- | ------------ |
-| `entry:page:read`             | subscriber   |
-| `entry:page:create`           | contributor  |
-| `entry:page:edit_own`         | contributor  |
-| `entry:page:publish`          | author       |
-| `entry:page:edit_any`         | editor       |
-| `entry:page:delete`           | editor       |
-| `entry:page:read_revisions`   | editor       |
-| `entry:page:restore_revision` | editor       |
-| `entry:page:edit_layout`      | author       |
+| Capability                    | Default roles                           |
+| ----------------------------- | --------------------------------------- |
+| `entry:page:read`             | subscriber, contributor, author, editor |
+| `entry:page:create`           | contributor, author, editor             |
+| `entry:page:edit_own`         | contributor, author, editor             |
+| `entry:page:publish`          | author, editor                          |
+| `entry:page:edit_any`         | editor                                  |
+| `entry:page:delete`           | editor                                  |
+| `entry:page:read_revisions`   | editor                                  |
+| `entry:page:restore_revision` | editor                                  |
+| `entry:page:edit_layout`      | author, editor                          |
 
 The family name comes from the type name, `page`, since the registration sets no `capabilityType` override. [Entry Types](/content-modelling/entry-types/#capabilities) covers `capabilityType`, which points a second type's capabilities at this same family instead of minting its own.
 

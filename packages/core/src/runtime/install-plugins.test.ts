@@ -35,6 +35,7 @@ import type {
   TermTaxonomyOptions,
 } from "../plugin/registry.js";
 import type { PluginSetupContext } from "../plugin/setup-context-types.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 
 declare module "../blocks/deps.js" {
   interface TemplateDepRegistry {
@@ -340,7 +341,7 @@ describe("installPlugins", () => {
         ctx.registerEntryType("docs", {
           label: "Docs",
           capabilityType: "post",
-          capabilities: { edit_any: "admin" },
+          capabilities: { edit_any: ["admin"] },
         });
       },
     });
@@ -349,7 +350,7 @@ describe("installPlugins", () => {
         ctx.registerEntryType("guides", {
           label: "Guides",
           capabilityType: "post",
-          capabilities: { edit_any: "admin" },
+          capabilities: { edit_any: ["admin"] },
         });
       },
     });
@@ -358,29 +359,46 @@ describe("installPlugins", () => {
     ).resolves.toBeDefined();
   });
 
-  test("registerCapability accepts the options-object form with defaultGrants", async () => {
+  test("registerCapability grants a grantTo list plus admin", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("menus", {
       setup: (ctx) => {
-        ctx.registerCapability("menu:manage", {
-          minRole: "admin",
-          defaultGrants: ["editor"],
-        });
+        ctx.registerCapability("menu:manage", { grantTo: ["editor"] });
       },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
-    const cap = registry.capabilities.get("menu:manage");
-    expect(cap?.grantTo).toEqual(["editor", "admin"]);
-    expect(cap?.registeredBy).toBe("menus");
+    expect(registry.capabilities.get("menu:manage")?.grantTo).toEqual([
+      "editor",
+      "admin",
+    ]);
   });
 
-  test("registerCapability orders + dedupes defaultGrants deterministically", async () => {
+  test("registerCapability without a grant goes to admin alone", async () => {
+    const hooks = new HookRegistry();
+    const plugin = definePlugin("menus", {
+      setup: (ctx) => {
+        ctx.registerCapability("menu:delete");
+      },
+    });
+    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    expect(registry.capabilities.get("menu:delete")?.grantTo).toEqual([
+      "admin",
+    ]);
+  });
+
+  test("registerCapability's options are only `grantTo`", () => {
+    type Options = Parameters<PluginSetupContext["registerCapability"]>[1];
+    expectTypeOf<Options>().toEqualTypeOf<
+      { readonly grantTo?: readonly DefaultRole[] } | undefined
+    >();
+  });
+
+  test("registerCapability orders + dedupes grantTo deterministically", async () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("media", {
       setup: (ctx) => {
         ctx.registerCapability("upload:files", {
-          minRole: "admin",
-          defaultGrants: ["editor", "author", "editor"],
+          grantTo: ["editor", "author", "editor"],
         });
       },
     });
@@ -417,7 +435,7 @@ describe("installPlugins", () => {
     const hooks = new HookRegistry();
     const plugin = definePlugin("seo", {
       setup: (ctx) => {
-        ctx.registerCapability("seo:manage", "editor");
+        ctx.registerCapability("seo:manage", { grantTo: ["editor"] });
       },
     });
     const { registry } = await installPlugins({ hooks, plugins: [plugin] });
@@ -776,12 +794,12 @@ describe("plugin id validation", () => {
     const hooks = new HookRegistry();
     const first = definePlugin("menus", {
       setup: (ctx) => {
-        ctx.registerCapability("first:cap", "admin");
+        ctx.registerCapability("first:cap");
       },
     });
     const second = definePlugin("menus", {
       setup: (ctx) => {
-        ctx.registerCapability("second:cap", "admin");
+        ctx.registerCapability("second:cap");
       },
     });
     await expect(
@@ -1788,7 +1806,7 @@ interface DuplicateCase {
   };
 }
 
-const variantMinRole = { first: "editor", second: "admin" } as const;
+const variantGrantTo = { first: "editor", second: "author" } as const;
 const variantAuth = { first: "authenticated", second: "public" } as const;
 const variantCron = { first: "0 3 * * *", second: "0 4 * * *" } as const;
 const noopHandler = () => new Response("ok");
@@ -1859,12 +1877,13 @@ const duplicateCases: readonly DuplicateCase[] = [
     identifier: "report:export",
     scope: "global",
     register: (ctx, variant) => {
-      ctx.registerCapability("report:export", variantMinRole[variant]);
+      ctx.registerCapability("report:export", {
+        grantTo: [variantGrantTo[variant]],
+      });
     },
     read: (registry) =>
       variantOf(
-        variantMinRole,
-        // The lowest rung it reaches; `grantTo` is in ladder order.
+        variantGrantTo,
         registry.capabilities.get("report:export")?.grantTo[0],
       ),
   },
@@ -2349,7 +2368,9 @@ describe("duplicate registration", () => {
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
-        ctx.registerCapability("entry:post:edit_own", "author");
+        ctx.registerCapability("entry:post:edit_own", {
+          grantTo: ["author", "editor"],
+        });
       },
     });
 

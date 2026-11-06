@@ -1,13 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../db/schema/users.js";
 import type { ActionArgs } from "../hooks/types.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../plugin/manifest.js";
 import type { ActionSpy } from "../test/spies.js";
-import { rolesFromRank } from "../access/contract/rbac.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
@@ -23,16 +22,22 @@ function taxonomyRegistry(): MutablePluginRegistry {
     "category",
     toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
   );
-  const caps: Record<string, UserRole> = {
-    "term:category:read": "subscriber",
-    "term:category:assign": "contributor",
-    "term:category:edit": "editor",
-    "term:category:delete": "editor",
+  const caps: Record<string, readonly DefaultRole[]> = {
+    "term:category:read": [
+      "subscriber",
+      "contributor",
+      "author",
+      "editor",
+      "admin",
+    ],
+    "term:category:assign": ["contributor", "author", "editor", "admin"],
+    "term:category:edit": ["editor", "admin"],
+    "term:category:delete": ["editor", "admin"],
   };
-  for (const [name, minRole] of Object.entries(caps)) {
+  for (const [name, roles] of Object.entries(caps)) {
     registry.capabilities.set(name, {
       name,
-      grantTo: rolesFromRank(minRole),
+      grantTo: roles,
       registeredBy: "test",
     });
   }
@@ -212,14 +217,20 @@ describe("term meta: registration + round-trip via term.update", () => {
       "tag",
       toRegisteredTermTaxonomy("tag", { label: "Tags" }, "test"),
     );
-    const tagCaps: Record<string, UserRole> = {
-      "term:tag:read": "subscriber",
-      "term:tag:edit": "editor",
+    const tagCaps: Record<string, readonly DefaultRole[]> = {
+      "term:tag:read": [
+        "subscriber",
+        "contributor",
+        "author",
+        "editor",
+        "admin",
+      ],
+      "term:tag:edit": ["editor", "admin"],
     };
-    for (const [name, minRole] of Object.entries(tagCaps)) {
+    for (const [name, roles] of Object.entries(tagCaps)) {
       plugins.capabilities.set(name, {
         name,
-        grantTo: rolesFromRank(minRole),
+        grantTo: roles,
         registeredBy: "test",
       });
     }

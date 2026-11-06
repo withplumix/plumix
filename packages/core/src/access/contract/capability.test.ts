@@ -22,7 +22,6 @@ describe("KnownCapability", () => {
       | "user:promote"
       | "user:delete"
       | "user:manage_tokens"
-      | "plugin:manage"
       | "settings:manage"
     >();
   });

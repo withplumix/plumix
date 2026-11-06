@@ -138,15 +138,15 @@ Term archive routes compile ahead of entry-type routes, so a taxonomy prefix win
 
 ## Capabilities
 
-Registering a taxonomy mints five capabilities named `term:<taxonomy>:<action>`.
+Registering a taxonomy mints five capabilities named `term:<taxonomy>:<action>`, each granted to the default roles below. `admin` holds every one, and a role you declare grants them under `term`, such as `term: { cuisine: ["assign"] }`.
 
-| Capability            | Minimum role | Gates                                     |
-| --------------------- | ------------ | ----------------------------------------- |
-| `term:cuisine:read`   | subscriber   | Listing and reading terms                 |
-| `term:cuisine:assign` | contributor  | Attaching a term to an entry              |
-| `term:cuisine:edit`   | editor       | Creating and editing terms                |
-| `term:cuisine:delete` | editor       | Deleting a term                           |
-| `term:cuisine:manage` | editor       | Nothing in core; a gate plugins can claim |
+| Capability            | Default roles                           | Gates                                     |
+| --------------------- | --------------------------------------- | ----------------------------------------- |
+| `term:cuisine:read`   | subscriber, contributor, author, editor | Listing and reading terms                 |
+| `term:cuisine:assign` | contributor, author, editor             | Attaching a term to an entry              |
+| `term:cuisine:edit`   | editor                                  | Creating and editing terms                |
+| `term:cuisine:delete` | editor                                  | Deleting a term                           |
+| `term:cuisine:manage` | editor                                  | Nothing in core; a gate plugins can claim |
 
 The `term:` prefix keeps the namespaces apart, so a `cuisine` taxonomy and a `cuisine` entry type would never share a capability. `capabilities` on the registration names the default roles that receive any of the five, the same way it does for an entry type.
 
@@ -184,7 +184,7 @@ export const recipes = definePlugin("recipes", {
 
 ## Options that stay server-side
 
-Not every option reaches the browser. The projection that builds the plugin manifest works from an allowlist, and it holds back `hasAdminColumn`, `isInQuickEdit`, `rewrite` and `capabilities`. Two of those four still do their work on the server. `rewrite` sets the compiled route's base slug and decides whether term URLs nest, and `capabilities` overrides the minimum role for each of the five actions above. The other two reach nothing today, so do not expect `hasAdminColumn: true` to add a column to the entry list, or `isInQuickEdit` to change the quick-edit form.
+Not every option reaches the browser. The projection that builds the plugin manifest works from an allowlist, and it holds back `hasAdminColumn`, `isInQuickEdit`, `rewrite` and `capabilities`. Two of those four still do their work on the server. `rewrite` sets the compiled route's base slug and decides whether term URLs nest, and `capabilities` names the default roles that receive each of the five actions above. The other two reach nothing today, so do not expect `hasAdminColumn: true` to add a column to the entry list, or `isInQuickEdit` to change the quick-edit form.
 
 `isPublic: false` removes the taxonomy's public surface altogether. No term archive routes compile, and the term URL builder returns null.
 

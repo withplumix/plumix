@@ -25,6 +25,7 @@ export type {
   RoleNameOf,
   SiteRoles,
 } from "./access/contract/roles.js";
+export type { DefaultRole } from "./users/contract/roles.js";
 export * from "./context/index.js";
 export { consoleLogger, createAppContext } from "./context/app.js";
 export { createJsonLogger } from "./context/json-logger.js";

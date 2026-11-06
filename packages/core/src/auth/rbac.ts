@@ -1,17 +1,14 @@
-import type {
-  CoreCapability,
-  PostCapabilityAction,
-} from "../access/contract/capability.js";
+import type { PostCapabilityAction } from "../access/contract/capability.js";
 import type { RoleDeclaration, RoleGrants } from "../access/contract/roles.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import {
   CORE_CAPABILITIES,
   entryCapability,
   resolveCapability,
 } from "../access/contract/capability.js";
-import { rolesFromRank } from "../access/contract/rbac.js";
-import { USER_ROLES } from "../db/schema/users.js";
+import { grantedRoles } from "../access/contract/rbac.js";
+import { DEFAULT_ROLES } from "../users/contract/roles.js";
 
 // The capability vocabulary lives in `access/contract/` so the plugin and
 // context contracts can name it; re-exported here for existing callers.
@@ -29,13 +26,7 @@ export type {
   TermTaxonomyCapabilityOverrides,
 } from "../access/contract/capability.js";
 
-function isCoreCapability(name: string): name is CoreCapability {
-  return Object.hasOwn(CORE_CAPABILITIES, name);
-}
-
 export interface CapabilityResolver {
-  /** Returns the minimum role required for a capability, or null if unknown. */
-  requiredRole(capability: string): UserRole | null;
   /** True iff the role's resolved capabilities include the capability. */
   hasCapability(role: string, capability: string): boolean;
   /** True for a default role and for one the config declares. */
@@ -46,13 +37,13 @@ type RoleCapabilityTable = ReadonlyMap<string, ReadonlySet<string>>;
 
 function defaultReceivers(
   plugins: PluginRegistry,
-): ReadonlyMap<string, readonly UserRole[]> {
-  // A plugin's registration of a core name replaces core's rung for it, so a
+): ReadonlyMap<string, readonly DefaultRole[]> {
+  // A plugin's registration of a core name replaces core's grant for it, so a
   // pooled type's override tightens or loosens `entry:post:*`.
-  const receivers = new Map<string, readonly UserRole[]>(
-    Object.entries(CORE_CAPABILITIES).map(([name, minRole]) => [
+  const receivers = new Map<string, readonly DefaultRole[]>(
+    Object.entries(CORE_CAPABILITIES).map(([name, roles]) => [
       name,
-      rolesFromRank(minRole),
+      grantedRoles(roles),
     ]),
   );
   for (const [name, cap] of plugins.capabilities) {
@@ -127,7 +118,7 @@ function declaredRoles(
 function resolveRoleCapabilities(plugins: PluginRegistry): RoleCapabilityTable {
   const receivers = defaultReceivers(plugins);
   const table = new Map<string, ReadonlySet<string>>(
-    USER_ROLES.map((role) => {
+    DEFAULT_ROLES.map((role) => {
       const granted = new Set<string>();
       for (const [name, roles] of receivers) {
         if (roles.includes(role)) granted.add(name);
@@ -192,7 +183,7 @@ export function unknownRoleGrants(plugins: PluginRegistry): readonly string[] {
     if (
       parent !== undefined &&
       !declarations.has(parent) &&
-      !(USER_ROLES as readonly string[]).includes(parent)
+      !(DEFAULT_ROLES as readonly string[]).includes(parent)
     ) {
       messages.push(`Role "${role}" extends "${parent}", which is not a role.`);
     }
@@ -221,14 +212,6 @@ export function createCapabilityResolver(
 ): CapabilityResolver {
   const table = roleCapabilityTable(plugins);
   return {
-    requiredRole(capability) {
-      const fromPlugin = plugins.capabilities.get(capability);
-      // The lowest rung it reaches; `grantTo` is in ladder order.
-      if (fromPlugin) return fromPlugin.grantTo[0] ?? null;
-      return isCoreCapability(capability)
-        ? CORE_CAPABILITIES[capability]
-        : null;
-    },
     hasCapability(role, capability) {
       return table.get(role)?.has(capability) ?? false;
     },

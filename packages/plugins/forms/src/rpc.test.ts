@@ -1,5 +1,5 @@
-import type { RequestAuthenticator } from "plumix/auth";
-import type { User, UserRole } from "plumix/schema";
+import type { DefaultRole, RequestAuthenticator } from "plumix/auth";
+import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import { text } from "plumix/fields";
 import {
@@ -59,7 +59,7 @@ function stubAuthenticator(user: User): RequestAuthenticator {
   };
 }
 
-async function harness(role: UserRole = "editor") {
+async function harness(role: DefaultRole = "editor") {
   const db = await createFormsTestDb();
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();

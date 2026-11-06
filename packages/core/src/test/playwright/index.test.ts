@@ -102,7 +102,7 @@ describe("AUTHED_ADMIN", () => {
   test("has a baseline admin user with the bare-install capabilities", () => {
     expect(AUTHED_ADMIN.user?.role).toBe("admin");
     expect(AUTHED_ADMIN.user?.capabilities).toEqual(
-      expect.arrayContaining(["settings:manage", "plugin:manage", "user:list"]),
+      expect.arrayContaining(["settings:manage", "user:list"]),
     );
   });
 

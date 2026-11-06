@@ -57,19 +57,19 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
         ctx.registerEntryType("hello_item", {
           label: "Hello items",
           isPublic: false,
-          capabilities: { edit_any: "admin" },
+          capabilities: { edit_any: ["admin"] },
         });
         // 2. Public CPT with targeted cap remap (media-shape: only create
         //    is raised to author+).
         ctx.registerEntryType("hello_attachment", {
           label: "Hello attachments",
-          capabilities: { create: "author" },
+          capabilities: { create: ["author", "editor"] },
         });
         // 3. Taxonomy with its own cap isolation.
         ctx.registerTermTaxonomy("hello_menu", {
           label: "Hello menus",
           isPublic: false,
-          capabilities: { manage: "admin", edit: "admin" },
+          capabilities: { manage: ["admin"], edit: ["admin"] },
         });
         // 4. Plugin RPC namespace.
         ctx.registerRpcRouter({
@@ -96,7 +96,7 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
           handler: () => new Response(null, { status: 204 }),
         });
         // 6. Capability registration.
-        ctx.registerCapability("hello:manage", "admin");
+        ctx.registerCapability("hello:manage");
         // 7. Admin page with cap gate. The custom group "appearance" is
         // declared inline on the first page that targets it.
         ctx.registerAdminPage({

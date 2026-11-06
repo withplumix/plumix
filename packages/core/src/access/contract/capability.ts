@@ -1,67 +1,71 @@
-import type { UserRole } from "../../db/schema/users.js";
+import type { DefaultRole } from "../../users/contract/roles.js";
+
+const MEMBERS = ["subscriber", "contributor", "author", "editor"] as const;
+const WRITERS = ["contributor", "author", "editor"] as const;
+const PUBLISHERS = ["author", "editor"] as const;
+const EDITORS = ["editor"] as const;
+/** `admin` holds every capability, so a list never names it. */
+const ADMIN_ONLY = [] as const;
 
 /**
+ * The default roles each core capability goes to.
  * `entry:`/`term:` prefixes keep an entry type and a same-named taxonomy apart.
  * `promote` is split from `edit`: role escalation outranks a profile change.
  */
 export const CORE_CAPABILITIES = Object.freeze({
-  // Below it, the admin shell would answer every RPC with a 403.
-  "admin:access": "contributor",
-  "entry:post:read": "subscriber",
-  "entry:post:create": "contributor",
-  "entry:post:edit_own": "contributor",
-  "entry:post:publish": "author",
-  "entry:post:edit_any": "editor",
-  "entry:post:delete": "editor",
-  "entry:post:read_revisions": "editor",
-  "entry:post:restore_revision": "editor",
-  "entry:post:edit_layout": "author",
-  "user:list": "editor",
-  "user:edit_own": "subscriber",
-  "user:create": "admin",
-  "user:edit": "admin",
-  "user:promote": "admin",
-  "user:delete": "admin",
+  // `subscriber` is the theme-only open-signup role, which gets no admin.
+  "admin:access": WRITERS,
+  "entry:post:read": MEMBERS,
+  "entry:post:create": WRITERS,
+  "entry:post:edit_own": WRITERS,
+  "entry:post:publish": PUBLISHERS,
+  "entry:post:edit_any": EDITORS,
+  "entry:post:delete": EDITORS,
+  "entry:post:read_revisions": EDITORS,
+  "entry:post:restore_revision": EDITORS,
+  "entry:post:edit_layout": PUBLISHERS,
+  "user:list": EDITORS,
+  "user:edit_own": MEMBERS,
+  "user:create": ADMIN_ONLY,
+  "user:edit": ADMIN_ONLY,
+  "user:promote": ADMIN_ONLY,
+  "user:delete": ADMIN_ONLY,
   // Any user's API tokens. Separate from `user:edit` so a policy can grant
   // one without the other; users manage their own tokens without it.
-  "user:manage_tokens": "admin",
-  "plugin:manage": "admin",
-  "settings:manage": "admin",
-} as const satisfies Record<string, UserRole>);
+  "user:manage_tokens": ADMIN_ONLY,
+  "settings:manage": ADMIN_ONLY,
+} as const satisfies Record<string, readonly DefaultRole[]>);
 
 export const POST_TYPE_CAPABILITY_ACTIONS = {
-  read: "subscriber",
-  create: "contributor",
-  edit_own: "contributor",
-  publish: "author",
-  edit_any: "editor",
-  delete: "editor",
-  read_revisions: "editor",
+  read: MEMBERS,
+  create: WRITERS,
+  edit_own: WRITERS,
+  publish: PUBLISHERS,
+  edit_any: EDITORS,
+  delete: EDITORS,
+  read_revisions: EDITORS,
   // Restoring overwrites the live row.
-  restore_revision: "editor",
+  restore_revision: EDITORS,
   // Structure and style; `edit_own`/`edit_any` alone change only the inputs a
   // block marks `content`.
-  edit_layout: "author",
-} as const satisfies Record<string, UserRole>;
+  edit_layout: PUBLISHERS,
+} as const satisfies Record<string, readonly DefaultRole[]>;
 
 export const TERM_TAXONOMY_CAPABILITY_ACTIONS = {
-  read: "subscriber",
-  assign: "contributor",
-  edit: "editor",
-  delete: "editor",
-  manage: "editor",
-} as const satisfies Record<string, UserRole>;
+  read: MEMBERS,
+  assign: WRITERS,
+  edit: EDITORS,
+  delete: EDITORS,
+  manage: EDITORS,
+} as const satisfies Record<string, readonly DefaultRole[]>;
 
 export type PostCapabilityAction = keyof typeof POST_TYPE_CAPABILITY_ACTIONS;
 export type TermTaxonomyCapabilityAction =
   keyof typeof TERM_TAXONOMY_CAPABILITY_ACTIONS;
 export type CoreCapability = keyof typeof CORE_CAPABILITIES;
 
-/**
- * The default roles that receive an action; `admin` always does. A single
- * role is the ladder form, that role and every one above it (#3366 drops it).
- */
-export type ActionGrant = readonly UserRole[] | UserRole;
+/** The default roles that receive an action; `admin` always does. */
+export type ActionGrant = readonly DefaultRole[];
 
 export type EntryTypeCapabilityOverrides = Partial<
   Record<PostCapabilityAction, ActionGrant>

@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 
-import { rolesFromRank } from "../../../access/contract/rbac.js";
 import { verifyPreviewToken } from "../../../auth/preview-token.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
@@ -55,14 +54,14 @@ describe("entry.createPreviewLink", () => {
     // entry:page:* aren't builtin (only entry:post:* are), so register the
     // caps canReadEntry consults — `registry.entryTypes.set` skips the
     // derivation `ctx.registerEntryType` does in the real flow.
-    for (const [action, minRole] of [
-      ["read", "subscriber"],
-      ["edit_own", "contributor"],
-      ["edit_any", "editor"],
+    for (const [action, roles] of [
+      ["read", ["subscriber", "contributor", "author", "editor", "admin"]],
+      ["edit_own", ["contributor", "author", "editor", "admin"]],
+      ["edit_any", ["editor", "admin"]],
     ] as const) {
       registry.capabilities.set(`entry:page:${action}`, {
         name: `entry:page:${action}`,
-        grantTo: rolesFromRank(minRole),
+        grantTo: roles,
         registeredBy: "test",
       });
     }

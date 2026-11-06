@@ -8,11 +8,12 @@ import { beforeEach } from "vitest";
 import type { AnyPluginDescriptor, PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
-import type { User, UserRole } from "../db/schema/users.js";
+import type { User } from "../db/schema/users.js";
 import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
 import type { PluginRpcClient } from "../plugin/registry.js";
 import type { AppRouterClient } from "../rpc/router.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
@@ -90,7 +91,9 @@ export interface TestSite<
    * This site, calling as the user, or as a user of the role created on its
    * first call in each test.
    */
-  readonly actingAs: (principal: User | UserRole) => TestSite<TFactories, TRpc>;
+  readonly actingAs: (
+    principal: User | DefaultRole,
+  ) => TestSite<TFactories, TRpc>;
   /** Moves this site's clock forward, and no other site's. */
   readonly travel: (by: Travel) => void;
   /** Stops this site's clock at an instant, which `travel` then moves. */
@@ -114,7 +117,7 @@ type InstalledRpc<TPlugins extends readonly AnyPluginDescriptor[]> =
     : Record<never, never>;
 
 /** `null` is a visitor; a bare role is a user not created yet. */
-type Principal = User | { readonly role: UserRole } | null;
+type Principal = User | { readonly role: DefaultRole } | null;
 
 interface Session {
   readonly user: User;

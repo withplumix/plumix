@@ -37,7 +37,7 @@ import {
 } from "../access/contract/capability.js";
 import { DEFAULT_ROLE_LABELS } from "../access/contract/roles.js";
 import { DEFAULT_BREAKPOINTS } from "../blocks/index.js";
-import { USER_ROLES } from "../users/contract/roles.js";
+import { DEFAULT_ROLES } from "../users/contract/roles.js";
 
 export { startingMeta } from "./fields/starting-meta.js";
 export type { StartingMetaField } from "./fields/starting-meta.js";
@@ -412,12 +412,12 @@ export interface RoleManifestEntry {
 export function roleEntries(
   roles: SiteRoles = {},
 ): readonly RoleManifestEntry[] {
-  const defaults = USER_ROLES.map((name) => ({
+  const defaults = DEFAULT_ROLES.map((name) => ({
     name,
     label: roles[name]?.label ?? DEFAULT_ROLE_LABELS[name],
   }));
   const declared = Object.entries(roles)
-    .filter(([name]) => !(USER_ROLES as readonly string[]).includes(name))
+    .filter(([name]) => !(DEFAULT_ROLES as readonly string[]).includes(name))
     .map(([name, role]) => ({ name, label: role.label ?? name }));
   return [...defaults, ...declared];
 }

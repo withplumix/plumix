@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../db/schema/users.js";
-import { rolesFromRank } from "../access/contract/rbac.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import { and, asc, eq } from "../db/index.js";
 import { entryTerm } from "../db/schema/entry_term.js";
 import { terms } from "../db/schema/terms.js";
@@ -12,7 +11,7 @@ import { createRpcHarness } from "../test/rpc.js";
 
 function taxonomyRegistry(
   opts: {
-    readonly assignRole?: UserRole;
+    readonly assignRoles?: readonly DefaultRole[];
     readonly termTaxonomies?: readonly string[];
   } = {},
 ) {
@@ -24,17 +23,17 @@ function taxonomyRegistry(
     );
     registry.capabilities.set(`term:${name}:read`, {
       name: `term:${name}:read`,
-      grantTo: rolesFromRank("subscriber"),
+      grantTo: ["subscriber", "contributor", "author", "editor", "admin"],
       registeredBy: "test",
     });
     registry.capabilities.set(`term:${name}:assign`, {
       name: `term:${name}:assign`,
-      grantTo: rolesFromRank(opts.assignRole ?? "contributor"),
+      grantTo: opts.assignRoles ?? ["contributor", "author", "editor", "admin"],
       registeredBy: "test",
     });
     registry.capabilities.set(`term:${name}:edit`, {
       name: `term:${name}:edit`,
-      grantTo: rolesFromRank("editor"),
+      grantTo: ["editor", "admin"],
       registeredBy: "test",
     });
   }
@@ -238,7 +237,7 @@ describe("entry.update — terms", () => {
   });
 
   test("missing {termTaxonomy}:assign cap → FORBIDDEN (even for editor if cap elevated)", async () => {
-    const plugins = taxonomyRegistry({ assignRole: "admin" });
+    const plugins = taxonomyRegistry({ assignRoles: ["admin"] });
     const h = await createRpcHarness({ authAs: "editor", plugins });
     const post = await h.factory.draft.create({ authorId: h.user.id });
     const cat = (

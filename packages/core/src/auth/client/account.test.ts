@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../../db/schema/users.js";
 import type { JsonValue } from "../../json.js";
 import type {
   CreateDispatcherHarnessOptions,
   DispatcherHarness,
 } from "../../test/dispatcher.js";
+import type { DefaultRole } from "../../users/contract/roles.js";
 import type { AccountPatch, RpcCall } from "./account.js";
 import { CSRF_HEADER_NAME, CSRF_HEADER_VALUE } from "../../csrf-header.js";
 import { acquireEditLease, readEditLease } from "../../db/edit-lease.js";
@@ -47,7 +47,7 @@ function clientOf(
 }
 
 async function signedInClient(
-  role: UserRole = "subscriber",
+  role: DefaultRole = "subscriber",
   config?: CreateDispatcherHarnessOptions["config"],
 ) {
   const h = await createDispatcherHarness({ config });

@@ -14,7 +14,7 @@ Every submission a form stores lands in one table, and the admin reads that tabl
 
 A submission is a row in `form_submissions`. It records which form it answered, the answers, a status, and a pointer to a snapshot of what every field and option was called when the visitor sent it. The snapshot is what keeps an old submission readable after the form changes, and it is why the inbox and the exports never read the live form to name a column.
 
-Reading submissions is gated on one capability, `form_submission:moderate`, which the plugin grants to editors and above. The inbox, the export route and the plugin's agent tools all check it. Roles below editor never see what a visitor typed.
+Reading submissions is gated on one capability, `form_submission:moderate`, which the plugin grants to `editor` and `admin`. The inbox, the export route and the plugin's agent tools all check it. No other default role sees what a visitor typed, and a role you declare does only when its `can` grants `form_submission: ["moderate"]`.
 
 The plugin keeps submissions indefinitely unless you set a retention period. You set one per form or once for the whole site, and one nightly task enforces it.
 

@@ -1,6 +1,6 @@
-import type { RequestAuthenticator } from "plumix/auth";
+import type { DefaultRole, RequestAuthenticator } from "plumix/auth";
 import type { AppContext } from "plumix/plugin";
-import type { User, UserRole } from "plumix/schema";
+import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import { createPluginRegistry, HookRegistry } from "plumix/plugin";
 import { createTestContext } from "plumix/test";
@@ -51,7 +51,7 @@ function stubAuthenticator(user: User): RequestAuthenticator {
   };
 }
 
-function buildContext(role: UserRole): AppContext {
+function buildContext(role: DefaultRole): AppContext {
   const registry = createPluginRegistry();
   // Mirror the audit-log plugin's setup() — register the capability so
   // the role-based resolver knows admin → audit_log:read.
@@ -85,7 +85,7 @@ function buildContext(role: UserRole): AppContext {
   });
 }
 
-function harness(role: UserRole, reply?: AuditLogQueryResult): Harness {
+function harness(role: DefaultRole, reply?: AuditLogQueryResult): Harness {
   const { storage, calls } = fakeStorage(reply);
   const router = createAuditLogRouter(storage);
   const client = createRouterClient(

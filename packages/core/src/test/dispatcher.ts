@@ -4,7 +4,7 @@ import type {
   DeferFn,
   Logger,
 } from "../context/app-context.js";
-import type { User, UserRole } from "../db/schema/users.js";
+import type { User } from "../db/schema/users.js";
 import type { EventDefinition } from "../hooks/define.js";
 import type { ActionArgs, ActionName } from "../hooks/types.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
@@ -18,6 +18,7 @@ import type {
   ConnectedObjectStorage,
 } from "../runtime/contract/slots.js";
 import type { BoundSlots } from "../runtime/handler.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
@@ -142,7 +143,7 @@ export interface DispatcherHarness {
     request: Request,
     userId: number,
   ) => Promise<Request>;
-  readonly seedUser: (role?: UserRole) => Promise<User>;
+  readonly seedUser: (role?: DefaultRole) => Promise<User>;
   /**
    * A `?preview=` token granting `userId`'s preview of `entryId`, as the
    * editor's preview link mints one — so a render carrying it overlays that

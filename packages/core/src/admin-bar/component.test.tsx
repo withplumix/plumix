@@ -7,9 +7,9 @@ import type {
   Db,
   Logger,
 } from "../context/app-context.js";
-import type { UserRole } from "../db/schema/users.js";
 import type { PluginSetup } from "../plugin/define.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import type { BarCatalogs } from "./i18n.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
@@ -95,7 +95,7 @@ describe("createAdminBarChrome", () => {
     expect(visible).not.toHaveBeenCalled();
   });
 
-  test.each<UserRole>(["contributor", "admin"])(
+  test.each<DefaultRole>(["contributor", "admin"])(
     "renders the bar for a %s",
     async (role) => {
       expect(await renderChrome({ ...user, role })).toContain(

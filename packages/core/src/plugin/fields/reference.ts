@@ -1,6 +1,5 @@
 import type { Capability } from "../../access/contract/capability.js";
 import type { EntryStatus } from "../../db/schema/entries.js";
-import type { UserRole } from "../../db/schema/users.js";
 import type { Label } from "../../i18n/label.js";
 import type { JsonObject, JsonValue } from "../../json.js";
 import type { ReferenceHydrationShapes } from "../lookup.js";
@@ -211,7 +210,7 @@ export class ReferenceFieldBuilder<
   /** Restrict a `user` reference to these roles (absent → any role). */
   roles(
     this: ReferenceFieldBuilder<"user", K, Multiple, Required, Returns>,
-    roles: readonly UserRole[],
+    roles: readonly string[],
   ): ReferenceFieldBuilder<"user", K, Multiple, Required, Returns> {
     return this.#fork({}, { roles });
   }

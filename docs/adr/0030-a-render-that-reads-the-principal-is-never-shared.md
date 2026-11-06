@@ -1,9 +1,9 @@
 # A render that reads the principal is never shared
 
 A policied page is cached per audience segment: `authenticatedPolicy`,
-`rolePolicy` and an entitlement grant all store one copy per segment and serve
-it to every member (#1740). The design said such a render must not depend on
-which member is viewing, and nothing enforced it. A block loader reading
+`capabilityPolicy` and an entitlement grant all store one copy per segment and
+serve it to every member (#1740). The design said such a render must not depend
+on which member is viewing, and nothing enforced it. A block loader reading
 `ctx.user`, a component calling `useUser()`, or the front-end admin bar, which
 shows the viewer's email, baked one member's data into the copy every other
 member received (#2835).
@@ -40,9 +40,9 @@ the render personal from the start:
   the same request resolves to without them, the page is theirs. Otherwise
   reading `ctx.locale` is not a principal read.
 - **Admin bar.** Core decides whether the bar shows with the staff check #2814
-  introduced (`canAccessAdmin`), and a render with the bar is personal. The
-  bar's own reads of the viewer never mark anything; only the decision does,
-  so a subscriber, who gets no bar, shares the segment's copy.
+  introduced (now the `admin:access` capability), and a render with the bar is
+  personal. The bar's own reads of the viewer never mark anything; only the
+  decision does, so a subscriber, who gets no bar, shares the segment's copy.
 
 ## Effect
 

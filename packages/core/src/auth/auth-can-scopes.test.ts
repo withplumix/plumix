@@ -6,7 +6,6 @@ import {
   entryCapability,
   termCapability,
 } from "../access/contract/capability.js";
-import { rolesFromRank } from "../access/contract/rbac.js";
 import { createAppContext } from "../context/app.js";
 import { HookRegistry } from "../hooks/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
@@ -114,7 +113,7 @@ describe("auth.can — capability references", () => {
     const plugins = createPluginRegistry();
     plugins.capabilities.set("term:tag:assign", {
       name: "term:tag:assign",
-      grantTo: rolesFromRank("contributor"),
+      grantTo: ["contributor", "author", "editor", "admin"],
       registeredBy: null,
     });
     const ctx = buildCtx({ role: "contributor", plugins });

@@ -24,7 +24,6 @@ export {
   sessions,
   settings,
   terms,
-  USER_ROLES,
   users,
 } from "@plumix/core/schema";
 

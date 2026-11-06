@@ -1,78 +1,41 @@
-import type { UserRole } from "../../db/schema/users.js";
+import type { DefaultRole } from "../../users/contract/roles.js";
 import type {
   ActionGrant,
   EntryTypeCapabilityOverrides,
   TermTaxonomyCapabilityOverrides,
 } from "./capability.js";
-import { USER_ROLES } from "../../db/schema/users.js";
+import { DEFAULT_ROLES } from "../../users/contract/roles.js";
 import {
   POST_TYPE_CAPABILITY_ACTIONS,
   TERM_TAXONOMY_CAPABILITY_ACTIONS,
 } from "./capability.js";
 
 /**
- * Role hierarchy (ascending). A role with a higher level has all capabilities
- * of lower roles — e.g., editor satisfies any capability whose minRole is
- * author, contributor, or subscriber.
+ * The default roles a capability goes to, in `DEFAULT_ROLES` order. `admin`
+ * holds every capability, so it is always one of them.
  */
-export const ROLE_LEVEL: Readonly<Record<UserRole, number>> = Object.freeze(
-  USER_ROLES.reduce<Record<UserRole, number>>(
-    (acc, role, index) => {
-      acc[role] = index;
-      return acc;
-    },
-    {} as Record<UserRole, number>,
-  ),
-);
-
-/** A site role sits on no rung, so it ranks below every one. */
-export function roleLevel(role: string): number {
-  return Object.hasOwn(ROLE_LEVEL, role) ? ROLE_LEVEL[role as UserRole] : -1;
-}
-
-/**
- * Lowest role that may use the admin shell; `subscriber` is the theme-only
- * open-signup tier.
- */
-export const STAFF_MIN_ROLE: UserRole = "contributor";
-
-/** True for any staff role, false for a theme-only `subscriber`. */
-export function canAccessAdmin(role: string): boolean {
-  return roleLevel(role) >= roleLevel(STAFF_MIN_ROLE);
-}
-
-/**
- * The default roles a capability goes to, in ladder order. `admin` holds
- * every capability, so it is always one of them.
- */
-export function grantedRoles(roles: readonly UserRole[]): readonly UserRole[] {
-  return USER_ROLES.filter((role) => role === "admin" || roles.includes(role));
-}
-
-/** The ladder form: a minimum rung grants that rung and every one above it. */
-export function rolesFromRank(minRole: UserRole): readonly UserRole[] {
-  return USER_ROLES.slice(roleLevel(minRole));
-}
-
-/** A list names the receiving roles; a single role is the ladder's minimum. */
-function grantedRolesOf(grant: ActionGrant): readonly UserRole[] {
-  return grantedRoles(typeof grant === "string" ? rolesFromRank(grant) : grant);
+export function grantedRoles(
+  roles: readonly DefaultRole[],
+): readonly DefaultRole[] {
+  return DEFAULT_ROLES.filter(
+    (role) => role === "admin" || roles.includes(role),
+  );
 }
 
 export interface DerivedCapability {
   readonly name: string;
   /** The default roles that receive it, `admin` included. */
-  readonly grantTo: readonly UserRole[];
+  readonly grantTo: readonly DefaultRole[];
 }
 
 function deriveCapabilities(
   base: string,
-  actions: Record<string, UserRole>,
+  actions: Record<string, ActionGrant>,
   overrides: Partial<Record<string, ActionGrant>> | undefined,
 ): readonly DerivedCapability[] {
-  return Object.entries(actions).map(([action, minRole]) => ({
+  return Object.entries(actions).map(([action, roles]) => ({
     name: `${base}:${action}`,
-    grantTo: grantedRolesOf(overrides?.[action] ?? minRole),
+    grantTo: grantedRoles(overrides?.[action] ?? roles),
   }));
 }
 

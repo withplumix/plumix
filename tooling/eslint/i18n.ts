@@ -52,7 +52,7 @@ export const i18nStrictOverrides: Linter.Config = {
           // `plumix.v2.draft.<slug>.<id>`).
           "^plumix\\.",
           // User-role identifiers (valibot picklist discriminators) —
-          // matches `UserRole` from `@plumix/core/schema`. The role's
+          // matches `DefaultRole` from `plumix/auth`. The role's
           // display label lives in a separate `MessageDescriptor`.
           "^(subscriber|contributor|author|editor|admin)$",
           // shadcn variant values inside a record literal, which

@@ -1,7 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../../../db/schema/users.js";
-import { rolesFromRank } from "../../../access/contract/rbac.js";
+import type { DefaultRole } from "../../../users/contract/roles.js";
 import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
@@ -14,14 +13,20 @@ function taxonomyRegistry() {
     "category",
     toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
   );
-  const caps: Record<string, UserRole> = {
-    "term:category:read": "subscriber",
-    "term:category:edit": "editor",
+  const caps: Record<string, readonly DefaultRole[]> = {
+    "term:category:read": [
+      "subscriber",
+      "contributor",
+      "author",
+      "editor",
+      "admin",
+    ],
+    "term:category:edit": ["editor", "admin"],
   };
-  for (const [name, minRole] of Object.entries(caps)) {
+  for (const [name, roles] of Object.entries(caps)) {
     registry.capabilities.set(name, {
       name,
-      grantTo: rolesFromRank(minRole),
+      grantTo: roles,
       registeredBy: "test",
     });
   }

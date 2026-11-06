@@ -1,5 +1,4 @@
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
-import type { UserRole } from "../db/schema/users.js";
 import type {
   Access,
   CapabilitySegment,
@@ -12,10 +11,8 @@ import type {
   AccessResolverFor,
   EntryAdmission,
 } from "./contract/policy.js";
-import { USER_ROLES } from "../db/schema/users.js";
 import { resolveCapability } from "./contract/capability.js";
 import { admissionMeets, admissionOf } from "./contract/policy.js";
-import { roleLevel } from "./contract/rbac.js";
 import { PRIVATE_SEGMENT } from "./contract/segments.js";
 
 export type {
@@ -155,13 +152,12 @@ export async function resolveAccess(
   }
 }
 
-const ROLE_PREFIX = "role:";
 const CAPABILITY_PREFIX = "capability:";
 
 /**
- * True for `anonymous`, `authenticated`, `private`, `role:<known-role>`, or
- * `capability:<name>`. A capability nobody registered is still built in: its
- * policy grants it to nobody.
+ * True for `anonymous`, `authenticated`, `private`, or `capability:<name>`.
+ * A capability nobody registered is still built in: its policy grants it to
+ * nobody.
  */
 export function isBuiltinSegment(segment: string): boolean {
   if (
@@ -171,12 +167,9 @@ export function isBuiltinSegment(segment: string): boolean {
   ) {
     return true;
   }
-  if (segment.startsWith(CAPABILITY_PREFIX)) {
-    return segment.length > CAPABILITY_PREFIX.length;
-  }
-  if (!segment.startsWith(ROLE_PREFIX)) return false;
-  return (USER_ROLES as readonly string[]).includes(
-    segment.slice(ROLE_PREFIX.length),
+  return (
+    segment.startsWith(CAPABILITY_PREFIX) &&
+    segment.length > CAPABILITY_PREFIX.length
   );
 }
 
@@ -201,23 +194,6 @@ export const anonymousPolicy: AccessPolicy = definePolicy({
 export const authenticatedPolicy: AccessPolicy = definePolicy({
   resolve: (ctx) => (ctx.user ? grant("authenticated") : redirectToLogin()),
 });
-
-/**
- * An under-privileged principal gets a 403, since redirecting to sign-in would
- * loop. Grants the *required* tier, so all qualifying visitors share one
- * variant.
- */
-export function rolePolicy(required: UserRole): AccessPolicy {
-  return definePolicy({
-    resolve: (ctx) => {
-      if (!ctx.user) return redirectToLogin();
-      if (roleLevel(ctx.user.role) >= roleLevel(required)) {
-        return grant(`${ROLE_PREFIX}${required}`);
-      }
-      return challenge("forbidden");
-    },
-  });
-}
 
 /**
  * A principal without the capability gets a 403, since redirecting to sign-in

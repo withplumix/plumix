@@ -13,14 +13,14 @@ import {
 describe("createCapabilityResolver", () => {
   const emptyRegistry = createPluginRegistry();
 
-  test("grants core capability when role meets the minimum", () => {
+  test("grants a core capability to the roles that receive it", () => {
     const resolver = createCapabilityResolver(emptyRegistry);
     expect(resolver.hasCapability("author", "entry:post:publish")).toBe(true);
     expect(resolver.hasCapability("editor", "entry:post:publish")).toBe(true);
     expect(resolver.hasCapability("admin", "entry:post:publish")).toBe(true);
   });
 
-  test("denies core capability when role is below minimum", () => {
+  test("denies a core capability to the roles that don't receive it", () => {
     const resolver = createCapabilityResolver(emptyRegistry);
     expect(resolver.hasCapability("contributor", "entry:post:publish")).toBe(
       false,
@@ -33,18 +33,11 @@ describe("createCapabilityResolver", () => {
   test("returns false for unknown capability (no implicit grant)", () => {
     const resolver = createCapabilityResolver(emptyRegistry);
     expect(resolver.hasCapability("admin", "nope:nothing")).toBe(false);
-    expect(resolver.requiredRole("nope:nothing")).toBeNull();
   });
 
   test("a name on Object's prototype is not a capability", () => {
     const resolver = createCapabilityResolver(emptyRegistry);
-    expect(resolver.requiredRole("constructor")).toBeNull();
     expect(resolver.hasCapability("admin", "constructor")).toBe(false);
-  });
-
-  test("requiredRole names a core capability's minimum role", () => {
-    const resolver = createCapabilityResolver(emptyRegistry);
-    expect(resolver.requiredRole("entry:post:publish")).toBe("author");
   });
 
   test("plugin-registered capabilities are looked up alongside core", () => {
@@ -120,7 +113,7 @@ describe("derived entry-type capabilities", () => {
         "nav_menu_item",
         {
           label: "Menu items",
-          capabilities: { edit_any: "admin" },
+          capabilities: { edit_any: ["admin"] },
         },
         null,
       ),

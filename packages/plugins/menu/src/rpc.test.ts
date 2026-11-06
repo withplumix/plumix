@@ -1,7 +1,7 @@
 import type { JsonObject } from "plumix";
-import type { RequestAuthenticator } from "plumix/auth";
+import type { DefaultRole, RequestAuthenticator } from "plumix/auth";
 import type { PluginRegistry } from "plumix/plugin";
-import type { User, UserRole } from "plumix/schema";
+import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import { acquireEditLease, and, eq, readEditLease } from "plumix/db";
 import { text } from "plumix/fields";
@@ -92,7 +92,7 @@ function stubAuthenticator(user: User): RequestAuthenticator {
 }
 
 async function buildHarness(
-  role: UserRole = "editor",
+  role: DefaultRole = "editor",
   locations: MenuPluginOptions["locations"] = {},
   extraPlugins: readonly ReturnType<typeof definePlugin>[] = [],
 ): Promise<Harness> {

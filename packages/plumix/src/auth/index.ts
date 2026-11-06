@@ -10,7 +10,6 @@ export {
   auth,
   authenticatedPolicy,
   buildSessionCookie,
-  canAccessAdmin,
   capabilityPolicy,
   chainAuthenticators,
   challenge,
@@ -38,12 +37,8 @@ export {
   resolveAccess,
   resolveExternalIdentity,
   resolveReturnUrl,
-  ROLE_LEVEL,
-  roleLevel,
-  rolePolicy,
   SESSION_COOKIE_NAME,
   sessionAuthenticator,
-  STAFF_MIN_ROLE,
   TERM_TAXONOMY_CAPABILITY_ACTIONS,
 } from "@plumix/core";
 
@@ -67,6 +62,7 @@ export type {
   CoreCapability,
   CreatedSession,
   CreateSessionInput,
+  DefaultRole,
   DefinePolicyInput,
   DerivedCapability,
   EmailChangeErrorCode,

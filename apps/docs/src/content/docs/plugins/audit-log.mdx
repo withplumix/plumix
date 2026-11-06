@@ -17,7 +17,7 @@ The plugin exports a factory named `auditLog`, so you call it. `auditLog()` with
 What it registers:
 
 - An admin page at `/audit-log`, under Tools, showing the feed newest first.
-- An `audit_log:read` capability, granted to the admin role. The page and the procedure behind it both check it, so nobody below admin sees the feed.
+- An `audit_log:read` capability, registered with no `grantTo`, so only `admin` holds it by default. The page and the procedure behind it both check it, so only a role holding `audit_log:read` sees the feed; a role you declare grants it with `audit_log: ["read"]`.
 - One listener per audited event. Nothing needs wiring in your own code.
 - A daily scheduled task that deletes rows older than 90 days.
 - An `audit` helper on the per-request context, so any plugin's routes, hooks and RPC procedures can record their own events.

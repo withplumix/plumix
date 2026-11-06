@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { UserRole } from "../db/schema/users.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import type { DefaultRole } from "../users/contract/roles.js";
 import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
@@ -52,7 +52,7 @@ async function mintPat(
     role = "editor",
     scopes = null,
     userId,
-  }: { role?: UserRole; scopes?: string[] | null; userId?: number } = {},
+  }: { role?: DefaultRole; scopes?: string[] | null; userId?: number } = {},
 ): Promise<string> {
   const id = userId ?? (await h.factory.user.create({ role })).id;
   const { secret } = await h.factory.apiToken.create({

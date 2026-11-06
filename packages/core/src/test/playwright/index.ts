@@ -259,7 +259,6 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
     role: "admin",
     capabilities: [
       "settings:manage",
-      "plugin:manage",
       "entry:post:create",
       "entry:post:delete",
       "entry:post:edit_any",

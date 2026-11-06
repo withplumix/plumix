@@ -89,7 +89,7 @@ Other public exports from `plumix/plugin`: `applyOverride` / `Overridable` (opti
 
 `buildApp` seeds the registry before plugins run: `createPluginRegistry` adds the `featured` and `ogImage` image roles, then core adds its lookup adapters, template deps, settings and scheduled tasks. It hands `installPlugins` the configured theme. After install it indexes image roles and merges plugin `schema` exports, rejecting a key two owners export.
 
-`registerCapability` records a plugin's capability and the default roles (`member`, `author`, `editor`, `admin`) that get it. `auth/rbac.ts` merges those grants with the site's roles, stored and declared, so a site can grant the capability to any role, its own included.
+`registerCapability(name, { grantTo })` records a plugin's capability and the default roles (`member`, `author`, `editor`, `admin`) that get it; without `grantTo` only `admin` does, and `admin` always holds every capability. An entry type's or taxonomy's `capabilities` override maps an action to the default roles that receive it, and types pooling one `capabilityType` combine what they name. `auth/rbac.ts` merges those grants with the roles the site declares in config, so a site can grant the capability to any role, its own included. Nothing ranks one role above another.
 
 - `packages/core/src/plugin/define.ts`: `definePlugin`, `PluginDescriptor`, `assertValidPluginId`, `PLUGIN_I18N_SLOT`, `pluginAdminEntryPath`.
 - `packages/core/src/plugin/setup-context-types.ts`: `PluginSetupContextBase`, `PluginAfterSetupContext`.

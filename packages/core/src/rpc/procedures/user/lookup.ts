@@ -1,6 +1,5 @@
 import type { SQL } from "drizzle-orm";
 
-import type { UserRole } from "../../../db/schema/users.js";
 import type { UserFieldScope } from "../../../plugin/fields/user.js";
 import type {
   LookupAdapter,
@@ -98,7 +97,7 @@ function parseUserId(id: string): number | null {
 function scopeConditions(scope: UserFieldScope | undefined): SQL[] {
   const conditions: SQL[] = [];
   if (scope?.roles && scope.roles.length > 0) {
-    conditions.push(inArray(users.role, scope.roles as UserRole[]));
+    conditions.push(inArray(users.role, [...scope.roles]));
   }
   if (!scope?.includeDisabled) {
     conditions.push(isNull(users.disabledAt));
