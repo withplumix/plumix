@@ -858,6 +858,7 @@ function toEntryMetaBoxEntry(
     id,
     label,
     description,
+    // eslint-disable-next-line @typescript-eslint/no-deprecated
     location,
     priority,
     entryTypes,
