@@ -319,18 +319,29 @@ export const databaseContractCases: readonly Case[] = [
       }),
   },
   {
+    name: "a statement binding exactly the parameters D1 allows runs",
+    skip: onlyD1,
+    run: (options) =>
+      withCoreSchema(options, async (db) => {
+        await expect(
+          db
+            .select()
+            .from(users)
+            .where(inArray(users.id, ids(D1_MAX_BOUND_PARAMETERS))),
+        ).resolves.toEqual([]);
+      }),
+  },
+  {
     name: "a statement binding more parameters than D1 allows is refused",
     skip: onlyD1,
     run: (options) =>
       withCoreSchema(options, async (db) => {
-        const select = (count: number) =>
+        await expect(
           db
             .select()
             .from(users)
-            .where(inArray(users.id, ids(count)));
-
-        await expect(select(D1_MAX_BOUND_PARAMETERS)).resolves.toEqual([]);
-        await expect(select(D1_MAX_BOUND_PARAMETERS + 1)).rejects.toThrow();
+            .where(inArray(users.id, ids(D1_MAX_BOUND_PARAMETERS + 1))),
+        ).rejects.toThrow();
       }),
   },
   {

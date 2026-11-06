@@ -48,10 +48,6 @@ export async function createSiteDatabase(
   };
 }
 
-/**
- * Fails a statement before it runs wherever D1 would, so a query that breaks
- * in production breaks in the test too.
- */
 function refusingWhatD1Refuses(target: Client): Client {
   const execute = (
     statement: InStatement | string,
@@ -66,13 +62,7 @@ function refusingWhatD1Refuses(target: Client): Client {
   };
   const batch: Client["batch"] = (statements, mode) => {
     for (const statement of statements) {
-      assertWithinD1Cap(
-        Array.isArray(statement)
-          ? statement[1]
-          : typeof statement === "string"
-            ? undefined
-            : statement.args,
-      );
+      assertWithinD1Cap(argsOf(statement));
     }
     return target.batch(statements, mode);
   };
@@ -90,6 +80,14 @@ function refusingWhatD1Refuses(target: Client): Client {
       return forwarded(on, key);
     },
   });
+}
+
+function argsOf(
+  statement: InStatement | [string, InArgs?],
+): InArgs | undefined {
+  if (typeof statement === "string") return undefined;
+  if (Array.isArray(statement)) return statement[1];
+  return statement.args;
 }
 
 function assertWithinD1Cap(args: InArgs | undefined): void {
