@@ -43,19 +43,24 @@ export function createTracedFetch(
   };
 }
 
+/** `init.signal` replaces a Request input's own, as it does in the platform's `fetch`. */
+export function callerSignal(
+  input: Parameters<PlumixFetch>[0],
+  init: { readonly signal?: AbortSignal | null } | undefined,
+): AbortSignal | undefined {
+  return init?.signal ?? (input instanceof Request ? input.signal : undefined);
+}
+
 /** The platform `fetch`, with a 10s deadline, following `contextSignal`. */
 function boundedFetch(contextSignal: AbortSignal): PlumixFetch {
   return async (input, init) => {
     const { timeout = DEFAULT_TIMEOUT_MS, ...platformInit } = init ?? {};
-    // `init.signal` replaces a Request input's own, so both are kept.
-    const callerSignal =
-      platformInit.signal ??
-      (input instanceof Request ? input.signal : undefined);
+    const caller = callerSignal(input, platformInit);
     const deadline =
       timeout === false
         ? undefined
         : { ms: timeout, signal: AbortSignal.timeout(timeout) };
-    const signals = [callerSignal, deadline?.signal, contextSignal].filter(
+    const signals = [caller, deadline?.signal, contextSignal].filter(
       (signal) => signal !== undefined,
     );
     try {

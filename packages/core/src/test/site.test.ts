@@ -540,20 +540,25 @@ describe("the site's outbound fetches", () => {
     ).rejects.toMatchObject({ name: "TypeError", message: "fetch failed" });
   });
 
-  test("time out as ctx.fetch does on a declared timeout, at the call's bound", async () => {
+  test("time out as ctx.fetch does on a declared timeout, at the default bound", async () => {
     forecasting.fetch.route("GET", "https://weather.example/*", "timeout");
-    const ctx = forecasting.context;
 
-    const byDefault = ctx.fetch("https://weather.example/today");
-    const tightened = ctx.fetch("https://weather.example/today", {
-      timeout: 2500,
-    });
-
-    await expect(byDefault).rejects.toMatchObject({
+    await expect(
+      forecasting.context.fetch("https://weather.example/today"),
+    ).rejects.toMatchObject({
       name: "TimeoutError",
       message: "timed out after 10s",
     });
-    await expect(tightened).rejects.toMatchObject({
+  });
+
+  test("time out as ctx.fetch does on a declared timeout, at a tightened bound", async () => {
+    forecasting.fetch.route("GET", "https://weather.example/*", "timeout");
+
+    await expect(
+      forecasting.context.fetch("https://weather.example/today", {
+        timeout: 2500,
+      }),
+    ).rejects.toMatchObject({
       name: "TimeoutError",
       message: "timed out after 2.5s",
     });

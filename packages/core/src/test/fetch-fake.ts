@@ -50,7 +50,7 @@ export interface FetchFake {
   readonly assertNotFetched: (url: string) => void;
   /**
    * Throws what the first request no route answered threw, for a test whose
-   * code caught it; the test site calls it after each test.
+   * code caught it.
    */
   readonly assertAllDeclared: () => void;
   /** What `ctx.fetch` calls inside its span, in place of the platform's. */
@@ -142,8 +142,11 @@ function timedOut(
   );
 }
 
+/** A URL with no `*` is matched as `Request` spells it, so `https://a.example` meets `https://a.example/`. */
 function urlPattern(url: string): RegExp {
-  const literals = url
+  const spelled =
+    !url.includes("*") && URL.canParse(url) ? new URL(url).href : url;
+  const literals = spelled
     .split("*")
     .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   return new RegExp(`^${literals.join(".*")}$`);

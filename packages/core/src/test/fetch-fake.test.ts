@@ -23,9 +23,33 @@ describe("a declared route", () => {
     expect(await response.json()).toEqual({
       url: "https://api.example/users/7?fields=a.b",
     });
+  });
+
+  test("does not match a URL the pattern's literal parts do not cover", async () => {
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/users/*?fields=*", new Response());
+
     await expect(
       fetch.send("https://api.example/users/7/posts"),
     ).rejects.toThrow("fetch: no route answers GET");
+  });
+
+  test("answers a URL declared without the path the request carries", async () => {
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example", new Response("up"));
+
+    const response = await fetch.send("https://api.example");
+
+    expect(await response.text()).toBe("up");
+  });
+
+  test("answers a URL declared as the request URL spells it", async () => {
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/a b", new Response("up"));
+
+    const response = await fetch.send("https://api.example/a b");
+
+    expect(await response.text()).toBe("up");
   });
 
   test("answers each request afresh", async () => {

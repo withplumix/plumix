@@ -62,7 +62,7 @@ import { createRequestMemo } from "./memo.js";
 import { bindSettings, rebindSettings } from "./settings-namespace.js";
 import { tryGetContext } from "./stores.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
-import { createTracedFetch } from "./traced-fetch.js";
+import { callerSignal, createTracedFetch } from "./traced-fetch.js";
 import {
   traceAssets,
   traceCdn,
@@ -401,11 +401,9 @@ export function withSignal<TSchema extends Record<string, unknown>>(
   const derived: AppContext<TSchema> = {
     ...ctx,
     signal,
-    // Wraps `ctx.fetch`, so whatever answers it, a test site's fake included,
-    // answers here too.
+    // Wraps `ctx.fetch`, so whatever answers it answers here too.
     fetch: (input, init) => {
-      const caller =
-        init?.signal ?? (input instanceof Request ? input.signal : undefined);
+      const caller = callerSignal(input, init);
       return ctx.fetch(input, {
         ...init,
         signal: caller ? AbortSignal.any([caller, signal]) : signal,
