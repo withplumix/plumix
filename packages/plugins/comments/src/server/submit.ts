@@ -9,10 +9,11 @@ import * as v from "valibot";
 import type { ResolvedCommentsConfig } from "../config.js";
 import type { CommentRefusalCode } from "../refusals.js";
 import type { CommentStatus } from "../types.js";
-import type { CommentModerationCandidate } from "./hooks.js";
+import type { CommentModerationCandidate } from "./events.js";
 import { RETURN_FIELD, SUBMIT_PATH } from "../contract.js";
 import { REFUSALS } from "../refusals.js";
 import { resolveCommentableEntry } from "./commentable.js";
+import { comment } from "./events.js";
 import { applyModerationVerdict, decideBaselineStatus } from "./moderation.js";
 import { readSubmission } from "./read-submission.js";
 import { rejectPage } from "./reject-page.js";
@@ -158,8 +159,8 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       ipHash,
       isAuthenticated,
     };
-    const verdict = await ctx.hooks.applyFilter(
-      "comment:moderate",
+    const verdict = await ctx.filters.apply(
+      comment.moderate,
       baseline,
       candidate,
     );
@@ -188,7 +189,7 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
     });
 
     if (row.status === "approved") ctx.cache.changed(row.entryId);
-    await ctx.hooks.doAction("comment:created", row, ctx);
+    await ctx.events.emit(comment.created, { comment: row });
 
     return accepted(status);
   };

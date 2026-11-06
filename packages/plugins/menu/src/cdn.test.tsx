@@ -8,6 +8,7 @@ import { describe, expect, test } from "vitest";
 import type { MenuItemMeta } from "./server/types.js";
 import { menu } from "./index.js";
 import { getMenuByName } from "./server/getMenuByName.js";
+import { menu as menuSubject } from "./server/index.js";
 
 const blog = definePlugin("blog", {
   setup: (ctx) => {
@@ -316,8 +317,8 @@ describe("@plumix/plugin-menu — location writes", () => {
         ctx.addAction("settings:group_changed", (changes) => {
           heard.push(`${changes.group}: ${changes.removed.join(",")}`);
         });
-        ctx.addAction("menu:deleted", ({ slug }) => {
-          heard.push(`menu:deleted ${slug}`);
+        ctx.events.on(menuSubject.deleted, ({ slug }) => {
+          heard.push(`menu.deleted ${slug}`);
         });
       },
     });
@@ -327,6 +328,6 @@ describe("@plumix/plugin-menu — location writes", () => {
 
     await rpc(s, "menu/delete", { termId });
 
-    expect(heard).toEqual(["menu_locations: footer", "menu:deleted main-nav"]);
+    expect(heard).toEqual(["menu_locations: footer", "menu.deleted main-nav"]);
   });
 });

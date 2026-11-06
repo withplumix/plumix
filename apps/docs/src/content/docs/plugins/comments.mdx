@@ -23,8 +23,10 @@ What it registers:
 - `GET /_plumix/comments/list`, which pages older roots for a thread that has more than `rootsPerPage` of them.
 - A REST resource at `/{collection}/{entry}/comments`, behind the site's `api.enabled` switch. An entry that isn't a published one open to anonymous visitors, or isn't of the named collection's type, is a 404; one whose type has commenting off is an empty page.
 - A moderation queue in the admin, gated on the `comment:moderate` capability the plugin mints for the editor role.
-- A `comment:moderate` filter and a `comment:created` action, which is where a spam or notification plugin attaches.
-- The lifecycle actions a moderator's writes fire: `comment:approved` (also on restore), `comment:spam`, `comment:trashed`, and `comment:deleted` when a moderator removes a comment, outright or as a tombstone. Each passes the comment row, and `comment:deleted` passes it as it stood before the removal.
+- The `comment.moderate` filter and the `comment.created` event, which is where a spam or notification plugin attaches.
+- The lifecycle events a moderator's writes emit: `comment.approved` (also on restore), `comment.spam`, `comment.trashed`, and `comment.deleted` when a moderator removes a comment, outright or as a tombstone. Each passes `{ comment }`, the comment row, and `comment.deleted` passes it as it stood before the removal.
+
+The package root exports the events and the filter as one namespace, `comment`, so another plugin subscribes with `ctx.events.on(comment.approved, …)` or `ctx.filters.add(comment.moderate, …)` with no `declare module`.
 
 Two surfaces render the form. `PlumixCommentForm` from `@plumix/plugin-comments/theme` is the plugin's own markup, and `usePlumixCommentForm` from `@plumix/plugin-comments/hooks` is the same submission with none of the markup, for a theme writing its own controls. The thread has the same pair: `PlumixCommentThread` from `@plumix/plugin-comments/theme`, and `usePlumixCommentThread` from `@plumix/plugin-comments/hooks`.
 
@@ -205,7 +207,7 @@ export function ReplyBox({ entryId }: { entryId: number }) {
 }
 ```
 
-It posts to the same endpoint the rendered form posts to, so a comment sent from a theme's own controls meets the rate limit, the trust policy and the `comment:moderate` chain exactly as one sent from the plugin's markup does. The honeypot is the one thing it does not meet — the trap is a field in markup this hook does not render, which is the trade of writing the markup yourself.
+It posts to the same endpoint the rendered form posts to, so a comment sent from a theme's own controls meets the rate limit, the trust policy and the `comment.moderate` filter exactly as one sent from the plugin's markup does. The honeypot is the one thing it does not meet — the trap is a field in markup this hook does not render, which is the trade of writing the markup yourself.
 
 `loadThread` comes from `@plumix/plugin-comments/server`, the entry that loads a thread without pulling in admin code. It takes the request context, the entry id, and the page to load, `{ maxDepth, rootsPerPage, cursor }`. It resolves to a `ResolvedThread`, which the `comments` template dep extends with the page links above. `comments` holds the page's roots newest first, each with its `replies`, and `hasMore` and `nextCursor` point at the next page over `/list`. The same entry exports the `ResolvedThreadPage`, `ResolvedThread` and `ResolvedComment` types for typing a theme's own thread component. A comment carries the author's name and avatar URL and its body already rendered to HTML, never the author's email.
 
@@ -223,7 +225,23 @@ It posts to the same endpoint the rendered form posts to, so a comment sent from
 
 A comment from a signed-in author takes a fast path to `approved` whatever the mode — subject to the divergence above, which is the one place that fast path is not taken.
 
-The `comment:moderate` filter runs on that baseline and may only push a comment toward the restrictive end, so two detectors compose without caring which ran first. A filter returning anything that is not a known status is ignored rather than persisted.
+The `comment.moderate` filter runs on that baseline and may only push a comment toward the restrictive end, so two detectors compose without caring which ran first. A handler returning anything that is not a known status is ignored rather than persisted. A handler receives the status so far and the comment being submitted, `{ entryId, authorName, authorEmail, bodyMd, ipHash, isAuthenticated }`:
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+import { comment } from "@plumix/plugin-comments";
+
+export const casinoGuard = definePlugin("casino-guard", {
+  setup: (ctx) => {
+    ctx.filters.add(comment.moderate, (status, candidate) =>
+      candidate.bodyMd.includes("casino") ? "spam" : status,
+    );
+  },
+});
+```
+
+`CommentModerationCandidate`, from `@plumix/plugin-comments/server`, names that second argument for a handler written apart from the call that subscribes it.
 
 A comment purges the cached copy of its entry's page from the CDN only when visitors would see the change: it is approved or restored to approved, an approved comment is spammed, trashed or deleted, or a new comment arrives approved. A comment moving between held, spam and trash purges nothing, since the page shows none of them. Only the pages that render the entry's thread are purged, its `?comments=` pages included; an archive that shows the entry as a card stays stored.
 
@@ -255,5 +273,5 @@ Every option has a default, and `comments()` on its own is a complete registrati
 ## Next steps
 
 - Declare the `comments` template dep on every template that should show a thread — [Templates](/themes/templates/).
-- Attach a spam detector to `comment:moderate`, which sees every comment the other checks accepted.
+- Attach a spam detector to `comment.moderate`, which sees every comment the other checks accepted.
 - Set `notifyEmail` once a mailer is configured, so a held comment reaches a person rather than only the queue.

@@ -26,6 +26,7 @@ import { describe, expect, test } from "vitest";
 
 import type { MenuPluginOptions } from "./index.js";
 import { menu } from "./index.js";
+import { menu as menuSubject } from "./server/index.js";
 
 type Db = Awaited<ReturnType<typeof createTestDb>>;
 type Factories = ReturnType<typeof factoriesFor>;
@@ -1754,12 +1755,12 @@ describe("menu RPC", () => {
     });
   });
 
-  describe("menu.delete hooks", () => {
-    test("fires menu:deleted with the term id, slug and request context", async () => {
+  describe("menu.delete events", () => {
+    test("emits menu.deleted with the term id, slug and request context", async () => {
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "ghost");
       const calls: { payload: unknown; sameHooks: boolean }[] = [];
-      h.hooks.addAction("menu:deleted", (payload, ctx) => {
+      h.hooks.on(menuSubject.deleted, (payload, ctx) => {
         calls.push({ payload, sameHooks: ctx.hooks === h.hooks });
       });
 

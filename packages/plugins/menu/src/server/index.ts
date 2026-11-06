@@ -1,3 +1,4 @@
+export { menu } from "./events.js";
 export { getMenuByName, getMenusByName } from "./getMenuByName.js";
 export {
   getMenuForLocation,

@@ -1,6 +1,8 @@
 import type { AppContext } from "plumix/plugin";
 import {
   createPluginRegistry,
+  defineEvent,
+  definePlugin,
   HookRegistry,
   installPlugins,
 } from "plumix/plugin";
@@ -10,7 +12,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { ResolvedThreadPage } from "./server/load-thread.js";
 import type { CommentsTestDb } from "./test/db.js";
 import type { CommentsConfig } from "./types.js";
-import { comments } from "./index.js";
+import { comment, comments } from "./index.js";
 import { createCommentsTestDb, seedPublishedPost } from "./test/db.js";
 import { commentFactory } from "./test/factories.js";
 
@@ -61,7 +63,7 @@ describe("comments() plugin", () => {
     readonly restResources: string[];
     readonly capabilities: string[];
     readonly adminPaths: string[];
-    readonly actions: string[];
+    readonly events: string[];
     rpcRouter: boolean;
   }
 
@@ -72,7 +74,7 @@ describe("comments() plugin", () => {
       restResources: [],
       capabilities: [],
       adminPaths: [],
-      actions: [],
+      events: [],
       rpcRouter: false,
     };
     const ctx = {
@@ -87,7 +89,9 @@ describe("comments() plugin", () => {
       },
       registerAdminPage: (opts: { path: string }) =>
         captured.adminPaths.push(opts.path),
-      addAction: (name: string) => captured.actions.push(name),
+      events: {
+        on: (event: { readonly id: string }) => captured.events.push(event.id),
+      },
     } as unknown as Parameters<ReturnType<typeof comments>["setup"]>[0];
     void comments(config).setup(ctx, undefined);
     return captured;
@@ -103,12 +107,37 @@ describe("comments() plugin", () => {
     expect(s.rpcRouter).toBe(true);
   });
 
-  test("adds a comment:created listener for notifyEmail only when it is set", () => {
+  test("subscribes to comment.created for notifyEmail only when it is set", () => {
     const created = (options: CommentsConfig) =>
-      captureSetup(options).actions.filter((name) => name === "comment:created")
+      captureSetup(options).events.filter((id) => id === "comment:created")
         .length;
     expect(created({})).toBe(0);
     expect(created({ notifyEmail: "mod@example.test" })).toBe(1);
+  });
+});
+
+describe("comment namespace", () => {
+  test.each([
+    "comment:created",
+    "comment:approved",
+    "comment:spam",
+    "comment:trashed",
+    "comment:deleted",
+    "comment:moderate",
+  ] as const)("a plugin declaring %s again fails boot", async (id) => {
+    const rival = definePlugin("rival", {
+      events: [defineEvent<undefined>(id)],
+      setup: () => undefined,
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [comments(), rival],
+    });
+
+    await expect(install).rejects.toThrow(
+      `Plugin "rival" registers event "${id}" already registered by "comments".`,
+    );
   });
 });
 
@@ -116,7 +145,7 @@ describe("moderator notification", () => {
   test("a comment held for review is mailed to the moderator", async () => {
     const db = await createCommentsTestDb();
     const entry = await seedPublishedPost(db);
-    const comment = await commentFactory
+    const held = await commentFactory
       .transient({ db })
       .create({ entryId: entry.id, status: "pending" });
     const hooks = new HookRegistry();
@@ -130,7 +159,7 @@ describe("moderator notification", () => {
       config: { mailer: { send }, plugins: [plugin] },
     });
 
-    await hooks.doAction("comment:created", comment, ctx);
+    await hooks.emit(comment.created, { comment: held }, ctx);
 
     expect(send).toHaveBeenCalledOnce();
   });

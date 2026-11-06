@@ -68,8 +68,8 @@ export interface ResolvedMenuItem {
    */
   readonly isCurrent: boolean;
   /**
-   * Menu-tree ancestry only; entity-tree ancestry is left to `menu:item`
-   * filters.
+   * Menu-tree ancestry only; entity-tree ancestry is left to `menu.item`
+   * handlers.
    */
   readonly isAncestor: boolean;
   readonly children: readonly ResolvedMenuItem[];

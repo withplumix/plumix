@@ -1,9 +1,11 @@
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, EventDefinition } from "plumix/plugin";
 import { authenticated, base, requireCapability } from "plumix/plugin";
 import * as v from "valibot";
 
+import type { Comment } from "./db/schema.js";
 import type { ModerationComment, StatusChange } from "./server/repository.js";
 import type { CommentStatus } from "./types.js";
+import { comment } from "./server/events.js";
 import {
   countByStatus,
   listForModeration,
@@ -24,7 +26,7 @@ export type ModerationCommentDTO = Omit<ModerationComment, "createdAt"> & {
   readonly createdAt: string;
 };
 
-type TransitionAction = "comment:approved" | "comment:spam" | "comment:trashed";
+type TransitionEvent = EventDefinition<{ readonly comment: Comment }>;
 
 /**
  * `restore` reuses the approved entry; `purge` is separate because it removes.
@@ -33,11 +35,11 @@ const BULK_ACTIONS = ["approve", "spam", "trash"] as const;
 type BulkAction = (typeof BULK_ACTIONS)[number];
 const TRANSITIONS: Record<
   BulkAction,
-  { target: CommentStatus; action: TransitionAction }
+  { target: CommentStatus; event: TransitionEvent }
 > = {
-  approve: { target: "approved", action: "comment:approved" },
-  spam: { target: "spam", action: "comment:spam" },
-  trash: { target: "trash", action: "comment:trashed" },
+  approve: { target: "approved", event: comment.approved },
+  spam: { target: "spam", event: comment.spam },
+  trash: { target: "trash", event: comment.trashed },
 };
 
 const idInput = v.object({
@@ -91,9 +93,9 @@ export function createCommentsRouter() {
       return countByStatus(context);
     });
 
-  // `restore` reuses the approved action — returning a comment to the queue
-  // is re-approving it (no separate comment:restored action in v1).
-  function transition(target: CommentStatus, action: TransitionAction) {
+  // `restore` reuses the approved event: returning a comment to the queue is
+  // re-approving it.
+  function transition(target: CommentStatus, event: TransitionEvent) {
     return base
       .use(authenticated)
       .use(requireCapability(COMMENT_MODERATE_CAPABILITY))
@@ -111,7 +113,7 @@ export function createCommentsRouter() {
             });
           }
           threadChanged(context, change);
-          await context.hooks.doAction(action, change.comment, context);
+          await context.events.emit(event, { comment: change.comment });
           return { status: change.comment.status };
         },
       );
@@ -131,17 +133,15 @@ export function createCommentsRouter() {
           if (outcome.comment.status === "approved") {
             context.cache.changed(outcome.comment.entryId);
           }
-          await context.hooks.doAction(
-            "comment:deleted",
-            outcome.comment,
-            context,
-          );
+          await context.events.emit(comment.deleted, {
+            comment: outcome.comment,
+          });
         }
         return { result: outcome.result };
       },
     );
 
-  // Bulk transitions fire the lifecycle action per affected comment.
+  // Bulk transitions emit the lifecycle event per affected comment.
   const bulk = base
     .use(authenticated)
     .use(requireCapability(COMMENT_MODERATE_CAPABILITY))
@@ -155,11 +155,11 @@ export function createCommentsRouter() {
       }),
     )
     .handler(async ({ input, context }): Promise<{ changed: number }> => {
-      const { target, action } = TRANSITIONS[input.action];
+      const { target, event } = TRANSITIONS[input.action];
       const changes = await setStatusMany(context, input.ids, target);
       for (const change of changes) {
         threadChanged(context, change);
-        await context.hooks.doAction(action, change.comment, context);
+        await context.events.emit(event, { comment: change.comment });
       }
       return { changed: changes.length };
     });
@@ -167,10 +167,10 @@ export function createCommentsRouter() {
   return {
     list,
     counts,
-    approve: transition(TRANSITIONS.approve.target, TRANSITIONS.approve.action),
-    spam: transition(TRANSITIONS.spam.target, TRANSITIONS.spam.action),
-    trash: transition(TRANSITIONS.trash.target, TRANSITIONS.trash.action),
-    restore: transition(TRANSITIONS.approve.target, TRANSITIONS.approve.action),
+    approve: transition(TRANSITIONS.approve.target, TRANSITIONS.approve.event),
+    spam: transition(TRANSITIONS.spam.target, TRANSITIONS.spam.event),
+    trash: transition(TRANSITIONS.trash.target, TRANSITIONS.trash.event),
+    restore: transition(TRANSITIONS.approve.target, TRANSITIONS.approve.event),
     purge,
     bulk,
   };

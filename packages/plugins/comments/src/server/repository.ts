@@ -171,8 +171,7 @@ export interface StatusChange {
   readonly previous: CommentStatus;
 }
 
-/** Apply a status to many comments at once (bulk moderation). Returns the
- * changes so the caller can fire per-comment lifecycle actions. */
+/** Apply a status to many comments at once (bulk moderation). */
 export async function setStatusMany(
   ctx: AppContext,
   ids: readonly number[],

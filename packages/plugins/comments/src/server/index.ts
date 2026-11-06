@@ -8,7 +8,6 @@ export type {
   ResolvedThreadPage,
 } from "./load-thread.js";
 export { loadThread } from "./load-thread.js";
-// Re-exported so a third-party moderation plugin can type its
-// `comment:moderate` filter; importing it also pulls the plugin's
-// FilterRegistry/ActionRegistry augmentation into scope.
-export type { CommentModerationCandidate } from "./hooks.js";
+// Re-exported so a third-party moderation plugin can type a handler of the
+// `comment.moderate` filter outside the call that subscribes it.
+export type { CommentModerationCandidate } from "./events.js";

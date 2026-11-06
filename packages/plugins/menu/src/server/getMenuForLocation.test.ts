@@ -17,7 +17,8 @@ import {
 } from "plumix/test";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { menu } from "../index.js";
+import { menu as menuPlugin } from "../index.js";
+import { menu } from "./events.js";
 import { getMenuByName } from "./getMenuByName.js";
 import {
   getMenuForLocation,
@@ -33,7 +34,7 @@ async function buildTestRegistry(): Promise<TestRegistryBundle> {
   const hooks = new HookRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menu()], registry });
+  await installPlugins({ hooks, plugins: [menuPlugin()], registry });
   return { registry, hooks };
 }
 
@@ -197,13 +198,13 @@ describe("getMenuForLocation", () => {
       expect(result.unbound).toBeNull();
     });
 
-    test("two locations bound to the same menu each see their own location in menu:tree", async () => {
+    test("two locations bound to the same menu each see their own location in menu.tree", async () => {
       await seedMenuWithItem("shared", "Home", "/");
       await bind("primary", "shared");
       await bind("footer", "shared");
 
       const seen: (string | null)[] = [];
-      bundle.hooks.addFilter("menu:tree", (items, { location }) => {
+      bundle.hooks.add(menu.tree, (items, { location }) => {
         seen.push(location);
         return items;
       });
@@ -264,7 +265,7 @@ describe("getMenuForLocation", () => {
       await installPlugins({
         hooks,
         plugins: [
-          menu({
+          menuPlugin({
             locations: {
               header: { label: "Header", maxDepth: 2 },
               sidebar: { label: "Sidebar" },
