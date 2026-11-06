@@ -119,22 +119,28 @@ export const runShipLoop = async (
     ports.say(`\n${stoppedBecause}\nLeaving the rest of the queue untouched.`);
   };
 
+  const confirmRerunningOnce = async (
+    pullRequest: QueuedPullRequest,
+  ): Promise<MergeOutcome> => {
+    const outcome = await ports.confirm(pullRequest);
+    if (
+      outcome.status !== "failed" ||
+      !failedOnItsOwnChecks(outcome) ||
+      !(await ports.rerunFailedChecks(pullRequest, outcome))
+    )
+      return outcome;
+    ports.say(
+      `  #${pullRequest.number} refused (${outcome.reason}), re-running the failed jobs once`,
+    );
+    ports.requeue(pullRequest);
+    return ports.confirm(pullRequest);
+  };
+
   const confirmRepairingWhatIsRefused = async ({
     ticket,
     pullRequest,
   }: Queued): Promise<MergeOutcome> => {
-    let outcome = await ports.confirm(pullRequest);
-    if (
-      outcome.status === "failed" &&
-      failedOnItsOwnChecks(outcome) &&
-      (await ports.rerunFailedChecks(pullRequest, outcome))
-    ) {
-      ports.say(
-        `  #${pullRequest.number} refused (${outcome.reason}), re-running the failed jobs once`,
-      );
-      ports.requeue(pullRequest);
-      outcome = await ports.confirm(pullRequest);
-    }
+    let outcome = await confirmRerunningOnce(pullRequest);
     let repairs = 0;
     let rebases = 0;
     while (outcome.status !== "merged" && !outcome.needsAPerson) {
@@ -166,10 +172,10 @@ export const runShipLoop = async (
           : ports.repair(ticket, pullRequest, refusal),
       );
       if (repaired === undefined) return { status: "merged" };
-      if (repaired.status === "declined") {
+      if (repaired.status === "declined" && !failedOnItsOwnChecks(refusal)) {
         return { status: "failed", reason: repaired.reason, failingChecks: [] };
       }
-      if (repaired.status === "not-this-branch") {
+      if (repaired.status !== "repaired") {
         const refusedFor = outcome;
         if (!(await ports.rerunFailedChecks(pullRequest, refusedFor))) {
           return {
@@ -179,7 +185,7 @@ export const runShipLoop = async (
           };
         }
         ports.say(
-          `  #${pullRequest.number} failed on something that is not this branch, re-running it`,
+          `  #${pullRequest.number} has nothing for a repair to fix, re-running it`,
         );
         ports.requeue(pullRequest);
         outcome = await ports.confirm(pullRequest);
@@ -188,7 +194,7 @@ export const runShipLoop = async (
           : { status: "failed", reason: repaired.reason, failingChecks: [] };
       }
       ports.requeue(pullRequest);
-      outcome = await ports.confirm(pullRequest);
+      outcome = await confirmRerunningOnce(pullRequest);
     }
     return outcome;
   };
