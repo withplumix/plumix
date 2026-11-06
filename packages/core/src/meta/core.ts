@@ -95,8 +95,6 @@ export class MetaSanitizationError extends Error {
   }
 }
 
-export type { MetaChanges } from "./contract/bags.js";
-
 /**
  * Carries every `{ path, message }` across the patch so the admin form can
  * address each input in one round-trip. Nothing is written when this throws.
