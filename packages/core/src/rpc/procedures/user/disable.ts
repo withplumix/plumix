@@ -53,8 +53,6 @@ export const disable = base
 
     await invalidateAllSessionsForUser(context.db, updated.id);
 
-    // Pairs with the `user.statusChanged` emitted on re-enable, so plugins
-    // observing "account active state changed" subscribe to one event.
     await context.events.emit(user.statusChanged, {
       user: updated,
       enabled: false,

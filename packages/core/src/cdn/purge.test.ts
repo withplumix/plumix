@@ -195,8 +195,7 @@ describe("purge accumulator", () => {
 });
 
 describe("registerCorePurgeInvalidator", () => {
-  // Loose-typed: each action's payload differs, so the tests fire by name.
-  // A declared event is named by its id, so a table of events reads by name.
+  // Loose-typed: payloads differ per event, so the tests fire by name.
   const fire = async (
     hooks: HookRegistry,
     ctx: AppContext,

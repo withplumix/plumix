@@ -405,12 +405,18 @@ function actorOfCtx(_payload: unknown, ctx: AppContext): AuditLogActor {
   return actorOf(ctx);
 }
 
+const userSubject = {
+  kind: "extract",
+  type: "user",
+  from: ({ user }: { readonly user: SubjectInput }) => user,
+} as const;
+
 export const auditedEvents: readonly AuditedEvent[] = [
   // ─── User surface ───
   audited({
     event: "user:updated",
     on: user.updated,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     actor: actorOfCtx,
     diff: {
       omit: ["createdAt", "updatedAt", "lastSignInAt", "passwordHash", "meta"],
@@ -420,7 +426,7 @@ export const auditedEvents: readonly AuditedEvent[] = [
   audited({
     event: "user:status_changed",
     on: user.statusChanged,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     actor: actorOfCtx,
     // The diff renderer already understands `[old, new]` tuples; encode
     // the boolean toggle as one so the feed reads consistently.
@@ -434,7 +440,7 @@ export const auditedEvents: readonly AuditedEvent[] = [
   audited({
     event: "user:deleted",
     on: user.deleted,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     actor: actorOfCtx,
     extra: ({ reassignedTo }) => ({ reassignedTo }),
   }),
@@ -458,7 +464,7 @@ export const auditedEvents: readonly AuditedEvent[] = [
   audited({
     event: "user:invited",
     on: user.invited,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     // A CLI-initiated invite has no matching ctx.user, so the label falls back
     // to the id. SECURITY: `inviteToken` is never recorded.
     actor: ({ invitedBy }, ctx) => ({
@@ -470,7 +476,7 @@ export const auditedEvents: readonly AuditedEvent[] = [
   audited({
     event: "user:registered",
     on: auth.registered,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     actor: actorIsUser,
   }),
 
@@ -478,7 +484,7 @@ export const auditedEvents: readonly AuditedEvent[] = [
   audited({
     event: "user:signed_in",
     on: auth.signedIn,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     actor: actorIsUser,
     extra: ({ method, provider, firstSignIn }) => ({
       method,
@@ -489,13 +495,13 @@ export const auditedEvents: readonly AuditedEvent[] = [
   audited({
     event: "user:signed_out",
     on: auth.signedOut,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     actor: actorIsUser,
   }),
   audited({
     event: "user:email_change_requested",
     on: auth.emailChangeRequested,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     // An admin may request the change for someone else, so the payload's
     // actor, not ctx.user, is the responsible party.
     actor: actorOfPayload,
@@ -507,7 +513,7 @@ export const auditedEvents: readonly AuditedEvent[] = [
   audited({
     event: "user:email_changed",
     on: auth.emailChanged,
-    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    subject: userSubject,
     actor: actorOfCtx,
     extra: ({ user, previousEmail }) => ({
       email: [previousEmail, user.email],

@@ -37,8 +37,6 @@ export const enable = base
       throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
 
-    // One `user.statusChanged` covers enable and disable, so plugins
-    // observing "account activity state changed" don't need two events.
     await context.events.emit(user.statusChanged, {
       user: updated,
       enabled: true,
