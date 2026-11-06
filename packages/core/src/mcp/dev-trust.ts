@@ -1,9 +1,11 @@
 import type { AppContext } from "../context/app-context.js";
+import { hasBearerToken } from "../auth/bearer.js";
 import { isLoopbackHostname, isLoopbackOrigin } from "../auth/csrf.js";
 
 /**
- * `"trusted"` serves without a token, as the first admin when the site has
- * one; `"rejected"` blocks a cross-site Origin; `"token"` requires a bearer token as in prod.
+ * `"trusted"` serves a tokenless request, as the first admin when the site has
+ * one; `"rejected"` blocks a cross-site Origin; `"token"` requires a bearer
+ * token as in prod.
  */
 export type McpDevTrust = "trusted" | "rejected" | "token";
 
@@ -19,6 +21,7 @@ export function resolveMcpDevTrust(ctx: AppContext): McpDevTrust {
   if (origin !== null && !isAllowedDevOrigin(origin, ctx.origin)) {
     return "rejected";
   }
+  if (hasBearerToken(ctx.request)) return "token";
 
   let hostname: string;
   try {

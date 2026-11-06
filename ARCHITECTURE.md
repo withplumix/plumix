@@ -863,7 +863,7 @@ Agents are users of Plumix twice over: they build sites, and they work inside ru
   It writes, composes and publishes through the same procedures as the admin, held to the same
   rules: its token's capabilities, leases, revisions, the allowed blocks and the style policy. What it
   may do is what its token may do; a person steers it by choosing that token. Every change it makes
-  is a revision naming the agent and the person whose token it used.
+  is a revision authored by the person whose token it used, with the token's name in its meta.
 
 ## How do I
 

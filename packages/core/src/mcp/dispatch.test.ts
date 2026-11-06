@@ -1171,6 +1171,47 @@ describe("MCP endpoint — dev trust", () => {
     });
   });
 
+  test("a loopback request with a token acts as the token's person", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [revisedBlog] } });
+    await h.factory.admin.create();
+    const editor = await h.factory.user.create({ role: "editor" });
+    const { secret } = await h.factory.apiToken.create({
+      userId: editor.id,
+      name: "Claude Desktop",
+    });
+    const draft = await h.factory.draft.create({ authorId: editor.id });
+
+    await h.dispatch(
+      mcpRequest(
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: {
+            name: "content_update",
+            arguments: {
+              type: "post",
+              id: draft.id,
+              ifMatch: await currentEtag(h.db, draft.id),
+              title: "Edited",
+            },
+          },
+        },
+        { url: "http://localhost/_plumix/mcp", secret },
+      ),
+    );
+
+    const [revision] = await h.db
+      .select()
+      .from(entries)
+      .where(eq(entries.type, "revision"));
+    expect(revision?.authorId).toBe(editor.id);
+    expect(revision?.meta).toMatchObject({
+      __plumix_revision_token: { tokenName: "Claude Desktop" },
+    });
+  });
+
   test("a loopback request on a site with no admin reads as anonymous", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
     const h = await mcpHarness({ config: { plugins: [blog] } });

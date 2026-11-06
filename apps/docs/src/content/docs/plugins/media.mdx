@@ -23,7 +23,7 @@ Beyond the `media` entry type, installing it registers:
 - The `media` and `mediaList` field types, plus `mediaUrl` and `focalPoint`, which the block style controls and the image block use.
 - Two blocks, `media/image` and `media/file`.
 - Two routes under `/_plumix/media/`: one that receives worker-routed uploads, and one that serves a published file when the bucket has no public URL.
-- Two read-only MCP tools, `media_list` and `media_get`.
+- Two MCP tools that read the library, `media_list` and `media_get`, beside the tools an [agent](/apis/connect-an-agent/) gets from core.
 
 The plugin registers the `media` entry type with `isPublic: false`, so it gets no generic entries list, no sidebar item of its own and no public URL. The library page replaces all three.
 
