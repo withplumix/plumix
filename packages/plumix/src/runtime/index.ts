@@ -76,6 +76,7 @@ export type {
   ListResult,
   MemoryKV,
   MemoryKvConfig,
+  ConnectedMemoryStorage,
   MemoryObjectStorage,
   MemoryStorageConfig,
   NegotiatedFormat,

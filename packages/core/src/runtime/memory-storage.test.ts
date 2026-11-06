@@ -62,6 +62,26 @@ describe("memoryStorage as an HTTP endpoint", () => {
 
     expect(response.status).toBe(404);
   });
+
+  test.each([
+    [
+      "a path outside its URL base",
+      "/elsewhere/a-path-longer-than-the-base.png",
+    ],
+    ["its URL base alone", "/_plumix/memory-storage/"],
+  ])("stores nothing from a PUT to %s", async (_, path) => {
+    const s = memoryStorage().connect();
+
+    const response = await s.fetch(
+      new Request(`https://cms.example${path}`, {
+        method: "PUT",
+        body: "bytes",
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    expect((await s.list()).items).toEqual([]);
+  });
 });
 
 describe("memoryStorage list", () => {

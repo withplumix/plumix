@@ -21,7 +21,6 @@ describe("uploading an image", () => {
       size: PNG.byteLength,
     });
 
-    // Resolved against the site's origin, as the browser on it resolves it.
     const sent = await site.storage.fetch(
       new Request(new URL(upload.uploadUrl, "https://cms.example"), {
         method: upload.method,

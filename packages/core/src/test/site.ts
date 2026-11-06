@@ -236,7 +236,6 @@ export async function testSite<
     return response;
   }
 
-  // What a bucket with a public URL base answers, the site serves at it.
   async function isStoragePath(request: Request): Promise<boolean> {
     const base = new URL(await fakes.storage.url(""), request.url);
     return new URL(request.url).pathname.startsWith(base.pathname);
@@ -445,7 +444,6 @@ function freshFakes(): Fakes {
 }
 
 /**
- * Storage, kv and image delivery stay unbound unless the config declares them.
  * The config's own telemetry consumers are replaced, so none exports from a
  * test.
  */
@@ -470,7 +468,6 @@ function withFakes(config: PlumixConfig, current: () => Fakes): PlumixConfig {
       connect: () => current().storage,
     },
     kv: config.kv && { kind: "test", connect: () => current().kv },
-    // Serves the stored original at every width, from the site's own bucket.
     imageDelivery: config.imageDelivery && {
       kind: "test",
       acceptsRelativeSources: true,

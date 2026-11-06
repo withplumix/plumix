@@ -146,6 +146,7 @@ export { memoryKv } from "./runtime/memory-kv.js";
 export type { MemoryKV, MemoryKvConfig } from "./runtime/memory-kv.js";
 export { memoryStorage } from "./runtime/memory-storage.js";
 export type {
+  ConnectedMemoryStorage,
   MemoryObjectStorage,
   MemoryStorageConfig,
 } from "./runtime/memory-storage.js";
