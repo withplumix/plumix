@@ -145,7 +145,7 @@ HTTP/1.1 401 Unauthorized
 WWW-Authenticate: Bearer error="invalid_token", error_description="Missing or invalid token", scope="read draft full", resource_metadata="https://example.com/.well-known/oauth-protected-resource/_plumix/mcp"
 ```
 
-The scopes match the mint form: `read` is "Read only", `draft` is "Draft, can't publish", and `full` is "Same as me". The metadata document at that URL names the endpoint as the resource. Plumix serves no OAuth authorization endpoints yet, so connect a client with a minted token as the [Quickstart](#quickstart) shows.
+The scopes match the mint form: `read` is "Read only", `draft` is "Draft, can't publish", and `full` is "Same as me". The metadata document at that URL names the endpoint as the resource and the site as its authorization server. A client that speaks OAuth signs you in from there: you approve it on a consent page in the admin, where you can untick capabilities of the scope it asked for, and it gets a one-hour token that works only on `/_plumix/mcp`. A client without OAuth connects with a minted token as the [Quickstart](#quickstart) shows.
 
 ## Conflicts and leases
 
