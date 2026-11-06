@@ -4,6 +4,7 @@ import type { AppContext } from "../context/app-context.js";
 import { authenticateBearer } from "../auth/bearer.js";
 import { loadOnce } from "../load-once.js";
 import { forbidden, methodNotAllowed } from "../runtime/contract/http.js";
+import { asLoopbackAdmin } from "./dev-loopback.js";
 import { resolveMcpDevTrust } from "./dev-trust.js";
 import { buildMcpToolRegistry } from "./registry.js";
 
@@ -28,8 +29,8 @@ export async function handleMcpRequest(ctx: AppContext): Promise<Response> {
 
   let toolCtx: AppContext;
   let authInfo: AuthInfo | undefined;
-  if (trust === "trusted") {
-    toolCtx = ctx;
+  if (process.env.PLUMIX_DEV && trust === "trusted") {
+    toolCtx = await asLoopbackAdmin(ctx);
   } else {
     const { mcpUrl, tokenAuthInfo, unauthorizedChallenge } =
       await loadResourceMetadata();

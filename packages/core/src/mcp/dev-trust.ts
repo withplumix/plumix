@@ -2,8 +2,8 @@ import type { AppContext } from "../context/app-context.js";
 import { isLoopbackHostname, isLoopbackOrigin } from "../auth/csrf.js";
 
 /**
- * `"trusted"` serves without a token under an anonymous context; `"rejected"`
- * blocks a cross-site Origin; `"token"` requires a bearer token as in prod.
+ * `"trusted"` serves without a token, as the first admin when the site has
+ * one; `"rejected"` blocks a cross-site Origin; `"token"` requires a bearer token as in prod.
  */
 export type McpDevTrust = "trusted" | "rejected" | "token";
 
