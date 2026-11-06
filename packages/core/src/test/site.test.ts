@@ -528,29 +528,6 @@ describe("the site's outbound fetches", () => {
     forecasting.fetch.assertNotFetched("https://weather.example/*");
   });
 
-  test("fail as the platform's fetch fails on a declared network error", async () => {
-    forecasting.fetch.route(
-      "GET",
-      "https://weather.example/*",
-      "network error",
-    );
-
-    await expect(
-      forecasting.context.fetch("https://weather.example/today"),
-    ).rejects.toMatchObject({ name: "TypeError", message: "fetch failed" });
-  });
-
-  test("time out as ctx.fetch does on a declared timeout, at the default bound", async () => {
-    forecasting.fetch.route("GET", "https://weather.example/*", "timeout");
-
-    await expect(
-      forecasting.context.fetch("https://weather.example/today"),
-    ).rejects.toMatchObject({
-      name: "TimeoutError",
-      message: "timed out after 10s",
-    });
-  });
-
   test("time out as ctx.fetch does on a declared timeout, at a tightened bound", async () => {
     forecasting.fetch.route("GET", "https://weather.example/*", "timeout");
 

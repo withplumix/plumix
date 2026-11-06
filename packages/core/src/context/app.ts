@@ -107,10 +107,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly origin?: EnvInput<string>;
   readonly dev?: DevRuntime;
   readonly clock?: Clock;
-  /**
-   * Answers `ctx.fetch` inside its span, in place of the bounded platform
-   * `fetch`; a test site's fake.
-   */
+  /** Answers `ctx.fetch` inside its span, in place of the bounded platform `fetch`. */
   readonly fetch?: PlumixFetch;
   readonly logger?: Logger;
   readonly defer?: DeferFn;

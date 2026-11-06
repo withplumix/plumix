@@ -52,7 +52,7 @@ export interface FetchFake {
    * code caught it.
    */
   readonly assertAllDeclared: () => void;
-  /** What `ctx.fetch` calls inside its span, in place of the platform's. */
+  /** Answers a request as the platform's `fetch` would. */
   readonly send: PlumixFetch;
 }
 

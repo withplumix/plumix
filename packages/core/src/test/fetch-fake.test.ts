@@ -96,17 +96,10 @@ describe("an undeclared request", () => {
   });
 });
 
-function pingRoute(): ReturnType<typeof fakeFetch> {
-  const fetch = fakeFetch();
-  for (const method of ["GET", "POST", "PUT", "DELETE"]) {
-    fetch.route(method, "https://api.example/*", new Response(null));
-  }
-  return fetch;
-}
-
 describe("assertFetched", () => {
   test("passes for a request to the URL", async () => {
-    const fetch = pingRoute();
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/*", new Response(null));
     await fetch.send("https://api.example/ping");
 
     expect(() => {
@@ -115,7 +108,8 @@ describe("assertFetched", () => {
   });
 
   test("passes for a request with the method and JSON body", async () => {
-    const fetch = pingRoute();
+    const fetch = fakeFetch();
+    fetch.route("POST", "https://api.example/*", new Response(null));
     await fetch.send("https://api.example/ping", {
       method: "POST",
       body: JSON.stringify({ urls: ["/a"], key: "k" }),
@@ -130,7 +124,8 @@ describe("assertFetched", () => {
   });
 
   test("passes for a request with the text body", async () => {
-    const fetch = pingRoute();
+    const fetch = fakeFetch();
+    fetch.route("PUT", "https://api.example/*", new Response(null));
     await fetch.send("https://api.example/ping", {
       method: "PUT",
       body: "secret=abc",
@@ -142,7 +137,9 @@ describe("assertFetched", () => {
   });
 
   test("fails listing what was fetched, bodies included", async () => {
-    const fetch = pingRoute();
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/*", new Response(null));
+    fetch.route("POST", "https://api.example/*", new Response(null));
     await fetch.send("https://api.example/status");
     await fetch.send("https://api.example/ping", {
       method: "POST",
@@ -164,7 +161,7 @@ describe("assertFetched", () => {
 
   test("fails saying nothing was fetched", () => {
     expect(() => {
-      pingRoute().assertFetched("https://api.example/ping");
+      fakeFetch().assertFetched("https://api.example/ping");
     }).toThrow(
       "Expected https://api.example/ping to be fetched, but it was not.\n" +
         "Nothing was fetched.",
@@ -174,7 +171,8 @@ describe("assertFetched", () => {
 
 describe("assertNotFetched", () => {
   test("passes when no request matched the URL", async () => {
-    const fetch = pingRoute();
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/*", new Response(null));
     await fetch.send("https://api.example/status");
 
     expect(() => {
@@ -183,7 +181,8 @@ describe("assertNotFetched", () => {
   });
 
   test("fails listing what was fetched", async () => {
-    const fetch = pingRoute();
+    const fetch = fakeFetch();
+    fetch.route("DELETE", "https://api.example/*", new Response(null));
     await fetch.send("https://api.example/ping", { method: "DELETE" });
 
     expect(() => {
@@ -198,7 +197,8 @@ describe("assertNotFetched", () => {
 
 describe("assertAllDeclared", () => {
   test("passes when every request had a route", async () => {
-    const fetch = pingRoute();
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/*", new Response(null));
     await fetch.send("https://api.example/ping");
 
     expect(() => {
@@ -214,5 +214,40 @@ describe("assertAllDeclared", () => {
     expect(() => {
       fetch.assertAllDeclared();
     }).toThrow("fetch: no route answers GET https://api.example/first.");
+  });
+});
+
+describe("a declared failure", () => {
+  test("rejects as the platform's fetch does on a network error", async () => {
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/*", "network error");
+
+    await expect(
+      fetch.send("https://api.example/status"),
+    ).rejects.toMatchObject({ name: "TypeError", message: "fetch failed" });
+  });
+
+  test("rejects as ctx.fetch does on a timeout, at the default bound", async () => {
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/*", "timeout");
+
+    await expect(
+      fetch.send("https://api.example/status"),
+    ).rejects.toMatchObject({
+      name: "TimeoutError",
+      message: "timed out after 10s",
+    });
+  });
+
+  test("rejects as ctx.fetch does on a timeout, at the call's bound", async () => {
+    const fetch = fakeFetch();
+    fetch.route("GET", "https://api.example/*", "timeout");
+
+    await expect(
+      fetch.send("https://api.example/status", { timeout: 2500 }),
+    ).rejects.toMatchObject({
+      name: "TimeoutError",
+      message: "timed out after 2.5s",
+    });
   });
 });
