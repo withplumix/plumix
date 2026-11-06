@@ -5,6 +5,7 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { resolveUserMeta, settleUserMeta } from "./meta.js";
 import { userGetInputSchema } from "./schemas.js";
+import { user } from "./subject.js";
 
 /**
  * Listing gates access to arbitrary user records; self-lookup is always
@@ -29,7 +30,7 @@ export const get = base
     }
     const { bag } = await settleUserMeta(context, row, row.meta);
     const meta = await resolveUserMeta(context, bag);
-    const output = await context.hooks.applyFilter("rpc:user.get:output", {
+    const output = await context.filters.apply(user.getOutput, {
       ...row,
       meta,
     });

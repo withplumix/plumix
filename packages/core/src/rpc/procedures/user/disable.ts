@@ -7,6 +7,7 @@ import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { otherActiveAdminExists } from "./helpers.js";
 import { userDisableInputSchema } from "./schemas.js";
+import { user } from "./subject.js";
 
 const CAPABILITY = "user:edit";
 
@@ -15,10 +16,7 @@ export const disable = base
   .use(requireCapability(CAPABILITY))
   .input(userDisableInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:user.disable:input",
-      input,
-    );
+    const filtered = await context.filters.apply(user.disableInput, input);
 
     const existing = await context.db.query.users.findFirst({
       where: eq(users.id, filtered.id),
@@ -27,10 +25,7 @@ export const disable = base
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
     if (existing.disabledAt) {
-      const output = await context.hooks.applyFilter(
-        "rpc:user.disable:output",
-        existing,
-      );
+      const output = await context.filters.apply(user.disableOutput, existing);
       return { ...output, etag: etagOf(existing.updatedAt) };
     }
 
@@ -58,21 +53,13 @@ export const disable = base
 
     await invalidateAllSessionsForUser(context.db, updated.id);
 
-    // Pairs with the `user:status_changed` fired on re-enable — one
-    // hook surface for "account active state changed" so plugins don't
-    // have to subscribe to two events.
-    await context.hooks.doAction(
-      "user:status_changed",
-      updated,
-      {
-        enabled: false,
-      },
-      context,
-    );
+    // Pairs with the `user.statusChanged` emitted on re-enable, so plugins
+    // observing "account active state changed" subscribe to one event.
+    await context.events.emit(user.statusChanged, {
+      user: updated,
+      enabled: false,
+    });
 
-    const output = await context.hooks.applyFilter(
-      "rpc:user.disable:output",
-      updated,
-    );
+    const output = await context.filters.apply(user.disableOutput, updated);
     return { ...output, etag: etagOf(updated.updatedAt) };
   });

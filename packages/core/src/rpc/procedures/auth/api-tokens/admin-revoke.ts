@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "../../../../db/index.js";
 import { apiTokens } from "../../../../db/schema/api_tokens.js";
+import { auth } from "../../../../hooks/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { requireCapability } from "../../../require-capability.js";
@@ -26,11 +27,10 @@ export const adminRevoke = base
     if (!row) {
       throw errors.NOT_FOUND({ data: { kind: "api_token", id: input.id } });
     }
-    await context.hooks.doAction(
-      "api_token:revoked",
-      { id: row.id, userId: row.userId },
-      { actor: context.user, mode: "admin" },
-      context,
-    );
+    await context.events.emit(auth.apiTokenRevoked, {
+      apiToken: { id: row.id, userId: row.userId },
+      actor: context.user,
+      mode: "admin",
+    });
     return { id: input.id };
   });

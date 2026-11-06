@@ -1,20 +1,15 @@
-// A test runs `assertRedactionInvariants` over this table, so a row auditing a
-// subject with a sensitive field must list that field in `diff.omit`.
+// A test runs `assertRedactionInvariants` over these tables, so a row
+// auditing a subject with a sensitive field must list that field in
+// `diff.omit`.
 
 import type { ActionArgs, ActionName, JsonObject } from "plumix";
 import type {
   AppContext,
-  AuthenticatedUser,
+  EventDefinition,
   PluginSetupContext,
 } from "plumix/plugin";
-import type {
-  ApiToken,
-  Credential,
-  Entry,
-  EntryStatus,
-  SettingsBag,
-  User,
-} from "plumix/schema";
+import type { Entry, EntryStatus, SettingsBag } from "plumix/schema";
+import { auth, user } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditEntityRow, AuditLogActor } from "../types.js";
@@ -35,12 +30,7 @@ interface ResolvedSubject {
 }
 
 type SubjectStrategy =
-  | {
-      readonly kind: "extract";
-      readonly type: string;
-      /** Defaults to identity. */
-      readonly from?: (payload: never, context: never) => SubjectInput;
-    }
+  | { readonly kind: "extract"; readonly type: string }
   | {
       readonly kind: "inline";
       readonly type: string;
@@ -48,24 +38,6 @@ type SubjectStrategy =
         payload: never,
         context: never,
       ) => { readonly id: string; readonly label: string };
-    };
-
-type ActorStrategy =
-  | { readonly kind: "ctx" }
-  /** `context.actor` is a `User`-shaped object passed by the hook firer. */
-  | { readonly kind: "context-actor" }
-  /**
-   * Payload itself is the user being acted on AND the actor (sign-in / sign-out
-   * / register — ctx.user is null at that point).
-   */
-  | { readonly kind: "self" }
-  | {
-      readonly kind: "custom";
-      readonly resolve: (
-        payload: never,
-        context: never,
-        appCtx: AppContext,
-      ) => AuditLogActor;
     };
 
 /**
@@ -78,10 +50,10 @@ type ContextualAction = {
     : never;
 }[ActionName];
 
+/** A row attributed to the request's user. */
 export interface AuditEventDef {
   readonly event: ContextualAction;
   readonly subject: SubjectStrategy;
-  readonly actor: ActorStrategy;
   /**
    * Diff the top-level columns of `payload` (next) vs. `context` (previous),
    * omitting these keys.
@@ -114,41 +86,7 @@ function resolveSubject(
     )(payload, context);
     return { type: strategy.type, id: partial.id, label: partial.label };
   }
-  const input = strategy.from
-    ? (strategy.from as (payload: unknown, context: unknown) => SubjectInput)(
-        payload,
-        context,
-      )
-    : (payload as SubjectInput);
-  return extractSubject(strategy.type, input);
-}
-
-function resolveActor(
-  strategy: ActorStrategy,
-  payload: unknown,
-  context: unknown,
-  appCtx: AppContext,
-): AuditLogActor {
-  switch (strategy.kind) {
-    case "ctx":
-      return actorOf(appCtx);
-    case "context-actor":
-      return actorFromUser(
-        (context as { readonly actor: AuthenticatedUser }).actor,
-      );
-    case "self":
-      return actorFromUser(
-        payload as { readonly id: number; readonly email: string },
-      );
-    case "custom":
-      return (
-        strategy.resolve as (
-          payload: unknown,
-          context: unknown,
-          appCtx: AppContext,
-        ) => AuditLogActor
-      )(payload, context, appCtx);
-  }
+  return extractSubject(strategy.type, payload as SubjectInput);
 }
 
 function actorOf(ctx: AppContext): AuditLogActor {
@@ -186,7 +124,7 @@ function buildRow(
   appCtx: AppContext,
 ): NewAuditLogRow {
   const subject = resolveSubject(def.subject, payload, context);
-  const actor = resolveActor(def.actor, payload, context, appCtx);
+  const actor = actorOf(appCtx);
   const previous = def.diff
     ? stripKeys(context as Readonly<Record<string, unknown>>, def.diff.omit)
     : undefined;
@@ -226,12 +164,18 @@ export const SUBJECT_REQUIRED_REDACTIONS: Readonly<
   user: ["passwordHash"],
 };
 
+interface RedactedRow {
+  readonly event: string;
+  readonly subject: { readonly type: string };
+  readonly diff?: { readonly omit: readonly string[] };
+}
+
 /**
  * Throws, naming the event, when a row's `diff.omit` misses a key `required`
  * lists for its subject type.
  */
 export function assertRedactionInvariants(
-  events: readonly AuditEventDef[],
+  events: readonly RedactedRow[],
   required: Readonly<Record<string, readonly string[]>>,
 ): void {
   for (const def of events) {
@@ -259,7 +203,6 @@ export const auditEvents: readonly AuditEventDef[] = [
   {
     event: "entry:updated",
     subject: { kind: "extract", type: "entry" },
-    actor: { kind: "ctx" },
     // Auto-managed timestamps would surface as a "diff" on every update;
     // nested JSON (`content` / `meta`) is covered by `entry:meta_changed`
     // so we don't double-count.
@@ -268,7 +211,6 @@ export const auditEvents: readonly AuditEventDef[] = [
   {
     event: "entry:transition",
     subject: { kind: "extract", type: "entry" },
-    actor: { kind: "ctx" },
     extra: (entry: Entry, oldStatus: EntryStatus) => ({
       status: { from: oldStatus, to: entry.status },
     }),
@@ -276,22 +218,18 @@ export const auditEvents: readonly AuditEventDef[] = [
   {
     event: "entry:published",
     subject: { kind: "extract", type: "entry" },
-    actor: { kind: "ctx" },
   },
   {
     event: "entry:trashed",
     subject: { kind: "extract", type: "entry" },
-    actor: { kind: "ctx" },
   },
   {
     event: "entry:restored",
     subject: { kind: "extract", type: "entry" },
-    actor: { kind: "ctx" },
   },
   {
     event: "entry:deleted",
     subject: { kind: "extract", type: "entry" },
-    actor: { kind: "ctx" },
   },
   {
     event: "entry:meta_changed",
@@ -303,275 +241,25 @@ export const auditEvents: readonly AuditEventDef[] = [
         label: `Entry #${String(entry.id)}`,
       }),
     },
-    actor: { kind: "ctx" },
     extra: (_entry: unknown, changes: EntryMetaChanges) => ({
       metaSet: Object.keys(changes.set),
       metaRemoved: changes.removed,
     }),
   },
 
-  // ─── User surface ───
-  {
-    event: "user:updated",
-    subject: { kind: "extract", type: "user" },
-    actor: { kind: "ctx" },
-    diff: {
-      omit: ["createdAt", "updatedAt", "lastSignInAt", "passwordHash", "meta"],
-    },
-  },
-  {
-    event: "user:status_changed",
-    subject: { kind: "extract", type: "user" },
-    actor: { kind: "ctx" },
-    // The diff renderer already understands `[old, new]` tuples; encode
-    // the boolean toggle as one so the feed reads consistently.
-    extra: (_user: User, context: { readonly enabled: boolean }) => ({
-      status: [
-        context.enabled ? "disabled" : "enabled",
-        context.enabled ? "enabled" : "disabled",
-      ],
-    }),
-  },
-  {
-    event: "user:deleted",
-    subject: { kind: "extract", type: "user" },
-    actor: { kind: "ctx" },
-    extra: (
-      _user: User,
-      context: { readonly reassignedTo: number | null },
-    ) => ({
-      reassignedTo: context.reassignedTo,
-    }),
-  },
-  {
-    event: "user:meta_changed",
-    subject: {
-      kind: "inline",
-      type: "user",
-      resolve: (user: { readonly id: number }) => ({
-        id: String(user.id),
-        label: `User #${String(user.id)}`,
-      }),
-    },
-    actor: { kind: "ctx" },
-    extra: (_user: unknown, changes: EntryMetaChanges) => ({
-      metaSet: Object.keys(changes.set),
-      metaRemoved: changes.removed,
-    }),
-  },
-  {
-    event: "user:invited",
-    subject: { kind: "extract", type: "user" },
-    // A CLI-initiated invite has no matching ctx.user, so the label falls back
-    // to the id. SECURITY: `inviteToken` is never recorded.
-    actor: {
-      kind: "custom",
-      resolve: (
-        _user: unknown,
-        context: { readonly invitedBy: number },
-        appCtx,
-      ) => ({
-        id: context.invitedBy,
-        label:
-          appCtx.user?.id === context.invitedBy
-            ? appCtx.user.email
-            : String(context.invitedBy),
-      }),
-    },
-    extra: (_user: unknown, context: { readonly expiresAt: Date }) => ({
-      expiresAt: context.expiresAt.toISOString(),
-    }),
-  },
-  {
-    event: "user:registered",
-    subject: { kind: "extract", type: "user" },
-    // Self-registration: `ctx.user` is null because the session is
-    // being established in the same request, so attribute to the
-    // payload directly.
-    actor: { kind: "self" },
-  },
-
-  // ─── Auth surface ───
-  {
-    event: "user:signed_in",
-    subject: { kind: "extract", type: "user" },
-    // Sign-in middleware runs before auth completes, so ctx.user is
-    // null at this point; self-attribution to the payload preserves
-    // accurate authorship.
-    actor: { kind: "self" },
-    extra: (
-      _user: User,
-      context: {
-        readonly method: string;
-        readonly provider?: string;
-        readonly firstSignIn: boolean;
-      },
-    ) => ({
-      method: context.method,
-      provider: context.provider ?? null,
-      firstSignIn: context.firstSignIn,
-    }),
-  },
-  {
-    event: "user:signed_out",
-    subject: { kind: "extract", type: "user" },
-    actor: { kind: "self" },
-  },
-  {
-    event: "user:email_change_requested",
-    subject: { kind: "extract", type: "user" },
-    // An admin may request the change for someone else; the hook
-    // explicitly carries `context.actor`, prefer it over ctx.user so
-    // the row reflects the responsible party.
-    actor: { kind: "context-actor" },
-    extra: (
-      _user: User,
-      context: { readonly newEmail: string; readonly expiresAt: Date },
-    ) => ({
-      newEmail: context.newEmail,
-      expiresAt: context.expiresAt.toISOString(),
-    }),
-  },
-  {
-    event: "user:email_changed",
-    subject: { kind: "extract", type: "user" },
-    actor: { kind: "ctx" },
-    extra: (user: User, context: { readonly previousEmail: string }) => ({
-      email: [context.previousEmail, user.email],
-    }),
-  },
-  {
-    event: "credential:created",
-    subject: { kind: "extract", type: "credential" },
-    actor: { kind: "context-actor" },
-    extra: (
-      credential: Pick<
-        Credential,
-        "id" | "userId" | "name" | "deviceType" | "isBackedUp"
-      >,
-    ) => ({
-      deviceType: credential.deviceType,
-      isBackedUp: credential.isBackedUp,
-      userId: credential.userId,
-    }),
-  },
-  {
-    event: "credential:revoked",
-    subject: { kind: "extract", type: "credential" },
-    actor: { kind: "context-actor" },
-    extra: (credential: { readonly userId: number }) => ({
-      userId: credential.userId,
-    }),
-  },
-  {
-    event: "credential:renamed",
-    subject: {
-      kind: "inline",
-      type: "credential",
-      resolve: (
-        credential: { readonly id: string },
-        context: { readonly name: string },
-      ) => ({
-        id: credential.id,
-        label: context.name,
-      }),
-    },
-    actor: { kind: "context-actor" },
-    extra: (credential: { readonly userId: number }) => ({
-      userId: credential.userId,
-    }),
-  },
-  {
-    event: "session:revoked",
-    subject: { kind: "extract", type: "session" },
-    actor: { kind: "context-actor" },
-    extra: (
-      session: { readonly userId: number },
-      context: { readonly mode: "single" | "all_others" },
-    ) => ({
-      mode: context.mode,
-      userId: session.userId,
-    }),
-  },
-  {
-    event: "api_token:created",
-    subject: { kind: "extract", type: "api_token" },
-    actor: { kind: "context-actor" },
-    extra: (
-      token: Pick<
-        ApiToken,
-        "id" | "userId" | "name" | "prefix" | "scopes" | "expiresAt"
-      >,
-    ) => ({
-      prefix: token.prefix,
-      scopes: token.scopes,
-      userId: token.userId,
-      expiresAt: token.expiresAt ? token.expiresAt.toISOString() : null,
-    }),
-  },
-  {
-    event: "api_token:revoked",
-    subject: { kind: "extract", type: "api_token" },
-    actor: { kind: "context-actor" },
-    extra: (
-      token: { readonly userId: number },
-      context: { readonly mode: "self" | "admin" },
-    ) => ({
-      mode: context.mode,
-      userId: token.userId,
-    }),
-  },
-  {
-    event: "device_code:approved",
-    // The user-facing handle for a device-code session is the
-    // `userCode` (e.g. `ABCD-WXYZ`); feed it through the extractor as
-    // `title` to match the device_code extractor's contract.
-    subject: {
-      kind: "extract",
-      type: "device_code",
-      from: (deviceCode: {
-        readonly id: string;
-        readonly userCode: string;
-      }) => ({ id: deviceCode.id, title: deviceCode.userCode }),
-    },
-    actor: { kind: "context-actor" },
-    extra: (deviceCode: {
-      readonly tokenName: string;
-      readonly scopes: readonly string[] | null;
-    }) => ({
-      tokenName: deviceCode.tokenName,
-      scopes: deviceCode.scopes,
-    }),
-  },
-  {
-    event: "device_code:denied",
-    subject: {
-      kind: "extract",
-      type: "device_code",
-      from: (deviceCode: {
-        readonly id: string;
-        readonly userCode: string;
-      }) => ({ id: deviceCode.id, title: deviceCode.userCode }),
-    },
-    actor: { kind: "context-actor" },
-  },
-
   // ─── Term surface ───
   {
     event: "term:created",
     subject: { kind: "extract", type: "term" },
-    actor: { kind: "ctx" },
   },
   {
     event: "term:updated",
     subject: { kind: "extract", type: "term" },
-    actor: { kind: "ctx" },
     diff: { omit: ["createdAt", "updatedAt", "meta"] },
   },
   {
     event: "term:deleted",
     subject: { kind: "extract", type: "term" },
-    actor: { kind: "ctx" },
   },
   {
     event: "term:meta_changed",
@@ -583,7 +271,6 @@ export const auditEvents: readonly AuditEventDef[] = [
         label: `Term #${String(term.id)}`,
       }),
     },
-    actor: { kind: "ctx" },
     extra: (
       term: { readonly taxonomy: string },
       changes: EntryMetaChanges,
@@ -607,7 +294,6 @@ export const auditEvents: readonly AuditEventDef[] = [
         label: changes.group,
       }),
     },
-    actor: { kind: "ctx" },
     extra: (changes: {
       readonly set: SettingsBag;
       readonly removed: readonly string[];
@@ -619,12 +305,330 @@ export const auditEvents: readonly AuditEventDef[] = [
 ];
 
 // ──────────────────────────────────────────────────────────────────
+// Declared events
+// ──────────────────────────────────────────────────────────────────
+
+/**
+ * A row recorded from an event declared as a value. `event` is the name the
+ * row stores, which the feed's event filter and existing rows read.
+ */
+interface AuditedEventDef<TPayload> {
+  readonly event: string;
+  readonly on: EventDefinition<TPayload>;
+  readonly subject:
+    | {
+        readonly kind: "extract";
+        readonly type: string;
+        readonly from: (payload: TPayload) => SubjectInput;
+      }
+    | {
+        readonly kind: "inline";
+        readonly type: string;
+        readonly resolve: (payload: TPayload) => {
+          readonly id: string;
+          readonly label: string;
+        };
+      };
+  readonly actor: (payload: TPayload, ctx: AppContext) => AuditLogActor;
+  readonly diff?: {
+    readonly omit: readonly string[];
+    readonly between: (payload: TPayload) => {
+      readonly previous: AuditEntityRow;
+      readonly next: AuditEntityRow;
+    };
+  };
+  /** Merged into the row's `properties`; a `Date` is converted by hand. */
+  readonly extra?: (payload: TPayload) => JsonObject;
+}
+
+export interface AuditedEvent extends RedactedRow {
+  subscribe(ctx: PluginSetupContext, service: AuditService): void;
+}
+
+function audited<TPayload>(def: AuditedEventDef<TPayload>): AuditedEvent {
+  return {
+    event: def.event,
+    subject: def.subject,
+    diff: def.diff,
+    subscribe: (ctx, service) => {
+      ctx.events.on(def.on, (payload, appCtx) => {
+        service.record(appCtx, buildEventRow(def, payload, appCtx));
+      });
+    },
+  };
+}
+
+function buildEventRow<TPayload>(
+  def: AuditedEventDef<TPayload>,
+  payload: TPayload,
+  ctx: AppContext,
+): NewAuditLogRow {
+  const subject =
+    def.subject.kind === "inline"
+      ? { type: def.subject.type, ...def.subject.resolve(payload) }
+      : extractSubject(def.subject.type, def.subject.from(payload));
+  const diffed = def.diff && {
+    omit: def.diff.omit,
+    ...def.diff.between(payload),
+  };
+  return buildAuditRow({
+    event: def.event,
+    actor: def.actor(payload, ctx),
+    subject,
+    previous: diffed && stripKeys(diffed.previous, diffed.omit),
+    next: diffed && stripKeys(diffed.next, diffed.omit),
+    extraProperties: def.extra?.(payload),
+  });
+}
+
+function actorOfPayload({
+  actor,
+}: {
+  readonly actor: { readonly id: number; readonly email: string };
+}): AuditLogActor {
+  return actorFromUser(actor);
+}
+
+/**
+ * Sign-in, sign-out and registration run before the request has a user, so
+ * the user the payload names is the actor.
+ */
+function actorIsUser({
+  user,
+}: {
+  readonly user: { readonly id: number; readonly email: string };
+}): AuditLogActor {
+  return actorFromUser(user);
+}
+
+function actorOfCtx(_payload: unknown, ctx: AppContext): AuditLogActor {
+  return actorOf(ctx);
+}
+
+export const auditedEvents: readonly AuditedEvent[] = [
+  // ─── User surface ───
+  audited({
+    event: "user:updated",
+    on: user.updated,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    actor: actorOfCtx,
+    diff: {
+      omit: ["createdAt", "updatedAt", "lastSignInAt", "passwordHash", "meta"],
+      between: ({ user, previous }) => ({ previous, next: user }),
+    },
+  }),
+  audited({
+    event: "user:status_changed",
+    on: user.statusChanged,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    actor: actorOfCtx,
+    // The diff renderer already understands `[old, new]` tuples; encode
+    // the boolean toggle as one so the feed reads consistently.
+    extra: ({ enabled }) => ({
+      status: [
+        enabled ? "disabled" : "enabled",
+        enabled ? "enabled" : "disabled",
+      ],
+    }),
+  }),
+  audited({
+    event: "user:deleted",
+    on: user.deleted,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    actor: actorOfCtx,
+    extra: ({ reassignedTo }) => ({ reassignedTo }),
+  }),
+  audited({
+    event: "user:meta_changed",
+    on: user.metaChanged,
+    subject: {
+      kind: "inline",
+      type: "user",
+      resolve: ({ user }) => ({
+        id: String(user.id),
+        label: `User #${String(user.id)}`,
+      }),
+    },
+    actor: actorOfCtx,
+    extra: ({ changes }) => ({
+      metaSet: Object.keys(changes.set),
+      metaRemoved: changes.removed,
+    }),
+  }),
+  audited({
+    event: "user:invited",
+    on: user.invited,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    // A CLI-initiated invite has no matching ctx.user, so the label falls back
+    // to the id. SECURITY: `inviteToken` is never recorded.
+    actor: ({ invitedBy }, ctx) => ({
+      id: invitedBy,
+      label: ctx.user?.id === invitedBy ? ctx.user.email : String(invitedBy),
+    }),
+    extra: ({ expiresAt }) => ({ expiresAt: expiresAt.toISOString() }),
+  }),
+  audited({
+    event: "user:registered",
+    on: auth.registered,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    actor: actorIsUser,
+  }),
+
+  // ─── Auth surface ───
+  audited({
+    event: "user:signed_in",
+    on: auth.signedIn,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    actor: actorIsUser,
+    extra: ({ method, provider, firstSignIn }) => ({
+      method,
+      provider: provider ?? null,
+      firstSignIn,
+    }),
+  }),
+  audited({
+    event: "user:signed_out",
+    on: auth.signedOut,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    actor: actorIsUser,
+  }),
+  audited({
+    event: "user:email_change_requested",
+    on: auth.emailChangeRequested,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    // An admin may request the change for someone else, so the payload's
+    // actor, not ctx.user, is the responsible party.
+    actor: actorOfPayload,
+    extra: ({ newEmail, expiresAt }) => ({
+      newEmail,
+      expiresAt: expiresAt.toISOString(),
+    }),
+  }),
+  audited({
+    event: "user:email_changed",
+    on: auth.emailChanged,
+    subject: { kind: "extract", type: "user", from: ({ user }) => user },
+    actor: actorOfCtx,
+    extra: ({ user, previousEmail }) => ({
+      email: [previousEmail, user.email],
+    }),
+  }),
+  audited({
+    event: "credential:created",
+    on: auth.credentialCreated,
+    subject: {
+      kind: "extract",
+      type: "credential",
+      from: ({ credential }) => credential,
+    },
+    actor: actorOfPayload,
+    extra: ({ credential }) => ({
+      deviceType: credential.deviceType,
+      isBackedUp: credential.isBackedUp,
+      userId: credential.userId,
+    }),
+  }),
+  audited({
+    event: "credential:revoked",
+    on: auth.credentialRevoked,
+    subject: {
+      kind: "extract",
+      type: "credential",
+      from: ({ credential }) => credential,
+    },
+    actor: actorOfPayload,
+    extra: ({ credential }) => ({ userId: credential.userId }),
+  }),
+  audited({
+    event: "credential:renamed",
+    on: auth.credentialRenamed,
+    subject: {
+      kind: "inline",
+      type: "credential",
+      resolve: ({ credential, name }) => ({ id: credential.id, label: name }),
+    },
+    actor: actorOfPayload,
+    extra: ({ credential }) => ({ userId: credential.userId }),
+  }),
+  audited({
+    event: "session:revoked",
+    on: auth.sessionRevoked,
+    subject: {
+      kind: "extract",
+      type: "session",
+      from: ({ session }) => session,
+    },
+    actor: actorOfPayload,
+    extra: ({ session, mode }) => ({ mode, userId: session.userId }),
+  }),
+  audited({
+    event: "api_token:created",
+    on: auth.apiTokenCreated,
+    subject: {
+      kind: "extract",
+      type: "api_token",
+      from: ({ apiToken }) => apiToken,
+    },
+    actor: actorOfPayload,
+    extra: ({ apiToken }) => ({
+      prefix: apiToken.prefix,
+      scopes: apiToken.scopes,
+      userId: apiToken.userId,
+      expiresAt: apiToken.expiresAt ? apiToken.expiresAt.toISOString() : null,
+    }),
+  }),
+  audited({
+    event: "api_token:revoked",
+    on: auth.apiTokenRevoked,
+    subject: {
+      kind: "extract",
+      type: "api_token",
+      from: ({ apiToken }) => apiToken,
+    },
+    actor: actorOfPayload,
+    extra: ({ apiToken, mode }) => ({ mode, userId: apiToken.userId }),
+  }),
+  audited({
+    event: "device_code:approved",
+    on: auth.deviceCodeApproved,
+    // A device-code session's user-facing handle is its `userCode`
+    // (`ABCD-WXYZ`), which the device_code extractor reads as `title`.
+    subject: {
+      kind: "extract",
+      type: "device_code",
+      from: ({ deviceCode }) => ({
+        id: deviceCode.id,
+        title: deviceCode.userCode,
+      }),
+    },
+    actor: actorOfPayload,
+    extra: ({ deviceCode }) => ({
+      tokenName: deviceCode.tokenName,
+      scopes: deviceCode.scopes,
+    }),
+  }),
+  audited({
+    event: "device_code:denied",
+    on: auth.deviceCodeDenied,
+    subject: {
+      kind: "extract",
+      type: "device_code",
+      from: ({ deviceCode }) => ({
+        id: deviceCode.id,
+        title: deviceCode.userCode,
+      }),
+    },
+    actor: actorOfPayload,
+  }),
+];
+
+// ──────────────────────────────────────────────────────────────────
 // Interpreter
 // ──────────────────────────────────────────────────────────────────
 
 /**
- * Walk `auditEvents` and register one `ctx.addAction(...)` listener
- * per row, routing a built row through `service.record`.
+ * Subscribe one handler per row of `auditEvents` and `auditedEvents`, routing
+ * a built row through `service.record`.
  */
 export function registerAuditEvents(
   ctx: PluginSetupContext,
@@ -639,4 +643,5 @@ export function registerAuditEvents(
       service.record(appCtx, buildRow(def, payload, context, appCtx));
     });
   }
+  for (const def of auditedEvents) def.subscribe(ctx, service);
 }

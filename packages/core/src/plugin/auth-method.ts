@@ -43,7 +43,7 @@ interface ProveIdentityOptions {
    * to the request's `?redirectTo=`.
    */
   readonly redirectTo?: string;
-  /** Runs after the session exists and before `user:signed_in`. */
+  /** Runs after the session exists and before `auth.signedIn`. */
   readonly afterSession?: (user: User) => void | Promise<void>;
 }
 

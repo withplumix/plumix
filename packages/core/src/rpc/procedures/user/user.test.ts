@@ -7,6 +7,7 @@ import { users } from "../../../db/schema/users.js";
 import { createPluginRegistry } from "../../../plugin/registry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { currentUserEtag } from "../../../test/user-etag.js";
+import { user } from "./subject.js";
 
 describe("user.list", () => {
   test("editor+ can list users; others get FORBIDDEN", async () => {
@@ -126,19 +127,19 @@ describe("user.invite", () => {
     expect(new Set([a.user.slug, b.user.slug]).size).toBe(2);
   });
 
-  test("fires user:invited with the token + invitedBy for plugins to hook (e.g. email delivery)", async () => {
+  test("fires user.invited with the token + invitedBy for plugins to hook (e.g. email delivery)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const onInvited = h.spyAction("user:invited");
-    const { user, inviteToken } = await h.client.user.invite({
+    const onInvited = h.spyEvent(user.invited);
+    const { user: invited, inviteToken } = await h.client.user.invite({
       email: "plugin@example.test",
       role: "subscriber",
     });
     onInvited.assertCalledOnce();
-    const [userArg, ctxArg] = onInvited.lastArgs ?? [];
-    expect(userArg?.id).toBe(user.id);
-    expect(ctxArg?.inviteToken).toBe(inviteToken);
-    expect(ctxArg?.invitedBy).toBe(h.user.id);
-    expect(ctxArg?.expiresAt).toBeInstanceOf(Date);
+    const payload = onInvited.lastPayload;
+    expect(payload?.user.id).toBe(invited.id);
+    expect(payload?.inviteToken).toBe(inviteToken);
+    expect(payload?.invitedBy).toBe(h.user.id);
+    expect(payload?.expiresAt).toBeInstanceOf(Date);
   });
 });
 
@@ -538,69 +539,68 @@ describe("user.enable", () => {
   });
 });
 
-describe("user lifecycle action hooks", () => {
-  test("user:updated fires after update with previous row", async () => {
+describe("user events", () => {
+  test("user.updated fires after update with previous row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create({ name: "Before" });
-    const spy = h.spyAction("user:updated");
+    const spy = h.spyEvent(user.updated);
     await h.client.user.update({
       id: target.id,
       ifMatch: await currentUserEtag(h.db, target.id),
       name: "After",
     });
     spy.assertCalledOnce();
-    const [post, previous] = spy.lastArgs ?? [];
-    expect(post?.name).toBe("After");
-    expect(previous?.name).toBe("Before");
+    expect(spy.lastPayload?.user.name).toBe("After");
+    expect(spy.lastPayload?.previous.name).toBe("Before");
   });
 
-  test("user:status_changed fires on disable with enabled=false", async () => {
+  test("user.statusChanged fires on disable with enabled=false", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create();
-    const spy = h.spyAction("user:status_changed");
+    const spy = h.spyEvent(user.statusChanged);
     await h.client.user.disable({ id: target.id });
     spy.assertCalledOnce();
-    expect(spy.lastArgs?.[1]).toEqual({ enabled: false });
+    expect(spy.lastPayload?.enabled).toBe(false);
   });
 
-  test("user:status_changed fires on re-enable with enabled=true", async () => {
+  test("user.statusChanged fires on re-enable with enabled=true", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create();
     await h.client.user.disable({ id: target.id });
-    const spy = h.spyAction("user:status_changed");
+    const spy = h.spyEvent(user.statusChanged);
     await h.client.user.enable({ id: target.id });
     spy.assertCalledOnce();
-    expect(spy.lastArgs?.[1]).toEqual({ enabled: true });
+    expect(spy.lastPayload?.enabled).toBe(true);
   });
 
-  test("user:status_changed does NOT fire on an already-active enable (idempotent short-circuit)", async () => {
+  test("user.statusChanged does NOT fire on an already-active enable (idempotent short-circuit)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create();
-    const spy = h.spyAction("user:status_changed");
+    const spy = h.spyEvent(user.statusChanged);
     await h.client.user.enable({ id: target.id });
     spy.assertNotCalled();
   });
 
-  test("user:deleted fires with reassignedTo=null when the user had no entries", async () => {
+  test("user.deleted fires with reassignedTo=null when the user had no entries", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.subscriber.create();
-    const spy = h.spyAction("user:deleted");
+    const spy = h.spyEvent(user.deleted);
     await h.client.user.delete({ id: target.id });
     spy.assertCalledOnce();
-    expect(spy.lastArgs?.[1]).toEqual({ reassignedTo: null });
+    expect(spy.lastPayload?.reassignedTo).toBeNull();
   });
 
-  test("user:deleted fires with reassignedTo=<id> when entries were migrated", async () => {
+  test("user.deleted fires with reassignedTo=<id> when entries were migrated", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const author = await h.factory.author.create();
     const inheritor = await h.factory.author.create();
     await h.factory.draft.create({ authorId: author.id, slug: "orphan" });
-    const spy = h.spyAction("user:deleted");
+    const spy = h.spyEvent(user.deleted);
     await h.client.user.delete({
       id: author.id,
       reassignTo: inheritor.id,
     });
     spy.assertCalledOnce();
-    expect(spy.lastArgs?.[1]).toEqual({ reassignedTo: inheritor.id });
+    expect(spy.lastPayload?.reassignedTo).toBe(inheritor.id);
   });
 });

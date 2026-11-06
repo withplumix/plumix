@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { TestConfigInput } from "../test/config.js";
+import { auth } from "../hooks/auth.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -497,10 +498,10 @@ describe("a sign-in method's kernel", () => {
     expect(seen.input).toBeNull();
   });
 
-  test("runs afterSession after the session exists and before user:signed_in", async () => {
+  test("runs afterSession after the session exists and before auth.signedIn", async () => {
     const h = await createDispatcherHarness({ config: probeSite() });
     const user = await h.factory.user.create({ email: "alice@example.com" });
-    const spy = h.spyAction("user:signed_in");
+    const spy = h.spyEvent(auth.signedIn);
     spyCalls = () => spy.callCount;
 
     const response = await h.dispatch(
@@ -513,7 +514,11 @@ describe("a sign-in method's kernel", () => {
     expect(response.headers.get("set-cookie")).toMatch(/^plumix_session=/);
     expect(seen.spyCallsAtAfterSession).toBe(0);
     spy.assertCalledOnce();
-    expect(spy.lastArgs?.[1]).toEqual({ method: "probe", firstSignIn: false });
+    expect(spy.lastPayload).toMatchObject({
+      user: { id: user.id },
+      method: "probe",
+      firstSignIn: false,
+    });
   });
 
   test("an account proof signs in the user it names, not the first user", async () => {

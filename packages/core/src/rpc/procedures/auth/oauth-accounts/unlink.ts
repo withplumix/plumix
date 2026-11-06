@@ -2,6 +2,7 @@ import type { AuthMethodsSummary } from "../../../../auth/contract/auth-methods.
 import { and, eq, or, sql } from "../../../../db/index.js";
 import { credentials } from "../../../../db/schema/credentials.js";
 import { oauthAccounts } from "../../../../db/schema/oauth_accounts.js";
+import { auth } from "../../../../hooks/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { oauthAccountsUnlinkInputSchema } from "./schemas.js";
@@ -44,12 +45,10 @@ export const unlink = base
       )
       .returning({ id: oauthAccounts.providerAccountId });
     if (rows.length > 0) {
-      await context.hooks.doAction(
-        "oauth_account:unlinked",
-        { provider: input.provider, userId },
-        { actor: context.user },
-        context,
-      );
+      await context.events.emit(auth.oauthAccountUnlinked, {
+        oauthAccount: { provider: input.provider, userId },
+        actor: context.user,
+      });
       return { provider: input.provider };
     }
 

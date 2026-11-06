@@ -30,6 +30,7 @@ import {
   validateUserMetaReferences,
 } from "./meta.js";
 import { userUpdateInputSchema } from "./schemas.js";
+import { user } from "./subject.js";
 
 const PROMOTE_CAPABILITY = "user:promote";
 
@@ -88,10 +89,7 @@ export const update = base
   .use(authenticated)
   .input(userUpdateInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:user.update:input",
-      input,
-    );
+    const filtered = await context.filters.apply(user.updateInput, input);
 
     const existing = await context.db.query.users.findFirst({
       where: eq(users.id, filtered.id),
@@ -157,7 +155,7 @@ export const update = base
     const metaChanged = !isEmptyMetaPatch(metaPatch);
     if (Object.keys(patch).length === 0 && !metaChanged) {
       const meta = await resolveUserMeta(context, existing.meta);
-      const output = await context.hooks.applyFilter("rpc:user.update:output", {
+      const output = await context.filters.apply(user.updateOutput, {
         ...existing,
         meta,
       });
@@ -203,12 +201,15 @@ export const update = base
 
     // WP's `profile_update` parity — plugins observe successful row writes
     // with the previous row for diffing. Skipped on meta-only saves —
-    // subscribe to `user:meta_changed` for that surface.
+    // subscribe to `user.metaChanged` for that surface.
     if (Object.keys(patch).length > 0) {
-      await context.hooks.doAction("user:updated", updated, existing, context);
+      await context.events.emit(user.updated, {
+        user: updated,
+        previous: existing,
+      });
     }
 
-    const output = await context.hooks.applyFilter("rpc:user.update:output", {
+    const output = await context.filters.apply(user.updateOutput, {
       ...updated,
       meta,
     });

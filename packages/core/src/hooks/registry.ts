@@ -230,7 +230,7 @@ export class HookRegistry implements HookExecutor {
 
   async emit<TPayload>(
     event: EventDefinition<TPayload>,
-    payload: TPayload,
+    payload: NoInfer<TPayload>,
     ctx: AppContext,
   ): Promise<readonly EventFailure[]> {
     const sorted = sortSubscriptions(this.#eventHandlers.get(event.id) ?? []);

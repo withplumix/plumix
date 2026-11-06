@@ -11,8 +11,7 @@ export interface VerifyEmailChangeResult {
   /** The user row post-commit (new email, fresh `emailVerifiedAt`). */
   readonly user: User;
   /**
-   * What the email used to be — passed through to the `user:email_changed`
-   * hook.
+   * What the email used to be — passed through to `auth.emailChanged`.
    */
   readonly previousEmail: string;
 }

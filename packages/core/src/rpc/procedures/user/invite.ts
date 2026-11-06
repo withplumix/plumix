@@ -13,6 +13,7 @@ import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
 import { assertCanAssignRole, assertDeclaredRole } from "./helpers.js";
 import { userInviteInputSchema } from "./schemas.js";
+import { user } from "./subject.js";
 
 const CREATE_CAPABILITY = "user:create";
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -22,10 +23,7 @@ export const invite = base
   .use(requireCapability(CREATE_CAPABILITY))
   .input(userInviteInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:user.invite:input",
-      input,
-    );
+    const filtered = await context.filters.apply(user.inviteInput, input);
     assertDeclaredRole(context, filtered.role, errors);
     assertCanAssignRole(context, filtered.role, {
       forbidden: (capability) => {
@@ -82,17 +80,13 @@ export const invite = base
 
     // Fires before the output filter so an email-delivery plugin still sees the
     // raw token.
-    await context.hooks.doAction(
-      "user:invited",
-      created,
-      {
-        inviteToken: token,
-        invitedBy: context.user.id,
-        expiresAt,
-      },
-      context,
-    );
+    await context.events.emit(user.invited, {
+      user: created,
+      inviteToken: token,
+      invitedBy: context.user.id,
+      expiresAt,
+    });
 
     const output = { user: created, inviteToken: token };
-    return context.hooks.applyFilter("rpc:user.invite:output", output);
+    return context.filters.apply(user.inviteOutput, output);
   });

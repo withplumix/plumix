@@ -7,6 +7,7 @@ import { eq, sql } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
+import { auth } from "../../hooks/auth.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
 import { silentLogger } from "../../test/context.js";
@@ -1179,12 +1180,12 @@ describe("magic-link verify of a link issued to a new address", () => {
       email: "newcomer@example.com",
       role: "subscriber",
     });
-    const signedIn = h.spyAction("user:signed_in");
+    const signedIn = h.spyEvent(auth.signedIn);
 
     await verifyLinkFor(h, "newcomer@example.com");
 
-    expect(signedIn.lastArgs?.[0].id).toBe(raced.id);
-    expect(signedIn.lastArgs?.[1]).toEqual({
+    expect(signedIn.lastPayload).toMatchObject({
+      user: { id: raced.id },
       method: "magic_link",
       firstSignIn: false,
     });

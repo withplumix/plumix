@@ -2501,6 +2501,23 @@ describe("declared events and filters", () => {
       message:
         'Plugin "acme" registers event "sync:after" already registered by core.',
     },
+    {
+      declares: { events: [defineEvent<string>("user:updated")] },
+      message:
+        'Plugin "acme" registers event "user:updated" already registered by core.',
+    },
+    {
+      declares: {
+        filters: [defineFilter<string>("user:listInput", { sync: false })],
+      },
+      message:
+        'Plugin "acme" registers filter "user:listInput" already registered by core.',
+    },
+    {
+      declares: { events: [defineEvent<string>("auth:signedIn")] },
+      message:
+        'Plugin "acme" registers event "auth:signedIn" already registered by core.',
+    },
   ])(
     "a plugin declaring one of core's ids fails boot: $message",
     async ({ declares, message }) => {

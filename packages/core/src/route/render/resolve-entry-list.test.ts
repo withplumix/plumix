@@ -13,6 +13,7 @@ import {
 import { withUser } from "../../auth/with-user.js";
 import { eq } from "../../db/index.js";
 import { users } from "../../db/schema/users.js";
+import { userEvents } from "../../hooks/user.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/builder.js";
 import { entry as entryRef } from "../../plugin/fields/entry.js";
@@ -139,7 +140,10 @@ describe("resolveEntryList author memoization", () => {
         .where(eq(users.id, author.id))
         .returning();
       if (renamed === undefined) throw new Error("the author is gone");
-      await ctx.hooks.doAction("user:updated", renamed, author, ctx);
+      await ctx.events.emit(userEvents.updated, {
+        user: renamed,
+        previous: author,
+      });
       return [first, await resolveEntryList(ctx, [post])];
     });
 

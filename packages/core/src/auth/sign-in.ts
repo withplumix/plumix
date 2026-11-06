@@ -1,9 +1,10 @@
 import type { AppContext } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
-import type { ActionArgs } from "../hooks/types.js";
+import type { SignIn } from "../hooks/auth.js";
 import type { SessionCookieOptions } from "./cookies.js";
 import type { AuthFlowApp } from "./flow-app.js";
 import { withBasePath } from "../base-path.js";
+import { auth } from "../hooks/auth.js";
 import { buildSessionCookie, isSecureRequest } from "./cookies.js";
 import { createSession, readClientMeta } from "./sessions.js";
 
@@ -50,7 +51,7 @@ export async function mintSessionAndCookie(
 export async function announceSignIn(
   ctx: AppContext,
   user: User,
-  signIn: ActionArgs<"user:signed_in">[1],
+  signIn: Omit<SignIn, "user">,
 ): Promise<void> {
-  await ctx.hooks.doAction("user:signed_in", user, signIn, ctx);
+  await ctx.events.emit(auth.signedIn, { user, ...signIn });
 }

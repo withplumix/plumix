@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, Db } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
+import type { AnyEventDefinition } from "../hooks/define.js";
 import type { JsonObject } from "../json.js";
 import type { CdnFake } from "../test/cdn-fake.js";
 import { withUser } from "../auth/with-user.js";
@@ -12,6 +13,7 @@ import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
 import { compileEntryQuery, entryQuery } from "../entries/query.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { userEvents } from "../hooks/user.js";
 import { definePlugin } from "../plugin/define.js";
 import { term } from "../plugin/fields/term.js";
 import { toggle } from "../plugin/fields/toggle.js";
@@ -194,12 +196,28 @@ describe("purge accumulator", () => {
 
 describe("registerCorePurgeInvalidator", () => {
   // Loose-typed: each action's payload differs, so the tests fire by name.
-  const fire = (hooks: HookRegistry, name: string, ...args: unknown[]) =>
-    (hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>).call(
-      hooks,
-      name,
-      ...args,
-    );
+  // A declared event is named by its id, so a table of events reads by name.
+  const fire = async (
+    hooks: HookRegistry,
+    ctx: AppContext,
+    name: string,
+    ...payload: unknown[]
+  ): Promise<void> => {
+    const event = Object.values(userEvents).find(({ id }) => id === name);
+    if (event !== undefined) {
+      await (
+        hooks.emit as (
+          e: AnyEventDefinition,
+          p: unknown,
+          c: AppContext,
+        ) => Promise<unknown>
+      ).call(hooks, event, payload[0], ctx);
+      return;
+    }
+    await (
+      hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>
+    ).call(hooks, name, ...payload, ctx);
+  };
 
   const entry = { id: 9, type: "post" };
   const changes = { set: {}, removed: [] };
@@ -219,7 +237,7 @@ describe("registerCorePurgeInvalidator", () => {
       registerCorePurgeInvalidator(hooks);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await fire(hooks, event, ...payload, ctx);
+      await fire(hooks, ctx, event, ...payload);
       await flush();
 
       assertOnlyPurged(cdn, ["/post", "/post/9"]);
@@ -243,7 +261,7 @@ describe("registerCorePurgeInvalidator", () => {
       registerCorePurgeInvalidator(hooks);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await fire(hooks, event, ...payload, ctx);
+      await fire(hooks, ctx, event, ...payload);
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3"]);
@@ -257,7 +275,7 @@ describe("registerCorePurgeInvalidator", () => {
       registerCorePurgeInvalidator(hooks);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await fire(hooks, event, ...payload, ctx);
+      await fire(hooks, ctx, event, ...payload);
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3", "/category/terms"]);
@@ -275,7 +293,7 @@ describe("registerCorePurgeInvalidator", () => {
         arg === term ? { ...term, taxonomy: "tag" } : arg,
       );
 
-      await fire(hooks, event, ...untyped, ctx);
+      await fire(hooks, ctx, event, ...untyped);
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3", "/tag/terms"]);
@@ -289,7 +307,7 @@ describe("registerCorePurgeInvalidator", () => {
     registerCorePurgeInvalidator(hooks);
     const { ctx, cdn, flush } = await fakeCtx();
 
-    await fire(hooks, "settings:group_changed", { group: "site" }, ctx);
+    await fire(hooks, ctx, "settings:group_changed", { group: "site" });
     await flush();
 
     assertOnlyPurged(cdn, ["/settings/site"]);
@@ -300,9 +318,9 @@ describe("registerCorePurgeInvalidator", () => {
     ...ENTRY_EVENTS,
     ...TERM_LIST_EVENTS,
     ...TERM_EDIT_EVENTS,
-    ["user:updated", [jane, jane]],
-    ["user:meta_changed", [jane, changes]],
-    ["user:deleted", [jane, { reassignedTo: 1 }]],
+    ["user:updated", [{ user: jane, previous: jane }]],
+    ["user:metaChanged", [{ user: jane, changes }]],
+    ["user:deleted", [{ user: jane, reassignedTo: 1 }]],
     ["settings:group_changed", [{ group: "site" }]],
   ];
 
@@ -329,7 +347,7 @@ describe("registerCorePurgeInvalidator", () => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
       const purging = await fakeCtx();
-      await fire(hooks, event, ...payload, purging.ctx);
+      await fire(hooks, purging.ctx, event, ...payload);
       await purging.flush();
       const purged: string[] = [];
       for (const [path, tag] of Object.entries(PAGES)) {
@@ -342,7 +360,7 @@ describe("registerCorePurgeInvalidator", () => {
       await read("untagged");
       loads.length = 0;
 
-      await fire(hooks, event, ...payload, ctx);
+      await fire(hooks, ctx, event, ...payload);
       for (const [, tag] of Object.entries(PAGES)) await read(tag, [tag]);
       await read("untagged");
 
@@ -356,8 +374,8 @@ describe("registerCorePurgeInvalidator", () => {
     registerCorePurgeInvalidator(hooks);
     const { ctx, cdn, deferred, flush } = await fakeCtx();
 
-    await fire(hooks, "entry:published", { id: 9, type: "post" }, ctx);
-    await fire(hooks, "entry:published", { id: 8, type: "post" }, ctx);
+    await fire(hooks, ctx, "entry:published", { id: 9, type: "post" });
+    await fire(hooks, ctx, "entry:published", { id: 8, type: "post" });
     await flush();
 
     expect(deferred).toHaveLength(1);

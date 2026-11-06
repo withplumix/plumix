@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import { userEvents } from "../hooks/user.js";
 import { definePlugin } from "../plugin/define.js";
 import { createTracedContext } from "../test/traced-context.js";
 import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
@@ -38,7 +39,10 @@ describe("slug lookups after a write in the same request", () => {
         .update(users)
         .set({ slug: "grace" })
         .where(eq(users.id, user.id));
-      await ctx.hooks.doAction("user:updated", renamed, user, ctx);
+      await ctx.events.emit(userEvents.updated, {
+        user: renamed,
+        previous: user,
+      });
       return [
         ...lookups,
         await findAuthorBySlug(ctx, "ada"),

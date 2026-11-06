@@ -1,8 +1,11 @@
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
 import { eq } from "../db/index.js";
 import { credentials } from "../db/schema/credentials.js";
+import { auth } from "../hooks/auth.js";
+import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import {
   buildRegisterVerifyEnvelope,
@@ -16,10 +19,10 @@ import { generateToken, hashToken } from "./tokens.js";
 // An audit-log plugin subscribes to these emissions, so each state change
 // must keep firing with its expected payload.
 
-describe("auth hooks — api tokens", () => {
-  test("api_token:created fires after a successful mint", async () => {
+describe("auth events — api tokens", () => {
+  test("auth.apiTokenCreated fires after a successful mint", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const spy = h.spyAction("api_token:created");
+    const spy = h.spyEvent(auth.apiTokenCreated);
 
     const result = await h.client.auth.apiTokens.create({
       name: "ci",
@@ -27,30 +30,30 @@ describe("auth hooks — api tokens", () => {
     });
 
     spy.assertCalledOnce();
-    const [token, ctx] = spy.lastArgs ?? [];
-    expect(token?.id).toBe(result.token.id);
-    expect(token?.userId).toBe(h.user.id);
-    expect(token?.name).toBe("ci");
-    expect(token?.scopes).toEqual(["entry:post:read"]);
-    expect(ctx?.actor.id).toBe(h.user.id);
+    const payload = spy.lastPayload;
+    expect(payload?.apiToken.id).toBe(result.token.id);
+    expect(payload?.apiToken.userId).toBe(h.user.id);
+    expect(payload?.apiToken.name).toBe("ci");
+    expect(payload?.apiToken.scopes).toEqual(["entry:post:read"]);
+    expect(payload?.actor.id).toBe(h.user.id);
   });
 
-  test("api_token:revoked fires with mode=self for the owner's revoke", async () => {
+  test("auth.apiTokenRevoked fires with mode=self for the owner's revoke", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const created = await h.client.auth.apiTokens.create({ name: "x" });
-    const spy = h.spyAction("api_token:revoked");
+    const spy = h.spyEvent(auth.apiTokenRevoked);
 
     await h.client.auth.apiTokens.revoke({ id: created.token.id });
 
     spy.assertCalledOnce();
-    const [token, ctx] = spy.lastArgs ?? [];
-    expect(token?.id).toBe(created.token.id);
-    expect(token?.userId).toBe(h.user.id);
-    expect(ctx?.actor.id).toBe(h.user.id);
-    expect(ctx?.mode).toBe("self");
+    const payload = spy.lastPayload;
+    expect(payload?.apiToken.id).toBe(created.token.id);
+    expect(payload?.apiToken.userId).toBe(h.user.id);
+    expect(payload?.actor.id).toBe(h.user.id);
+    expect(payload?.mode).toBe("self");
   });
 
-  test("api_token:revoked fires with mode=admin for adminRevoke", async () => {
+  test("auth.apiTokenRevoked fires with mode=admin for adminRevoke", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     const target = await h.factory.user.create({});
     const { createApiToken } = await import("./api-tokens.js");
@@ -59,25 +62,25 @@ describe("auth hooks — api tokens", () => {
       name: "leaked",
       expiresAt: null,
     });
-    const spy = h.spyAction("api_token:revoked");
+    const spy = h.spyEvent(auth.apiTokenRevoked);
 
     await h.client.auth.apiTokens.adminRevoke({ id: minted.row.id });
 
     spy.assertCalledOnce();
-    const [token, ctx] = spy.lastArgs ?? [];
-    expect(token?.id).toBe(minted.row.id);
-    expect(token?.userId).toBe(target.id);
-    expect(ctx?.actor.id).toBe(h.user.id);
-    expect(ctx?.mode).toBe("admin");
+    const payload = spy.lastPayload;
+    expect(payload?.apiToken.id).toBe(minted.row.id);
+    expect(payload?.apiToken.userId).toBe(target.id);
+    expect(payload?.actor.id).toBe(h.user.id);
+    expect(payload?.mode).toBe("admin");
   });
 });
 
-describe("auth hooks — device flow", () => {
-  test("device_code:approved fires with the row id + scopes", async () => {
+describe("auth events — device flow", () => {
+  test("auth.deviceCodeApproved fires with the row id + scopes", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const { requestDeviceCode } = await import("./device-flow.js");
     const { userCode } = await requestDeviceCode(h.db);
-    const spy = h.spyAction("device_code:approved");
+    const spy = h.spyEvent(auth.deviceCodeApproved);
 
     await h.client.auth.deviceFlow.approve({
       userCode,
@@ -86,49 +89,49 @@ describe("auth hooks — device flow", () => {
     });
 
     spy.assertCalledOnce();
-    const [deviceCode, ctx] = spy.lastArgs ?? [];
-    expect(deviceCode?.userCode).toBe(userCode);
-    expect(deviceCode?.tokenName).toBe("claude-code");
-    expect(deviceCode?.scopes).toEqual(["entry:post:read"]);
-    expect(ctx?.actor.id).toBe(h.user.id);
+    const payload = spy.lastPayload;
+    expect(payload?.deviceCode.userCode).toBe(userCode);
+    expect(payload?.deviceCode.tokenName).toBe("claude-code");
+    expect(payload?.deviceCode.scopes).toEqual(["entry:post:read"]);
+    expect(payload?.actor.id).toBe(h.user.id);
   });
 
-  test("device_code:denied fires on explicit deny", async () => {
+  test("auth.deviceCodeDenied fires on explicit deny", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const { requestDeviceCode } = await import("./device-flow.js");
     const { userCode } = await requestDeviceCode(h.db);
-    const spy = h.spyAction("device_code:denied");
+    const spy = h.spyEvent(auth.deviceCodeDenied);
 
     await h.client.auth.deviceFlow.deny({ userCode });
 
     spy.assertCalledOnce();
-    const [deviceCode, ctx] = spy.lastArgs ?? [];
-    expect(deviceCode?.userCode).toBe(userCode);
-    expect(ctx?.actor.id).toBe(h.user.id);
+    const payload = spy.lastPayload;
+    expect(payload?.deviceCode.userCode).toBe(userCode);
+    expect(payload?.actor.id).toBe(h.user.id);
   });
 });
 
-describe("auth hooks — credentials", () => {
-  test("credential:renamed fires on a successful rename", async () => {
+describe("auth events — credentials", () => {
+  test("auth.credentialRenamed fires on a successful rename", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const cred = await h.factory.credential.create({
       userId: h.user.id,
       publicKey: Buffer.from([1, 2, 3]),
       name: "MacBook",
     });
-    const spy = h.spyAction("credential:renamed");
+    const spy = h.spyEvent(auth.credentialRenamed);
 
     await h.client.auth.credentials.rename({ id: cred.id, name: "Laptop" });
 
     spy.assertCalledOnce();
-    const [credPayload, ctx] = spy.lastArgs ?? [];
-    expect(credPayload?.id).toBe(cred.id);
-    expect(credPayload?.userId).toBe(h.user.id);
-    expect(ctx?.actor.id).toBe(h.user.id);
-    expect(ctx?.name).toBe("Laptop");
+    const payload = spy.lastPayload;
+    expect(payload?.credential.id).toBe(cred.id);
+    expect(payload?.credential.userId).toBe(h.user.id);
+    expect(payload?.actor.id).toBe(h.user.id);
+    expect(payload?.name).toBe("Laptop");
   });
 
-  test("credential:revoked fires on a successful delete (when not last)", async () => {
+  test("auth.credentialRevoked fires on a successful delete (when not last)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const credA = await h.factory.credential.create({
       userId: h.user.id,
@@ -140,24 +143,24 @@ describe("auth hooks — credentials", () => {
       publicKey: Buffer.from([4, 5, 6]),
       name: "iPhone",
     });
-    const spy = h.spyAction("credential:revoked");
+    const spy = h.spyEvent(auth.credentialRevoked);
 
     await h.client.auth.credentials.delete({ id: credA.id });
 
     spy.assertCalledOnce();
-    const [credPayload, ctx] = spy.lastArgs ?? [];
-    expect(credPayload?.id).toBe(credA.id);
-    expect(ctx?.actor.id).toBe(h.user.id);
+    const payload = spy.lastPayload;
+    expect(payload?.credential.id).toBe(credA.id);
+    expect(payload?.actor.id).toBe(h.user.id);
   });
 
-  test("credential:revoked does NOT fire on the last-credential conflict", async () => {
+  test("auth.credentialRevoked does NOT fire on the last-credential conflict", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const cred = await h.factory.credential.create({
       userId: h.user.id,
       publicKey: Buffer.from([1, 2, 3]),
       name: "Solo",
     });
-    const spy = h.spyAction("credential:revoked");
+    const spy = h.spyEvent(auth.credentialRevoked);
 
     await expect(
       h.client.auth.credentials.delete({ id: cred.id }),
@@ -167,8 +170,8 @@ describe("auth hooks — credentials", () => {
   });
 });
 
-describe("auth hooks — oauth accounts", () => {
-  test("oauth_account:unlinked fires on a successful unlink", async () => {
+describe("auth events — oauth accounts", () => {
+  test("auth.oauthAccountUnlinked fires on a successful unlink", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await h.factory.credential.create({
       userId: h.user.id,
@@ -178,23 +181,26 @@ describe("auth hooks — oauth accounts", () => {
       userId: h.user.id,
       provider: "github",
     });
-    const spy = h.spyAction("oauth_account:unlinked");
+    const spy = h.spyEvent(auth.oauthAccountUnlinked);
 
     await h.client.auth.oauthAccounts.unlink({ provider: "github" });
 
     spy.assertCalledOnce();
-    const [account, ctx] = spy.lastArgs ?? [];
-    expect(account).toEqual({ provider: "github", userId: h.user.id });
-    expect(ctx?.actor.id).toBe(h.user.id);
+    const payload = spy.lastPayload;
+    expect(payload?.oauthAccount).toEqual({
+      provider: "github",
+      userId: h.user.id,
+    });
+    expect(payload?.actor.id).toBe(h.user.id);
   });
 
-  test("oauth_account:unlinked does NOT fire on the last-sign-in conflict", async () => {
+  test("auth.oauthAccountUnlinked does NOT fire on the last-sign-in conflict", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     await h.factory.oauthAccount.create({
       userId: h.user.id,
       provider: "github",
     });
-    const spy = h.spyAction("oauth_account:unlinked");
+    const spy = h.spyEvent(auth.oauthAccountUnlinked);
 
     await expect(
       h.client.auth.oauthAccounts.unlink({ provider: "github" }),
@@ -204,22 +210,22 @@ describe("auth hooks — oauth accounts", () => {
   });
 });
 
-describe("auth hooks — sessions", () => {
-  test("session:revoked fires with mode=single for sessions.revoke", async () => {
+describe("auth events — sessions", () => {
+  test("auth.sessionRevoked fires with mode=single for sessions.revoke", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const other = await h.factory.session.create({ userId: h.user.id });
-    const spy = h.spyAction("session:revoked");
+    const spy = h.spyEvent(auth.sessionRevoked);
 
     await h.client.auth.sessions.revoke({ id: other.id });
 
     spy.assertCalledOnce();
-    const [session, ctx] = spy.lastArgs ?? [];
-    expect(session?.id).toBe(other.id);
-    expect(ctx?.actor.id).toBe(h.user.id);
-    expect(ctx?.mode).toBe("single");
+    const payload = spy.lastPayload;
+    expect(payload?.session.id).toBe(other.id);
+    expect(payload?.actor.id).toBe(h.user.id);
+    expect(payload?.mode).toBe("single");
   });
 
-  test("session:revoked fires once per row with mode=all_others on revokeOthers", async () => {
+  test("auth.sessionRevoked fires once per row with mode=all_others on revokeOthers", async () => {
     // Harness mints one "current" session for the authed editor;
     // add two more to revoke. The current session is preserved
     // (cookie hash filter) and the other two get one hook each.
@@ -227,25 +233,69 @@ describe("auth hooks — sessions", () => {
     const { createSession } = await import("./sessions.js");
     await createSession(h.db, { userId: h.user.id });
     await createSession(h.db, { userId: h.user.id });
-    const spy = h.spyAction("session:revoked");
+    const spy = h.spyEvent(auth.sessionRevoked);
 
     const result = await h.client.auth.sessions.revokeOthers({});
     expect(result.revoked).toBe(2);
 
     spy.assertCalledTimes(2);
     for (const call of spy.calls) {
-      const [, ctx] = call.args;
-      expect(ctx.mode).toBe("all_others");
-      expect(ctx.actor.id).toBe(h.user.id);
+      expect(call.payload.mode).toBe("all_others");
+      expect(call.payload.actor.id).toBe(h.user.id);
     }
   });
 });
 
-describe("auth hooks — passkey signed_in / signed_out / credential:created", () => {
-  test("user:signed_out fires through /_plumix/auth/signout", async () => {
+describe("auth.signedIn", () => {
+  test("a magic-link sign-in hands a subscriber the user, the method and the request ctx", async () => {
+    const received: { payload: unknown; ctx: AppContext }[] = [];
+    const h = await createDispatcherHarness({
+      config: {
+        auth: { magicLink: { siteName: "Test" } },
+        plugins: [
+          definePlugin("records-sign-ins", {
+            setup: (ctx) => {
+              ctx.events.on(auth.signedIn, (payload, handlerCtx) => {
+                received.push({ payload, ctx: handlerCtx });
+              });
+            },
+          }),
+        ],
+      },
+    });
+    const seeded = await h.factory.user.create({
+      email: "alice@example.test",
+      role: "editor",
+    });
+    const { token } = await h.factory.authToken.create({
+      type: "magic_link",
+      userId: seeded.id,
+      email: seeded.email,
+    });
+
+    await h.dispatch(
+      new Request(
+        `https://cms.example/_plumix/auth/magic-link/verify?token=${token}`,
+      ),
+    );
+
+    expect(received).toHaveLength(1);
+    expect(received[0]?.payload).toMatchObject({
+      user: { id: seeded.id, email: "alice@example.test" },
+      method: "magic_link",
+      firstSignIn: false,
+    });
+    expect(received[0]?.ctx.request.url).toBe(
+      `https://cms.example/_plumix/auth/magic-link/verify?token=${token}`,
+    );
+  });
+});
+
+describe("auth events — passkey sign-in, sign-out and credentials", () => {
+  test("auth.signedOut fires through /_plumix/auth/signout", async () => {
     const h = await createDispatcherHarness();
     const seeded = await h.factory.user.create({ role: "editor" });
-    const spy = h.spyAction("user:signed_out");
+    const spy = h.spyEvent(auth.signedOut);
 
     const signoutRequest = await h.authenticateRequest(
       plumixRequest("/_plumix/auth/signout", { method: "POST" }),
@@ -255,11 +305,11 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     expect(response.status).toBe(200);
 
     spy.assertCalledOnce();
-    const [user] = spy.lastArgs ?? [];
-    expect(user?.id).toBe(seeded.id);
+    const payload = spy.lastPayload;
+    expect(payload?.user.id).toBe(seeded.id);
   });
 
-  test("user:signed_out is silent for a session past the configured cap", async () => {
+  test("auth.signedOut is silent for a session past the configured cap", async () => {
     const h = await createDispatcherHarness({
       config: {
         auth: {
@@ -272,7 +322,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
       },
     });
     const seeded = await h.factory.user.create({ role: "editor" });
-    const spy = h.spyAction("user:signed_out");
+    const spy = h.spyEvent(auth.signedOut);
     const token = generateToken();
     await h.factory.session.create({
       id: await hashToken(token),
@@ -291,9 +341,9 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     spy.assertNotCalled();
   });
 
-  test("user:signed_out is silent when there's no session cookie", async () => {
+  test("auth.signedOut is silent when there's no session cookie", async () => {
     const h = await createDispatcherHarness();
-    const spy = h.spyAction("user:signed_out");
+    const spy = h.spyEvent(auth.signedOut);
 
     const response = await h.dispatch(
       plumixRequest("/_plumix/auth/signout", { method: "POST" }),
@@ -302,7 +352,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     spy.assertNotCalled();
   });
 
-  test("user:signed_in fires with method=magic_link, firstSignIn=false on existing-user verify", async () => {
+  test("auth.signedIn fires with method=magic_link, firstSignIn=false on existing-user verify", async () => {
     const h = await createDispatcherHarness({
       config: { auth: { magicLink: { siteName: "Test" } } },
     });
@@ -310,7 +360,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
       email: "alice@example.test",
       role: "editor",
     });
-    const spy = h.spyAction("user:signed_in");
+    const spy = h.spyEvent(auth.signedIn);
 
     // Seed a magic-link token bound to the existing user.
     const { token } = await h.factory.authToken.create({
@@ -328,13 +378,13 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     expect(response.status).toBe(302);
 
     spy.assertCalledOnce();
-    const [user, ctx] = spy.lastArgs ?? [];
-    expect(user?.id).toBe(seeded.id);
-    expect(ctx?.method).toBe("magic_link");
-    expect(ctx?.firstSignIn).toBe(false);
+    const payload = spy.lastPayload;
+    expect(payload?.user.id).toBe(seeded.id);
+    expect(payload?.method).toBe("magic_link");
+    expect(payload?.firstSignIn).toBe(false);
   });
 
-  test("user:signed_in fires with firstSignIn=true on magic-link signup", async () => {
+  test("auth.signedIn fires with firstSignIn=true on magic-link signup", async () => {
     // Pre-seed: at least one user exists (so signup isn't bootstrap-
     // gated) + the email's domain is on the allowlist.
     const h = await createDispatcherHarness({
@@ -347,7 +397,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     });
     await h.factory.user.create({ email: "existing@allowed.test" });
 
-    const spy = h.spyAction("user:signed_in");
+    const spy = h.spyEvent(auth.signedIn);
     const { token } = await h.factory.authToken.create({
       type: "magic_link",
       // Signup row: userId is null until verify provisions one.
@@ -364,43 +414,43 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     expect(response.status).toBe(302);
 
     spy.assertCalledOnce();
-    const [user, ctx] = spy.lastArgs ?? [];
-    expect(user?.email).toBe("newcomer@allowed.test");
-    expect(ctx?.method).toBe("magic_link");
+    const payload = spy.lastPayload;
+    expect(payload?.user.email).toBe("newcomer@allowed.test");
+    expect(payload?.method).toBe("magic_link");
     // The whole point: a fresh provision must surface as firstSignIn.
-    expect(ctx?.firstSignIn).toBe(true);
+    expect(payload?.firstSignIn).toBe(true);
   });
 
-  test("user:signed_in fires with firstSignIn=false when a signed-in user registers their first passkey", async () => {
+  test("auth.signedIn fires with firstSignIn=false when a signed-in user registers their first passkey", async () => {
     const h = await createDispatcherHarness();
     const seeded = await h.factory.user.create({ email: "alice@cms.example" });
-    const spy = h.spyAction("user:signed_in");
+    const spy = h.spyEvent(auth.signedIn);
 
     const verifyRes = await registerPasskey(h, seeded.email, { as: seeded });
     verifyRes.assertStatus(200);
 
     spy.assertCalledOnce();
-    const [user, ctx] = spy.lastArgs ?? [];
-    expect(user?.id).toBe(seeded.id);
-    expect(ctx?.method).toBe("passkey");
-    expect(ctx?.firstSignIn).toBe(false);
+    const payload = spy.lastPayload;
+    expect(payload?.user.id).toBe(seeded.id);
+    expect(payload?.method).toBe("passkey");
+    expect(payload?.firstSignIn).toBe(false);
   });
 
-  test("user:signed_in fires with firstSignIn=true on the bootstrap passkey registration", async () => {
+  test("auth.signedIn fires with firstSignIn=true on the bootstrap passkey registration", async () => {
     const h = await createDispatcherHarness();
-    const spy = h.spyAction("user:signed_in");
+    const spy = h.spyEvent(auth.signedIn);
 
     const verifyRes = await registerPasskey(h, "admin@cms.example");
     verifyRes.assertStatus(200);
 
     spy.assertCalledOnce();
-    const [user, ctx] = spy.lastArgs ?? [];
-    expect(user?.email).toBe("admin@cms.example");
-    expect(ctx?.method).toBe("passkey");
-    expect(ctx?.firstSignIn).toBe(true);
+    const payload = spy.lastPayload;
+    expect(payload?.user.email).toBe("admin@cms.example");
+    expect(payload?.method).toBe("passkey");
+    expect(payload?.firstSignIn).toBe(true);
   });
 
-  test("user:signed_in fires with firstSignIn=true on invite accept", async () => {
+  test("auth.signedIn fires with firstSignIn=true on invite accept", async () => {
     const h = await createDispatcherHarness();
     const invitee = await h.seedUser("author");
     const token = generateToken();
@@ -411,7 +461,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
       role: "author",
       expiresAt: new Date(Date.now() + 60_000),
     });
-    const spy = h.spyAction("user:signed_in");
+    const spy = h.spyEvent(auth.signedIn);
 
     const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
       json: { token },
@@ -426,13 +476,13 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     verifyRes.assertStatus(200);
 
     spy.assertCalledOnce();
-    const [user, ctx] = spy.lastArgs ?? [];
-    expect(user?.id).toBe(invitee.id);
-    expect(ctx?.method).toBe("invite");
-    expect(ctx?.firstSignIn).toBe(true);
+    const payload = spy.lastPayload;
+    expect(payload?.user.id).toBe(invitee.id);
+    expect(payload?.method).toBe("invite");
+    expect(payload?.firstSignIn).toBe(true);
   });
 
-  test("no sign-in or credential action fires when an invite challenge is sent to passkey register verify", async () => {
+  test("no sign-in or credential event fires when an invite challenge is sent to passkey register verify", async () => {
     const h = await createDispatcherHarness();
     const invitee = await h.seedUser("author");
     const token = generateToken();
@@ -443,8 +493,8 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
       role: "author",
       expiresAt: new Date(Date.now() + 60_000),
     });
-    const signedIn = h.spyAction("user:signed_in");
-    const created = h.spyAction("credential:created");
+    const signedIn = h.spyEvent(auth.signedIn);
+    const created = h.spyEvent(auth.credentialCreated);
 
     const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
       json: { token },
@@ -462,7 +512,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     created.assertNotCalled();
   });
 
-  test("credential:created fires when a passkey is added directly via the credentials table (smoke)", async () => {
+  test("auth.credentialCreated fires when a passkey is added directly via the credentials table (smoke)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
     const cred = await h.factory.credential.create({
       userId: h.user.id,
@@ -472,7 +522,7 @@ describe("auth hooks — passkey signed_in / signed_out / credential:created", (
     // No hook fires for direct factory inserts (factories bypass the
     // RPC layer); this asserts that fact and locks it in. Plugins
     // doing direct DB writes shouldn't auto-emit.
-    const spy = h.spyAction("credential:created");
+    const spy = h.spyEvent(auth.credentialCreated);
     expect(spy.called).toBe(false);
     expect(cred.userId).toBe(h.user.id);
     // The seeded credential exists in the DB.

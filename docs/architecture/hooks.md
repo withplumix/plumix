@@ -2,7 +2,7 @@
 
 Hooks are core's named extension points, the "hooks" half of the "Plugin system and hooks" component in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). They are moving, one subject at a time, from string names to declared values ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)):
 
-- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render` and `sync` subjects have moved.
+- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render`, `sync`, `user` and `auth` subjects have moved.
 - **String names.** Every other extension point is still a string name: a filter is a pipeline, an action announces something, plugin authors subscribe through `ctx.addFilter` / `ctx.addAction`, and core and plugins fire them through `ctx.hooks`. The names are types, declared by augmenting `FilterRegistry` and `ActionRegistry`.
 
 Both live in one `HookRegistry` per app, in `packages/core/src/hooks/`.
@@ -79,6 +79,32 @@ Core's subjects are exported from `plumix/plugin`. `block` (`packages/core/src/h
 
 `sync` (`packages/core/src/hooks/sync.ts`) holds `sync.after`, an event with the `SyncAfterEvent` (`{ scopes, direction }`) as its payload, emitted by `settleSync` in `context/settle-sync.ts` once per sync, on a pull and a push alike.
 
+`user` (`packages/core/src/hooks/user.ts` holds its events; `packages/core/src/rpc/procedures/user/subject.ts` adds the filters, whose types live in `rpc/`) is fired from `rpc/procedures/user/**`:
+
+| Value                                   | Kind         | Payload or value                                                                                                          |
+| --------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `user.invited`                          | event        | `{ user, inviteToken, invitedBy, expiresAt }`; `inviteToken` is the raw credential                                        |
+| `user.updated`                          | event        | `{ user, previous }`, only when row columns changed                                                                       |
+| `user.metaChanged`                      | event        | `{ user: { id }, changes }`                                                                                               |
+| `user.statusChanged`                    | event        | `{ user, enabled }`, on disable and re-enable                                                                             |
+| `user.deleted`                          | event        | `{ user, reassignedTo }`                                                                                                  |
+| `user.<proc>Input`, `user.<proc>Output` | async filter | an RPC procedure's input before it runs, or its result (`list`, `get`, `invite`, `update`, `disable`, `enable`, `delete`) |
+
+`auth` (`packages/core/src/hooks/auth.ts`, published as `auth` from `plumix/plugin` and as `authEvents` from core's barrel, whose `auth` is the config builder) is fired from `auth/**` and `rpc/procedures/auth/**`. `actor` is who acted, which differs from `user` when an admin acts on someone else:
+
+| Value                                              | Payload                                                                                                               |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `auth.signedIn`                                    | `{ user, method, provider?, firstSignIn }`, emitted by `announceSignIn` in `auth/sign-in.ts` for every sign-in method |
+| `auth.signedOut`, `auth.registered`                | `{ user }`                                                                                                            |
+| `auth.emailChangeRequested`                        | `{ user, actor, newEmail, expiresAt }`                                                                                |
+| `auth.emailChanged`                                | `{ user, previousEmail }`                                                                                             |
+| `auth.credentialCreated`, `auth.credentialRevoked` | `{ credential, actor }`                                                                                               |
+| `auth.credentialRenamed`                           | `{ credential, actor, name }`                                                                                         |
+| `auth.oauthAccountUnlinked`                        | `{ oauthAccount, actor }`                                                                                             |
+| `auth.sessionRevoked`                              | `{ session, actor, mode }`                                                                                            |
+| `auth.apiTokenCreated`, `auth.apiTokenRevoked`     | `{ apiToken, actor }`, plus `mode` on a revoke                                                                        |
+| `auth.deviceCodeApproved`, `auth.deviceCodeDenied` | `{ deviceCode, actor }`                                                                                               |
+
 `spyEvent(hooks, event)` and `spyFilter(hooks, filter)` from `plumix/test` record what was emitted or filtered; the dispatcher and RPC harnesses expose them bound as `h.spyEvent` and `h.spyFilter`.
 
 ## String names
@@ -130,18 +156,17 @@ Execution (`HookExecutor`, on `ctx.hooks`; public type):
 
 Core's hook names, by the module that declares them (paths under `packages/core/src/`):
 
-| Declared in    | Names                                                                                                                                                               | Fired from                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `rpc/hooks.ts` | `rpc:<entry\|term\|user\|settings>.<proc>:input` / `:output` filters; `entry:before_save` and `entry:<type>:before_save`                                            | `rpc/procedures/**`                                      |
-| `rpc/hooks.ts` | `entry:published\|updated\|trashed\|restored\|deleted\|transition` plus `entry:<type>:…`; `entry:revision_*`, `entry:autosave_*`, `entry:meta_changed`              | `rpc/procedures/entry/lifecycle.ts`, `meta/entry.ts`     |
-| `rpc/hooks.ts` | `user:*`, `term:*`, `settings:group_changed`                                                                                                                        | `rpc/procedures/**`, `meta/term.ts`, `settings/write.ts` |
-| `rpc/hooks.ts` | `user:signed_in`, `user:signed_out`, `user:registered`, `user:email_*`, `credential:*`, `session:revoked`, `oauth_account:unlinked`, `api_token:*`, `device_code:*` | `auth/**`, `rpc/procedures/auth/**`                      |
+| Declared in    | Names                                                                                                                                                  | Fired from                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `rpc/hooks.ts` | `rpc:<entry\|term\|settings>.<proc>:input` / `:output` filters; `entry:before_save` and `entry:<type>:before_save`                                     | `rpc/procedures/**`                                      |
+| `rpc/hooks.ts` | `entry:published\|updated\|trashed\|restored\|deleted\|transition` plus `entry:<type>:…`; `entry:revision_*`, `entry:autosave_*`, `entry:meta_changed` | `rpc/procedures/entry/lifecycle.ts`, `meta/entry.ts`     |
+| `rpc/hooks.ts` | `term:*`, `settings:group_changed`                                                                                                                     | `rpc/procedures/**`, `meta/term.ts`, `settings/write.ts` |
 
 First-party plugins declare their own the same way: `comment:*` (`plugins/comments/src/server/hooks.ts`), `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `menu:tree`, `menu:item`, `menu:saved`, `menu:deleted` (`plugins/menu`), `seo:*` (`plugins/seo/src/`).
 
 ## How it works
 
-`HookRegistry` holds one sorted-on-read list per string name, and one per declared event or filter id. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from entry, term and user actions). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
+`HookRegistry` holds one sorted-on-read list per string name, and one per declared event or filter id. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from entry and term actions and `user` events). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
 
 The admin bar takes no hook. Its nodes, core's included, are registrations made with `registerAdminBarNode` and held in the plugin registry's `adminBarNodes` (see [Plugin system](./plugin-system.md)), so no handler can remove another plugin's node ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)).
 
@@ -157,7 +182,7 @@ Webhooks are declared in code per entry type: several per type, each a URL, cust
 - `packages/core/src/hooks/dispatch.ts`: `bindDispatch`, `rebindDispatch`, which build `ctx.events` and `ctx.filters`.
 - `packages/core/src/hooks/block-render.ts`: core's `block` subject.
 - `packages/core/src/hooks/registry.ts`: `HookRegistry` (`getEventHandlers` lists an event's handlers in firing order, for a test that moves them between registries), `HookExecutor`, `isolate`, `sortEntries`, `sortSubscriptions`.
-- `packages/core/src/hooks/render.ts`, `sync.ts`: core's `render` and `sync` subjects.
+- `packages/core/src/hooks/render.ts`, `sync.ts`, `auth.ts`, `user.ts`: core's `render`, `sync` and `auth` subjects, and the events of `user`, whose filters `rpc/procedures/user/subject.ts` adds.
 - `packages/core/src/hooks/types.ts`: `FilterRegistry`, `ActionRegistry`, `FilterName`, `ActionName`, `FilterFn`, `ActionFn`, `DEFAULT_HOOK_PRIORITY`.
 - `packages/core/src/hooks/public-hooks.ts`: side-effect imports that keep each augmentation in the published declarations. Imported from `packages/core/src/index.ts`.
 - `packages/core/src/hooks/errors.ts`: `HookExecutionError`.

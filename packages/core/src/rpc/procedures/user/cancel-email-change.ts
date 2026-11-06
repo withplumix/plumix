@@ -9,8 +9,8 @@ const EDIT_OWN_CAPABILITY = "user:edit_own";
 const EDIT_CAPABILITY = "user:edit";
 
 /**
- * No hook fires: audit can infer a cancel from two adjacent
- * `user:email_change_requested` events with no `user:email_changed` between.
+ * No event fires: audit can infer a cancel from two adjacent
+ * `auth.emailChangeRequested` events with no `auth.emailChanged` between.
  */
 export const cancelEmailChangeProc = base
   .use(authenticated)

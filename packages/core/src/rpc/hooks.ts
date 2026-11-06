@@ -1,10 +1,7 @@
-import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
-import type { ApiToken } from "../db/schema/api_tokens.js";
-import type { Credential } from "../db/schema/credentials.js";
+import type { AppContext } from "../context/app-context.js";
 import type { Entry, EntryStatus, NewEntry } from "../db/schema/entries.js";
 import type { SettingsBag, SettingsGroupCopy } from "../db/schema/settings.js";
 import type { Term } from "../db/schema/terms.js";
-import type { User } from "../db/schema/users.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
 import type { EntryMetaChanges } from "../meta/entry.js";
 import type { TermMetaChanges } from "../meta/term.js";
@@ -22,12 +19,6 @@ import type {
   TermListInput,
   TermUpdateInput,
 } from "./procedures/term/schemas.js";
-import type { UserMetaChanges } from "./procedures/user/meta.js";
-import type {
-  UserInviteInput,
-  UserListInput,
-  UserUpdateInput,
-} from "./procedures/user/schemas.js";
 
 /**
  * `_preview` lets editor clients tell autosave-overlaid responses from
@@ -40,15 +31,6 @@ type EntryWithTerms = WithResolvedMeta<Entry> & {
     readonly autosaveUpdatedAt: Date | null;
     readonly liveUpdatedAt: Date;
   };
-};
-
-/**
- * `user.list` decorates each row with `lastSignInAt` (max session
- * createdAt per user), so the admin's users table can show "Active 2d
- * ago" / "Never". Plugin filters see the same shape.
- */
-type UserListRow = User & {
-  readonly lastSignInAt: Date | null;
 };
 
 declare module "../hooks/types.js" {
@@ -87,32 +69,6 @@ declare module "../hooks/types.js" {
     "rpc:entry.duplicate:output": (
       output: WithResolvedMeta<Entry>,
     ) => WithResolvedMeta<Entry>;
-
-    "rpc:user.list:input": (input: UserListInput) => UserListInput;
-    "rpc:user.list:output": (
-      output: readonly UserListRow[],
-    ) => readonly UserListRow[];
-
-    "rpc:user.get:output": (
-      output: WithResolvedMeta<User>,
-    ) => WithResolvedMeta<User>;
-
-    "rpc:user.invite:input": (input: UserInviteInput) => UserInviteInput;
-    "rpc:user.invite:output": (output: {
-      user: User;
-      inviteToken: string;
-    }) => typeof output;
-
-    "rpc:user.update:input": (input: UserUpdateInput) => UserUpdateInput;
-    "rpc:user.update:output": (
-      output: WithResolvedMeta<User>,
-    ) => WithResolvedMeta<User>;
-
-    "rpc:user.disable:input": (input: { id: number }) => typeof input;
-    "rpc:user.disable:output": (output: User) => User;
-    "rpc:user.enable:input": (input: { id: number }) => typeof input;
-    "rpc:user.enable:output": (output: User) => User;
-    "rpc:user.delete:output": (output: User) => User;
 
     "rpc:term.list:input": (input: TermListInput) => TermListInput;
     "rpc:term.list:output": (
@@ -297,66 +253,6 @@ declare module "../hooks/types.js" {
       ctx: AppContext,
     ) => void | Promise<void>;
 
-    /**
-     * SECURITY: `inviteToken` is the raw plaintext credential (the DB stores a
-     * hash). Never log or forward it; it completes registration until consumed
-     * or expired (7 days).
-     */
-    "user:invited": (
-      user: User,
-      context: {
-        readonly inviteToken: string;
-        readonly invitedBy: number;
-        readonly expiresAt: Date;
-      },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * Fires on invite acceptance, not on `user:invited`. PII: the payload
-     * carries `email`, `name` and `role`, as do all `user:*` actions.
-     */
-    "user:registered": (user: User, ctx: AppContext) => void | Promise<void>;
-
-    /**
-     * Fires only when row columns changed. `user.meta` here predates any meta
-     * write in the same RPC, so use `user:meta_changed` for meta.
-     */
-    "user:updated": (
-      user: User,
-      previous: User,
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * Fires after a successful meta write via `user.update`. Payload
-     * carries the decoded upserts + deleted keys — same shape as
-     * `entry:meta_changed` / `term:meta_changed` so plugins adopt one
-     * pattern across bags.
-     */
-    "user:meta_changed": (
-      user: { readonly id: number },
-      changes: UserMetaChanges,
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * Fires on both disable and re-enable. The user's sessions are already
-     * invalidated when it fires.
-     */
-    "user:status_changed": (
-      user: User,
-      context: { readonly enabled: boolean },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /** `reassignedTo` is `null` when the deleted user had no entries. */
-    "user:deleted": (
-      user: User,
-      context: { readonly reassignedTo: number | null },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
     /** Fires after `term.create` persists a new term row. */
     "term:created": (term: Term, ctx: AppContext) => void | Promise<void>;
 
@@ -395,167 +291,6 @@ declare module "../hooks/types.js" {
         readonly set: SettingsBag;
         readonly removed: readonly string[];
       },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    // Sign-in is split by `method` so an audit log can attribute it without
-    // sniffing call paths. The actor travels in `context.actor`, not in
-    // `revoked_by` columns.
-
-    /**
-     * Also fires on an external authenticator's first authenticated request.
-     * `firstSignIn` is true only when this sign-in enrolled the user, not when
-     * an existing user adds a passkey.
-     */
-    "user:signed_in": (
-      user: User,
-      context: {
-        /** A sign-in method's key, or `external` for an authenticator. */
-        readonly method: string;
-        readonly provider?: string;
-        readonly firstSignIn: boolean;
-      },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * A user signed out via the dedicated `/auth/signout` route. The
-     * session row is already deleted by the time this fires.
-     */
-    "user:signed_out": (user: User, ctx: AppContext) => void | Promise<void>;
-
-    /**
-     * The email is NOT changed yet; see `user:email_changed`. `actor` differs
-     * from `user` when an admin requests the change.
-     */
-    "user:email_change_requested": (
-      user: User,
-      context: {
-        readonly actor: AuthenticatedUser;
-        readonly newEmail: string;
-        readonly expiresAt: Date;
-      },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * The user's sessions are already invalidated when this fires, so don't
-     * assume the actor's session still exists.
-     */
-    "user:email_changed": (
-      user: User,
-      context: { readonly previousEmail: string },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * Also fires on first signup and invite-accept. The payload omits the
-     * public key; read the full row from `context.db`.
-     */
-    "credential:created": (
-      credential: Pick<
-        Credential,
-        "id" | "userId" | "name" | "deviceType" | "isBackedUp"
-      >,
-      context: { readonly actor: AuthenticatedUser },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * A passkey was revoked via `auth.credentials.delete`. Self-only —
-     * cross-user passkey deletion is intentionally not a feature, so
-     * `actor.id === credential.userId` always.
-     */
-    "credential:revoked": (
-      credential: { readonly id: string; readonly userId: number },
-      context: { readonly actor: AuthenticatedUser },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * A passkey was renamed via `auth.credentials.rename`. Same
-     * self-only contract as `credential:revoked`.
-     */
-    "credential:renamed": (
-      credential: { readonly id: string; readonly userId: number },
-      context: { readonly actor: AuthenticatedUser; readonly name: string },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * The user's links to `provider` were removed via
-     * `auth.oauthAccounts.unlink`. Self-only, as `credential:revoked` is, so
-     * `actor.id === account.userId` always.
-     */
-    "oauth_account:unlinked": (
-      account: { readonly provider: string; readonly userId: number },
-      context: { readonly actor: AuthenticatedUser },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * Only the caller's own sessions can be revoked. `mode` tells a single
-     * revoke from "everywhere except this browser".
-     */
-    "session:revoked": (
-      session: { readonly id: string; readonly userId: number },
-      context: {
-        readonly actor: AuthenticatedUser;
-        readonly mode: "single" | "all_others";
-      },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * A personal access token was minted via `auth.apiTokens.create`.
-     * Token row is shipped sans secret (PK = SHA-256 hash). Mint is
-     * always self-action — you can't mint for another user — so
-     * `actor.id === token.userId`.
-     */
-    "api_token:created": (
-      token: Pick<
-        ApiToken,
-        "id" | "userId" | "name" | "prefix" | "scopes" | "expiresAt"
-      >,
-      context: { readonly actor: AuthenticatedUser },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * `mode: "self"` for the owner's `revoke`, `mode: "admin"` for
-     * `adminRevoke`.
-     */
-    "api_token:revoked": (
-      token: { readonly id: string; readonly userId: number },
-      context: {
-        readonly actor: AuthenticatedUser;
-        readonly mode: "self" | "admin";
-      },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * Fires at approval, before the polling client mints the token, so the
-     * human's decision is recorded separately from the mint.
-     */
-    "device_code:approved": (
-      deviceCode: {
-        readonly id: string;
-        readonly userCode: string;
-        readonly tokenName: string;
-        readonly scopes: readonly string[] | null;
-      },
-      context: { readonly actor: AuthenticatedUser },
-      ctx: AppContext,
-    ) => void | Promise<void>;
-
-    /**
-     * A device-flow session was denied via `auth.deviceFlow.deny`.
-     * Polling client gets `access_denied` on the next exchange.
-     */
-    "device_code:denied": (
-      deviceCode: { readonly id: string; readonly userCode: string },
-      context: { readonly actor: AuthenticatedUser },
       ctx: AppContext,
     ) => void | Promise<void>;
   }

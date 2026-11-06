@@ -7,6 +7,7 @@ import { authTokens } from "../../db/schema/auth_tokens.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
+import { auth } from "../../hooks/auth.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
 import {
@@ -883,7 +884,7 @@ describe("sign-out by form post and redirectTo", () => {
     const h = await createDispatcherHarness();
     const user = await h.seedUser("admin");
     const signedIn = await h.authenticateRequest(signOutFormPost(), user.id);
-    const signedOut = h.spyAction("user:signed_out");
+    const signedOut = h.spyEvent(auth.signedOut);
 
     const response = await h.dispatch(signedIn);
 
@@ -1138,9 +1139,9 @@ describe("passkey verify answers", () => {
     });
   });
 
-  test("register verify fires credential:created for the new passkey", async () => {
+  test("register verify fires auth.credentialCreated for the new passkey", async () => {
     const h = await createDispatcherHarness();
-    const created = h.spyAction("credential:created");
+    const created = h.spyEvent(auth.credentialCreated);
 
     await enrolledPasskey(h, "admin@cms.example");
 
@@ -1148,7 +1149,7 @@ describe("passkey verify answers", () => {
       where: eq(users.email, "admin@cms.example"),
     });
     created.assertCalledOnce();
-    expect(created.lastArgs?.[0]).toMatchObject({ userId: user?.id });
+    expect(created.lastPayload?.credential).toMatchObject({ userId: user?.id });
   });
 
   test("login verify answers the user and the admin to go to", async () => {
@@ -1212,7 +1213,7 @@ describe("passkey verify answers", () => {
     expect(await response.json()).toEqual({ error: "link_broken" });
   });
 
-  test("invite verify fires user:registered and credential:created for the invitee", async () => {
+  test("invite verify fires auth.registered and auth.credentialCreated for the invitee", async () => {
     const h = await createDispatcherHarness();
     const { user: invitee, token } = await seedInvite(h);
     const optionsRes = await h.fetch("/_plumix/auth/invite/register/options", {
@@ -1221,8 +1222,8 @@ describe("passkey verify answers", () => {
     const { options } = await optionsRes.json<{
       options: { challenge: string };
     }>();
-    const registered = h.spyAction("user:registered");
-    const created = h.spyAction("credential:created");
+    const registered = h.spyEvent(auth.registered);
+    const created = h.spyEvent(auth.credentialCreated);
 
     await h.fetch("/_plumix/auth/invite/register/verify", {
       json: {
@@ -1238,9 +1239,11 @@ describe("passkey verify answers", () => {
     });
 
     registered.assertCalledOnce();
-    expect(registered.lastArgs?.[0]).toMatchObject({ id: invitee.id });
+    expect(registered.lastPayload?.user).toMatchObject({ id: invitee.id });
     created.assertCalledOnce();
-    expect(created.lastArgs?.[0]).toMatchObject({ userId: invitee.id });
+    expect(created.lastPayload?.credential).toMatchObject({
+      userId: invitee.id,
+    });
   });
 
   test("invite verify answers the user and the admin to go to", async () => {

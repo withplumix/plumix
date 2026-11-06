@@ -11,6 +11,7 @@ import type {
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { ThemeDescriptor } from "../theme.js";
+import { auth } from "../hooks/auth.js";
 import { block } from "../hooks/block-render.js";
 import { render } from "../hooks/render.js";
 import { sync } from "../hooks/sync.js";
@@ -25,6 +26,7 @@ import {
   createPluginAfterSetupContext,
   createPluginSetupContext,
 } from "../plugin/setup-context.js";
+import { user } from "../rpc/procedures/user/subject.js";
 
 export interface PluginInstallResult {
   readonly hooks: HookRegistry;
@@ -134,6 +136,8 @@ const CORE_DECLARATIONS: readonly Declaration[] = [
   ...Object.values(block),
   ...Object.values(render),
   ...Object.values(sync),
+  ...Object.values(user),
+  ...Object.values(auth),
 ];
 
 function assertUniqueDeclarations(

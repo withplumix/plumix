@@ -5,6 +5,7 @@ import { authTokens } from "../../db/schema/auth_tokens.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
+import { auth } from "../../hooks/auth.js";
 import { silentLogger } from "../../test/context.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { github } from "./providers/github.js";
@@ -481,7 +482,7 @@ describe("oauth callback route", () => {
     });
 
     const state = await seedState(h, "github", "v-1");
-    const signedIn = h.spyAction("user:signed_in");
+    const signedIn = h.spyEvent(auth.signedIn);
 
     answer({
       "https://github.com/login/oauth/access_token": {
@@ -521,11 +522,11 @@ describe("oauth callback route", () => {
     expect(sessionRows[0]?.userId).toBe(seeded.id);
 
     signedIn.assertCalledOnce();
-    const [user, context] = signedIn.lastArgs ?? [];
-    expect(user?.id).toBe(seeded.id);
-    expect(context?.method).toBe("oauth");
-    expect(context?.provider).toBe("github");
-    expect(context?.firstSignIn).toBe(false);
+    const payload = signedIn.lastPayload;
+    expect(payload?.user.id).toBe(seeded.id);
+    expect(payload?.method).toBe("oauth");
+    expect(payload?.provider).toBe("github");
+    expect(payload?.firstSignIn).toBe(false);
   });
 
   test("returns the visitor to a safe redirectTo carried in state", async () => {
@@ -615,7 +616,7 @@ describe("oauth callback route", () => {
     await h.seedUser("admin");
 
     const state = await seedState(h, "google", "v-2");
-    const signedIn = h.spyAction("user:signed_in");
+    const signedIn = h.spyEvent(auth.signedIn);
 
     answer({
       "https://oauth2.googleapis.com/token": {
@@ -645,10 +646,10 @@ describe("oauth callback route", () => {
     expect(created?.role).toBe("author");
 
     signedIn.assertCalledOnce();
-    const [user, context] = signedIn.lastArgs ?? [];
-    expect(user?.id).toBe(created?.id);
-    expect(context?.method).toBe("oauth");
-    expect(context?.firstSignIn).toBe(true);
+    const payload = signedIn.lastPayload;
+    expect(payload?.user.id).toBe(created?.id);
+    expect(payload?.method).toBe("oauth");
+    expect(payload?.firstSignIn).toBe(true);
   });
 
   test("a sign-up stores the provider's name and avatar on the new user", async () => {

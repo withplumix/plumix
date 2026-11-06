@@ -1,6 +1,8 @@
 export * from "./define.js";
 export * from "./registry.js";
 export * from "./types.js";
+// `auth` is the config builder; `plumix/plugin` publishes this as `auth`.
+export { auth as authEvents } from "./auth.js";
 export { block } from "./block-render.js";
 export { render } from "./render.js";
 export type { ArchiveEntriesInput, RenderDocumentInput } from "./render.js";

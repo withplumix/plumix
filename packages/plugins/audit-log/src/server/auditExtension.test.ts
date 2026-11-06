@@ -7,6 +7,7 @@ import type {
   DeferFn,
   HookOptions,
   PluginSetupContext,
+  SetupEvents,
 } from "plumix/plugin";
 import type { Entry } from "plumix/schema";
 import { authenticated, base, definePlugin, HookRegistry } from "plumix/plugin";
@@ -209,6 +210,11 @@ describe("createAuditExtension — integration with the real AuditService", () =
       ) => {
         hooks.addAction(name as never, fn as never, options);
       },
+      events: {
+        on: (event, handler, options) => {
+          hooks.on(event, handler, options);
+        },
+      } satisfies SetupEvents,
     } as unknown as PluginSetupContext;
     registerAuditEvents(setupCtx, service);
 
