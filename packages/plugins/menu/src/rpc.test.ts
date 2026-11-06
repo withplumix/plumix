@@ -11,6 +11,7 @@ import {
   HookRegistry,
   installPlugins,
   registerCoreLookupAdapters,
+  settings as settingsEvents,
 } from "plumix/plugin";
 import { entries, settings, terms } from "plumix/schema";
 import {
@@ -1771,7 +1772,7 @@ describe("menu RPC", () => {
       ]);
     });
 
-    test("fires settings:group_changed with the unbound keys", async () => {
+    test("emits settings.groupChanged with the unbound keys", async () => {
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "ghost");
       await h.factories.setting.create({
@@ -1791,7 +1792,7 @@ describe("menu RPC", () => {
         value: other.slug,
       });
       const calls: unknown[] = [];
-      h.hooks.addAction("settings:group_changed", (payload) => {
+      h.hooks.on(settingsEvents.groupChanged, (payload) => {
         calls.push({
           group: payload.group,
           removed: [...payload.removed].sort(),
@@ -1852,11 +1853,11 @@ describe("menu RPC", () => {
       expect(rows).toEqual([]);
     });
 
-    test("fires settings:group_changed for the bound key, then for the unbound key", async () => {
+    test("emits settings.groupChanged for the bound key, then for the unbound key", async () => {
       const h = await buildHarness("editor", { primary: { label: "Primary" } });
       await seedMenu(h.db, h.factories, "main");
       const calls: unknown[] = [];
-      h.hooks.addAction("settings:group_changed", (payload) => {
+      h.hooks.on(settingsEvents.groupChanged, (payload) => {
         calls.push({
           group: payload.group,
           set: payload.set,

@@ -15,6 +15,7 @@ import { users } from "../db/schema/users.js";
 import { compileEntryQuery, entryQuery } from "../entries/query.js";
 import { entry } from "../hooks/entry.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { settings } from "../hooks/settings.js";
 import { term as termEvents } from "../hooks/term.js";
 import { userEvents } from "../hooks/user.js";
 import { definePlugin } from "../plugin/define.js";
@@ -198,14 +199,6 @@ describe("purge accumulator", () => {
 });
 
 describe("registerCorePurgeInvalidator", () => {
-  // Loose-typed: each action's payload differs, so the tests fire by name.
-  const fire = (hooks: HookRegistry, name: string, ...args: unknown[]) =>
-    (hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>).call(
-      hooks,
-      name,
-      ...args,
-    );
-
   type Emit = (hooks: HookRegistry, ctx: AppContext) => Promise<unknown>;
 
   const row = { id: 9, type: "post" } as Entry;
@@ -311,14 +304,16 @@ describe("registerCorePurgeInvalidator", () => {
     },
   );
 
+  const siteChanged = { group: "site", set: {}, removed: [] };
+
   // A page that printed a settings group is stored under its tag, so saving
   // the group has to reach the CDN, not only this request's memo.
-  it("settings:group_changed purges the pages that printed the group", async () => {
+  it("settings.groupChanged purges the pages that printed the group", async () => {
     const hooks = new HookRegistry();
     registerCorePurgeInvalidator(hooks);
     const { ctx, cdn, flush } = await fakeCtx();
 
-    await fire(hooks, "settings:group_changed", { group: "site" }, ctx);
+    await hooks.emit(settings.groupChanged, siteChanged, ctx);
     await flush();
 
     assertOnlyPurged(cdn, ["/settings/site"]);
@@ -345,8 +340,8 @@ describe("registerCorePurgeInvalidator", () => {
         h.emit(userEvents.deleted, { user: jane, reassignedTo: 1 }, ctx),
     ],
     [
-      "settings:group_changed",
-      (h, ctx) => fire(h, "settings:group_changed", { group: "site" }, ctx),
+      "settings.groupChanged",
+      (h, ctx) => h.emit(settings.groupChanged, siteChanged, ctx),
     ],
   ];
 

@@ -2,7 +2,7 @@ import type { Logger, TelemetrySpan } from "plumix";
 import type { DispatcherHarness, TestResponse } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { eq } from "plumix/db";
-import { definePlugin, render } from "plumix/plugin";
+import { definePlugin, render, settings } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { fakeCdn } from "plumix/test";
 import { describe, expect, test } from "vitest";
@@ -496,11 +496,11 @@ describe("a card at the edge", () => {
       ctx.registerPublicRoute({
         path: "/save-site-settings",
         handler: async (_request, appCtx) => {
-          await appCtx.hooks.doAction(
-            "settings:group_changed",
-            { group: "site", set: { title: "Renamed Site" }, removed: [] },
-            appCtx,
-          );
+          await appCtx.events.emit(settings.for("site").groupChanged, {
+            group: "site",
+            set: { title: "Renamed Site" },
+            removed: [],
+          });
           return new Response("ok");
         },
       });

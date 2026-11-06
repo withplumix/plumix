@@ -6,6 +6,12 @@ import { createTestContext } from "./context.js";
 import { createTestDb } from "./harness.js";
 import { bindFilterSpy, spyEvent, spyFilter } from "./spies.js";
 
+declare module "../hooks/types.js" {
+  interface FilterRegistry {
+    "test:spied": (value: string) => string;
+  }
+}
+
 const saved = defineEvent<{ readonly id: number }>("acme:saved");
 const title = defineFilter<string, { readonly locale: string }>("acme:title", {
   sync: true,
@@ -118,11 +124,9 @@ describe("bindFilterSpy", () => {
 
   test("spies a filter name on the hooks it is bound to", () => {
     const hooks = new HookRegistry();
-    const spy = bindFilterSpy(hooks)("rpc:settings.get:input");
+    const spy = bindFilterSpy(hooks)("test:spied");
 
     expect(spy.calls).toEqual([]);
-    expect(() => spy.assertCalled()).toThrow(
-      "spyFilter(rpc:settings.get:input)",
-    );
+    expect(() => spy.assertCalled()).toThrow("spyFilter(test:spied)");
   });
 });

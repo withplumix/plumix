@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { declaredPageTags } from "./cdn/contract/page-tags.js";
 import { and, eq } from "./db/index.js";
 import { settings } from "./db/schema/settings.js";
+import { settings as settingsEvents } from "./hooks/settings.js";
 import { settingsLoader } from "./template-deps-core.js";
 import { createTracedContext } from "./test/traced-context.js";
 
@@ -94,16 +95,16 @@ describe("settingsLoader request memoization", () => {
       await ctx.db
         .insert(settings)
         .values({ group: "social", key: "handle", value: "@plumix" });
-      await ctx.hooks.doAction(
-        "settings:group_changed",
-        { group: "site", set: { title: "After" }, removed: [] },
-        ctx,
-      );
-      await ctx.hooks.doAction(
-        "settings:group_changed",
-        { group: "social", set: { handle: "@plumix" }, removed: [] },
-        ctx,
-      );
+      await ctx.events.emit(settingsEvents.for("site").groupChanged, {
+        group: "site",
+        set: { title: "After" },
+        removed: [],
+      });
+      await ctx.events.emit(settingsEvents.for("social").groupChanged, {
+        group: "social",
+        set: { handle: "@plumix" },
+        removed: [],
+      });
       return [first, await settingsLoader(["site", "social"], ctx)];
     });
 

@@ -1,4 +1,5 @@
 import type { Entry } from "../db/schema/entries.js";
+import type { SettingsGroupCopy } from "../db/schema/settings.js";
 import type { Term } from "../db/schema/terms.js";
 import type { AnyFilterDefinition } from "../hooks/define.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
@@ -8,11 +9,16 @@ import type {
   EntryUpdateInput,
 } from "./procedures/entry/schemas.js";
 import type {
+  SettingsGetInput,
+  SettingsUpsertInput,
+} from "./procedures/settings/schemas.js";
+import type {
   TermCreateInput,
   TermListInput,
   TermUpdateInput,
 } from "./procedures/term/schemas.js";
 import { defineFilter } from "../hooks/define.js";
+import { scopeDeclarations } from "../hooks/scope.js";
 
 /**
  * `_preview` lets editor clients tell autosave-overlaid responses from
@@ -132,9 +138,55 @@ export const termRpc = {
   },
 };
 
+/**
+ * The settings procedures' input and output. Each names one group, so
+ * {@link settingsRpcFor} scopes them to it.
+ */
+export const settingsRpc = {
+  get: {
+    input: defineFilter<SettingsGetInput>("settings:rpc.get.input", {
+      sync: false,
+    }),
+    /** Can decorate, redact or replace the group's copy. */
+    output: defineFilter<SettingsGroupCopy, { readonly group: string }>(
+      "settings:rpc.get.output",
+      { sync: false },
+    ),
+  },
+  upsert: {
+    input: defineFilter<SettingsUpsertInput>("settings:rpc.upsert.input", {
+      sync: false,
+    }),
+    /** Runs on the stored copy after the write, with the same input as `get`. */
+    output: defineFilter<SettingsGroupCopy, { readonly group: string }>(
+      "settings:rpc.upsert.output",
+      { sync: false },
+    ),
+  },
+};
+
+export type SettingsRpc = typeof settingsRpc;
+
+/** {@link settingsRpc}, run only for `group`. */
+export function settingsRpcFor(group: string): SettingsRpc {
+  return {
+    get: scopeDeclarations(settingsRpc.get, group),
+    upsert: scopeDeclarations(settingsRpc.upsert, group),
+  };
+}
+
+const settingsProcedures: readonly Readonly<
+  Record<string, AnyFilterDefinition>
+>[] = Object.values(settingsRpc);
+
+export const settingsRpcDeclarations = settingsProcedures.flatMap((procedure) =>
+  Object.values(procedure),
+);
+
 const procedures: readonly Readonly<Record<string, AnyFilterDefinition>>[] = [
   ...Object.values(entryRpc),
   ...Object.values(termRpc),
+  ...settingsProcedures,
 ];
 
 /** Every RPC filter above, for the boot check on duplicate ids. */

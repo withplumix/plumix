@@ -1,15 +1,14 @@
-// A test runs `assertRedactionInvariants` over these tables, so a row
+// A test runs `assertRedactionInvariants` over this table, so a row
 // auditing a subject with a sensitive field must list that field in
 // `diff.omit`.
 
-import type { ActionArgs, ActionName, JsonObject } from "plumix";
+import type { JsonObject } from "plumix";
 import type {
   AppContext,
   EventDefinition,
   PluginSetupContext,
 } from "plumix/plugin";
-import type { SettingsBag } from "plumix/schema";
-import { auth, entry, term, user } from "plumix/plugin";
+import { auth, entry, settings, term, user } from "plumix/plugin";
 
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { AuditEntityRow, AuditLogActor } from "../types.js";
@@ -17,76 +16,6 @@ import type { AuditService } from "./auditService.js";
 import type { SubjectInput } from "./subjectExtractors.js";
 import { buildAuditRow } from "./buildAuditRow.js";
 import { extractSubject } from "./subjectExtractors.js";
-
-// ──────────────────────────────────────────────────────────────────
-// Row schema
-// ──────────────────────────────────────────────────────────────────
-
-interface ResolvedSubject {
-  readonly type: string;
-  readonly id: string;
-  readonly label: string;
-}
-
-type SubjectStrategy =
-  | { readonly kind: "extract"; readonly type: string }
-  | {
-      readonly kind: "inline";
-      readonly type: string;
-      readonly resolve: (
-        payload: never,
-        context: never,
-      ) => { readonly id: string; readonly label: string };
-    };
-
-/**
- * An action that hands its handler the firing context last — the only kind
- * the interpreter can record against, since that is where it reads it.
- */
-type ContextualAction = {
-  [K in ActionName]: ActionArgs<K> extends readonly [...unknown[], AppContext]
-    ? K
-    : never;
-}[ActionName];
-
-/** A row attributed to the request's user. */
-export interface AuditEventDef {
-  readonly event: ContextualAction;
-  readonly subject: SubjectStrategy;
-  /**
-   * Diff the top-level columns of `payload` (next) vs. `context` (previous),
-   * omitting these keys.
-   */
-  readonly diff?: { readonly omit: readonly string[] };
-  /** Extra properties merged into the row's `properties` envelope. Every
-   *  definition below already converts a `Date` by hand. */
-  readonly extra?: (
-    payload: never,
-    context: never,
-    appCtx: AppContext,
-  ) => JsonObject;
-}
-
-// ──────────────────────────────────────────────────────────────────
-// Strategy resolvers
-// ──────────────────────────────────────────────────────────────────
-
-function resolveSubject(
-  strategy: SubjectStrategy,
-  payload: unknown,
-  context: unknown,
-): ResolvedSubject {
-  if (strategy.kind === "inline") {
-    const partial = (
-      strategy.resolve as (
-        payload: unknown,
-        context: unknown,
-      ) => { readonly id: string; readonly label: string }
-    )(payload, context);
-    return { type: strategy.type, id: partial.id, label: partial.label };
-  }
-  return extractSubject(strategy.type, payload as SubjectInput);
-}
 
 function actorOf(ctx: AppContext): AuditLogActor {
   if (ctx.user === null) return { id: null, label: null };
@@ -110,43 +39,6 @@ function stripKeys(
     out[key] = value;
   }
   return out;
-}
-
-// ──────────────────────────────────────────────────────────────────
-// Row → audit-row reducer
-// ──────────────────────────────────────────────────────────────────
-
-function buildRow(
-  def: AuditEventDef,
-  payload: unknown,
-  context: unknown,
-  appCtx: AppContext,
-): NewAuditLogRow {
-  const subject = resolveSubject(def.subject, payload, context);
-  const actor = actorOf(appCtx);
-  const previous = def.diff
-    ? stripKeys(context as Readonly<Record<string, unknown>>, def.diff.omit)
-    : undefined;
-  const next = def.diff
-    ? stripKeys(payload as Readonly<Record<string, unknown>>, def.diff.omit)
-    : undefined;
-  const extraProperties = def.extra
-    ? (
-        def.extra as (
-          payload: unknown,
-          context: unknown,
-          appCtx: AppContext,
-        ) => JsonObject
-      )(payload, context, appCtx)
-    : undefined;
-  return buildAuditRow({
-    event: def.event,
-    actor,
-    subject,
-    previous,
-    next,
-    extraProperties,
-  });
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -192,34 +84,6 @@ export function assertRedactionInvariants(
     }
   }
 }
-
-// ──────────────────────────────────────────────────────────────────
-// Audit-event table
-// ──────────────────────────────────────────────────────────────────
-
-export const auditEvents: readonly AuditEventDef[] = [
-  // ─── Settings surface ───
-  {
-    event: "settings:group_changed",
-    // SECURITY: settings values can carry secrets (SMTP password, API keys), so
-    // record only the changed key names.
-    subject: {
-      kind: "inline",
-      type: "settings_group",
-      resolve: (changes: { readonly group: string }) => ({
-        id: changes.group,
-        label: changes.group,
-      }),
-    },
-    extra: (changes: {
-      readonly set: SettingsBag;
-      readonly removed: readonly string[];
-    }) => ({
-      keysSet: Object.keys(changes.set),
-      keysRemoved: changes.removed,
-    }),
-  },
-];
 
 // ──────────────────────────────────────────────────────────────────
 // Declared events
@@ -341,6 +205,24 @@ const userSubject = {
 } as const;
 
 export const auditedEvents: readonly AuditedEvent[] = [
+  // ─── Settings surface ───
+  audited({
+    event: "settings:group_changed",
+    on: settings.groupChanged,
+    // SECURITY: settings values can carry secrets (SMTP password, API keys), so
+    // record only the changed key names.
+    subject: {
+      kind: "inline",
+      type: "settings_group",
+      resolve: ({ group }) => ({ id: group, label: group }),
+    },
+    actor: actorOfCtx,
+    extra: ({ set, removed }) => ({
+      keysSet: Object.keys(set),
+      keysRemoved: removed,
+    }),
+  }),
+
   // ─── Entry surface ───
   audited({
     event: "entry:updated",
@@ -669,21 +551,12 @@ export const auditedEvents: readonly AuditedEvent[] = [
 // ──────────────────────────────────────────────────────────────────
 
 /**
- * Subscribe one handler per row of `auditEvents` and `auditedEvents`, routing
- * a built row through `service.record`.
+ * Subscribe one handler per row of `auditedEvents`, routing a built row
+ * through `service.record`.
  */
 export function registerAuditEvents(
   ctx: PluginSetupContext,
   service: AuditService,
 ): void {
-  for (const def of auditEvents) {
-    ctx.addAction(def.event, (...args: unknown[]) => {
-      // Every audited action declares the firing context as its last
-      // parameter, whatever payload comes before it.
-      const [payload, context] = args.slice(0, -1);
-      const appCtx = args.at(-1) as AppContext;
-      service.record(appCtx, buildRow(def, payload, context, appCtx));
-    });
-  }
   for (const def of auditedEvents) def.subscribe(ctx, service);
 }

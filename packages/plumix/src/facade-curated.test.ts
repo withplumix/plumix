@@ -52,6 +52,13 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "core's settings subject, which plumix/plugin publishes as " +
+      "`settings`; the barrel's `settings` is the settings table plumix/schema " +
+      "publishes",
+    names: ["settingsSubject"],
+  },
+  {
+    reason:
       "the editing-copy controller and the save queue it writes through, " +
       "which only the admin's own editors use until a plugin editor moves " +
       "onto them (#3241)",
@@ -342,9 +349,13 @@ const CORE_WITHHELD: readonly Withholding[] = [
 
 const CURATED: Readonly<Record<string, Curated>> = {
   ".": { draws: "@plumix/core" },
-  // `entry` and `term` are core's `entrySubject` and `termSubject`, renamed:
-  // the barrel's own `entry` and `term` are the theme's template builders.
-  "./plugin": { draws: "@plumix/core", adds: ["v", "auth", "entry", "term"] },
+  // `entry`, `term` and `settings` are core's `entrySubject`, `termSubject`
+  // and `settingsSubject`, renamed: the barrel's own `entry` and `term` are
+  // the theme's template builders, and its `settings` is the settings table.
+  "./plugin": {
+    draws: "@plumix/core",
+    adds: ["v", "auth", "entry", "term", "settings"],
+  },
   "./theme": { draws: "@plumix/core" },
   "./runtime": { draws: "@plumix/core" },
   "./auth": { draws: "@plumix/core" },
@@ -1007,7 +1018,7 @@ function rpcOf(subject: unknown): object {
 }
 
 // ADR 0052: a plugin declares and subscribes through values, not strings.
-test("plumix/plugin offers the event and filter declarers and core's block, render, sync, entry, term, user and auth subjects", () => {
+test("plumix/plugin offers the event and filter declarers and core's block, render, sync, entry, term, settings, user and auth subjects", () => {
   const plugin = loaded(facade, "./plugin");
   expect({
     defineEvent: typeof plugin.defineEvent,
@@ -1019,6 +1030,8 @@ test("plumix/plugin offers the event and filter declarers and core's block, rend
     entryRpc: Object.keys(rpcOf(plugin.entry)).sort(),
     term: Object.keys(plugin.term ?? {}).sort(),
     termRpc: Object.keys(rpcOf(plugin.term)).sort(),
+    settings: Object.keys(plugin.settings ?? {}).sort(),
+    settingsRpc: Object.keys(rpcOf(plugin.settings)).sort(),
     user: Object.keys(plugin.user ?? {}).sort(),
     auth: Object.keys(plugin.auth ?? {}).sort(),
   }).toEqual({
@@ -1066,6 +1079,8 @@ test("plumix/plugin offers the event and filter declarers and core's block, rend
     ],
     term: ["created", "deleted", "for", "metaChanged", "rpc", "updated"],
     termRpc: ["create", "delete", "get", "list", "update"],
+    settings: ["for", "groupChanged", "rpc"],
+    settingsRpc: ["get", "upsert"],
     user: [
       "deleteOutput",
       "deleted",

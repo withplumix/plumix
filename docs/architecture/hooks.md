@@ -2,8 +2,8 @@
 
 Hooks are core's named extension points, the "hooks" half of the "Plugin system and hooks" component in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). They are moving, one subject at a time, from string names to declared values ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)):
 
-- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render`, `sync`, `entry`, `term`, `user` and `auth` subjects have moved.
-- **String names.** Every other extension point is still a string name: a filter is a pipeline, an action announces something, plugin authors subscribe through `ctx.addFilter` / `ctx.addAction`, and core and plugins fire them through `ctx.hooks`. The names are types, declared by augmenting `FilterRegistry` and `ActionRegistry`.
+- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render`, `sync`, `entry`, `term`, `settings`, `user` and `auth` subjects have moved, so core declares no string name of its own.
+- **String names.** The first-party plugins' own extension points are still string names: a filter is a pipeline, an action announces something, plugin authors subscribe through `ctx.addFilter` / `ctx.addAction`, and core and plugins fire them through `ctx.hooks`. The names are types, declared by augmenting `FilterRegistry` and `ActionRegistry`.
 
 Both live in one `HookRegistry` per app, in `packages/core/src/hooks/`.
 
@@ -96,6 +96,16 @@ Core's subjects are exported from `plumix/plugin`. `block` (`packages/core/src/h
 
 `entry.for(type)` and `term.for(taxonomy)` return the same events (and `entry.beforeSave`) carrying a `scope`; `registerEntryType` and `registerTermTaxonomy` return exactly that view, so `const product = ctx.registerEntryType("product", …)` exposes `product.published`. A scoped declaration keeps its parent's id. Each event is emitted once, through `entry.for(row.type)` or `term.for(row.taxonomy)`, and `HookRegistry` runs the unscoped handlers and those whose scope matches; emitting an unscoped declaration runs only unscoped handlers. At equal order, scoped handlers run before unscoped ones, which keeps the type-specific-first layering of `beforeSave`. After every plugin's `setup` and `afterSetup`, `installPlugins` fails boot with `PluginDefinitionError` (`handler_scoped_to_unknown_name`) on a scope naming no registered entry type or taxonomy, listing the registered names. The `rpc` filters are unscoped: a list's input names no single type.
 
+`settings` holds the settings groups' event, in `packages/core/src/hooks/settings.ts`, and the settings procedures' `rpc` filters, in `rpc/filters.ts`; `hooks/public-hooks.ts` joins them:
+
+| Value                               | Kind         | Payload or value                                                 | Fired from                                          |
+| ----------------------------------- | ------------ | ---------------------------------------------------------------- | --------------------------------------------------- |
+| `settings.groupChanged`             | event        | `{ group, set, removed }`; not for a private (`_internal`) group | `settings/write.ts`, `rpc/procedures/meta/sweep.ts` |
+| `settings.rpc.<get\|upsert>.input`  | async filter | the procedure's input                                            | `rpc/procedures/settings/**`                        |
+| `settings.rpc.<get\|upsert>.output` | async filter | the group's copy, with `{ group }` as input                      | `rpc/procedures/settings/**`                        |
+
+`settings.for(group)` scopes all of them, the `rpc` filters too, since each settings procedure names one group: it returns the event and `rpc` carrying the group as their `scope`. The event is emitted once through `settings.for(group)` in `hooks/settings.ts` and each filter applied once through `settingsRpcFor(group)` in `rpc/filters.ts`, and the boot check fails on a scope naming no registered settings group, core's `site` included among the registered names. The input filters are scoped by the group the caller asked for.
+
 `user` (`packages/core/src/hooks/user.ts` holds its events; `packages/core/src/rpc/procedures/user/subject.ts` adds the filters, whose types live in `rpc/`) is fired from `rpc/procedures/user/**`:
 
 | Value                                   | Kind         | Payload or value                                                                                                          |
@@ -171,27 +181,21 @@ Execution (`HookExecutor`, on `ctx.hooks`; public type):
 | `doAction`                               | Starts every handler in priority order, awaits all with `Promise.allSettled`, and logs each rejection (see Invariants). Traced as a `hook: <name>` span. |
 | `getFilterHandlers`, `getActionHandlers` | Sorted handlers, for a caller that runs them itself.                                                                                                     |
 
-Core's hook names, by the module that declares them (paths under `packages/core/src/`):
+Core declares no string hook names. First-party plugins that still use string names declare them by augmenting the registries: `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `seo:*` (`plugins/seo/src/`).
 
-| Declared in    | Names                                           | Fired from          |
-| -------------- | ----------------------------------------------- | ------------------- |
-| `rpc/hooks.ts` | `rpc:settings.<proc>:input` / `:output` filters | `rpc/procedures/**` |
-| `rpc/hooks.ts` | `settings:group_changed`                        | `settings/write.ts` |
+Core and other plugins declare their events and filters with `defineEvent` and `defineFilter`, list them in their descriptor's `events` and `filters`, and export them as one namespace named after their subject:
 
-First-party plugins still declare string names the same way: `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `seo:*` (`plugins/seo/src/`).
-
-Others declare their own events and filters with `defineEvent` and `defineFilter`, list them in their descriptor's `events` and `filters`, and export them as one namespace named after their subject:
-
-| Namespace | Exported from                | Events and filters                                                            | Declared in                             |
-| --------- | ---------------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
-| `comment` | `@plumix/plugin-comments`    | `created`, `approved`, `spam`, `trashed`, `deleted` events; `moderate` filter | `plugins/comments/src/server/events.ts` |
-| `menu`    | `@plumix/plugin-menu/server` | `saved`, `deleted` events; `tree`, `item` filters                             | `plugins/menu/src/server/events.ts`     |
+| Namespace  | Exported from                | Events and filters                                                            | Declared in                             |
+| ---------- | ---------------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
+| `settings` | `plumix/plugin`              | `groupChanged` event; `rpc.<proc>.input` / `.output` filters                  | `core/src/hooks/settings.ts`            |
+| `comment`  | `@plumix/plugin-comments`    | `created`, `approved`, `spam`, `trashed`, `deleted` events; `moderate` filter | `plugins/comments/src/server/events.ts` |
+| `menu`     | `@plumix/plugin-menu/server` | `saved`, `deleted` events; `tree`, `item` filters                             | `plugins/menu/src/server/events.ts`     |
 
 `menu` is exported from `./server` because the package root's `menu()` factory already takes the name, as the media plugin's field builder is exported from `./fields`.
 
 ## How it works
 
-`HookRegistry` holds one sorted-on-read list per string name, and one per declared event or filter id. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from the `entry`, `term` and `user` events). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
+`HookRegistry` holds one sorted-on-read list per string name, and one per declared event or filter id. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from the `entry`, `term`, `user` and `settings` events). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
 
 The admin bar takes no hook. Its nodes, core's included, are registrations made with `registerAdminBarNode` and held in the plugin registry's `adminBarNodes` (see [Plugin system](./plugin-system.md)), so no handler can remove another plugin's node ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)).
 
@@ -208,9 +212,9 @@ Webhooks are declared in code per entry type: several per type, each a URL, cust
 - `packages/core/src/hooks/block-render.ts`: core's `block` subject.
 - `packages/core/src/hooks/registry.ts`: `HookRegistry` (`getEventHandlers` lists an event's handlers in firing order, for a test that moves them between registries), `HookExecutor`, `isolate`, `sortEntries`, `sortSubscriptions`.
 - `packages/core/src/hooks/render.ts`, `sync.ts`, `auth.ts`, `user.ts`: core's `render`, `sync` and `auth` subjects, and the events of `user`, whose filters `rpc/procedures/user/subject.ts` adds.
-- `packages/core/src/hooks/entry.ts`, `term.ts`: the `entry` and `term` events, `entry.beforeSave`, and `.for`; `rpc/filters.ts` holds their `rpc` filters, joined in `hooks/public-hooks.ts`.
+- `packages/core/src/hooks/entry.ts`, `term.ts`, `settings.ts`: the `entry`, `term` and `settings` events, `entry.beforeSave`, and `.for`; `rpc/filters.ts` holds their `rpc` filters, joined in `hooks/public-hooks.ts`.
 - `packages/core/src/hooks/types.ts`: `FilterRegistry`, `ActionRegistry`, `FilterName`, `ActionName`, `FilterFn`, `ActionFn`, `DEFAULT_HOOK_PRIORITY`.
-- `packages/core/src/hooks/public-hooks.ts`: side-effect imports that keep each augmentation in the published declarations. Imported from `packages/core/src/index.ts`.
+- `packages/core/src/hooks/public-hooks.ts`: joins the `entry`, `term` and `settings` events with their `rpc` filters, and `settings.for` scopes both. Re-exported from `packages/core/src/index.ts` as `entrySubject`, `termSubject` and `settingsSubject`.
 - `packages/core/src/hooks/errors.ts`: `HookExecutionError`.
 - `packages/core/src/plugin/setup-context.ts`: `events.on`, `filters.add`, `addFilter`, `addAction`, `registerFilter`, `registerAction` attach the plugin id; the first two also its place in the config.
 - `packages/core/src/runtime/install-plugins.ts`: rejects an event or filter id declared twice, core's included.
@@ -224,9 +228,9 @@ Related but separate: a field's `.validate()` and `.sanitize()` are per-field ca
 - Two declarations sharing an id fail boot with `DuplicateRegistrationError`, naming the id and both owners, whether or not anything subscribes. An event and a filter can't share one either.
 - One failing event handler never stops the others or the caller. Its failure is logged as an error through the firing `ctx.logger`, naming the event and the plugin (`core` for core's own), marks its own `event:` span `error`, and is returned by `emit`.
 - A throwing filter handler's error reaches the caller of `apply` unchanged.
-- Behaviour of the declared API is guarded by `packages/core/src/hooks/registry.test.ts` (ordering, failure, cloning, telemetry), its types by `packages/core/src/hooks/define.test.ts` and `entry.test.ts`, and the boot checks by `packages/core/src/runtime/install-plugins.test.ts`. Scoped dispatch through RPC, the before-save order and veto are guarded by `packages/core/tests/feature/subscribing-to-an-entry-type.test.ts`.
+- Behaviour of the declared API is guarded by `packages/core/src/hooks/registry.test.ts` (ordering, failure, cloning, telemetry), its types by `packages/core/src/hooks/define.test.ts`, `entry.test.ts` and `settings.test.ts`, and the boot checks by `packages/core/src/runtime/install-plugins.test.ts`. Scoped dispatch through RPC, the before-save order and veto are guarded by `packages/core/tests/feature/subscribing-to-an-entry-type.test.ts`, and a settings group's scoped event and output filter by `subscribing-to-a-settings-group.test.ts` beside it.
 
-- A hook name is a TypeScript contract. A rename breaks at compile time. Core has no runtime name check and keeps no aliases ([ADR 0009](../adr/0009-a-renamed-hook-breaks-at-compile-time.md)). `packages/plumix/src/facade-action-hooks.test.ts` checks that `user:updated` reaches `PluginSetupContext["addAction"]` from the built `dist/`.
+- A hook name is a TypeScript contract. A rename breaks at compile time. Core has no runtime name check and keeps no aliases ([ADR 0009](../adr/0009-a-renamed-hook-breaks-at-compile-time.md)). `packages/plumix/src/facade-events-filters.test.ts` checks that core's subjects reach `plumix/plugin` with their types from the built `dist/`.
 - An extension point hands out a narrowing query, not a raw filter. `render.archiveEntries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
 - Each async filter step works on its own copy, so one handler's mutation can't leak into the next. Sync filters are not copied and must treat the value as read-only.
 - One failing action handler never stops the others or the caller. Its failure is logged as an error through the request's `ctx.logger`, naming the hook and the plugin (`core` for core's own), and marks its own `hook:` span `error`, never another handler's. Outside a request (at boot) there is no app logger and no trace yet, so it goes to `console.error`. A registry built with `onActionFailure` reports there instead.

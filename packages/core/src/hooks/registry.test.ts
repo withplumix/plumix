@@ -34,6 +34,7 @@ declare module "./types.js" {
     "test:fired": () => void;
     "test:args": (userId: number, detail: string) => void;
     "test:throws": () => void;
+    "test:noted": (note: string) => void;
   }
 }
 
@@ -371,14 +372,14 @@ describe("a failing action handler in a booted app", () => {
       path: "/note",
       auth: "public",
       handler: async (_request, appCtx) => {
-        await appCtx.settings.write("notes", { body: "A" });
+        await appCtx.hooks.doAction("test:noted", "notes");
         return new Response(null, { status: 204 });
       },
     });
   };
   const faulty = definePlugin("faulty", {
     setup: (ctx) => {
-      ctx.addAction("settings:group_changed", () => {
+      ctx.addAction("test:noted", () => {
         throw new Error("subscriber blew up");
       });
       note(ctx);
@@ -386,16 +387,16 @@ describe("a failing action handler in a booted app", () => {
   });
   const listener = definePlugin("listener", {
     setup: (ctx) => {
-      ctx.addAction("settings:group_changed", () => undefined);
+      ctx.addAction("test:noted", () => undefined);
     },
   });
 
-  test("stops neither the other handlers nor the write that fired it", async () => {
+  test("stops neither the other handlers nor the route that fired it", async () => {
     const heard: string[] = [];
     const recorder = definePlugin("recorder", {
       setup: (ctx) => {
-        ctx.addAction("settings:group_changed", (changes) => {
-          heard.push(changes.group);
+        ctx.addAction("test:noted", (note) => {
+          heard.push(note);
         });
       },
     });
@@ -436,9 +437,9 @@ describe("a failing action handler in a booted app", () => {
 
     expect(error.mock.calls).toEqual([
       [
-        "[plumix] action failed hook=settings:group_changed plugin=faulty: subscriber blew up",
+        "[plumix] action failed hook=test:noted plugin=faulty: subscriber blew up",
         {
-          hook: "settings:group_changed",
+          hook: "test:noted",
           plugin: "faulty",
           error: new Error("subscriber blew up"),
           requestId: expect.any(String) as unknown,
@@ -497,15 +498,13 @@ describe("a failing action handler in a booted app", () => {
 
     const spans = snapshots
       .flatMap((s) => flatten(s.spans))
-      .filter((span) => span.name === "hook: settings:group_changed")
+      .filter((span) => span.name === "hook: test:noted")
       .map((span) => ({
         plugin: span.attributes["hook.plugin"],
         status: span.status,
         error: span.error?.message,
       }));
-    // Core's own purge subscriber runs first, unscoped to any plugin.
     expect(spans).toEqual([
-      { plugin: null, status: "ok", error: undefined },
       { plugin: "faulty", status: "error", error: "subscriber blew up" },
       { plugin: "listener", status: "ok", error: undefined },
     ]);

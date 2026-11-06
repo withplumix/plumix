@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import type { CdnFake } from "../test/cdn-fake.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { settings } from "../hooks/settings.js";
 import { definePlugin } from "../plugin/define.js";
 import { group, number, text } from "../plugin/fields/index.js";
 import { entry, fallback } from "../route/render/template-builders.js";
@@ -19,7 +20,7 @@ beforeAll(async () => {
   await import("../rpc/build-handler.js");
 });
 
-/** Who heard each `settings:group_changed`, and what it said. */
+/** Who heard each `settings.groupChanged`, and what it said. */
 interface Heard {
   readonly group: string;
   readonly set: unknown;
@@ -31,7 +32,7 @@ function writer(heard: Heard[]) {
   return definePlugin("writer", {
     setup: (ctx) => {
       ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-      ctx.addAction("settings:group_changed", (changes, appCtx) => {
+      ctx.events.on(settings.groupChanged, (changes, appCtx) => {
         heard.push({ ...changes, userId: appCtx.user?.id ?? null });
       });
       ctx.registerRoute({
@@ -336,7 +337,7 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
   test("writeIfAbsent stores only the keys the group lacks", async () => {
     const { h } = await harness();
     await h.context.settings.write("notes", { title: "First" });
-    const spy = h.spyAction("settings:group_changed");
+    const spy = h.spyEvent(settings.groupChanged);
 
     const copy = await h.context.settings.writeIfAbsent("notes", {
       title: "Second",
@@ -344,8 +345,7 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
     });
 
     expect(copy.values).toEqual({ title: "First", body: "B" });
-    const [changes] = spy.lastArgs ?? [];
-    expect(changes).toEqual({
+    expect(spy.lastPayload).toEqual({
       group: "notes",
       set: { body: "B" },
       removed: [],
@@ -355,7 +355,7 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
   test("writeIfAbsent changes nothing when every key is stored", async () => {
     const { h, save } = await harness();
     const { etag } = await save("notes", { title: "First" });
-    const spy = h.spyAction("settings:group_changed");
+    const spy = h.spyEvent(settings.groupChanged);
 
     const copy = await h.context.settings.writeIfAbsent("notes", {
       title: "Second",
@@ -374,13 +374,12 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
       footer: "main",
       sidebar: "other",
     });
-    const spy = h.spyAction("settings:group_changed");
+    const spy = h.spyEvent(settings.groupChanged);
 
     const copy = await h.context.settings.removeValue("places", "main");
 
     expect(copy.values).toEqual({ sidebar: "other" });
-    const [changes] = spy.lastArgs ?? [];
-    expect(changes).toEqual({
+    expect(spy.lastPayload).toEqual({
       group: "places",
       set: {},
       removed: ["header", "footer"],
@@ -390,7 +389,7 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
   test("removeValue announces nothing when no key holds the value", async () => {
     const { h, save } = await harness();
     const { etag } = await save("places", { sidebar: "other" });
-    const spy = h.spyAction("settings:group_changed");
+    const spy = h.spyEvent(settings.groupChanged);
 
     const copy = await h.context.settings.removeValue("places", "main");
 

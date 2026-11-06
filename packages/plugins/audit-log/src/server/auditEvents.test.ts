@@ -2,12 +2,11 @@ import type {
   AppContext,
   AuthenticatedUser,
   EventDefinition,
-  HookOptions,
   PluginSetupContext,
   SetupEvents,
 } from "plumix/plugin";
 import type { Entry, Term, User } from "plumix/schema";
-import { auth, entry, HookRegistry, term, user } from "plumix/plugin";
+import { auth, entry, HookRegistry, settings, term, user } from "plumix/plugin";
 import {
   createDispatcherHarness,
   createTestContext,
@@ -18,14 +17,12 @@ import { beforeAll, describe, expect, test } from "vitest";
 import type { NewAuditLogRow } from "../db/schema.js";
 import type { TestDb } from "../test-support.js";
 import type { AuditLogStorage } from "../types.js";
-import type { AuditEventDef } from "./auditEvents.js";
 import type { AuditService } from "./auditService.js";
 import { auditLog } from "../index.js";
 import { createDb } from "../test-support.js";
 import {
   assertRedactionInvariants,
   auditedEvents,
-  auditEvents,
   registerAuditEvents,
   SUBJECT_REQUIRED_REDACTIONS,
 } from "./auditEvents.js";
@@ -109,12 +106,6 @@ describe("registerAuditEvents — through a procedure", () => {
   });
 });
 
-/**
- * Some action names here aren't in `ActionRegistry`'s typed view (core
- * lifecycle actions), so the dispatch is cast once.
- */
-type ActionDispatcher = (name: string, ...args: unknown[]) => Promise<void>;
-
 /** The fake service never writes, so one database serves every request. */
 let db: TestDb;
 beforeAll(async () => {
@@ -145,7 +136,6 @@ function fakeService(): FakeServiceState {
 interface HarnessHandles {
   readonly hooks: HookRegistry;
   readonly state: FakeServiceState;
-  readonly fire: ActionDispatcher;
   readonly emit: <TPayload>(
     event: EventDefinition<TPayload>,
     payload: NoInfer<TPayload>,
@@ -156,17 +146,10 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
   const hooks = new HookRegistry();
   const state = fakeService();
 
-  // Minimal PluginSetupContext stand-in: only `addAction` and `events.on`
-  // are needed by `registerAuditEvents`. Casting through `unknown` lets us
-  // satisfy the strict type without conjuring every register* method.
+  // Minimal PluginSetupContext stand-in: only `events.on` is needed by
+  // `registerAuditEvents`. Casting through `unknown` lets us satisfy the
+  // strict type without conjuring every register* method.
   const ctx = {
-    addAction: (
-      name: string,
-      fn: (...args: unknown[]) => unknown,
-      options?: HookOptions,
-    ) => {
-      hooks.addAction(name as never, fn as never, options);
-    },
     events: {
       on: (event, handler, options) => {
         hooks.on(event, handler, options);
@@ -179,10 +162,6 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
   return {
     hooks,
     state,
-    // Bound so the call sites don't drop `this` — `doAction` reads
-    // private state through `this.#actions`.
-    fire: (name, ...args) =>
-      (hooks.doAction as ActionDispatcher).call(hooks, name, ...args, fakeCtx),
     emit: (event, payload) => hooks.emit(event, payload, fakeCtx),
   };
 }
@@ -452,7 +431,7 @@ describe("registerAuditEvents — term surface", () => {
 describe("registerAuditEvents — settings surface", () => {
   test("settings:group_changed records key names only, never raw values", async () => {
     const h = harness();
-    await h.fire("settings:group_changed", {
+    await h.emit(settings.for("mailer").groupChanged, {
       group: "mailer",
       set: {
         fromAddress: "noreply@example.com",
@@ -797,9 +776,6 @@ describe("auditEvents table", () => {
   test("registers one listener for each audited event, and no others", () => {
     const registered: string[] = [];
     const ctx = {
-      addAction: (name: string) => {
-        registered.push(name);
-      },
       events: {
         on: (event) => {
           registered.push(event.id);
@@ -828,7 +804,7 @@ describe("auditEvents table", () => {
       "entry:transition",
       "entry:trashed",
       "entry:updated",
-      "settings:group_changed",
+      "settings:groupChanged",
       "term:created",
       "term:deleted",
       "term:metaChanged",
@@ -845,17 +821,14 @@ describe("auditEvents table", () => {
 describe("assertRedactionInvariants", () => {
   test("real tables satisfy the configured required-redaction map", () => {
     expect(() =>
-      assertRedactionInvariants(
-        [...auditEvents, ...auditedEvents],
-        SUBJECT_REQUIRED_REDACTIONS,
-      ),
+      assertRedactionInvariants(auditedEvents, SUBJECT_REQUIRED_REDACTIONS),
     ).not.toThrow();
   });
 
   test("throws when a user-subject diff row forgets to omit passwordHash", () => {
-    const violating: AuditEventDef[] = [
+    const violating = [
       {
-        event: "user:bad" as AuditEventDef["event"],
+        event: "user:bad",
         subject: { kind: "extract", type: "user" },
         // `passwordHash` deliberately missing from the omit list.
         diff: { omit: ["createdAt", "updatedAt"] },
@@ -867,9 +840,9 @@ describe("assertRedactionInvariants", () => {
   });
 
   test("ignores diff-less rows even when subject is in the required map", () => {
-    const safe: AuditEventDef[] = [
+    const safe = [
       {
-        event: "user:tagged" as AuditEventDef["event"],
+        event: "user:tagged",
         subject: { kind: "extract", type: "user" },
       },
     ];

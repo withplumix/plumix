@@ -1,10 +1,13 @@
-// tsc drops augmentations from modules reached only through value or type
-// imports; a side-effect import keeps each public hook's augmentation in the
-// published declarations.
-import "../rpc/hooks.js"; // settings:* filters and actions
-
-import { entryRpc, termRpc } from "../rpc/filters.js";
+import type { SettingsRpc } from "../rpc/filters.js";
+import type { SettingsGroupEvents } from "./settings.js";
+import {
+  entryRpc,
+  settingsRpc,
+  settingsRpcFor,
+  termRpc,
+} from "../rpc/filters.js";
 import { entry as entryEvents } from "./entry.js";
+import { settings as settingsEvents } from "./settings.js";
 import { term as termEvents } from "./term.js";
 
 /**
@@ -15,3 +18,20 @@ export const entry = { ...entryEvents, rpc: entryRpc };
 
 /** Core's events and filters about terms; see {@link entry}. */
 export const term = { ...termEvents, rpc: termRpc };
+
+export type SettingsGroupHandle = SettingsGroupEvents & {
+  readonly rpc: SettingsRpc;
+};
+
+/**
+ * Core's events and filters about settings groups. `settings.for(group)`
+ * scopes all of them, the `rpc` filters too, to one group.
+ */
+export const settings = {
+  groupChanged: settingsEvents.groupChanged,
+  rpc: settingsRpc,
+  for: (group: string): SettingsGroupHandle => ({
+    ...settingsEvents.for(group),
+    rpc: settingsRpcFor(group),
+  }),
+};

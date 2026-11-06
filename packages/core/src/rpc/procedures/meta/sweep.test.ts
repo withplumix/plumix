@@ -6,6 +6,7 @@ import { settings } from "../../../db/schema/settings.js";
 import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
 import { entry } from "../../../hooks/entry.js";
+import { settings as settingsEvents } from "../../../hooks/settings.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { number, toggle } from "../../../plugin/fields/index.js";
 import { AUTOSAVE_TYPE } from "../../../revisions/slug-codec.js";
@@ -135,6 +136,29 @@ describe("sweepUnsettledMeta", () => {
       .from(settings)
       .where(eq(settings.key, SETTINGS_CREATED_KEY));
     expect(marker?.value).toBe(1);
+  });
+
+  test("settling a setting announces its group changed, with nothing removed", async () => {
+    const heard: unknown[] = [];
+    const listener = definePlugin("test-sweep-listener", {
+      setup: (ctx) => {
+        ctx.events.on(settingsEvents.groupChanged, (changes) => {
+          heard.push(changes);
+        });
+      },
+    });
+    const { harness, ctx } = await createTracedContext({
+      config: { plugins: [plugin, listener] },
+    });
+    await harness.db
+      .insert(settings)
+      .values({ group: "reading", key: "perPage", value: "10" });
+
+    await sweepUnsettledMeta(ctx, { write: true });
+
+    expect(heard).toEqual([
+      { group: "reading", set: { perPage: 10 }, removed: [] },
+    ]);
   });
 
   test("reports settleable and unconvertible values per store, scope and key", async () => {

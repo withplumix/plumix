@@ -1,19 +1,20 @@
 // Side-effect: exposes core's `TemplateDepRegistry` augmentation.
 import "./template-deps-core.js";
-// Side-effect: anchors public core hook augmentations (settings:*, …) into
-// the published declaration graph.
-import "./hooks/public-hooks.js";
-// Side-effect: anchors core's `ctx.entries` augmentation the same way.
+// Side-effect: anchors core's `ctx.entries` augmentation into the published
+// declaration graph.
 import "./rpc/procedures/entry/writes-shared.js";
 // Side-effect: anchors core's `MailRegistry` entries (`magicLink`,
 // `emailChange`) into the published declaration graph, the same way.
 import "./mail/core-mails.js";
 
-// `entry` and `term` are the template builders in this barrel.
+// `entry` and `term` are the template builders in this barrel, and `settings`
+// is the settings table.
 export {
   entry as entrySubject,
+  settings as settingsSubject,
   term as termSubject,
 } from "./hooks/public-hooks.js";
+export type { SettingsGroupHandle } from "./hooks/public-hooks.js";
 
 export * from "./access/index.js";
 export * from "./admin/index.js";

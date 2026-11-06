@@ -15,6 +15,7 @@ import { assertWritable } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { settings } from "../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
+import { settings as settingsEvents } from "../hooks/settings.js";
 import { decodeJsonValue } from "../meta/coerce.js";
 import { runFieldPipeline } from "../meta/field-pipeline.js";
 import { isConditionHidden } from "../plugin/fields/condition.js";
@@ -76,7 +77,7 @@ async function writeSettingsGroup(
 
   const deletes: string[] = [];
   // Not `NewSetting`: the insert type leaves `value` optional and
-  // nullable, and `settings:group_changed` ships these rows as a
+  // nullable, and `settings.groupChanged` ships these rows as a
   // `SettingsBag`, which admits neither.
   const upsertRows: { group: string; key: string; value: JsonValue }[] = [];
   const fieldErrors: MetaFieldError[] = [];
@@ -212,14 +213,10 @@ async function settle(
     enqueuePurgeTags(ctx, [settingsTag(groupName)]);
     return copy;
   }
-  await ctx.hooks.doAction(
-    "settings:group_changed",
-    {
-      group: groupName,
-      set: Object.fromEntries(set.map((r) => [r.key, r.value])),
-      removed,
-    },
-    ctx,
-  );
+  await ctx.events.emit(settingsEvents.for(groupName).groupChanged, {
+    group: groupName,
+    set: Object.fromEntries(set.map((r) => [r.key, r.value])),
+    removed,
+  });
   return copy;
 }
