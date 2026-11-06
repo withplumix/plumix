@@ -21,7 +21,6 @@ export const oauthRefreshTokens = sqliteTable(
     /** The approved capability list the access token carries. */
     scopes: t.text({ mode: "json" }).notNull().$type<readonly string[]>(),
     expiresAt: t.integer({ mode: "timestamp" }).notNull(),
-    /** Set when used; a rotated token presented again revokes its family. */
     rotatedAt: t.integer({ mode: "timestamp" }),
     createdAt: t
       .integer({ mode: "timestamp" })

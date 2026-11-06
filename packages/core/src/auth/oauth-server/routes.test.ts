@@ -547,11 +547,32 @@ describe("refreshing", () => {
     });
   }
 
-  test("a code exchange returns a refresh token, and refreshing returns a new pair whose access token calls an MCP tool", async () => {
+  test("a code exchange returns a refresh token", async () => {
+    const h = await mcpHarness();
+
+    const first = await tokenPair(h, await seed(h));
+
+    expect(first.refresh_token).toEqual(expect.any(String));
+  });
+
+  test("refreshing returns a new pair", async () => {
     const h = await mcpHarness();
     const first = await tokenPair(h, await seed(h));
 
     const { status, body } = await refresh(h, first.refresh_token);
+
+    expect(status).toBe(200);
+    expect(body).toMatchObject({ token_type: "Bearer", expires_in: 3600 });
+    expect(body.refresh_token).toEqual(expect.any(String));
+    expect(body.refresh_token).not.toBe(first.refresh_token);
+    expect(body.access_token).not.toBe(first.access_token);
+  });
+
+  test("the access token a refresh returns calls an MCP tool", async () => {
+    const h = await mcpHarness();
+    const first = await tokenPair(h, await seed(h));
+    const { body } = await refresh(h, first.refresh_token);
+
     const call = await callTool(
       h,
       body.access_token as string,
@@ -559,35 +580,50 @@ describe("refreshing", () => {
       { type: "post", slug: "hello", title: "Hello" },
     );
 
-    expect(first.refresh_token).toEqual(expect.any(String));
-    expect(status).toBe(200);
-    expect(body).toMatchObject({ token_type: "Bearer", expires_in: 3600 });
-    expect(body.refresh_token).toEqual(expect.any(String));
-    expect(body.refresh_token).not.toBe(first.refresh_token);
-    expect(body.access_token).not.toBe(first.access_token);
     expect(call.result?.isError).toBeUndefined();
   });
 
-  test("reusing a rotated refresh token is invalid_grant and revokes every token of the grant", async () => {
+  test("reusing a rotated refresh token is invalid_grant", async () => {
+    const h = await mcpHarness();
+    const first = await tokenPair(h, await seed(h));
+    await refresh(h, first.refresh_token);
+
+    const reused = await refresh(h, first.refresh_token);
+
+    expect(reused).toEqual({ status: 400, body: { error: "invalid_grant" } });
+  });
+
+  test("reusing a rotated refresh token revokes the grant's latest refresh token", async () => {
     const h = await mcpHarness();
     const first = await tokenPair(h, await seed(h));
     const { body } = await refresh(h, first.refresh_token);
-    const second = body as unknown as TokenPair;
+    await refresh(h, first.refresh_token);
 
-    const reused = await refresh(h, first.refresh_token);
-    const latestRefresh = await refresh(h, second.refresh_token);
+    const latest = await refresh(
+      h,
+      (body as unknown as TokenPair).refresh_token,
+    );
+
+    expect(latest.body).toEqual({ error: "invalid_grant" });
+  });
+
+  test("reusing a rotated refresh token revokes the grant's access tokens", async () => {
+    const h = await mcpHarness();
+    const first = await tokenPair(h, await seed(h));
+    const { body } = await refresh(h, first.refresh_token);
+    await refresh(h, first.refresh_token);
+
     const calls = await Promise.all(
-      [first.access_token, second.access_token].map((token) =>
-        callTool(h, token, "content_create", {
-          type: "post",
-          slug: "hello",
-          title: "Hello",
-        }),
+      [first.access_token, (body as unknown as TokenPair).access_token].map(
+        (token) =>
+          callTool(h, token, "content_create", {
+            type: "post",
+            slug: "hello",
+            title: "Hello",
+          }),
       ),
     );
 
-    expect(reused).toEqual({ status: 400, body: { error: "invalid_grant" } });
-    expect(latestRefresh.body).toEqual({ error: "invalid_grant" });
     expect(calls.map((call) => call.status)).toEqual([401, 401]);
   });
 
@@ -618,6 +654,89 @@ describe("refreshing", () => {
 
     expect(status).toBe(400);
     expect(body).toEqual({ error: "invalid_target" });
+  });
+
+  test("a refresh token presented by another client stays valid for its own", async () => {
+    const h = await mcpHarness();
+    const { refresh_token } = await tokenPair(h, await seed(h));
+    await exchange(h, {
+      grant_type: "refresh_token",
+      refresh_token,
+      client_id: "https://other.example/client.json",
+    });
+
+    const { status } = await refresh(h, refresh_token);
+
+    expect(status).toBe(200);
+  });
+
+  test("a refresh token refused for its resource stays valid", async () => {
+    const h = await mcpHarness();
+    const { refresh_token } = await tokenPair(h, await seed(h));
+    await exchange(h, {
+      grant_type: "refresh_token",
+      refresh_token,
+      client_id: CLIENT_ID,
+      resource: "https://cms.example/_plumix/rpc",
+    });
+
+    const { status } = await refresh(h, refresh_token);
+
+    expect(status).toBe(200);
+  });
+
+  test("a refresh token stays valid when the client's metadata is unreachable", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const h = await mcpHarness();
+      const { refresh_token } = await tokenPair(h, await seed(h));
+      vi.advanceTimersByTime(10 * 60_000);
+      vi.stubGlobal("fetch", () => Promise.reject(new Error("offline")));
+      const unreachable = await refresh(h, refresh_token);
+      vi.unstubAllGlobals();
+      vi.stubGlobal("fetch", () =>
+        Promise.resolve(Response.json(CLIENT_DOCUMENT)),
+      );
+
+      const { status } = await refresh(h, refresh_token);
+
+      expect(unreachable.status).toBe(401);
+      expect(status).toBe(200);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a refresh token carries only what the grant still holds after a narrower consent", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    const { refresh_token } = await tokenPair(h, user);
+    const narrowKeys = await pkce();
+    const narrowParams = authorizationParams(narrowKeys, { scope: "draft" });
+    const { body: offered } = await consentRpc<{ capabilities: string[] }>(
+      h,
+      "lookup",
+      narrowParams,
+      { as: user },
+    );
+    await approve(
+      h,
+      user,
+      narrowParams,
+      offered.capabilities.filter(
+        (capability) => capability !== "entry:post:create",
+      ),
+    );
+
+    const { body } = await refresh(h, refresh_token);
+    const created = await callTool(
+      h,
+      body.access_token as string,
+      "content_create",
+      { type: "post", slug: "hello", title: "Hello" },
+    );
+
+    expect(created.result?._meta?.code).toBe("forbidden");
   });
 
   test("stores a refresh token only as its hash", async () => {

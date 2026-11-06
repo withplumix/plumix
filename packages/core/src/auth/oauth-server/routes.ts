@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import type { AppContext } from "../../context/app-context.js";
-import type { RefreshedGrant } from "./grants.js";
+import type { ApprovedAccess } from "./grants.js";
 import { withBasePath } from "../../base-path.js";
 import { now } from "../../clock.js";
 import { encodeBase64url } from "../../encoding.js";
@@ -23,9 +23,10 @@ import {
   checkOAuthGrant,
   consumeAuthorizationCode,
   findOAuthGrant,
+  findRefreshableAccess,
   issueAuthorizationCode,
   issueRefreshToken,
-  rotateRefreshToken,
+  spendRefreshToken,
 } from "./grants.js";
 
 export { handleAuthorizationServerMetadata } from "./metadata.js";
@@ -132,7 +133,19 @@ async function exchangeCode(
   }
   const grant = await findOAuthGrant(ctx.db, code.userId, code.clientId);
   if (grant === null) return oauthError("invalid_grant");
-  return issueTokens(ctx, { ...code, grantId: grant.id });
+  const clientName = await resolveClientName(ctx, code.clientId);
+  if (clientName === null) return oauthError("invalid_client", 401);
+  return issueTokens(
+    ctx,
+    {
+      grantId: grant.id,
+      userId: code.userId,
+      clientId: code.clientId,
+      resource: code.resource,
+      scopes: code.scopes,
+    },
+    clientName,
+  );
 }
 
 async function refresh(
@@ -143,40 +156,48 @@ async function refresh(
   if (!parsed.success) return oauthError("invalid_request");
   const input = parsed.output;
 
-  const refreshed = await rotateRefreshToken(ctx.db, input.refresh_token);
-  if (refreshed?.clientId !== input.client_id) {
+  const access = await findRefreshableAccess(ctx.db, input.refresh_token, {
+    clientId: input.client_id,
+    resource: input.resource,
+  });
+  if (typeof access === "string") return oauthError(access);
+  const clientName = await resolveClientName(ctx, access.clientId);
+  if (clientName === null) return oauthError("invalid_client", 401);
+  if (!(await spendRefreshToken(ctx.db, access))) {
     return oauthError("invalid_grant");
   }
-  if ((input.resource ?? refreshed.resource) !== refreshed.resource) {
-    return oauthError("invalid_target");
-  }
-  return issueTokens(ctx, refreshed);
+  return issueTokens(ctx, access, clientName);
 }
 
-/** An access token and the refresh token that replaces it. */
-async function issueTokens(
+async function resolveClientName(
   ctx: AppContext,
-  grant: RefreshedGrant,
-): Promise<Response> {
-  let clientName: string;
+  clientId: string,
+): Promise<string | null> {
   try {
-    clientName = (await resolveClient(ctx, grant.clientId)).name;
+    return (await resolveClient(ctx, clientId)).name;
   } catch (error) {
     if (!(error instanceof ClientMetadataError)) throw error;
-    return oauthError("invalid_client", 401);
+    return null;
   }
+}
+
+async function issueTokens(
+  ctx: AppContext,
+  access: ApprovedAccess,
+  clientName: string,
+): Promise<Response> {
   const minted = await createApiToken(ctx.db, {
-    userId: grant.userId,
+    userId: access.userId,
     name: clientName,
     expiresAt: new Date(now().getTime() + ACCESS_TOKEN_TTL_SECONDS * 1000),
-    scopes: grant.scopes,
-    audience: grant.resource,
-    clientId: grant.clientId,
+    scopes: access.scopes,
+    audience: access.resource,
+    clientId: access.clientId,
   });
   const refreshToken = await issueRefreshToken(ctx.db, {
-    grantId: grant.grantId,
-    resource: grant.resource,
-    scopes: grant.scopes,
+    grantId: access.grantId,
+    resource: access.resource,
+    scopes: access.scopes,
   });
   return jsonResponse({
     access_token: minted.secret,

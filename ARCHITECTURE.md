@@ -704,6 +704,7 @@ erDiagram
   users |o--o{ device_codes : "approves"
   users ||--o{ oauth_grants : "approves OAuth clients"
   users ||--o{ oauth_authorization_codes : "is issued"
+  oauth_grants ||--o{ oauth_refresh_tokens : "keeps a client connected"
   users ||--o{ edit_leases : "holds"
   users {
     int id

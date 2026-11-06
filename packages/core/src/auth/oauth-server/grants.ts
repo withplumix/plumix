@@ -130,7 +130,7 @@ export async function issueRefreshToken(
   return token;
 }
 
-export interface RefreshedGrant {
+export interface ApprovedAccess {
   readonly grantId: number;
   readonly userId: number;
   readonly clientId: string;
@@ -138,60 +138,85 @@ export interface RefreshedGrant {
   readonly scopes: readonly string[];
 }
 
+export interface RefreshableAccess extends ApprovedAccess {
+  readonly refreshTokenId: string;
+}
+
+export type RefreshRefusal = "invalid_grant" | "invalid_target";
+
 /**
- * Spends `token` on first use. A rotated token presented again means two
- * parties hold it, so it revokes its grant's tokens. `null` when refused.
+ * What `token` may mint for `request`, without spending it. A rotated token
+ * presented again means two parties hold it, so it revokes its grant's tokens.
  */
-export async function rotateRefreshToken(
+export async function findRefreshableAccess(
   db: Db,
   token: string,
-): Promise<RefreshedGrant | null> {
-  const id = await hashToken(token);
+  request: { readonly clientId: string; readonly resource?: string },
+): Promise<RefreshableAccess | RefreshRefusal> {
+  const refreshTokenId = await hashToken(token);
   const found = await db
     .select({
       token: oauthRefreshTokens,
       userId: oauthGrants.userId,
       clientId: oauthGrants.clientId,
+      grantScopes: oauthGrants.scopes,
     })
     .from(oauthRefreshTokens)
     .innerJoin(oauthGrants, eq(oauthGrants.id, oauthRefreshTokens.grantId))
-    .where(eq(oauthRefreshTokens.id, id))
+    .where(eq(oauthRefreshTokens.id, refreshTokenId))
     .get();
-  if (found === undefined) return null;
-  const { token: row, ...grant } = found;
-  if (row.rotatedAt === null && row.expiresAt <= now()) return null;
-  // Conditional, so of two concurrent uses only one rotates it.
-  const rotated =
-    row.rotatedAt === null &&
-    (
-      await db
-        .update(oauthRefreshTokens)
-        .set({ rotatedAt: now() })
-        .where(
-          and(
-            eq(oauthRefreshTokens.id, id),
-            isNull(oauthRefreshTokens.rotatedAt),
-          ),
-        )
-        .returning({ id: oauthRefreshTokens.id })
-    ).length > 0;
-  if (!rotated) {
-    await revokeGrantTokens(db, row.grantId, grant);
-    return null;
+  if (found?.clientId !== request.clientId) return "invalid_grant";
+  const { token: row, userId, clientId, grantScopes } = found;
+  if (row.rotatedAt !== null) {
+    await revokeOAuthGrantTokens(db, {
+      grantId: row.grantId,
+      userId,
+      clientId,
+    });
+    return "invalid_grant";
+  }
+  if (row.expiresAt <= now()) return "invalid_grant";
+  if ((request.resource ?? row.resource) !== row.resource) {
+    return "invalid_target";
   }
   return {
+    refreshTokenId,
     grantId: row.grantId,
-    ...grant,
+    userId,
+    clientId,
     resource: row.resource,
-    scopes: row.scopes,
+    scopes: row.scopes.filter((scope) => grantScopes.includes(scope)),
   };
 }
 
-/** Access tokens first, so a failure part-way never leaves one live. */
-async function revokeGrantTokens(
+/** Rotates the token, so of two concurrent uses only one is `true`. */
+export async function spendRefreshToken(
   db: Db,
-  grantId: number,
-  grant: { readonly userId: number; readonly clientId: string },
+  access: RefreshableAccess,
+): Promise<boolean> {
+  const spent = await db
+    .update(oauthRefreshTokens)
+    .set({ rotatedAt: now() })
+    .where(
+      and(
+        eq(oauthRefreshTokens.id, access.refreshTokenId),
+        isNull(oauthRefreshTokens.rotatedAt),
+      ),
+    )
+    .returning({ id: oauthRefreshTokens.id });
+  if (spent.length > 0) return true;
+  await revokeOAuthGrantTokens(db, access);
+  return false;
+}
+
+/** Access tokens first, so a failure part-way never leaves one live. */
+async function revokeOAuthGrantTokens(
+  db: Db,
+  grant: {
+    readonly grantId: number;
+    readonly userId: number;
+    readonly clientId: string;
+  },
 ): Promise<void> {
   await db
     .update(apiTokens)
@@ -205,5 +230,5 @@ async function revokeGrantTokens(
     );
   await db
     .delete(oauthRefreshTokens)
-    .where(eq(oauthRefreshTokens.grantId, grantId));
+    .where(eq(oauthRefreshTokens.grantId, grant.grantId));
 }
