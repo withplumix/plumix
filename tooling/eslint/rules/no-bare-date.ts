@@ -13,7 +13,7 @@ export const noBareDate: Rule.RuleModule = {
     },
     messages: {
       bareDate:
-        "Read the current time through `now()` from `plumix/support` (`@plumix/core/support` inside the framework), so a test site's `travel` and `freezeTime` move it (issue #3444).",
+        "Read the current time through `now()` from `plumix/support` (`@plumix/core/support` inside the framework), so a test site's `travel` and `freezeTime` move it.",
     },
     schema: [],
   },

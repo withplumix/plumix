@@ -37,7 +37,6 @@ Plumix validates a draft save leniently. Required meta-box fields may be empty, 
 
 ```ts
 import { definePlugin } from "plumix/plugin";
-import { now } from "plumix/support";
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
@@ -92,6 +91,7 @@ A scheduled entry is invisible in public. It is not on its archive, and its URL 
 
 ```ts
 import { definePlugin } from "plumix/plugin";
+import { now } from "plumix/support";
 
 export const recipes = definePlugin("recipes", {
   setup: (ctx) => {
