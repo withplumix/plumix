@@ -78,6 +78,8 @@ export interface TestSite<
   readonly factory: Factories & TFactories;
   /** Every mail the site sent; the site's mailer delivers nothing. */
   readonly mail: MailFake;
+  /** What the site's cdn stored and which tags a write purged from it. */
+  readonly cdn: CdnFake;
   /** Answers `ctx.fetch` from the routes a test declares; none reaches the network. */
   readonly fetch: FetchFake;
   /** Every line the site logged; none reaches the console. */
@@ -283,6 +285,9 @@ export async function testSite<
       factory,
       get mail() {
         return fakes.mail;
+      },
+      get cdn() {
+        return fakes.cdn;
       },
       get fetch() {
         return fakes.fetch;

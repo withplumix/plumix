@@ -74,3 +74,88 @@ describe("assertNotStored", () => {
     );
   });
 });
+
+describe("assertPurged", () => {
+  test("passes for a tag a purge named", async () => {
+    const cdn = fakeCdn();
+    await cdn.purgeTags(["t:post", "e:1"]);
+
+    expect(() => {
+      cdn.assertPurged("e:1");
+    }).not.toThrow();
+  });
+
+  test("fails listing the tags that were purged", async () => {
+    const cdn = fakeCdn();
+    await cdn.purgeTags(["t:post", "e:1"]);
+    await cdn.purgeTags(["s:general"]);
+
+    expect(() => {
+      cdn.assertPurged("e:2");
+    }).toThrow(
+      'Expected tag "e:2" to be purged, but it was not.\n' +
+        "Purged:\n  - t:post\n  - e:1\n  - s:general",
+    );
+  });
+
+  test("says nothing was purged when no purge ran", () => {
+    const cdn = fakeCdn();
+
+    expect(() => {
+      cdn.assertPurged("e:1");
+    }).toThrow(
+      'Expected tag "e:1" to be purged, but it was not.\nNothing was purged.',
+    );
+  });
+});
+
+describe("assertNotPurged", () => {
+  test("passes for a tag no purge named", async () => {
+    const cdn = fakeCdn();
+    await cdn.purgeTags(["e:1"]);
+
+    expect(() => {
+      cdn.assertNotPurged("e:2");
+    }).not.toThrow();
+  });
+
+  test("fails listing the tags that were purged", async () => {
+    const cdn = fakeCdn();
+    await cdn.purgeTags(["t:post", "e:1"]);
+
+    expect(() => {
+      cdn.assertNotPurged("e:1");
+    }).toThrow(
+      'Expected tag "e:1" not to be purged, but it was.\n' +
+        "Purged:\n  - t:post\n  - e:1",
+    );
+  });
+});
+
+describe("assertNothingPurged", () => {
+  test("passes when no purge ran", () => {
+    const cdn = fakeCdn();
+
+    expect(() => {
+      cdn.assertNothingPurged();
+    }).not.toThrow();
+  });
+
+  test("fails listing the tags that were purged", async () => {
+    const cdn = fakeCdn();
+    await cdn.purgeTags(["e:1"]);
+
+    expect(() => {
+      cdn.assertNothingPurged();
+    }).toThrow("Expected nothing to be purged.\nPurged:\n  - e:1");
+  });
+
+  test("fails once everything was purged", async () => {
+    const cdn = fakeCdn();
+    await cdn.purgeAll();
+
+    expect(() => {
+      cdn.assertNothingPurged();
+    }).toThrow("Expected nothing to be purged.\nPurged everything.");
+  });
+});
