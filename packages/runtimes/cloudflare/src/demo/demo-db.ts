@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { now } from "plumix/support";
 
 import type { DemoSqlExecutor } from "./storage.js";
 import { dropDemoTables, initializeDemoStorage } from "./storage.js";
@@ -46,7 +47,7 @@ export class DemoDB extends DurableObject {
 
   /** Arm the self-cleanup alarm `ttlSeconds` from now. */
   async setTtlAlarm(ttlSeconds: number): Promise<void> {
-    await this.ctx.storage.setAlarm(Date.now() + ttlSeconds * 1000);
+    await this.ctx.storage.setAlarm(now().getTime() + ttlSeconds * 1000);
   }
 
   /** Session expiry: reclaim storage by dropping every user table. */

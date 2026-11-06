@@ -1,6 +1,7 @@
 import type { MigrationDatabase } from "@plumix/core";
 import type { DataMigration } from "@plumix/core/db";
 import { CORE_DATA_MIGRATIONS } from "@plumix/core/cli";
+import { now } from "@plumix/core/support";
 
 import { PlumixCliError } from "../errors.js";
 import { report } from "../report.js";
@@ -94,7 +95,7 @@ export async function applyDataMigrations(
       await db.batch([
         {
           sql: `INSERT INTO "${DATA_MIGRATIONS_TABLE}" (owner, name, applied_at) VALUES (?, ?, ?)`,
-          params: [owner, migration.name, Date.now()],
+          params: [owner, migration.name, now().getTime()],
         },
       ]);
       ran.push(migration.name);

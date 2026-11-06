@@ -1,5 +1,6 @@
 import { createApiToken } from "../../../../auth/api-tokens.js";
 import { resolveApiTokenPreset } from "../../../../auth/token-presets.js";
+import { now } from "../../../../clock.js";
 import { auth } from "../../../../hooks/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
@@ -19,7 +20,7 @@ export const create = base
     const expiresAt =
       input.expiresInDays === null
         ? null
-        : new Date(Date.now() + input.expiresInDays * MS_PER_DAY);
+        : new Date(now().getTime() + input.expiresInDays * MS_PER_DAY);
 
     const scopes =
       input.preset === undefined

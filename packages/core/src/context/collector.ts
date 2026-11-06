@@ -7,6 +7,7 @@ import type {
   TelemetrySpanError,
   TelemetrySpanHandle,
 } from "./telemetry.js";
+import { now } from "../clock.js";
 import { traceStore } from "./stores.js";
 import { NOOP_HANDLE } from "./telemetry.js";
 
@@ -150,7 +151,7 @@ export function createTelemetryCollector(): RequestTelemetryCollector {
     spanCount += 1;
     const span: TelemetrySpan = {
       name,
-      startedAt: Date.now(),
+      startedAt: now().getTime(),
       durationMs: 0,
       status: "ok",
       attributes: {},
@@ -167,7 +168,7 @@ export function createTelemetryCollector(): RequestTelemetryCollector {
   const siblingsOf = (parent: TelemetrySpan | undefined): TelemetrySpan[] =>
     parent ? parent.children : roots;
   const stamp = (span: TelemetrySpan): void => {
-    span.durationMs = Date.now() - span.startedAt;
+    span.durationMs = now().getTime() - span.startedAt;
     open.delete(span);
   };
   // Serialized (never the live Error) so a finished span tree stays JSON-safe
@@ -187,7 +188,7 @@ export function createTelemetryCollector(): RequestTelemetryCollector {
         return;
       }
       const record: TelemetryRecord = {
-        at: Date.now(),
+        at: now().getTime(),
         data: typeof entry === "function" ? entry() : entry,
       };
       if (bucket) bucket.push(record);
@@ -202,7 +203,7 @@ export function createTelemetryCollector(): RequestTelemetryCollector {
       }
       logCount += 1;
       span.logs.push({
-        at: Date.now(),
+        at: now().getTime(),
         level,
         message,
         attributes: toAttributes(meta),

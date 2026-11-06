@@ -9,6 +9,7 @@ import type {
   PresignPutOptions,
   UrlOptions,
 } from "./contract/slots.js";
+import { now as currentTime } from "../clock.js";
 import { bodyToBytes, toFreshArrayBuffer } from "../storage/body.js";
 
 interface MemoryEntry {
@@ -38,7 +39,7 @@ export function memoryStorage(
   const publicUrlBase = config.publicUrlBase ?? "/_plumix/memory-storage/";
 
   if (config.seed) {
-    const now = new Date();
+    const now = currentTime();
     for (const [key, bytes] of Object.entries(config.seed)) {
       store.set(key, {
         bytes,
@@ -57,7 +58,7 @@ export function memoryStorage(
         cacheControl: opts?.cacheControl,
         customMetadata: opts?.customMetadata,
         etag: computeEtag(bytes),
-        uploaded: new Date(),
+        uploaded: currentTime(),
       });
     },
     // eslint-disable-next-line @typescript-eslint/require-await
@@ -136,7 +137,7 @@ export function memoryStorage(
         url: `${publicUrlBase}${encodeURIComponent(key)}`,
         method: "PUT",
         headers: { "content-type": opts.contentType },
-        expiresAt: Math.floor(Date.now() / 1000) + expiresIn,
+        expiresAt: Math.floor(currentTime().getTime() / 1000) + expiresIn,
       };
     },
   };

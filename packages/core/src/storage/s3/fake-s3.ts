@@ -1,3 +1,4 @@
+import { now as currentTime } from "../../clock.js";
 // The verifier reads the AWS spec independently of `sigv4.ts`, so a signer bug
 // and a matching verifier bug cannot cancel out.
 
@@ -135,7 +136,7 @@ async function verifyQueryAuth(
     return { ok: false, reason: "X-Amz-Security-Token does not match" };
   }
   const issued = parseAmzDate(amzDate);
-  const now = options.now ?? new Date();
+  const now = options.now ?? currentTime();
   if (!Number.isFinite(expires) || now.getTime() > issued + expires * 1000) {
     return { ok: false, reason: "the presigned URL has expired" };
   }
@@ -402,7 +403,7 @@ export function fakeS3(options: FakeS3Options): FakeS3 {
       cacheControl: request.headers.get("cache-control") ?? undefined,
       metadata,
       etag,
-      uploaded: new Date(),
+      uploaded: currentTime(),
     });
     return new Response(null, { status: 200, headers: { etag } });
   }

@@ -2,6 +2,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { ScheduledRunReport } from "../context/runtime-adapter.js";
 import type { PlumixApp } from "./app.js";
 import { flushPurgeTags } from "../cdn/purge.js";
+import { now } from "../clock.js";
 import { withSignal } from "../context/app.js";
 import { logErrorSafely } from "../context/log.js";
 import { requestStore } from "../context/stores.js";
@@ -26,7 +27,7 @@ export async function runScheduledTasks(
   ctx: AppContext,
   firedCron?: string,
 ): Promise<ScheduledRunReport> {
-  const startedAt = Date.now();
+  const startedAt = now().getTime();
   const failed: string[] = [];
   const timedOut: string[] = [];
   let ran = 0;

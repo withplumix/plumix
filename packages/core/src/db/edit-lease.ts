@@ -2,6 +2,7 @@ import type { SQL } from "drizzle-orm";
 
 import type { Db } from "../context/app-context.js";
 import type { EditLeaseSurface } from "./schema/edit_leases.js";
+import { now as currentTime } from "../clock.js";
 import {
   EDIT_LEASE_DURATION_MS,
   EDIT_LEASE_RENEW_INTERVAL_MS,
@@ -55,7 +56,7 @@ function isResource(resource: LeaseResource) {
 export async function readEditLease(
   db: Db,
   resource: LeaseResource,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): Promise<EditLease | undefined> {
   const [row] = await db
     .select({
@@ -180,7 +181,7 @@ export async function acquireEditLease(
   db: Db,
   resource: LeaseResource,
   claimant: LeaseClaimant,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): Promise<EditLease> {
   const lease = await upsertLease(db, resource, claimant, now, {
     set: startedBy(claimant, now),
@@ -198,7 +199,7 @@ export async function takeOverEditLease(
   db: Db,
   resource: LeaseResource,
   claimant: LeaseClaimant,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): Promise<EditLease> {
   const lease = await upsertLease(db, resource, claimant, now, {
     set: startedBy(claimant, now),
@@ -220,7 +221,7 @@ export async function renewEditLease(
   db: Db,
   resource: LeaseResource,
   claimant: LeaseClaimant,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): Promise<EditLeaseRenewal> {
   const lease = await upsertLease(db, resource, claimant, now, {
     set: { surface: claimant.surface, expiresAt: expiryFrom(now) },
@@ -240,7 +241,7 @@ export async function releaseEditLease(
   db: Db,
   resource: LeaseResource,
   userId: number,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): Promise<void> {
   const lapsesAt = new Date(now.getTime() + EDIT_LEASE_RENEW_INTERVAL_MS);
   await db
@@ -263,7 +264,7 @@ export async function lapseEditLease(
   db: Db,
   resource: LeaseResource,
   userId: number,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): Promise<void> {
   await db
     .update(editLeases)
@@ -283,7 +284,7 @@ export async function assertWritable(
   resource: LeaseResource,
   writer: LeaseClaimant,
   options: { readonly takeOver?: boolean } = {},
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): Promise<void> {
   const lease = await readEditLease(db, resource, now);
   if (!lease || lease.holder.id === writer.userId) return;

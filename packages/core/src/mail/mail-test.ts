@@ -1,5 +1,6 @@
 import type { AppContext } from "../context/app-context.js";
 import type { MailTestMailProps } from "./core-mails.js";
+import { now } from "../clock.js";
 import { mailSite } from "./sender.js";
 
 /**
@@ -17,7 +18,7 @@ export async function sendMailTest(
   );
   await ctx.mail.send(
     "mailTest",
-    { siteName, sentAt: new Date().toISOString(), origin: input.origin },
+    { siteName, sentAt: now().toISOString(), origin: input.origin },
     { to: input.to },
   );
 }

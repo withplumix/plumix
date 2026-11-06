@@ -1,3 +1,4 @@
+import { now as currentTime } from "../../clock.js";
 // Hand-rolled on Web Crypto so minting a URL doesn't pull the AWS SDK.
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
 // https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
@@ -199,7 +200,7 @@ interface Scope {
   readonly credential: string;
 }
 
-function scopeOf(credentials: SigV4Credentials, now = new Date()): Scope {
+function scopeOf(credentials: SigV4Credentials, now = currentTime()): Scope {
   const { region } = credentials;
   const service = "s3";
   const amzDate = formatAmzDate(now); // 20260426T112233Z

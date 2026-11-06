@@ -1,3 +1,5 @@
+import { now as currentTime } from "../clock.js";
+
 /** A hash: the server sees the same path, and the browser a new cache key. */
 export function cacheBustUrl(url: string, now: number): string {
   return `${url}#plumix-retry=${String(now)}`;
@@ -16,6 +18,6 @@ export async function importWithRetry<T>(
     return await load(url);
   } catch {
     await wait();
-    return load(cacheBustUrl(url, Date.now()));
+    return load(cacheBustUrl(url, currentTime().getTime()));
   }
 }

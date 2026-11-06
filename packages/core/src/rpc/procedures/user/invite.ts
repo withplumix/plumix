@@ -1,4 +1,5 @@
 import { generateToken, hashToken } from "../../../auth/tokens.js";
+import { now } from "../../../clock.js";
 import {
   isUniqueConstraintError,
   isUniqueConstraintErrorOn,
@@ -33,7 +34,7 @@ export const invite = base
 
     const token = generateToken();
     const tokenHash = await hashToken(token);
-    const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
+    const expiresAt = new Date(now().getTime() + INVITE_TTL_MS);
 
     // Retry a lost slug race (concurrent creates deriving the same base); a
     // `users.email` collision is a real conflict, reported as `email_taken`.

@@ -2,6 +2,7 @@ import type { AppContext, PluginSetupContext } from "plumix/plugin";
 import { and, asc, desc, eq, gt, inArray, sql } from "plumix/db";
 import { sync } from "plumix/plugin";
 import { entries, entryChanges, terms } from "plumix/schema";
+import { now } from "plumix/support";
 
 import type { SearchReindexRun, SearchSourceType } from "../db/schema.js";
 import { searchReindexRuns } from "../db/schema.js";
@@ -85,7 +86,7 @@ export async function advanceReindex(
     ctx.logger.error("[plumix/plugin-search] reindex failed", { error });
     await ctx.db
       .update(searchReindexRuns)
-      .set({ status: "failed", finishedAt: new Date() })
+      .set({ status: "failed", finishedAt: now() })
       .where(eq(searchReindexRuns.id, run.id));
     return 0;
   }
@@ -134,7 +135,7 @@ async function walk(
       failed: sql`${searchReindexRuns.failed} + ${failed}`,
       ...(completed && {
         status: total > 0 ? "completed_with_errors" : "succeeded",
-        finishedAt: new Date(),
+        finishedAt: now(),
       }),
     })
     .where(eq(searchReindexRuns.id, run.id));

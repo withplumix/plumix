@@ -3,6 +3,7 @@ import { resolveReturnUrl } from "plumix/auth";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
 import { jsonResponse, listUserMetaFields, startingMeta } from "plumix/plugin";
+import { now } from "plumix/support";
 import * as v from "valibot";
 
 import type { ResolvedCommentsConfig } from "../config.js";
@@ -59,7 +60,7 @@ function isClosed(
   closeAfterDays: number | null,
 ): boolean {
   if (closeAfterDays === null || publishedAt === null) return false;
-  return Date.now() > publishedAt.getTime() + closeAfterDays * 86_400_000;
+  return now().getTime() > publishedAt.getTime() + closeAfterDays * 86_400_000;
 }
 
 /**

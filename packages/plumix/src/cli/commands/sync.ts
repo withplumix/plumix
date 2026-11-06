@@ -16,6 +16,7 @@ import type {
   TargetOptionValues,
 } from "@plumix/core";
 import { assertSameHeads, resolveScopes } from "@plumix/core/cli";
+import { now as currentTime } from "@plumix/core/support";
 
 import type { DumpHeader, DumpProgress } from "../sync/dump.js";
 import type { RewrittenDump, SiteLocation } from "../sync/rewrite-urls.js";
@@ -132,7 +133,7 @@ export const syncDeps = {
   isInteractive: (): boolean => process.stdin.isTTY && process.stderr.isTTY,
   confirm,
   ask,
-  now: (): Date => new Date(),
+  now: (): Date => currentTime(),
 };
 
 export function dumpName(prefix: string, now: Date): string {

@@ -30,7 +30,7 @@ import {
   termCapability,
 } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
-import { slugify } from "plumix/support";
+import { now, slugify } from "plumix/support";
 import * as v from "valibot";
 
 import type { MenuDepthLimit } from "./server/depth.js";
@@ -406,7 +406,7 @@ export function createMenuRouter(
       // Slug uniqueness on entries is `(type, slug)` — across all
       // `menu_item` rows, slugs must be unique. Generate per-save with
       // termId + index suffix to avoid collisions across menus.
-      const slugBase = `mi-t${term.id}-${Date.now()}-${cryptoRandom()}`;
+      const slugBase = `mi-t${term.id}-${now().getTime()}-${cryptoRandom()}`;
       // A new item starts from the fields registered on `menu_item` (ADR
       // 0026); its own meta lands on top.
       const starting = startingMeta(

@@ -1,4 +1,5 @@
 import type { Logger, LogMeta } from "./app-context.js";
+import { now as currentTime } from "../clock.js";
 
 type Level = keyof Logger;
 
@@ -8,7 +9,7 @@ type Level = keyof Logger;
  */
 export function createJsonLogger(
   write: (line: string) => void,
-  now: () => Date = () => new Date(),
+  now: () => Date = () => currentTime(),
 ): Logger {
   const log =
     (level: Level) =>

@@ -18,5 +18,6 @@ export function installClockSource(next: ClockSource): void {
 
 /** The current site's time, or real time outside a site and in a browser. */
 export function now(): Date {
+  // eslint-disable-next-line plumix/no-bare-date -- the clock is where real time is read
   return new Date(source?.()?.now() ?? Date.now());
 }

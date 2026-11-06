@@ -2,6 +2,7 @@ import { and, eq, lt } from "drizzle-orm";
 import * as v from "valibot";
 
 import type { Db } from "../../context/app-context.js";
+import { now } from "../../clock.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "../tokens.js";
 
@@ -43,7 +44,7 @@ export async function issueChallenge(
 ): Promise<IssuedChallenge> {
   const challenge = generateToken();
   const hash = await hashToken(challenge);
-  const expiresAt = new Date(Date.now() + ttlMs);
+  const expiresAt = new Date(now().getTime() + ttlMs);
   await db.insert(authTokens).values({
     hash,
     type: CHALLENGE_TYPE,
@@ -64,7 +65,7 @@ export async function issueChallenge(
  * at any time.
  */
 export async function pruneExpiredAuthTokens(db: Db): Promise<void> {
-  await db.delete(authTokens).where(lt(authTokens.expiresAt, new Date()));
+  await db.delete(authTokens).where(lt(authTokens.expiresAt, now()));
 }
 
 /**
@@ -83,7 +84,7 @@ export async function consumeChallenge(
     .where(and(eq(authTokens.hash, hash), eq(authTokens.type, CHALLENGE_TYPE)))
     .returning();
   if (!row) return null;
-  if (row.expiresAt.getTime() < Date.now()) return null;
+  if (row.expiresAt.getTime() < now().getTime()) return null;
   const parsed = v.safeParse(ceremonySchema, row.payload?.ceremony);
   return {
     userId: row.userId,

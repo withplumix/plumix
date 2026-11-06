@@ -1,5 +1,6 @@
 import type { Db } from "../context/app-context.js";
 import type { AuthToken } from "../db/schema/auth_tokens.js";
+import { now } from "../clock.js";
 import { eq } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { hashToken } from "./tokens.js";
@@ -55,7 +56,7 @@ export async function validateInviteToken(
   if (row.userId === null || row.email === null || row.role === null) {
     throw InviteError.invalidToken();
   }
-  if (row.expiresAt.getTime() < Date.now()) {
+  if (row.expiresAt.getTime() < now().getTime()) {
     throw InviteError.tokenExpired();
   }
   return {

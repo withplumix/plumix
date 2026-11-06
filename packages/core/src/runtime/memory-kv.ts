@@ -6,6 +6,7 @@ import type {
   KvListResult,
   KvPutOptions,
 } from "./contract/slots.js";
+import { now } from "../clock.js";
 
 interface MemoryEntry {
   readonly value: string;
@@ -45,7 +46,7 @@ export function memoryKv(config: MemoryKvConfig = {}): MemoryKV {
   const live = (key: string): MemoryEntry | undefined => {
     const entry = store.get(key);
     if (!entry) return undefined;
-    if (entry.expiresAt !== undefined && Date.now() >= entry.expiresAt) {
+    if (entry.expiresAt !== undefined && now().getTime() >= entry.expiresAt) {
       store.delete(key);
       return undefined;
     }
@@ -60,7 +61,8 @@ export function memoryKv(config: MemoryKvConfig = {}): MemoryKV {
     // eslint-disable-next-line @typescript-eslint/require-await
     async put(key, value, opts?: KvPutOptions) {
       const ttl = opts?.expirationTtl;
-      const expiresAt = ttl !== undefined ? Date.now() + ttl * 1000 : undefined;
+      const expiresAt =
+        ttl !== undefined ? now().getTime() + ttl * 1000 : undefined;
       store.set(key, { value, expiresAt });
     },
     // eslint-disable-next-line @typescript-eslint/require-await

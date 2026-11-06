@@ -1,7 +1,7 @@
 import type { AppContext, ArchiveAtPath, PluginRegistry } from "plumix/plugin";
 import { typeTag } from "plumix/db";
 import { loadSiteSettings, tagCdnEntry } from "plumix/plugin";
-import { nonEmpty, withBasePath } from "plumix/support";
+import { nonEmpty, now, withBasePath } from "plumix/support";
 
 import type { FeedRoute } from "./routes.js";
 import type { FeedChannel, FeedFormat } from "./serialize.js";
@@ -59,7 +59,7 @@ export async function handleFeed(
     // the externally-visible URL.
     feedUrl: `${ctx.origin}${withBasePath(pathname, ctx.config.basePath)}`,
     description: nonEmpty(site.tagline) ?? "",
-    updated: items[0]?.updated ?? new Date().toISOString(),
+    updated: items[0]?.updated ?? now().toISOString(),
   };
   const body =
     format === "atom" ? renderAtom(channel, items) : renderRss2(channel, items);

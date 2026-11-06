@@ -1,6 +1,7 @@
 import type { SQL } from "plumix/db";
 import type { AppContext } from "plumix/plugin";
 import { and, eq, gte, lt, max, or, rowsAffected, sql } from "plumix/db";
+import { now as currentTime } from "plumix/support";
 
 import type { FormRegistry } from "../registry.js";
 import { formSubmissions } from "../db/schema.js";
@@ -41,7 +42,7 @@ function firstKeptId(db: AppContext["db"], slug: string, cutoff: Date): SQL {
 export async function purgeExpiredSubmissions(
   ctx: AppContext,
   registry: FormRegistry,
-  now = new Date(),
+  now = currentTime(),
 ): Promise<number> {
   const expired: SQL[] = [];
   for (const form of registry.list()) {

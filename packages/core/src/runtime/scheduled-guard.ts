@@ -3,6 +3,7 @@ import { and, eq, lte, sql } from "drizzle-orm";
 import type { Db } from "../context/app-context.js";
 import type { PlumixApp } from "./app.js";
 import type { PlumixEnv } from "./contract/bindings.js";
+import { now as currentTime } from "../clock.js";
 import {
   scheduledTaskClaims,
   scheduledTaskLeases,
@@ -95,7 +96,7 @@ export function createScheduledRunGuard({
       // Per run, not per process: hostname and pid repeat across containers,
       // letting a finished run delete a live lease.
       const token = `${holder}:${crypto.randomUUID()}`;
-      const now = Date.now();
+      const now = currentTime().getTime();
       const held = await db
         .insert(scheduledTaskLeases)
         .values({ key: leaseKey, token, expiresAt: now + ttlMs })
@@ -120,7 +121,7 @@ export function createScheduledRunGuard({
           // which the TTL already bounds.
           void db
             .update(scheduledTaskLeases)
-            .set({ expiresAt: Date.now() + ttlMs })
+            .set({ expiresAt: currentTime().getTime() + ttlMs })
             .where(
               and(
                 eq(scheduledTaskLeases.key, leaseKey),

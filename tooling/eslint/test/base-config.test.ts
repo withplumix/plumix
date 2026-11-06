@@ -138,6 +138,23 @@ describe("plumix/no-reflect-get and plumix/no-reflect-apply", () => {
   });
 });
 
+describe("plumix/no-bare-date", () => {
+  it("rejects Date.now() and an argument-less new Date() in production source", async () => {
+    await expect(plumixReports("src/bare-date.violations.ts")).resolves.toEqual(
+      [
+        { ruleId: "plumix/no-bare-date", line: 4 },
+        { ruleId: "plumix/no-bare-date", line: 8 },
+      ],
+    );
+  });
+
+  it("stays silent in a test file", async () => {
+    await expect(
+      plumixReports("src/bare-date.exempt.test.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("plumix/no-spelled-capability", () => {
   it("rejects entry and term capabilities spelled as string or template literals", async () => {
     await expect(

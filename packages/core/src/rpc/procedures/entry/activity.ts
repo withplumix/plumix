@@ -2,6 +2,7 @@ import { inArray } from "drizzle-orm";
 import * as v from "valibot";
 
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
+import { now } from "../../../clock.js";
 import { users } from "../../../db/schema/users.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { listActiveAutosaves } from "../../../revisions/repository.js";
@@ -36,7 +37,7 @@ export const list = base
       throw errors.FORBIDDEN({ data: { capability } });
     }
 
-    const notOlderThan = new Date(Date.now() - ACTIVE_WINDOW_MS);
+    const notOlderThan = new Date(now().getTime() - ACTIVE_WINDOW_MS);
     const activeRows = await listActiveAutosaves(context.db, {
       entryId: input.entryId,
       notOlderThan,

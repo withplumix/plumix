@@ -1,4 +1,5 @@
 import type { Db } from "../context/app-context.js";
+import { now } from "../clock.js";
 import { and, eq } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { generateToken, hashToken } from "./tokens.js";
@@ -31,7 +32,7 @@ export async function createPreviewToken(
     userId: args.userId,
     type: "preview_link",
     payload: { entryId: args.entryId } satisfies PreviewPayload,
-    expiresAt: new Date(Date.now() + PREVIEW_TOKEN_TTL_MS),
+    expiresAt: new Date(now().getTime() + PREVIEW_TOKEN_TTL_MS),
   });
   return token;
 }
@@ -45,7 +46,7 @@ export async function verifyPreviewGrant(
   const row = await db.query.authTokens.findFirst({
     where: and(eq(authTokens.hash, hash), eq(authTokens.type, "preview_link")),
   });
-  if (!row || row.expiresAt.getTime() < Date.now()) return null;
+  if (!row || row.expiresAt.getTime() < now().getTime()) return null;
   const entryId = (row.payload as PreviewPayload | null)?.entryId;
   if (typeof entryId !== "number" || row.userId === null) return null;
   return { entryId, userId: row.userId };

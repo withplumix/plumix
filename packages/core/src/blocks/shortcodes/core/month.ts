@@ -1,3 +1,4 @@
+import { now } from "../../../clock.js";
 import { defineShortcode } from "../types.js";
 
 const MONTH_FORMATS = ["long", "short", "numeric"] as const;
@@ -13,12 +14,12 @@ function resolveFormat(value: string | undefined): MonthFormat {
 
 /**
  * `[month format="long|short|numeric"]` → the current month in the site's
- * locale, default `long`. Reads `new Date()` directly (fresh per request).
+ * locale, default `long`. Reads `now()` (fresh per request).
  */
 export const monthShortcode = defineShortcode({
   name: "month",
   render: ({ atts, context }) =>
     new Intl.DateTimeFormat(context.locale, {
       month: resolveFormat(atts.format),
-    }).format(new Date()),
+    }).format(now()),
 });

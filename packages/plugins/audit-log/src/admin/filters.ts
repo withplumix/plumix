@@ -1,3 +1,5 @@
+import { now as currentTime } from "plumix/support";
+
 import type {
   AuditLogFilter,
   AuditLogRowDTO,
@@ -55,7 +57,7 @@ export function filtersFromSearchParams(search: string): FilterState {
 
 export function filterToRpcInput(
   state: FilterState,
-  now: Date = new Date(),
+  now: Date = currentTime(),
 ): AuditLogFilter {
   const out: {
     actorId?: number;

@@ -1,5 +1,6 @@
 import { readSessionCookie } from "../../../../auth/cookies.js";
 import { hashToken } from "../../../../auth/tokens.js";
+import { now } from "../../../../clock.js";
 import { and, asc, eq, gt } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
 import { authenticated } from "../../../authenticated.js";
@@ -30,7 +31,7 @@ export const list = base
       .where(
         and(
           eq(sessions.userId, context.user.id),
-          gt(sessions.expiresAt, new Date()),
+          gt(sessions.expiresAt, now()),
         ),
       )
       .orderBy(asc(sessions.createdAt));

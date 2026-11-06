@@ -24,6 +24,7 @@ import {
   settleSync,
 } from "plumix/cli";
 import { buildApp, createRuntimeHandler } from "plumix/runtime";
+import { now as currentTime } from "plumix/support";
 
 import type { SiteReader } from "./sync-reads.js";
 import { D1_TARGET_OPTIONS } from "./d1-target.js";
@@ -383,7 +384,7 @@ export const syncDeps = {
   report: (line: string): void => {
     process.stderr.write(`${line}\n`);
   },
-  now: (): Date => new Date(),
+  now: (): Date => currentTime(),
   /** Far below V8's string limit, which a whole site's script can pass. */
   localExecBytes: (): number => 128 * 1024 * 1024,
 };

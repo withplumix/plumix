@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { index, sqliteTable } from "drizzle-orm/sqlite-core";
+import { now } from "plumix/support";
 
 import type { FormAnswers, FormBound, FormLabelSnapshot } from "../types.js";
 import { BOUND_TYPES, SUBMISSION_STATUSES } from "../types.js";
@@ -23,7 +24,7 @@ export const formSubmissions = sqliteTable(
       .integer({ mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`)
-      .$onUpdate(() => sql`(unixepoch())`),
+      .$onUpdate(now),
     /**
      * Both null or both set; every writer goes through `boundColumns`. An
      * integer, since every bindable entity has an integer key.
