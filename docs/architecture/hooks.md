@@ -3,7 +3,7 @@
 Hooks are core's named extension points, the "hooks" half of the "Plugin system and hooks" component in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). They are moving, one subject at a time, from string names to declared values ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)):
 
 - **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render`, `sync`, `entry`, `term`, `settings`, `user` and `auth` subjects have moved, so core declares no string name of its own.
-- **String names.** The first-party plugins' own extension points are still string names: a filter is a pipeline, an action announces something, plugin authors subscribe through `ctx.addFilter` / `ctx.addAction`, and core and plugins fire them through `ctx.hooks`. The names are types, declared by augmenting `FilterRegistry` and `ActionRegistry`.
+- **String names.** The older API, which no first-party extension point uses any more: a filter is a pipeline, an action announces something, plugin authors subscribe through `ctx.addFilter` / `ctx.addAction`, and code fires them through `ctx.hooks`. The names are types, declared by augmenting `FilterRegistry` and `ActionRegistry`.
 
 Both live in one `HookRegistry` per app, in `packages/core/src/hooks/`.
 
@@ -181,17 +181,20 @@ Execution (`HookExecutor`, on `ctx.hooks`; public type):
 | `doAction`                               | Starts every handler in priority order, awaits all with `Promise.allSettled`, and logs each rejection (see Invariants). Traced as a `hook: <name>` span. |
 | `getFilterHandlers`, `getActionHandlers` | Sorted handlers, for a caller that runs them itself.                                                                                                     |
 
-Core declares no string hook names. First-party plugins that still use string names declare them by augmenting the registries: `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `seo:*` (`plugins/seo/src/`).
+Neither core nor a first-party plugin declares a string hook name.
 
 Core and other plugins declare their events and filters with `defineEvent` and `defineFilter`, list them in their descriptor's `events` and `filters`, and export them as one namespace named after their subject:
 
-| Namespace  | Exported from                | Events and filters                                                            | Declared in                             |
-| ---------- | ---------------------------- | ----------------------------------------------------------------------------- | --------------------------------------- |
-| `settings` | `plumix/plugin`              | `groupChanged` event; `rpc.<proc>.input` / `.output` filters                  | `core/src/hooks/settings.ts`            |
-| `comment`  | `@plumix/plugin-comments`    | `created`, `approved`, `spam`, `trashed`, `deleted` events; `moderate` filter | `plugins/comments/src/server/events.ts` |
-| `menu`     | `@plumix/plugin-menu/server` | `saved`, `deleted` events; `tree`, `item` filters                             | `plugins/menu/src/server/events.ts`     |
+| Namespace  | Exported from                | Events and filters                                                                                        | Declared in                             |
+| ---------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `settings` | `plumix/plugin`              | `groupChanged` event; `rpc.<proc>.input` / `.output` filters                                              | `core/src/hooks/settings.ts`            |
+| `comment`  | `@plumix/plugin-comments`    | `created`, `approved`, `spam`, `trashed`, `deleted` events; `moderate` filter                             | `plugins/comments/src/server/events.ts` |
+| `menu`     | `@plumix/plugin-menu/server` | `saved`, `deleted` events; `tree`, `item` filters                                                         | `plugins/menu/src/server/events.ts`     |
+| `seo`      | `@plumix/plugin-seo`         | `ogImage`, `robotsTxt`, `llmsTxt`, `sitemap.urls`, `schema.needs`, `schema.piece`, `schema.graph` filters | `plugins/seo/src/events.ts`             |
+| `feed`     | `@plumix/plugin-feeds`       | `items` filter                                                                                            | `plugins/feeds/src/events.ts`           |
+| `form`     | `@plumix/plugin-forms`       | `submitted` event, payload `{ submission, candidate }`                                                    | `plugins/forms/src/server/events.ts`    |
 
-`menu` is exported from `./server` because the package root's `menu()` factory already takes the name, as the media plugin's field builder is exported from `./fields`.
+`menu` is exported from `./server` because the package root's `menu()` factory already takes the name, as the media plugin's field builder is exported from `./fields`. `seo`'s filters hang off the root's `seo()` factory instead (`Object.assign` in `plugins/seo/src/index.ts`), so `seo.ogImage` is what `@plumix/plugin-og` subscribes its card to.
 
 ## How it works
 

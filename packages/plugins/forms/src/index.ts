@@ -10,9 +10,6 @@ import {
   pluginAdminEntryPath,
 } from "plumix/plugin";
 
-// Side-effect import keeps the hook augmentations in the declaration graph.
-import "./server/hooks.js";
-
 import type { FormDefinition } from "./define-form.js";
 import type { FormRegistry } from "./registry.js";
 import type { SubmissionsRouter } from "./rpc.js";
@@ -36,6 +33,7 @@ import { isRetentionPeriod } from "./define-form.js";
 import { FormsError } from "./errors.js";
 import { createFormRegistry } from "./registry.js";
 import { createSubmissionsRouter } from "./rpc.js";
+import { form } from "./server/events.js";
 import { createExportHandler } from "./server/export.js";
 import { createFormMcpTools } from "./server/mcp-tools.js";
 import { purgeExpiredSubmissions, RETENTION_CRON } from "./server/retention.js";
@@ -58,6 +56,7 @@ export type {
 } from "./define-form.js";
 export { defineForm } from "./define-form.js";
 export { formatSubmission } from "./format.js";
+export { form } from "./server/events.js";
 export { FormsError } from "./errors.js";
 export type { FormPageBreak, FormPageBreakEntry, FormStep } from "./steps.js";
 export { pageBreak } from "./steps.js";
@@ -158,6 +157,7 @@ export function forms(
     // migration history.
     schemaModule: "@plumix/plugin-forms/schema",
     i18n: PLUGIN_I18N_SLOT,
+    events: [form.submitted],
     // Per install, not per `forms()` call: a descriptor may be installed
     // into more than one app.
     state: () => ({

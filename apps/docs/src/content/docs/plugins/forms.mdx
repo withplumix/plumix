@@ -23,7 +23,7 @@ What it registers:
 - A submissions inbox in the admin under Content, gated on the `form_submission:moderate` capability the plugin mints for the editor role, and `GET /_plumix/forms/export` behind the same capability.
 - A `tel` field type, which works in a form and in any meta box on the site.
 - A nightly scheduled task that deletes submissions older than a form's retention period.
-- `ctx.registerFormValidator` and a `form:submitted` action, which is where a spam or notification plugin attaches.
+- `ctx.registerFormValidator` and the `form.submitted` event, which is where a spam or notification plugin attaches.
 
 This page covers declaring a form, what happens to a submission, and the options that change it. Three more pages cover the rest: [Form Fields](/plugins/forms-fields/) for the questions a form asks, [Rendering Forms](/plugins/forms-rendering/) for putting a form on screen yourself and styling it, and [Form Submissions](/plugins/forms-submissions/) for the inbox, exports and retention.
 
@@ -194,7 +194,7 @@ The plugin always runs the same order: validate, store, then the handler. The su
 
 The visitor waits for your handler, so a slow third party means a slow response. Keep the handler to what has to happen now, and hand anything else to a queue.
 
-A submission the spam floor caught does not reach `onSubmit`. Stopping the notification is the point of the floor, and labelling the row is not enough if the email goes out anyway. The plugin still stores the row, so a false positive is still there to find. Listen on [`form:submitted`](#hooking-every-form) to see the submissions the floor caught.
+A submission the spam floor caught does not reach `onSubmit`. Stopping the notification is the point of the floor, and labelling the row is not enough if the email goes out anyway. The plugin still stores the row, so a false positive is still there to find. Subscribe to [`form.submitted`](#hooking-every-form) to see the submissions the floor caught.
 
 `onSubmit` receives `answers`, the `labels` snapshot of what every field was called, `bound`, `submission` (the stored row, or `null` when the form stores nothing), and `ctx`.
 
@@ -239,10 +239,12 @@ It reads the submission's own label snapshot rather than the live form, so its o
 
 ## Hooking every form
 
-A registered validator and a hook cover what belongs across all forms rather than in one, so a plugin needs no per-form wiring:
+A registered validator and an event cover what belongs across all forms rather than in one, so a plugin needs no per-form wiring:
 
 ```ts no-typecheck
 import { definePlugin } from "plumix/plugin";
+
+import { form } from "@plumix/plugin-forms";
 
 import { index, isSpam } from "./moderation";
 
@@ -254,7 +256,7 @@ export const moderation = definePlugin("moderation", {
         isSpam(candidate.answers) ? [{ field: "", message: "No." }] : [],
     });
 
-    ctx.addAction("form:submitted", (submission, candidate) => {
+    ctx.events.on(form.submitted, ({ submission }) => {
       if (submission) index(submission);
     });
   },
@@ -265,7 +267,7 @@ export const moderation = definePlugin("moderation", {
 
 `forms` limits a validator to the forms with those slugs; leave it out to validate every form. A slug no form declares fails boot, naming it, and so does a second validator with an `id` already taken. A validator that throws is logged and counts as returning no errors, so the others decide whether the submission is accepted.
 
-`form:submitted` fires once the plugin has stored the row and the form's own handler has run, for spam and genuine submissions alike. The row it carries is `null` only for a form that opted out of storage. A row carrying `handlerError` belongs to a submission whose handler threw.
+The package root exports the plugin's event in a namespace, `form`, so a plugin subscribes with no `declare module`. `form.submitted` is emitted once the plugin has stored the row and the form's own handler has run, for spam and genuine submissions alike. Its payload is `{ submission, candidate }`: the stored row, and the submission as the validators saw it. The row is `null` only for a form that opted out of storage. A row carrying `handlerError` belongs to a submission whose handler threw.
 
 ## Carrying the page's row
 

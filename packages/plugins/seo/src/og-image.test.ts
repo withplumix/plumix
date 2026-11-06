@@ -4,6 +4,7 @@ import { HookRegistry } from "plumix/plugin";
 import { createTestContext, createTestDb } from "plumix/test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { seo } from "./index.js";
 import { resolveOgImage } from "./og-image.js";
 
 /**
@@ -30,7 +31,7 @@ describe("resolveOgImage", () => {
     db = await createTestDb();
   });
 
-  // A real context because `seo:og_image` subscribers receive it; roles
+  // A real context because `seo.ogImage` subscribers receive it; roles
   // arrive on the entry, so no registry is seeded.
   const ogContext = (hooks: HookRegistry): AppContext =>
     createTestContext({ db, hooks });
@@ -39,7 +40,7 @@ describe("resolveOgImage", () => {
 
   test("a filter's image beats the site-wide default", async () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", () => ({
+    hooks.add(seo.ogImage, () => ({
       url: "https://cms.example/card.png",
       width: 1200,
       height: 630,
@@ -59,7 +60,7 @@ describe("resolveOgImage", () => {
 
   test("a filter declining falls through to the site default", async () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", (image) => image);
+    hooks.add(seo.ogImage, (image) => image);
 
     const image = await resolveOgImage(ogContext(hooks), entryData(), {
       override: null,
@@ -72,7 +73,7 @@ describe("resolveOgImage", () => {
   test("the ogImage role outranks the filter, which never runs", async () => {
     const hooks = new HookRegistry();
     let ran = false;
-    hooks.addFilter("seo:og_image", () => {
+    hooks.add(seo.ogImage, () => {
       ran = true;
       return { url: "https://cms.example/card.png" };
     });
@@ -102,7 +103,7 @@ describe("resolveOgImage", () => {
 
   test("the SEO box's own URL sits below the role and above the filter", async () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", () => ({
+    hooks.add(seo.ogImage, () => ({
       url: "https://cms.example/card.png",
     }));
 
@@ -126,7 +127,7 @@ describe("resolveOgImage", () => {
 
   test("declining leaves the featured photo exactly where it was", async () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", (image) => image);
+    hooks.add(seo.ogImage, (image) => image);
 
     const image = await resolveOgImage(
       ogContext(hooks),
@@ -141,7 +142,7 @@ describe("resolveOgImage", () => {
 
   test("the featured photo is passed alongside, to improve on", async () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", (_image, _data, _ctx, featured) =>
+    hooks.add(seo.ogImage, (_image, { featured }) =>
       featured ? { url: `${featured.url}?w=1200`, width: 1200 } : null,
     );
 
@@ -159,7 +160,7 @@ describe("resolveOgImage", () => {
   test("a filter may name what its own image shows", async () => {
     const photo = { url: "https://cdn/cat.jpg", alt: "A cat" } as const;
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", (_image, _data, _ctx, featured) =>
+    hooks.add(seo.ogImage, (_image, { featured }) =>
       featured
         ? { url: `${featured.url}?w=1200`, alt: "The same cat, cropped" }
         : null,
@@ -181,7 +182,7 @@ describe("resolveOgImage", () => {
 
   test("an image a filter returns outranks the featured photo", async () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", () => ({
+    hooks.add(seo.ogImage, () => ({
       url: "https://cms.example/card.png",
     }));
 
@@ -198,7 +199,7 @@ describe("resolveOgImage", () => {
     const hooks = new HookRegistry();
     const data = entryData();
     const seen: TemplateData[] = [];
-    hooks.addFilter("seo:og_image", (image, page) => {
+    hooks.add(seo.ogImage, (image, { data: page }) => {
       seen.push(page);
       return image;
     });
@@ -213,7 +214,7 @@ describe("resolveOgImage", () => {
 
   test("a non-entry page carries no role image and reaches the filter", async () => {
     const hooks = new HookRegistry();
-    hooks.addFilter("seo:og_image", () => ({
+    hooks.add(seo.ogImage, () => ({
       url: "https://cms.example/archive.png",
     }));
     const archive = { kind: "entryType" } as unknown as TemplateData;

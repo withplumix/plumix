@@ -21,7 +21,12 @@ import { createDispatcherHarness, fakeCdn } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
-import type { SeoOptions, SitemapScopeRef, SitemapSource } from "./index.js";
+import type {
+  SeoOptions,
+  SitemapScopeRef,
+  SitemapSource,
+  SitemapUrl,
+} from "./index.js";
 import type * as SeoPackage from "./index.js";
 import { seo } from "./index.js";
 
@@ -405,11 +410,11 @@ describe("/robots.txt", () => {
     expect(await bodyOf(h, "/robots.txt")).toBe("User-agent: *\nDisallow: /\n");
   });
 
-  test("the seo:robots-txt filter can modify the body", async () => {
+  test("the seo.robotsTxt filter can modify the body", async () => {
     const sitemapLine = definePlugin("robots-test", {
       setup: (ctx) => {
-        ctx.addFilter(
-          "seo:robots-txt",
+        ctx.filters.add(
+          seo.robotsTxt,
           (body) => `${body}Sitemap: https://cms.example/sitemap.xml\n`,
         );
       },
@@ -933,11 +938,11 @@ describe("a sub-sitemap", () => {
   });
 });
 
-describe("seo:sitemap:urls", () => {
+describe("seo.sitemap.urls", () => {
   test("can drop every URL", async () => {
     const dropAll = definePlugin("sitemap-drop", {
       setup: (ctx) => {
-        ctx.addFilter("seo:sitemap:urls", () => []);
+        ctx.filters.add(seo.sitemap.urls, () => []);
       },
     });
     const h = await createHarness([blogPlugin, dropAll]);
@@ -951,7 +956,7 @@ describe("seo:sitemap:urls", () => {
   test("receives the scope, page and ctx so a subscriber can inject rows", async () => {
     const injector = definePlugin("injector", {
       setup: (ctx) => {
-        ctx.addFilter("seo:sitemap:urls", (urls, scope, page, appCtx) => [
+        ctx.filters.add(seo.sitemap.urls, (urls, { scope, page }, appCtx) => [
           ...urls,
           {
             loc: `${appCtx.origin}/injected/${scope.name}?page=${String(page)}`,
@@ -970,7 +975,7 @@ describe("seo:sitemap:urls", () => {
     const seen: SitemapScopeRef[] = [];
     const recorder = definePlugin("recorder", {
       setup: (ctx) => {
-        ctx.addFilter("seo:sitemap:urls", (urls, scope) => {
+        ctx.filters.add(seo.sitemap.urls, (urls, { scope }) => {
           seen.push(scope);
           return urls;
         });
@@ -987,10 +992,12 @@ describe("seo:sitemap:urls", () => {
   test("a subscriber typed against a bare scope name does not compile", () => {
     const stale = definePlugin("stale", {
       setup: (ctx) => {
+        const handler = (
+          urls: readonly SitemapUrl[],
+          { scope }: { scope: string },
+        ) => (scope === "post" ? [] : urls);
         // @ts-expect-error — the scope is a `SitemapScopeRef`, not its name.
-        ctx.addFilter("seo:sitemap:urls", (urls, scope: string) =>
-          scope === "post" ? [] : urls,
-        );
+        ctx.filters.add(seo.sitemap.urls, handler);
       },
     });
     expect(stale.id).toBe("stale");
@@ -1308,10 +1315,10 @@ describe("the site's sitemap policy", () => {
     );
   });
 
-  test("the seo:sitemap:urls filter has the last word over both", async () => {
+  test("the seo.sitemap.urls filter has the last word over both", async () => {
     const overrider = definePlugin("overrider", {
       setup: (ctx) => {
-        ctx.addFilter("seo:sitemap:urls", (urls) =>
+        ctx.filters.add(seo.sitemap.urls, (urls) =>
           urls.map((url) => ({ ...url, priority: 0.3 })),
         );
       },
@@ -1367,7 +1374,7 @@ describe("the site's sitemap policy", () => {
     const dropped = definePlugin("dropped", {
       setup: (ctx) => {
         ctx.registerSitemap("location", { count: () => 1, urls });
-        ctx.addFilter("seo:sitemap:urls", (all) => filter(all) as typeof all);
+        ctx.filters.add(seo.sitemap.urls, (all) => filter(all) as typeof all);
       },
     });
     const h = await createHarness([dropped], {
@@ -2170,10 +2177,10 @@ describe("AI-crawler rules", () => {
     expect(await bodyOf(h, "/robots.txt")).toBe("User-agent: *\nDisallow: /\n");
   });
 
-  test("reach the seo:robots-txt filter with the rest of the body", async () => {
+  test("reach the seo.robotsTxt filter with the rest of the body", async () => {
     const appender = definePlugin("robots-append", {
       setup: (ctx) => {
-        ctx.addFilter("seo:robots-txt", (body) => `${body}\n# end\n`);
+        ctx.filters.add(seo.robotsTxt, (body) => `${body}\n# end\n`);
       },
     });
     const h = await createHarness([blogPlugin, appender]);
@@ -2253,10 +2260,10 @@ describe("/llms.txt", () => {
     );
   });
 
-  test("the seo:llms-txt filter can rewrite the body", async () => {
+  test("the seo.llmsTxt filter can rewrite the body", async () => {
     const rewrite = definePlugin("llms-test", {
       setup: (ctx) => {
-        ctx.addFilter("seo:llms-txt", (body) => `${body}\n## Docs\n`);
+        ctx.filters.add(seo.llmsTxt, (body) => `${body}\n## Docs\n`);
       },
     });
     const h = await createHarness([blogPlugin, rewrite]);
@@ -2520,7 +2527,7 @@ describe("/llms.txt", () => {
           path: "/llms.txt",
           handler: () => new Response("# Our own\n"),
         });
-        ctx.addFilter("seo:llms-txt", filter);
+        ctx.filters.add(seo.llmsTxt, filter);
       },
     });
     const h = await createHarness([blogPlugin, own], {

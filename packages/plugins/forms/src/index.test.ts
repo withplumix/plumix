@@ -2,7 +2,12 @@ import type { testSite } from "plumix/test";
 import { createElement as h } from "react";
 import { defineBlock } from "plumix/blocks";
 import { email, text } from "plumix/fields";
-import { definePlugin } from "plumix/plugin";
+import {
+  defineEvent,
+  definePlugin,
+  HookRegistry,
+  installPlugins,
+} from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
@@ -301,5 +306,23 @@ describe("the plugin's procedures on a test site", () => {
     expectTypeOf<Rpc["forms"]["get"]>()
       .parameter(0)
       .toEqualTypeOf<{ id: number }>();
+  });
+});
+
+describe("form namespace", () => {
+  test("a plugin declaring form:submitted again fails boot", async () => {
+    const rival = definePlugin("rival", {
+      events: [defineEvent<undefined>("form:submitted")],
+      setup: () => undefined,
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [forms(), rival],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "rival" registers event "form:submitted" already registered by "forms".',
+    );
   });
 });

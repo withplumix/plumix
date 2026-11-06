@@ -35,7 +35,7 @@ export function registerDevSurfaces(
       inputs,
     }),
   });
-  // `seo:og_image` doesn't always fire, so the panel needs this to tell those
+  // `seo.ogImage` isn't always applied, so the panel needs this to tell those
   // cases from a request that rendered no page.
   ctx.filters.add(render.document, (manifest, { data }, appCtx) => {
     appCtx.telemetry.record(OG_PANEL_ID, (): OgPageTrace => ({

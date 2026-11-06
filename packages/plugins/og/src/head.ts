@@ -1,5 +1,3 @@
-// The `OgImage` import pulls in plugin-seo's augmentation, without which
-// `index.ts`'s `seo:og_image` subscription doesn't typecheck.
 import type { TemplateData } from "plumix";
 import type { AppContext } from "plumix/plugin";
 import { ruleLabel } from "plumix/plugin";

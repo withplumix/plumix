@@ -10,6 +10,7 @@ import {
 import { entries } from "plumix/schema";
 
 import type { SeoSettings } from "./settings.js";
+import { seoFilters } from "./events.js";
 import { publicTargets } from "./scope.js";
 import { loadSeoSettings, nonEmpty } from "./settings.js";
 import { listedEntriesOf, sitemapIndexUrl } from "./sitemap.js";
@@ -19,7 +20,7 @@ export const LLMS_PATH = "/llms.txt";
 
 /**
  * The newest of each type: a map for a reader to start from, not an archive.
- * A site reshapes the file through `seo:llms-txt`.
+ * A site reshapes the file through `seo.llmsTxt`.
  */
 const LLMS_ENTRIES_PER_TYPE = 50;
 
@@ -29,16 +30,6 @@ const UNTITLED = "Untitled";
 /** Still served, so a crawler doesn't read a 404 as "nothing here yet". */
 const WITHHELD =
   "This site's content is not offered for AI training or retrieval.";
-
-declare module "plumix" {
-  interface FilterRegistry {
-    /**
-     * Adjust the generated `/llms.txt` body — list the pages that matter,
-     * add a section, or replace it outright without owning the route.
-     */
-    "seo:llms-txt": (body: string) => string | Promise<string>;
-  }
-}
 
 /** Escaped so a bracket in a title cannot close the link text early. */
 function linkText(title: string): string {
@@ -133,5 +124,5 @@ export async function llmsTxtBody(ctx: AppContext): Promise<string> {
   const map = offered
     ? `\n## Sitemap\n\n- [XML sitemap](${sitemap}): every URL this site offers to search engines.\n`
     : `\n${WITHHELD}\n`;
-  return ctx.hooks.applyFilter("seo:llms-txt", heading + intro + listed + map);
+  return ctx.filters.apply(seoFilters.llmsTxt, heading + intro + listed + map);
 }

@@ -40,7 +40,7 @@ export interface PreviewCardInput {
 
 /**
  * Rendered live, draft included, never read from storage. Ignores third-party
- * `seo:og_image` subscribers, which may change what the page advertises.
+ * `seo.ogImage` subscribers, which may change what the page advertises.
  */
 export async function previewCard(
   input: PreviewCardInput,

@@ -159,4 +159,4 @@ A form declared with `store: false` writes nothing here. [Forms that own their d
 
 To query submissions from your own code, [Carrying the page's row](/plugins/forms/#carrying-the-pages-row) shows a query against `formSubmissions` from `@plumix/plugin-forms/schema`, filtered by the row a form was bound to.
 
-To act on each submission as it arrives, rather than reading it later, write an `onSubmit` for one form or listen on `form:submitted` for all of them, as [What happens next](/plugins/forms/#what-happens-next) and [Hooking every form](/plugins/forms/#hooking-every-form) describe.
+To act on each submission as it arrives, rather than reading it later, write an `onSubmit` for one form or subscribe to `form.submitted` for all of them, as [What happens next](/plugins/forms/#what-happens-next) and [Hooking every form](/plugins/forms/#hooking-every-form) describe.

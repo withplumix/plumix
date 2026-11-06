@@ -2,18 +2,19 @@ import type { PluginDescriptor } from "plumix/plugin";
 import { definePlugin, loadSiteSettings, render } from "plumix/plugin";
 
 import { applyFeedDiscovery } from "./discovery.js";
+import { feed } from "./events.js";
 import { handleFeed } from "./respond.js";
 import { feedRoutes } from "./routes.js";
 // A `declare module "plumix"` block reaches a consumer only if its module is in
-// this package's declaration graph, so the augmenting modules are imported
+// this package's declaration graph, so the augmenting module is imported
 // explicitly.
 import "./archive.js"; // ListingArchiveTypeOptions.feed
-import "./items.js"; // feed:items
 
 export type { ArchiveTypeFeed } from "./archive.js";
 export type { FeedScope } from "./scope.js";
 export type { FeedChannel, FeedFormat, FeedItem } from "./serialize.js";
 export { FEED_LIMIT } from "./items.js";
+export { feed } from "./events.js";
 
 /**
  * RSS 2.0 and Atom for every archive; a feed is its archive's own entry query,
@@ -21,6 +22,7 @@ export { FEED_LIMIT } from "./items.js";
  */
 export function feeds(): PluginDescriptor {
   return definePlugin("feeds", {
+    filters: [feed.items],
     setup: (ctx) => {
       ctx.filters.add(render.document, async (manifest, { data }, appCtx) => {
         const site = await loadSiteSettings(appCtx);

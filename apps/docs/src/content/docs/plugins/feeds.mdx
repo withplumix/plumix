@@ -149,25 +149,25 @@ It gap-fills. A theme or another plugin that already set an `alternate` of a giv
 
 ## Adjusting the items
 
-`feed:items` runs over the collected list before serialization, with the scope the items were collected for. Add, drop or re-order:
+The package root exports the plugin's one filter in a namespace, `feed`. `feed.items` is an async filter over the collected list, applied before serialization, whose input is the scope the items were collected for. Add, drop or re-order:
 
 ```ts no-typecheck
 import { definePlugin } from "plumix/plugin";
 
+import { feed } from "@plumix/plugin-feeds";
+
 export const featured = definePlugin("featured", {
   setup: (ctx) => {
-    ctx.addFilter("feed:items", (items, scope) =>
-      scope.archive.kind === "frontPage" ? items.slice(0, 5) : items,
+    ctx.filters.add(feed.items, (items, { archive }) =>
+      archive.kind === "frontPage" ? items.slice(0, 5) : items,
     );
   },
 });
 ```
 
-`scope.archive` names the archive as core's lookup does — `frontPage`, `entryType` (with its `entryType`), `term` (with its `taxonomy`), `author`, `date`, or `archiveType` (with the plugin archive's `name`) — and `scope.params` holds what its route captured.
+`archive` names the archive as core's lookup does — `frontPage`, `entryType` (with its `entryType`), `term` (with its `taxonomy`), `author`, `date`, or `archiveType` (with the plugin archive's `name`) — and `params` holds what its route captured.
 
-`feed:items` shapes one feed's list and leaves the archive's page alone. To change which entries an archive holds — on its page and in its feed alike — narrow its query with core's [`render.archiveEntries`](/routing/overview/#narrowing-an-archive) filter instead.
-
-The plugin's own package must be installed for the hook name to type-check — it declares `feed:items` on `FilterRegistry` through the single `plumix` augmentation specifier, the same way every plugin declares a hook.
+`feed.items` shapes one feed's list and leaves the archive's page alone. To change which entries an archive holds — on its page and in its feed alike — narrow its query with core's [`render.archiveEntries`](/routing/overview/#narrowing-an-archive) filter instead.
 
 ## Syndicating a plugin archive
 
@@ -207,7 +207,7 @@ Two archives can match one URL. A feed is served only where the feed route that 
 
 The plugin owns its paths through `registerPublicRoute`, the seam [Routing](/routing/overview/) documents — including why a registered route always answers and what that means for a path you did not claim. [Permalinks and Slugs](/routing/permalinks/) covers the URL shapes the feed paths hang off, and [Statuses and Publishing](/content-modelling/statuses/) covers which entries are in a feed at all.
 
-The site title and tagline a feed's channel carries come from the settings in [Configuration](/getting-started/configuration/), and [Overview](/plugins/overview/) covers installing a plugin and the version track this one is on. Its `feed:items` filter and its `feed` augmentation both reach a consumer through `declare module "plumix"`, the one specifier every extension point in [Content Modelling](/content-modelling/overview/) uses.
+The site title and tagline a feed's channel carries come from the settings in [Configuration](/getting-started/configuration/), and [Overview](/plugins/overview/) covers installing a plugin and the version track this one is on. Its `feed` option on an archive type reaches a consumer through `declare module "plumix"`, the one specifier every registration option in [Content Modelling](/content-modelling/overview/) uses, while `feed.items` is a value imported from the package.
 
 ## Next steps
 

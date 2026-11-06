@@ -68,7 +68,7 @@ function archiveStep(ctx: AppContext, type: string): BreadcrumbItem | null {
 
 /**
  * A plugin archive's hierarchy is its owner's to describe via
- * `seo:schema:piece`. Ancestors aren't walked: that would cost a DB round-trip
+ * `seo.schema.piece`. Ancestors aren't walked: that would cost a DB round-trip
  * per render.
  */
 function trailBelowHome(

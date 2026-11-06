@@ -1,21 +1,7 @@
 import type { TemplateData } from "plumix";
 import type { AppContext, ImageRoleName, OgImage } from "plumix/plugin";
 
-declare module "plumix" {
-  interface FilterRegistry {
-    /**
-     * Not called when the author chose an image. Returning an image outranks
-     * `featured` and the site default, so pass the value through on pages you
-     * don't handle.
-     */
-    "seo:og_image": (
-      image: OgImage | null,
-      data: TemplateData,
-      ctx: AppContext,
-      featured: OgImage | null,
-    ) => OgImage | null | Promise<OgImage | null>;
-  }
-}
+import { seoFilters } from "./events.js";
 
 function roleImage(data: TemplateData, role: ImageRoleName): OgImage | null {
   return data.kind === "entry" ? (data.entry.images[role] ?? null) : null;
@@ -46,13 +32,10 @@ export async function resolveOgImage(
   // named a picture has answered, and a generated card must not overrule them.
   if (chain.override) return { url: chain.override };
   const featured = roleImage(data, "featured");
-  const filtered = await ctx.hooks.applyFilter(
-    "seo:og_image",
-    null,
+  const filtered = await ctx.filters.apply(seoFilters.ogImage, null, {
     data,
-    ctx,
     featured,
-  );
+  });
   return (
     filtered ??
     featured ??
