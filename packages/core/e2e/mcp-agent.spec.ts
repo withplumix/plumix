@@ -16,10 +16,6 @@ interface Written {
   readonly status: string;
 }
 
-/**
- * Calls `name` on the site's MCP endpoint the way an agent's client does: with
- * its bearer token and no cookies.
- */
 function agent(request: APIRequestContext, secret: string) {
   const call = async (
     name: string,

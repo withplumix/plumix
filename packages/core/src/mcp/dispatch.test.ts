@@ -1212,6 +1212,21 @@ describe("MCP endpoint — dev trust", () => {
     });
   });
 
+  test("a loopback request with an unknown token is refused, not served as the first admin", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const h = await mcpHarness({ config: { plugins: [blog] } });
+    await h.factory.admin.create();
+
+    const res = await h.dispatch(
+      mcpRequest(
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        { url: "http://localhost/_plumix/mcp", secret: "pmx_unknown" },
+      ),
+    );
+
+    expect(res.status).toBe(401);
+  });
+
   test("a loopback request on a site with no admin reads as anonymous", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
     const h = await mcpHarness({ config: { plugins: [blog] } });
