@@ -8,13 +8,14 @@ import type {
 import type { ContractCase } from "./case.js";
 import { describeContract, drainKeys } from "./case.js";
 
-export interface ObjectStorageContractOptions {
+export interface ObjectStorageContractOptions<
+  TBucket extends ConnectedObjectStorage = ConnectedObjectStorage,
+> {
   /**
    * Bind a bucket for one case. Every case gets its own, so the returned
    * bucket must start empty and must not share objects with a previous one.
    */
-  readonly connect: () =>
-    ConnectedObjectStorage | Promise<ConnectedObjectStorage>;
+  readonly connect: () => TBucket | Promise<TBucket>;
   /**
    * Publicly addressable bucket, so `url` returns a string; a private bucket
    * with no custom domain gets `null` and the caller mints a proxied URL.
@@ -22,6 +23,11 @@ export interface ObjectStorageContractOptions {
   readonly publicUrls?: boolean;
   /** The bucket can mint presigned PUTs. Cases that need one are skipped without it. */
   readonly presign?: boolean;
+  /**
+   * Sends a browser's request where `bucket` answers its presigned PUTs. The
+   * upload case is skipped without it.
+   */
+  upload?(bucket: TBucket, request: Request): Promise<Response>;
 }
 
 type Case = ContractCase<ObjectStorageContractOptions>;
@@ -347,15 +353,48 @@ export const objectStorageContractCases: readonly Case[] = [
       expect(presigned.expiresAt).toBeLessThanOrEqual(now + expiresIn + 5);
     },
   },
+  {
+    name: "a browser's PUT to the presigned URL stores the object",
+    skip: (options) => {
+      if (!options.presign) return "the factory declares no presignPut";
+      return options.upload ? null : "the factory declares no upload";
+    },
+    run: async (options) => {
+      const storage = await options.connect();
+      if (!storage.presignPut || !options.upload) {
+        throw new Error("the factory declares an upload but cannot mint one");
+      }
+      const body = encoder.encode("uploaded");
+      const presigned = await storage.presignPut("upload/1.png", {
+        contentType: "image/png",
+        contentLength: body.byteLength,
+      });
+      // A relative URL is the site's own origin, as the browser resolves it.
+      const response = await options.upload(
+        storage,
+        new Request(new URL(presigned.url, "https://cms.example"), {
+          method: presigned.method,
+          headers: presigned.headers,
+          body,
+        }),
+      );
+      expect(response.ok).toBe(true);
+      const got = await getOrThrow(storage, "upload/1.png");
+      expect(got.contentType).toBe("image/png");
+      expect(decoder.decode(new Uint8Array(await got.arrayBuffer()))).toBe(
+        "uploaded",
+      );
+    },
+  },
 ];
 
 /**
  * Assert an implementation of the `storage:` slot satisfies its port. Call it
  * at the top level of a test file with a factory that binds a fresh bucket.
  */
-export function describeObjectStorageContract(
-  options: ObjectStorageContractOptions,
-): void {
+export function describeObjectStorageContract<
+  TBucket extends ConnectedObjectStorage,
+>(options: ObjectStorageContractOptions<TBucket>): void {
   describeContract(
     "object storage contract",
     objectStorageContractCases,

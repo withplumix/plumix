@@ -19,7 +19,11 @@ declares (`site.fetch.route(method, url, answer)`, a failure or a timeout includ
 test on any other request, so no test stubs the global `fetch`, `site.logger`, which records every
 line the site logged (`assertLogged(level, message)`, `assertNothingLogged(level)`), so no test
 builds a capturing logger, and `site.telemetry`, which records each request's telemetry snapshot
-in place of the config's consumers (`site.telemetry.span(name).attributes`). `plumix/test/conformance` holds the
+in place of the config's consumers (`site.telemetry.span(name).attributes`), and `site.storage`,
+the in-memory bucket a config that declares `storage` gets (`assertStored(key)`, `assertMissing(key)`),
+which answers a browser's presigned PUT through `site.storage.fetch(request)` and which the site
+serves at its URLs; a config that declares `kv` or `imageDelivery` gets an in-memory kv and an image
+delivery that serves the stored original. `plumix/test/conformance` holds the
 contract suites a runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`editor`, `mailbox`, `passkey`, `PNG_1X1`,
 the shared `runtimeSpec`) from `plumix/test/playwright`.
 

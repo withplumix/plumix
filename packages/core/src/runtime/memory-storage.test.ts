@@ -7,6 +7,7 @@ describeObjectStorageContract({
   connect: () => memoryStorage().connect({}),
   publicUrls: true,
   presign: true,
+  upload: (bucket, request) => bucket.fetch(request),
 });
 
 describe("memoryStorage public URLs", () => {
@@ -31,6 +32,35 @@ describe("memoryStorage public URLs", () => {
     });
     expect(pre.url).toBe("/_plumix/memory-storage/upload%2F1");
     expect(pre.headers).toEqual({ "content-type": "image/jpeg" });
+  });
+});
+
+describe("memoryStorage as an HTTP endpoint", () => {
+  test("serves a stored object at its URL, with its content type", async () => {
+    const s = memoryStorage().connect();
+    await s.put("a/b.png", "png", { contentType: "image/png" });
+
+    const response = await s.fetch(
+      new Request("https://cms.example/_plumix/memory-storage/a%2Fb.png"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(await response.text()).toBe("png");
+  });
+
+  test.each([
+    ["a key not stored", "/_plumix/memory-storage/missing"],
+    ["a path outside its URL base", "/elsewhere/a.png"],
+    ["its URL base alone", "/_plumix/memory-storage/"],
+  ])("answers 404 for %s", async (_, path) => {
+    const s = memoryStorage({
+      seed: { "a.png": new Uint8Array([1]) },
+    }).connect();
+
+    const response = await s.fetch(new Request(`https://cms.example${path}`));
+
+    expect(response.status).toBe(404);
   });
 });
 

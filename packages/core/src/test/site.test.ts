@@ -135,6 +135,70 @@ describe("the site's cdn", () => {
   });
 });
 
+/** A bucket the site must never reach: the test site holds its own. */
+const unreachableStorage = {
+  kind: "disk",
+  connect: () => {
+    throw new Error("the config's own storage was connected");
+  },
+};
+const storing = await testSite({
+  config: {
+    storage: unreachableStorage,
+    kv: {
+      kind: "redis",
+      connect: () => {
+        throw new Error("the config's own kv was connected");
+      },
+    },
+    imageDelivery: {
+      kind: "images",
+      url: () => {
+        throw new Error("the config's own image delivery was asked");
+      },
+    },
+  },
+});
+
+describe("the site's storage", () => {
+  test("holds in memory what the site stored, whatever the config names", async () => {
+    await storing.context.storage?.put("a.txt", "held");
+
+    await storing.storage.assertStored("a.txt");
+  });
+
+  test("starts the next test empty", async () => {
+    await storing.storage.assertMissing("a.txt");
+  });
+
+  test("is served at its URL through image delivery, as the stored original", async () => {
+    const { storage, imageDelivery } = storing.context;
+    await storage?.put("photo.png", "original", { contentType: "image/png" });
+    const source = await storage?.url("photo.png");
+
+    const page = await storing.visit(
+      imageDelivery?.url(source ?? "", { width: 640 }) ?? "",
+    );
+
+    page
+      .assertOk()
+      .assertHeader("content-type", "image/png")
+      .assertSee("original");
+  });
+});
+
+describe("the site's kv", () => {
+  test("holds in memory what the site put, whatever the config names", async () => {
+    await storing.context.kv?.put("greeting", "hello");
+
+    expect(await storing.context.kv?.get("greeting")).toBe("hello");
+  });
+
+  test("starts the next test empty", async () => {
+    expect(await storing.context.kv?.get("greeting")).toBeNull();
+  });
+});
+
 const deferring = await testSite({});
 
 describe("work a test defers", () => {
