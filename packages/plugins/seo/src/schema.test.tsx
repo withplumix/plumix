@@ -393,8 +393,8 @@ describe("the three filter tiers", () => {
   test("a plugin can drop a piece", async () => {
     const dropper = definePlugin("drop-breadcrumb", {
       setup: (ctx) => {
-        ctx.addFilter("seo:schema:needs", (needed, piece) =>
-          piece === "breadcrumb" ? false : needed,
+        ctx.filters.add(seo.schema.needs, (needed, { name }) =>
+          name === "breadcrumb" ? false : needed,
         );
       },
     });
@@ -410,7 +410,7 @@ describe("the three filter tiers", () => {
   test("a plugin can reshape one piece", async () => {
     const reshaper = definePlugin("reshape-publisher", {
       setup: (ctx) => {
-        ctx.addFilter("seo:schema:piece", (piece, name) =>
+        ctx.filters.add(seo.schema.piece, (piece, { name }) =>
           name === "publisher"
             ? { ...piece, sameAs: ["https://example.social/@demo"] }
             : piece,
@@ -434,7 +434,7 @@ describe("the three filter tiers", () => {
   test("a plugin can transform the whole graph", async () => {
     const transformer = definePlugin("add-node", {
       setup: (ctx) => {
-        ctx.addFilter("seo:schema:graph", (graph) => [
+        ctx.filters.add(seo.schema.graph, (graph) => [
           ...graph,
           {
             "@type": "Product",
@@ -456,7 +456,7 @@ describe("the three filter tiers", () => {
   test("an emptied graph emits no script", async () => {
     const silencer = definePlugin("silence", {
       setup: (ctx) => {
-        ctx.addFilter("seo:schema:graph", () => []);
+        ctx.filters.add(seo.schema.graph, () => []);
       },
     });
     const h = await createHarness([blogPlugin, seo(), silencer]);
@@ -471,9 +471,9 @@ describe("the three filter tiers", () => {
     const graph = vi.fn((pieces: readonly SchemaPiece[]) => pieces);
     const watcher = definePlugin("watch-graph", {
       setup: (ctx) => {
-        ctx.addFilter("seo:schema:needs", needs);
-        ctx.addFilter("seo:schema:piece", piece);
-        ctx.addFilter("seo:schema:graph", graph);
+        ctx.filters.add(seo.schema.needs, needs);
+        ctx.filters.add(seo.schema.piece, piece);
+        ctx.filters.add(seo.schema.graph, graph);
       },
     });
     const h = await createHarness([

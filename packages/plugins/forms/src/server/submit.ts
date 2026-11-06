@@ -30,6 +30,8 @@ import {
 import { CAPTCHA_FAILED, CONFIRMATION } from "../messages.js";
 import { validateAnswers } from "../validate.js";
 import { verifyBound } from "./binding.js";
+// Aliased: `form` here is the definition being submitted.
+import { form as formEvents } from "./events.js";
 import { buildLabelSnapshot } from "./labels.js";
 import { rejectPage } from "./reject-page.js";
 import { insertSubmission, recordHandlerFailure } from "./repository.js";
@@ -253,7 +255,7 @@ export function createSubmitHandler(
       status === "spam"
         ? stored
         : await runHandler(ctx, form, candidate, stored);
-    await ctx.hooks.doAction("form:submitted", submission, candidate);
+    await ctx.events.emit(formEvents.submitted, { submission, candidate });
 
     return wantsJson(request)
       ? jsonResponse({ ok: true, message: labelSourceText(CONFIRMATION) })

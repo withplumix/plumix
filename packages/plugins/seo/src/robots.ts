@@ -1,17 +1,8 @@
 import type { AppContext } from "plumix/plugin";
 
+import { seoFilters } from "./events.js";
 import { loadRobotsBody, loadSeoSettings } from "./settings.js";
 import { sitemapIndexUrl } from "./sitemap.js";
-
-declare module "plumix" {
-  interface FilterRegistry {
-    /**
-     * Adjust the generated `/robots.txt` body — add `Sitemap:` lines, a
-     * crawl-delay, or per-agent rules without owning the route.
-     */
-    "seo:robots-txt": (body: string) => string | Promise<string>;
-  }
-}
 
 /**
  * Training and assistant crawlers only; ordinary search indexers are blocked by
@@ -89,8 +80,8 @@ export async function handleRobotsTxt(ctx: AppContext): Promise<Response> {
     loadSeoSettings(ctx),
     loadRobotsBody(ctx),
   ]);
-  const body = await ctx.hooks.applyFilter(
-    "seo:robots-txt",
+  const body = await ctx.filters.apply(
+    seoFilters.robotsTxt,
     robotsTxt({
       indexable: settings.indexable,
       blockAiCrawlers: settings.blockAiCrawlers,

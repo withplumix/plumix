@@ -13,6 +13,7 @@ import type { SeoSitemapsOptions } from "./sitemap.js";
 // Also anchors the `registerSitemap` augmentation, as the imports below do
 // theirs.
 import { createRegisterSitemap } from "./contributed.js";
+import { seoFilters } from "./events.js";
 import { applySeoHead } from "./head.js";
 import { assertIndexViewsNameViews } from "./indexable.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
@@ -22,18 +23,11 @@ import {
   registerSeoSettings,
   registerSeoSettingsDefaults,
 } from "./settings.js";
-// A `declare module "plumix"` block reaches consumers only if its module is in
-// the declaration graph; without these, `@plumix/plugin-og` stops compiling.
-import "./llms.js"; // seo:llms-txt
-import "./og-image.js"; // seo:og_image
-import "./robots.js"; // seo:robots-txt
-import "./schema.js"; // seo:schema:needs, seo:schema:piece, seo:schema:graph
-import "./sitemap.js"; // seo:sitemap:urls
 
 /** Resolved against the consuming site, the way every plugin admin entry is. */
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-seo");
 
-// Re-exported so a subscriber to this plugin's `seo:og_image` filter names the
+// Re-exported so a subscriber to this plugin's `seo.ogImage` filter names the
 // value type from the package that declares the filter — one import pulls both.
 export type { OgImage } from "plumix";
 export type { SitemapSource } from "./contributed.js";
@@ -45,7 +39,7 @@ export type {
   SitemapUrl,
 } from "./sitemap.js";
 export { SITEMAP_PAGE_SIZE } from "./sitemap.js";
-// The set-wide cache tag, for a `seo:sitemap:urls` subscriber whose own data
+// The set-wide cache tag, for a `seo.sitemap.urls` subscriber whose own data
 // changed and which has to retire what it contributed rows to.
 export { SITEMAP_TAG } from "./routes.js";
 // The site-wide answers the head reads, for a plugin that has to end the
@@ -59,7 +53,7 @@ export { indexable } from "./indexable.js";
 export { SEO_META_KEYS } from "./overrides.js";
 export type { SeoMetaBoxOptions } from "./meta-box.js";
 // The structured-data vocabulary, for a plugin describing its own content
-// through the three `seo:schema:*` tiers, and the serializer behind it for one
+// through the three `seo.schema` tiers, and the serializer behind it for one
 // emitting a script of its own.
 export type { SchemaPiece, SchemaPieceName, SchemaType } from "./schema.js";
 export { DEFAULT_SCHEMA_TYPE, SCHEMA_TYPES } from "./schema.js";
@@ -75,7 +69,7 @@ export interface SeoOptions {
   readonly metaBox?: SeoMetaBoxOptions;
   /**
    * Serve `/llms.txt`. On by default; `false` leaves the path unclaimed, so it
-   * 404s or a site plugin can answer it, and `seo:llms-txt` never fires.
+   * 404s or a site plugin can answer it, and `seo.llmsTxt` is never applied.
    */
   readonly llmsTxt?: boolean;
   /**
@@ -86,13 +80,13 @@ export interface SeoOptions {
   readonly articleTags?: boolean;
   /**
    * Build the JSON-LD graph and append it as an `application/ld+json` script.
-   * On by default; `false` builds nothing, so no `seo:schema:*` filter fires.
+   * On by default; `false` builds nothing, so no `seo.schema` filter is applied.
    * {@link Breadcrumbs} and {@link breadcrumbTrail} still work.
    */
   readonly structuredData?: boolean;
   /**
    * The site's sitemap policy, per scope: the `changefreq` and `priority` its
-   * URLs default to. A URL's own values, and then the `seo:sitemap:urls`
+   * URLs default to. A URL's own values, and then the `seo.sitemap.urls`
    * filter, override it.
    */
   readonly sitemaps?: SeoSitemapsOptions;
@@ -104,18 +98,7 @@ export interface SeoOptions {
   readonly indexViews?: readonly string[];
 }
 
-/**
- * Every tag is gap-filled: a theme or plugin that set the same key keeps it,
- * so installing this overrides nothing.
- *
- * @example
- * ```ts
- * import { seo } from "@plumix/plugin-seo";
- *
- * plumix({ plugins: [seo()] });
- * ```
- */
-export function seo(
+function seoPlugin(
   options: SeoOptions = {},
 ): PluginDescriptor<
   { contributed: ContributedSitemap[] },
@@ -131,6 +114,15 @@ export function seo(
     // preview falls through to the admin's text-input fallback.
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
+    filters: [
+      seoFilters.ogImage,
+      seoFilters.robotsTxt,
+      seoFilters.llmsTxt,
+      seoFilters.sitemap.urls,
+      seoFilters.schema.needs,
+      seoFilters.schema.piece,
+      seoFilters.schema.graph,
+    ],
     // One list per install, not per `seo()` call: a descriptor is a value that
     // may be installed into more than one app.
     state: () => ({ contributed: [] as ContributedSitemap[] }),
@@ -167,3 +159,17 @@ export function seo(
     },
   });
 }
+
+/**
+ * Every tag is gap-filled: a theme or plugin that set the same key keeps it,
+ * so installing this overrides nothing. Also carries the plugin's filters,
+ * such as `seo.ogImage`.
+ *
+ * @example
+ * ```ts
+ * import { seo } from "@plumix/plugin-seo";
+ *
+ * plumix({ plugins: [seo()] });
+ * ```
+ */
+export const seo = Object.assign(seoPlugin, seoFilters);

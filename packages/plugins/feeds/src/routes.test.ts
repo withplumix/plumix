@@ -19,7 +19,7 @@ import { entries, entryTerm, terms } from "plumix/schema";
 import { createDispatcherHarness, fakeCdn } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
-import { feeds } from "./index.js";
+import { feed, feeds } from "./index.js";
 import { FEED_LIMIT } from "./items.js";
 
 /**
@@ -353,10 +353,34 @@ describe("feed routes", () => {
     res.assertStatus(404);
   });
 
-  test("the feed:items filter can adjust the item list", async () => {
+  test("another plugin's feed.items handler adds an item to the feed", async () => {
+    const pinned = definePlugin("pinned", {
+      setup: (ctx) => {
+        ctx.filters.add(feed.items, (items, { archive }) => [
+          ...items,
+          {
+            title: `Pinned to ${archive.kind}`,
+            link: "https://cms.example/pinned",
+            id: "https://cms.example/pinned",
+            updated: "2026-01-01T00:00:00.000Z",
+            published: "2026-01-01T00:00:00.000Z",
+          },
+        ]);
+      },
+    });
+    const h = await harness(blogPlugin, pinned);
+    await seedPost(h, "hello", "Hello World");
+
+    const body = await (await h.fetch("/feed")).text();
+
+    expect(body).toContain("Hello World");
+    expect(body).toContain("<title>Pinned to frontPage</title>");
+  });
+
+  test("the feed.items filter can empty the item list", async () => {
     const h = await harness(blogPlugin);
     await seedPost(h, "hello", "Hello World");
-    h.spyFilter("feed:items").override(() => []);
+    h.spyFilter(feed.items).override(() => []);
 
     const body = await (await h.fetch("/feed")).text();
     expect(body).not.toContain("<item>");
@@ -878,9 +902,9 @@ describe("term feed routes", () => {
     res.assertStatus(404);
   });
 
-  test("the feed:items filter applies to the term-scoped list", async () => {
+  test("the feed.items filter applies to the term-scoped list", async () => {
     const h = await seedTermFeed();
-    h.spyFilter("feed:items").override(() => []);
+    h.spyFilter(feed.items).override(() => []);
     const body = await (await h.fetch("/category/news/feed")).text();
     expect(body).not.toContain("<item>");
   });

@@ -12,7 +12,7 @@ import { OG_PANEL_ID } from "../chain-trace.js";
  * default exists. `supplied` means an earlier subscriber.
  */
 const OUTCOME_LABEL: Record<OgChainOutcome, string> = {
-  supplied: "Another seo:og_image subscriber",
+  supplied: "Another seo.ogImage subscriber",
   card: "Generated card",
   featured: "Featured photo",
   "site-default": "Site default, if one is set",

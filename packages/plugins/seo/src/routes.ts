@@ -37,7 +37,7 @@ const ROBOTS_PATH = "/robots.txt";
 const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
- * On every sitemap response and on `llms.txt`, so a `seo:sitemap:urls`
+ * On every sitemap response and on `llms.txt`, so a `seo.sitemap.urls`
  * subscriber can retire the whole set.
  */
 export const SITEMAP_TAG = "seo:sitemap";

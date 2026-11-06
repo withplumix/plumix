@@ -30,7 +30,7 @@ import {
 import { formLabelSnapshots, formSubmissions } from "../db/schema.js";
 import { defineForm } from "../define-form.js";
 import { tel } from "../fields.js";
-import { forms } from "../index.js";
+import { form, forms } from "../index.js";
 import { pageBreak } from "../steps.js";
 import { createFormsHarness, seedPageWithForm } from "../test/harness.js";
 
@@ -875,9 +875,9 @@ describe("the cross-cutting hooks", () => {
     definePlugin("forms_listener", { setup });
 
   const withListener = (
-    form: FormDefinition,
+    definition: FormDefinition,
     setup: (ctx: PluginSetupContext) => void,
-  ) => createFormsHarness([forms({ forms: [form] }), listener(setup)]);
+  ) => createFormsHarness([forms({ forms: [definition] }), listener(setup)]);
 
   test("a registered validator refuses a submission with its errors alongside another's", async () => {
     const harness = await withListener(signup, (ctx) => {
@@ -1041,10 +1041,10 @@ describe("the cross-cutting hooks", () => {
     expect(await rows(harness)).toHaveLength(0);
   });
 
-  test("form:submitted fires with the stored row", async () => {
+  test("form.submitted fires with the stored row", async () => {
     const seen: (number | null)[] = [];
     const harness = await withListener(signup, (ctx) => {
-      ctx.addAction("form:submitted", (submission) => {
+      ctx.events.on(form.submitted, ({ submission }) => {
         seen.push(submission?.id ?? null);
       });
     });
@@ -1055,7 +1055,7 @@ describe("the cross-cutting hooks", () => {
     expect(seen).toEqual([stored?.id]);
   });
 
-  test("form:submitted fires after the handler, carrying its failure", async () => {
+  test("form.submitted fires after the handler, carrying its failure", async () => {
     const order: string[] = [];
     const failing = defineForm("failing", {
       fields: [text("name")],
@@ -1065,7 +1065,7 @@ describe("the cross-cutting hooks", () => {
       },
     });
     const harness = await withListener(failing, (ctx) => {
-      ctx.addAction("form:submitted", (submission) => {
+      ctx.events.on(form.submitted, ({ submission }) => {
         order.push(`action:${submission?.handlerError ?? ""}`);
       });
     });
@@ -1078,7 +1078,7 @@ describe("the cross-cutting hooks", () => {
     expect(order).toEqual(["handler", "action:SMTP refused"]);
   });
 
-  test("form:submitted fires with no row for a form that stores nothing", async () => {
+  test("form.submitted fires with no row for a form that stores nothing", async () => {
     const seen: unknown[] = [];
     const ephemeral = defineForm("ephemeral", {
       fields: [text("name")],
@@ -1086,7 +1086,7 @@ describe("the cross-cutting hooks", () => {
       onSubmit: () => undefined,
     });
     const harness = await withListener(ephemeral, (ctx) => {
-      ctx.addAction("form:submitted", (submission, candidate) => {
+      ctx.events.on(form.submitted, ({ submission, candidate }) => {
         seen.push({ submission, form: candidate.form });
       });
     });
@@ -1099,10 +1099,10 @@ describe("the cross-cutting hooks", () => {
     expect(seen).toEqual([{ submission: null, form: "ephemeral" }]);
   });
 
-  test("form:submitted does not fire for a submission that was refused", async () => {
+  test("form.submitted does not fire for a submission that was refused", async () => {
     const fired = vi.fn();
     const harness = await withListener(signup, (ctx) => {
-      ctx.addAction("form:submitted", fired);
+      ctx.events.on(form.submitted, fired);
     });
 
     const response = await submitAsIsland(harness, { name: "" });

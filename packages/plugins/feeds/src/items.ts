@@ -7,6 +7,7 @@ import { entries } from "plumix/schema";
 
 import type { FeedScope } from "./scope.js";
 import type { FeedItem } from "./serialize.js";
+import { feed } from "./events.js";
 import { syndicatableEntryTypeNames } from "./scope.js";
 
 /**
@@ -21,20 +22,6 @@ export const FEED_LIMIT = 20;
  * message.
  */
 const UNTITLED_FEED_TITLE = "Untitled";
-
-declare module "plumix" {
-  interface FilterRegistry {
-    /**
-     * Adjust a feed's item list before serialization — add, drop, or re-order.
-     * Receives the {@link FeedScope} naming the archive the items were
-     * collected for.
-     */
-    "feed:items": (
-      items: readonly FeedItem[],
-      scope: FeedScope,
-    ) => readonly FeedItem[] | Promise<readonly FeedItem[]>;
-  }
-}
 
 /**
  * `null` means 404. The public-entries rule is ANDed on again so a query built
@@ -101,5 +88,5 @@ export async function collectFeedItems(
     });
   }
   const scope: FeedScope = { archive: target.archive, params: target.params };
-  return ctx.hooks.applyFilter("feed:items", items, scope);
+  return ctx.filters.apply(feed.items, items, scope);
 }

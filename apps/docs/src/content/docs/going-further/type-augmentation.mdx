@@ -120,7 +120,7 @@ export async function postReview(ctx: AppContext, posted: Review) {
 
 Another plugin imports `review` and subscribes in `setup` with `ctx.events.on(review.posted, handler)` or `ctx.filters.add(review.stars, handler)`, and TypeScript types the payload, the value and the input from the declaration. Two declarations sharing an id fail boot. Core's own subjects, such as `block`, `user` and `auth`, are declared the same way.
 
-The extension points that have not moved yet are still string names. `FilterRegistry` and `ActionRegistry` map such a name to its handler signature, and TypeScript types every `addFilter` or `addAction` call against it.
+No extension point core or a first-party plugin owns is a string name any more. `FilterRegistry` and `ActionRegistry` still map a string name to its handler signature, and TypeScript types every `addFilter` or `addAction` call against them, until the string API is removed.
 
 ### Meta
 

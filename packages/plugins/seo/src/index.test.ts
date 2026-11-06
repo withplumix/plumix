@@ -1,6 +1,12 @@
 import type { DocumentManifest, JsonValue } from "plumix";
 import type { DispatcherHarness, testSite } from "plumix/test";
-import { definePlugin, render } from "plumix/plugin";
+import {
+  defineFilter,
+  definePlugin,
+  HookRegistry,
+  installPlugins,
+  render,
+} from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 import { describe, expect, expectTypeOf, test } from "vitest";
@@ -354,7 +360,7 @@ describe("head meta", () => {
 describe("the og:image chain", () => {
   const card = definePlugin("og-card-test", {
     setup: (ctx) => {
-      ctx.addFilter("seo:og_image", () => ({
+      ctx.filters.add(seo.ogImage, () => ({
         url: "https://cms.example/card.png",
         width: 1200,
         height: 630,
@@ -532,7 +538,7 @@ describe("per-entry overrides", () => {
   test("an entry social image outranks a generated card and the site default", async () => {
     const card = definePlugin("og-card-test", {
       setup: (ctx) => {
-        ctx.addFilter("seo:og_image", () => ({
+        ctx.filters.add(seo.ogImage, () => ({
           url: "https://cms.example/card.png",
         }));
       },
@@ -1092,5 +1098,31 @@ describe("the plugin's procedures on a test site", () => {
     expectTypeOf<Rpc["seo"]["preview"]>()
       .parameter(0)
       .toEqualTypeOf<{ entryId: number }>();
+  });
+});
+
+describe("seo namespace", () => {
+  test.each([
+    "seo:og_image",
+    "seo:robots-txt",
+    "seo:llms-txt",
+    "seo:sitemap:urls",
+    "seo:schema:needs",
+    "seo:schema:piece",
+    "seo:schema:graph",
+  ] as const)("a plugin declaring %s again fails boot", async (id) => {
+    const rival = definePlugin("rival", {
+      filters: [defineFilter<undefined>(id, { sync: false })],
+      setup: () => undefined,
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [seo(), rival],
+    });
+
+    await expect(install).rejects.toThrow(
+      `Plugin "rival" registers filter "${id}" already registered by "seo".`,
+    );
   });
 });

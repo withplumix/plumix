@@ -18,7 +18,7 @@ declare module "plumix" {
 /** Which link of the chain the page's `og:image` came off. */
 export type OgChainOutcome =
   /**
-   * An earlier `seo:og_image` subscriber's image, which a card never outranks.
+   * An earlier `seo.ogImage` subscriber's image, which a card never outranks.
    */
   "supplied" | "card" | "featured" | "site-default";
 
@@ -44,7 +44,7 @@ export interface OgPageTrace extends JsonObject {
   readonly pageKind: string;
 }
 
-/** Recorded by the `seo:og_image` subscriber, with what it decided and why. */
+/** Recorded by the `seo.ogImage` subscriber, with what it decided and why. */
 export interface OgChainTrace extends JsonObject {
   readonly phase: "chain";
   readonly outcome: OgChainOutcome;

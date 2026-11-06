@@ -232,7 +232,7 @@ export interface SeoHeadOptions {
 
 /**
  * An error page gets the robots directive alone; `options.structuredData:
- * false` skips the graph and its `seo:schema:*` filters.
+ * false` skips the graph and its `seo.schema` filters.
  */
 export async function applySeoHead(
   manifest: DocumentManifest,

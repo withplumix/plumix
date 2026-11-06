@@ -14,7 +14,7 @@ import { Aside, Steps, TabItem, Tabs } from "@astrojs/starlight/components";
 
 The plugin exports a factory named `og`. It adds no database tables, so installing it needs no migration, and it takes four options — `renderer`, `fonts`, `preview` and `palette` — each with a default. `renderer` and `fonts` are read together: a renderer declares which font formats it parses, and the plugin hands it no others.
 
-A **route** at `/_plumix/og/card/<target>/<digest>.<ext>` renders one page's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo:og_image` subscriber** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens. The bundled template reads three of those tokens too, so a card looks like the rest of the site before you have declared a card at all.
+A **route** at `/_plumix/og/card/<target>/<digest>.<ext>` renders one page's card on the first request, writes it to your storage bucket and reads it back on every request after. A **`seo.ogImage` handler** puts that URL in the page's head, alongside `og:image:width` and `og:image:height` so a scraper can lay the preview out before it fetches a byte. A **theme's `ogCards` array** replaces the bundled template with cards of your own, declared beside its `templates` and styled in its own design tokens. The bundled template reads three of those tokens too, so a card looks like the rest of the site before you have declared a card at all.
 
 The URL is content-addressed. Its digest covers everything the card read — the entry's `updatedAt`, the card's own source, the font set, the theme's tokens — and the bytes are served `immutable`. It is also the only thing that makes X, Facebook and LinkedIn refetch an image they already hold: a purge reaches Cloudflare and stops there, while an edit publishes a _different_ URL.
 
@@ -142,7 +142,7 @@ card.forEntryType("post").define({
 
 Cropping is a feature of this plugin, and it takes its target size from the card rule that matched. A site that wants cropped share images but no generated cards still declares a rule, to say what shape to crop to.
 
-An image an earlier `seo:og_image` subscriber supplied is left exactly as it arrived — neither outranked nor cropped. A subscriber registered after `og()` sees the card and can replace it, so the array order decides who has the last word.
+An image an earlier `seo.ogImage` handler supplied is left exactly as it arrived — neither outranked nor cropped. A subscriber registered after `og()` sees the card and can replace it, so the array order decides who has the last word.
 
 Two things leave a page with no card in its head, and they do not go equally far.
 
@@ -313,7 +313,7 @@ Three surfaces show what a card looks like, and why a page has none.
 og({ preview: ["post", "page"] });
 ```
 
-Each named type gains a Social card box in the editor rail: the image the entry will be shared with, and a line naming which link produced it. It renders on request and reads nothing back from storage, so a draft has one too, and it sees through a pending autosave. A render costs CPU, so the box fetches once and has a **Refresh** button for after you save. An entry a scraper could never reach, such as one of a private type or behind an access policy, gets no card here either. With `remote({ url })` as the renderer, every preview posts the draft's title and card content to that endpoint. It shows what will be shared; it does not change it. There is no per-entry override. It also models this plugin's own contribution to the chain, so a `seo:og_image` subscriber registered after `og()` can change what the page advertises without changing what the box says.
+Each named type gains a Social card box in the editor rail: the image the entry will be shared with, and a line naming which link produced it. It renders on request and reads nothing back from storage, so a draft has one too, and it sees through a pending autosave. A render costs CPU, so the box fetches once and has a **Refresh** button for after you save. An entry a scraper could never reach, such as one of a private type or behind an access policy, gets no card here either. With `remote({ url })` as the renderer, every preview posts the draft's title and card content to that endpoint. It shows what will be shared; it does not change it. There is no per-entry override. It also models this plugin's own contribution to the chain, so a `seo.ogImage` handler registered after `og()` can change what the page advertises without changing what the box says.
 
 The list is not defaulted, because a meta box is registered against entry types by name and a name nothing registered fails the boot. Leave `preview` out and neither the box, the procedure behind it, nor the plugin's admin chunk is registered at all.
 

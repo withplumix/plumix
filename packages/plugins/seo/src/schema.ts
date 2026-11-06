@@ -9,6 +9,7 @@ import type { AppContext } from "plumix/plugin";
 
 import type { BreadcrumbItem } from "./breadcrumbs.js";
 import type { SiteRepresents } from "./settings.js";
+import { seoFilters } from "./events.js";
 import { serializeJsonLd } from "./json-ld.js";
 
 /** Other pieces reference it as `{ "@id": … }` rather than repeating it. */
@@ -29,40 +30,6 @@ export type SchemaPieceName =
   | "breadcrumb"
   | "image"
   | "author";
-
-declare module "plumix" {
-  interface FilterRegistry {
-    /**
-     * Only ever narrows. Dropping a piece another references leaves that
-     * reference dangling, so drop or reshape the referrer too.
-     */
-    "seo:schema:needs": (
-      needed: boolean,
-      piece: SchemaPieceName,
-      facts: PageFacts,
-      ctx: AppContext,
-    ) => boolean | Promise<boolean>;
-    /**
-     * Reshape one piece — add `sameAs` links to the publisher, correct an
-     * article's `@type`, attach a `speakable`. Keep the `@id`: it is what the
-     * rest of the graph points at.
-     */
-    "seo:schema:piece": (
-      piece: SchemaPiece,
-      name: SchemaPieceName,
-      facts: PageFacts,
-      ctx: AppContext,
-    ) => SchemaPiece | Promise<SchemaPiece>;
-    /**
-     * Runs after the per-piece tiers. An empty array emits no script at all.
-     */
-    "seo:schema:graph": (
-      graph: readonly SchemaPiece[],
-      facts: PageFacts,
-      ctx: AppContext,
-    ) => readonly SchemaPiece[] | Promise<readonly SchemaPiece[]>;
-  }
-}
 
 /** Article subtypes only, so the piece keeps its `@id` and references. */
 export const SCHEMA_TYPES = [
@@ -257,19 +224,16 @@ export async function schemaGraph(
 ): Promise<readonly SchemaPiece[]> {
   const kept: SchemaPiece[] = [];
   for (const [name, built] of buildSchemaGraph(inputs)) {
-    const needed = await ctx.hooks.applyFilter(
-      "seo:schema:needs",
-      true,
+    const needed = await ctx.filters.apply(seoFilters.schema.needs, true, {
       name,
       facts,
-      ctx,
-    );
+    });
     if (!needed) continue;
     kept.push(
-      await ctx.hooks.applyFilter("seo:schema:piece", built, name, facts, ctx),
+      await ctx.filters.apply(seoFilters.schema.piece, built, { name, facts }),
     );
   }
-  return ctx.hooks.applyFilter("seo:schema:graph", kept, facts, ctx);
+  return ctx.filters.apply(seoFilters.schema.graph, kept, { facts });
 }
 
 /**

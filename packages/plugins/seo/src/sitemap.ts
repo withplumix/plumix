@@ -19,6 +19,7 @@ import type { ContributedSitemap, SitemapSource } from "./contributed.js";
 import type { SeoSettings } from "./settings.js";
 import { entryImages } from "./entry-images.js";
 import { SeoError } from "./errors.js";
+import { seoFilters } from "./events.js";
 import { SEO_META_KEYS } from "./overrides.js";
 import { publicTargets } from "./scope.js";
 
@@ -66,18 +67,6 @@ export interface SitemapUrl {
    * find them without crawling the page for `<img>` tags.
    */
   readonly images?: readonly string[];
-}
-
-declare module "plumix" {
-  interface FilterRegistry {
-    /** Runs even on an empty page, so a subscriber can inject rows. */
-    "seo:sitemap:urls": (
-      urls: readonly SitemapUrl[],
-      scope: SitemapScopeRef,
-      page: number,
-      ctx: AppContext,
-    ) => readonly SitemapUrl[] | Promise<readonly SitemapUrl[]>;
-  }
 }
 
 /**
@@ -487,7 +476,7 @@ function withPolicy(url: SitemapUrl, policy: SitemapScopePolicy): SitemapUrl {
   };
 }
 
-/** The `seo:sitemap:urls` filter has the last word on every value. */
+/** The `seo.sitemap.urls` filter has the last word on every value. */
 export async function collectSitemapUrls(
   ctx: AppContext,
   scope: SitemapScope,
@@ -495,7 +484,10 @@ export async function collectSitemapUrls(
 ): Promise<readonly SitemapUrl[]> {
   const provided = await scope.urls(ctx, page);
   const urls = provided.map((url) => withPolicy(url, scope.policy));
-  return ctx.hooks.applyFilter("seo:sitemap:urls", urls, scope.ref, page, ctx);
+  return ctx.filters.apply(seoFilters.sitemap.urls, urls, {
+    scope: scope.ref,
+    page,
+  });
 }
 
 /** The sub-sitemaps the index lists, one per page of each scope. */

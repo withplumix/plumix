@@ -3,6 +3,8 @@ import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
+import { seo } from "@plumix/plugin-seo";
+
 import type { CardRule } from "./card.js";
 import type { CardRenderer } from "./renderer.js";
 import { card, cardKey } from "./index.js";
@@ -406,7 +408,7 @@ describe("the og:image precedence chain", () => {
       before: [
         definePlugin("test_share", {
           setup: (ctx) => {
-            ctx.addFilter("seo:og_image", () => ({ url: chosen }));
+            ctx.filters.add(seo.ogImage, () => ({ url: chosen }));
           },
         }),
       ],

@@ -182,9 +182,15 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "the payload of the `feed:items` filter, for a plugin subscribing " +
-          "to it",
+          "the value and input of the `feed.items` filter, for a plugin " +
+          "typing a handler apart from the call that subscribes it",
         names: ["FeedItem", "FeedScope"],
+      },
+      {
+        reason:
+          "the plugin's filter, which another plugin subscribes to with " +
+          "`ctx.filters.add`",
+        names: ["feed"],
       },
       {
         reason:
@@ -238,8 +244,14 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "a submission as a registered validator and the `form:submitted` " +
-          "hook receive it, the validator a plugin registers, and the " +
+          "the plugin's event, which another plugin subscribes to with " +
+          "`ctx.events.on`",
+        names: ["form"],
+      },
+      {
+        reason:
+          "a submission as a registered validator and the `form.submitted` " +
+          "event receive it, the validator a plugin registers, and the " +
           "README's `formatSubmission` that renders one for a notification",
         names: [
           "FormValidatorRegistration",
@@ -478,19 +490,22 @@ export const ROSTER: Readonly<
   "@plumix/plugin-seo": {
     ".": [
       {
-        reason: "the factory a site config installs and its options",
+        reason:
+          "the factory a site config installs and its options; the factory " +
+          "also carries the plugin's filters (`seo.ogImage`, …), which " +
+          "another plugin subscribes to with `ctx.filters.add`",
         names: ["seo", "SeoOptions", "SeoMetaBoxOptions"],
       },
       {
         reason:
-          "the value type of the `seo:og_image` filter, from the package " +
+          "the value type of the `seo.ogImage` filter, from the package " +
           "that declares it (plugin-og subscribes)",
         names: ["OgImage"],
       },
       {
         reason:
           "the sitemap: the source a plugin hands `ctx.registerSitemap`, " +
-          "the `seo:sitemap:urls` payload and the scope it names, its page " +
+          "the `seo.sitemap.urls` value and the scope it names, its page " +
           "size, and the tag a subscriber retires its rows under",
         names: [
           "SitemapSource",
@@ -527,7 +542,7 @@ export const ROSTER: Readonly<
       {
         reason:
           "the structured-data vocabulary for a plugin describing its " +
-          "content through the `seo:schema:*` filters, and the serializer " +
+          "content through the `seo.schema` filters, and the serializer " +
           "for one emitting a script of its own",
         names: [
           "SchemaPiece",

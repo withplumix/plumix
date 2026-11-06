@@ -6,9 +6,10 @@ import {
 } from "plumix/plugin";
 import { loadOnce } from "plumix/support";
 
-// Side-effect imports keep these augmentations in the declaration graph; tsc
+import { seo } from "@plumix/plugin-seo";
+
+// A side-effect import keeps this augmentation in the declaration graph; tsc
 // drops value-only edges.
-import "@plumix/plugin-seo";
 import "./chain-trace.js";
 
 import type { CardInputs } from "./card-identity.js";
@@ -188,7 +189,7 @@ export function og(
       // Subscribed whatever the renderer makes: the featured-photo crop needs
       // no rasterizer, so it is the one link of the chain a deploy that cannot
       // render a card still gets.
-      ctx.addFilter("seo:og_image", (image, data, appCtx, featured) =>
+      ctx.filters.add(seo.ogImage, (image, { data, featured }, appCtx) =>
         pageOgImage({
           image,
           featured,
