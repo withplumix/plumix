@@ -133,7 +133,7 @@ function InviteUserRoute(): ReactNode {
 
   const form = useForm({
     resolver: valibotResolver(inviteFormSchema),
-    defaultValues: { email: "", name: "", role: "subscriber" },
+    defaultValues: { email: "", name: "", role: "member" },
     mode: "onBlur",
   });
 

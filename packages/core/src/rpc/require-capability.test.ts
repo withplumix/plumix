@@ -3,7 +3,11 @@ import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
 import { entryCapability } from "../access/contract/capability.js";
-import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
+import { HookRegistry } from "../hooks/registry.js";
+import { createPluginRegistry } from "../plugin/registry.js";
+import { installPlugins } from "../runtime/install-plugins.js";
+import { pooledEntryTypesPlugin } from "../test/pooled-entry-types.js";
+import { CONTRIBUTOR_ROLE } from "../test/roles.js";
 import { createRpcHarness } from "../test/rpc.js";
 import { expectError } from "../test/spies.js";
 import { authenticated } from "./authenticated.js";
@@ -60,9 +64,14 @@ describe("requireCapability middleware", () => {
   });
 
   test("gates a reference under the namespace its type pools into", async () => {
+    const { registry } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [pooledEntryTypesPlugin],
+      registry: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     const h = await createRpcHarness({
       authAs: "contributor",
-      plugins: await pooledEntryTypeRegistry(),
+      plugins: registry,
     });
     const router = {
       create: base

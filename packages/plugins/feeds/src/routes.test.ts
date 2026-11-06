@@ -1870,7 +1870,7 @@ describe("a feed at the edge", () => {
       config: { plugins: [postsWithAccess, feeds()] },
     });
     await seedPolicied(h);
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
     (await h.fetch("/post/feed")).assertStatus(200);
     await h.drainDeferred();
     cdn.assertStored("/post/feed");

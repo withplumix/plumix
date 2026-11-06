@@ -20,7 +20,7 @@ export const SEO_ROBOTS_GROUP = "seo_robots";
 
 /**
  * Every group is site-wide configuration, so every one carries the gate the
- * settings RPC enforces. A contributor reaching the page sees nothing.
+ * settings RPC enforces. An author reaching the page sees nothing.
  */
 const SETTINGS_CAPABILITY = "settings:manage";
 

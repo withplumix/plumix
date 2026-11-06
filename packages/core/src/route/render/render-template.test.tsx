@@ -692,7 +692,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
 
   describe("the admin bar's Edit link follows canEditEntry", () => {
     async function renderPostAs(
-      viewerRole: "contributor" | "editor",
+      viewerRole: "author" | "editor",
       authoredBy: "viewer" | "other",
     ): Promise<{ body: string; entryId: number }> {
       const theme = defineTheme({
@@ -725,16 +725,16 @@ describe("resolvePublicRoute — single entry through theme", () => {
       return { body: await response.text(), entryId: post.id };
     }
 
-    test("a contributor viewing their own post is offered Edit", async () => {
-      const { body, entryId } = await renderPostAs("contributor", "viewer");
+    test("an author viewing their own post is offered Edit", async () => {
+      const { body, entryId } = await renderPostAs("author", "viewer");
 
       expect(body).toContain(
         `href="/_plumix/admin/entries/posts/${entryId}/edit"`,
       );
     });
 
-    test("a contributor viewing another author's post is not offered Edit", async () => {
-      const { body, entryId } = await renderPostAs("contributor", "other");
+    test("an author viewing another author's post is not offered Edit", async () => {
+      const { body, entryId } = await renderPostAs("author", "other");
 
       expect(body).toContain('data-testid="plumix-admin-bar"');
       expect(body).not.toContain(

@@ -63,13 +63,13 @@ describe("resolveAccess — built-in policies", () => {
       gate: { type: "allow" },
     });
     await expect(
-      resolveAccess(ctx(user("subscriber")), anonymousPolicy),
+      resolveAccess(ctx(user("member")), anonymousPolicy),
     ).resolves.toEqual({ segment: "anonymous", gate: { type: "allow" } });
   });
 
   it("lets any authenticated principal through the authenticated policy", async () => {
     await expect(
-      resolveAccess(ctx(user("subscriber")), authenticatedPolicy),
+      resolveAccess(ctx(user("member")), authenticatedPolicy),
     ).resolves.toEqual({ segment: "authenticated", gate: { type: "allow" } });
   });
 
@@ -157,7 +157,7 @@ describe("resolveAccess — custom resolvers (open logic, closed output)", () =>
       resolve: (c) => (c.user ? grant("members") : redirectToLogin()),
     });
     await expect(
-      resolveAccess(ctx(user("subscriber")), membersOnly),
+      resolveAccess(ctx(user("member")), membersOnly),
     ).resolves.toEqual({ segment: "members", gate: { type: "allow" } });
   });
 
@@ -172,10 +172,10 @@ describe("resolveAccess — custom resolvers (open logic, closed output)", () =>
       },
     });
     await expect(
-      resolveAccess(ctx(user("subscriber", { active: true })), membersOnly),
+      resolveAccess(ctx(user("member", { active: true })), membersOnly),
     ).resolves.toEqual({ segment: "members", gate: { type: "allow" } });
     await expect(
-      resolveAccess(ctx(user("subscriber", { active: false })), membersOnly),
+      resolveAccess(ctx(user("member", { active: false })), membersOnly),
     ).resolves.toEqual({
       segment: "authenticated",
       gate: { type: "challenge", kind: "subscribe" },
@@ -187,9 +187,9 @@ describe("resolveAccess — custom resolvers (open logic, closed output)", () =>
       segments: ["members"],
       resolve: () => grant("vip"),
     });
-    await expect(
-      resolveAccess(ctx(user("subscriber")), policy),
-    ).rejects.toThrow(AccessError);
+    await expect(resolveAccess(ctx(user("member")), policy)).rejects.toThrow(
+      AccessError,
+    );
   });
 
   it("allows a grant of any built-in segment without declaring it", async () => {
@@ -206,9 +206,10 @@ describe("resolveAccess — custom resolvers (open logic, closed output)", () =>
     const policy = definePolicy({
       resolve: (c) => (c.user ? grant("private") : redirectToLogin()),
     });
-    await expect(
-      resolveAccess(ctx(user("subscriber")), policy),
-    ).resolves.toEqual({ segment: "private", gate: { type: "allow" } });
+    await expect(resolveAccess(ctx(user("member")), policy)).resolves.toEqual({
+      segment: "private",
+      gate: { type: "allow" },
+    });
   });
 });
 
@@ -232,7 +233,7 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
 
   it("grants an active entitlement the shared entitlement segment (full render)", async () => {
     await expect(
-      resolveAccess(ctx(user("subscriber", { premium: true })), paywall),
+      resolveAccess(ctx(user("member", { premium: true })), paywall),
     ).resolves.toEqual({
       segment: "entitlement:premium",
       gate: { type: "allow" },
@@ -241,10 +242,10 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
 
   it("soft-challenges a lapsed principal at their own segment (teaser variant)", async () => {
     // Two un-entitled visitors of the same kind share one teaser variant: a
-    // lapsed subscriber caches under `authenticated`, an anonymous bot under
+    // lapsed member caches under `authenticated`, an anonymous bot under
     // `anonymous` — both distinct from the entitled `entitlement:premium`.
     await expect(
-      resolveAccess(ctx(user("subscriber", { premium: false })), paywall),
+      resolveAccess(ctx(user("member", { premium: false })), paywall),
     ).resolves.toEqual({
       segment: "authenticated",
       gate: { type: "challenge", kind: "subscribe", soft: true },
@@ -257,7 +258,7 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
 
   it("memoizes the entitlement check within a request", async () => {
     let lookups = 0;
-    const perRequest = ctx(user("subscriber", { premium: true }));
+    const perRequest = ctx(user("member", { premium: true }));
     const policy = definePolicy({
       segments: [entitlementSegment("premium")],
       resolve: (c) =>
@@ -284,9 +285,9 @@ describe("resolveAccess — entitlement segments (paywall / membership)", () => 
       segments: [entitlementSegment("premium")],
       resolve: () => entitlement("pro"),
     });
-    await expect(
-      resolveAccess(ctx(user("subscriber")), policy),
-    ).rejects.toThrow(AccessError);
+    await expect(resolveAccess(ctx(user("member")), policy)).rejects.toThrow(
+      AccessError,
+    );
   });
 });
 
@@ -308,7 +309,7 @@ describe("challenge — hard vs soft", () => {
 
   it("keeps a hard challenge gate flag-free through resolution", async () => {
     const policy = definePolicy({ resolve: () => challenge("forbidden") });
-    const { gate } = await resolveAccess(ctx(user("subscriber")), policy);
+    const { gate } = await resolveAccess(ctx(user("member")), policy);
     expect(gate).toEqual({ type: "challenge", kind: "forbidden" });
   });
 });

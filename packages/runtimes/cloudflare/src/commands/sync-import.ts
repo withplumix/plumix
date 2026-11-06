@@ -310,7 +310,7 @@ async function resolveAuthors(
         slug: sqlLiteral(await freeSlug(db, String(author.slug), claimed)),
         name: sqlLiteral(author.name ?? null),
         avatar_url: sqlLiteral(author.avatar_url ?? null),
-        role: sqlLiteral(author.role ?? "subscriber"),
+        role: sqlLiteral(author.role ?? "member"),
         meta: sqlLiteral("{}"),
         disabled_at: String(Math.floor(now.getTime() / 1000)),
       }),

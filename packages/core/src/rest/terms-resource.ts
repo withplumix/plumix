@@ -9,7 +9,7 @@ import { projectTerm } from "./projection.js";
 import { readPagination } from "./schemas.js";
 
 /**
- * Only route public taxonomies here: subscribers hold `term:<taxonomy>:read`
+ * Only route public taxonomies here: members hold `term:<taxonomy>:read`
  * for every taxonomy. Every failure collapses to 404.
  */
 function termNotFound(error: unknown, errors: RestErrors): Error | undefined {

@@ -129,9 +129,9 @@ describe("the admin command palette", () => {
   });
 
   test("does not rank body text for a caller who cannot edit the type", async () => {
-    // Every subscriber holds `entry:<type>:read`, and a ranked hit reveals
+    // Every member holds `entry:<type>:read`, and a ranked hit reveals
     // body words that core's title match never did.
-    const reader = await h.seedUser("subscriber");
+    const reader = await h.seedUser("member");
     await withBody("hydroponics", { slug: "body" });
     await seed({ title: "Hydroponics", slug: "title" });
 

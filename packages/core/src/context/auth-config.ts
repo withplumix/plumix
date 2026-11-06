@@ -33,7 +33,7 @@ export type BootstrapVia = "passkey" | "first-method-wins";
 export interface PlumixSelfSignupConfig<TRole extends string = string> {
   /**
    * Never defaulted: it decides what "anyone with an email" gets, so prefer
-   * `"subscriber"`. A domain in `allowedDomains` still gets its own role.
+   * `"member"`. A domain in `allowedDomains` still gets its own role.
    */
   readonly defaultRole: TRole;
 }

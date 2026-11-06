@@ -8,6 +8,7 @@ import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
 import { defaultTestTheme } from "../../../test/default-theme.js";
 import { currentEtag } from "../../../test/entry-etag.js";
+import { CONTRIBUTOR_ROLE } from "../../../test/roles.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 /** Minimal taxonomy registry so `entry.update` accepts a `category` term patch. */
@@ -19,8 +20,8 @@ function categoryRegistry() {
     toRegisteredTermTaxonomy(name, { label: name }, "test"),
   );
   for (const [action, roles] of [
-    ["read", ["subscriber", "contributor", "author", "editor", "admin"]],
-    ["assign", ["contributor", "author", "editor", "admin"]],
+    ["read", ["member", "author", "editor", "admin"]],
+    ["assign", ["author", "editor", "admin"]],
     ["edit", ["editor", "admin"]],
   ] as const satisfies readonly [string, readonly DefaultRole[]][]) {
     registry.capabilities.set(`term:${name}:${action}`, {
@@ -79,7 +80,10 @@ describe("entry.duplicate", () => {
   });
 
   test("copies an entry holding blocks for a writer without edit_layout", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     const content = {
       version: "plumix.v2" as const,
       blocks: [
@@ -252,8 +256,8 @@ describe("entry.duplicate", () => {
     expect(second.slug).not.toBe(first.slug);
   });
 
-  test("contributor without the type's create cap is rejected", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("a member without the type's create cap is rejected", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const source = await h.factory.published.create({
       authorId: h.user.id,
       title: "Locked",

@@ -17,7 +17,7 @@ import { withUser } from "./with-user.js";
 // a refactor must not strip the tokenScopes intersection.
 
 function buildCtx(args: {
-  role: "subscriber" | "contributor" | "author" | "editor" | "admin";
+  role: "member" | "author" | "editor" | "admin";
   tokenScopes?: readonly string[] | null;
   plugins?: PluginRegistry;
 }) {
@@ -59,7 +59,7 @@ describe("auth.can — tokenScopes narrowing", () => {
 
   test("scoped token can't escalate beyond the role's caps", () => {
     const ctx = buildCtx({
-      role: "subscriber",
+      role: "member",
       tokenScopes: ["settings:manage", "user:delete"],
     });
     // Token claims `settings:manage` but the role doesn't grant it.
@@ -113,10 +113,10 @@ describe("auth.can — capability references", () => {
     const plugins = createPluginRegistry();
     plugins.capabilities.set("term:tag:assign", {
       name: "term:tag:assign",
-      grantTo: ["contributor", "author", "editor", "admin"],
+      grantTo: ["author", "editor", "admin"],
       registeredBy: null,
     });
-    const ctx = buildCtx({ role: "contributor", plugins });
+    const ctx = buildCtx({ role: "author", plugins });
     expect(ctx.auth.can(termCapability("tag", "assign"))).toBe(true);
   });
 });

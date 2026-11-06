@@ -26,12 +26,12 @@ describe("moderating a comment", () => {
     expect(approved).toEqual({ status: "approved" });
   });
 
-  test("a subscriber is refused", async () => {
+  test("a member is refused", async () => {
     const post = await site.factory.published.create({ type: "post" });
     const comment = await site.factory.comment.create({ entryId: post.id });
 
     const approving = site
-      .actingAs("subscriber")
+      .actingAs("member")
       .rpc.comments.approve({ id: comment.id });
 
     await expect(approving).rejects.toMatchObject({

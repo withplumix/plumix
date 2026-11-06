@@ -413,7 +413,7 @@ describe("oauth callback route", () => {
       config: {
         auth: {
           oauth: { providers: TEST_OAUTH },
-          allowedDomains: { "example.com": "subscriber" },
+          allowedDomains: { "example.com": "member" },
         },
       },
     });
@@ -534,7 +534,7 @@ describe("oauth callback route", () => {
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
     });
     await h.factory.user.create({
-      role: "subscriber",
+      role: "member",
       email: "alice@example.com",
     });
     const state = await seedState(h, "github", "v-rt", "/account/saved");
@@ -571,7 +571,7 @@ describe("oauth callback route", () => {
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
     });
     await h.factory.user.create({
-      role: "subscriber",
+      role: "member",
       email: "alice@example.com",
     });
     // A hand-rolled / tampered row carrying an off-origin destination must
@@ -694,13 +694,13 @@ describe("oauth callback route", () => {
       config: {
         auth: {
           oauth: { providers: TEST_OAUTH },
-          selfSignup: { defaultRole: "subscriber" },
+          selfSignup: { defaultRole: "member" },
         },
       },
     });
     await h.seedUser("admin");
     // The domain isn't listed, so a closed allowlist would reject, but open
-    // self-signup mints the user at "subscriber".
+    // self-signup mints the user at "member".
 
     const state = await seedState(h, "google", "v-self");
 
@@ -729,7 +729,7 @@ describe("oauth callback route", () => {
     const created = await h.db.query.users.findFirst({
       where: eq(users.email, "visitor@anywhere.test"),
     });
-    expect(created?.role).toBe("subscriber");
+    expect(created?.role).toBe("member");
   });
 
   test("unknown domain redirects to login with domain_not_allowed", async () => {
@@ -823,7 +823,7 @@ describe("oauth callback route", () => {
       config: { auth: { oauth: { providers: TEST_OAUTH } } },
     });
     await h.factory.user.create({
-      role: "subscriber",
+      role: "member",
       email: "reader@example.com",
     });
 
@@ -894,7 +894,7 @@ describe("oauth callback route", () => {
       config: {
         auth: {
           oauth: { providers: TEST_OAUTH },
-          allowedDomains: { "example.com": "subscriber" },
+          allowedDomains: { "example.com": "member" },
         },
       },
     });
@@ -931,7 +931,7 @@ describe("oauth callback route", () => {
     const created = await h.db.query.users.findFirst({
       where: eq(users.email, "newcomer@example.com"),
     });
-    expect(created?.role).toBe("subscriber");
+    expect(created?.role).toBe("member");
     expect(created?.emailVerifiedAt).not.toBeNull();
   });
 
@@ -940,7 +940,7 @@ describe("oauth callback route", () => {
       config: {
         auth: {
           oauth: { providers: TEST_OAUTH },
-          allowedDomains: { "example.com": "subscriber" },
+          allowedDomains: { "example.com": "member" },
         },
       },
     });

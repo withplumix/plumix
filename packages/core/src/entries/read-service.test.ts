@@ -75,8 +75,8 @@ const ENVELOPE_TERMS = [
 ];
 
 describe("listEntries", () => {
-  test("clamps a subscriber to published entries by default", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("clamps a member to published entries by default", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
 
@@ -112,9 +112,9 @@ describe("listEntries", () => {
     expect(rows.map((r) => r.slug)).toEqual(["pub"]);
   });
 
-  test("shows a contributor their own drafts beside published entries, not others' drafts", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
-    const other = await h.factory.user.create({ role: "contributor" });
+  test("shows an author their own drafts beside published entries, not others' drafts", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const other = await h.factory.user.create({ role: "author" });
     await h.factory.published.create({ authorId: other.id, slug: "pub" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
     await h.factory.draft.create({ authorId: other.id, slug: "theirs" });
@@ -129,9 +129,9 @@ describe("listEntries", () => {
     expect(rows.map((r) => r.slug).sort()).toEqual(["mine", "pub"]);
   });
 
-  test("a contributor filtering to drafts gets their own, not an empty list", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
-    const other = await h.factory.user.create({ role: "contributor" });
+  test("an author filtering to drafts gets their own, not an empty list", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const other = await h.factory.user.create({ role: "author" });
     await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "mine" });
     await h.factory.draft.create({ authorId: other.id, slug: "theirs" });
@@ -144,9 +144,9 @@ describe("listEntries", () => {
     expect(rows.map((r) => r.slug)).toEqual(["mine"]);
   });
 
-  test("a contributor filtering to trash sees their own bin, as getEntry already allowed", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
-    const other = await h.factory.user.create({ role: "contributor" });
+  test("an author filtering to trash sees their own bin, as getEntry already allowed", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
+    const other = await h.factory.user.create({ role: "author" });
     await h.factory.entry.create({
       authorId: h.user.id,
       slug: "mine",
@@ -166,8 +166,8 @@ describe("listEntries", () => {
     expect(rows.map((r) => r.slug)).toEqual(["mine"]);
   });
 
-  test("silently clamps — a subscriber asking for drafts gets an empty list", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("silently clamps — a member asking for drafts gets an empty list", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await h.factory.draft.create({ authorId: h.user.id, slug: "secret" });
 
     const rows = await listEntries(
@@ -237,7 +237,7 @@ describe("listEntries", () => {
   });
 
   test("throws forbidden when the caller can't read the type", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
 
     const error = await listEntries(
       authedCtx(h),
@@ -265,7 +265,7 @@ describe("listEntries", () => {
 
 describe("getEntry", () => {
   test("returns a published entry resolved with meta + terms", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     const entry = await h.factory.published.create({
       authorId: h.user.id,
       slug: "pub",
@@ -294,8 +294,8 @@ describe("getEntry", () => {
     expect(error).toMatchObject({ data: { code: "not_found", entryId: 9999 } });
   });
 
-  test("hides a draft from a subscriber as not_found, not forbidden", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("hides a draft from a member as not_found, not forbidden", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const draft = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "secret",

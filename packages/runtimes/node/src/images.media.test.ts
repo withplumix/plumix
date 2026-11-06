@@ -29,7 +29,7 @@ test("a disk-stored upload is transformed through the media route, gated exactly
     storage,
     config: { plugins: [media()], imageDelivery: slot },
   });
-  const user = await h.seedUser("contributor");
+  const user = await h.seedUser("author");
   const png = await sharp({
     create: { width: 900, height: 600, channels: 3, background: "#3c3" },
   })

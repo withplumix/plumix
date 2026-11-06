@@ -602,7 +602,7 @@ describe("a card at the edge", () => {
         },
       },
     });
-    const reader = await harness.seedUser("subscriber");
+    const reader = await harness.seedUser("member");
 
     const response = await harness.fetch(new URL(STORED).pathname, {
       as: reader,

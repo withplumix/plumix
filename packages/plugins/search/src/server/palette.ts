@@ -21,7 +21,7 @@ import { toMatchExpression } from "./query-text.js";
 const SCAN_LIMIT = 50;
 
 /**
- * Ranks on **edit** reach, stricter than core: `read` reaches subscribers, who
+ * Ranks on **edit** reach, stricter than core: `read` reaches members, who
  * could probe hidden bodies word by word.
  */
 export function registerAdminSearch(

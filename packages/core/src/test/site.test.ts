@@ -197,7 +197,7 @@ describe("a site bound to a role and kept across tests", () => {
 
 describe("a role without the capability", () => {
   test("is refused, as it is over the wire", async () => {
-    const creating = calling.actingAs("subscriber").rpc.entry.create({
+    const creating = calling.actingAs("member").rpc.entry.create({
       type: "post",
       title: "Hello",
       slug: "hello",

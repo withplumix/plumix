@@ -21,6 +21,7 @@ import { fallback } from "../route/render/template-builders.js";
 import { trustRequest } from "../runtime/request-trust.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { currentEtag } from "../test/entry-etag.js";
+import { CONTRIBUTOR_ROLE } from "../test/roles.js";
 import { defineTheme } from "../theme.js";
 
 /**
@@ -481,7 +482,9 @@ describe("MCP endpoint — a plugin write tool", () => {
   });
 
   test("refuses a layout change from a writer without edit_layout", async () => {
-    const h = await mcpHarness({ config: { plugins: [blog, writer] } });
+    const h = await mcpHarness({
+      config: { plugins: [blog, writer], roles: CONTRIBUTOR_ROLE },
+    });
     const user = await h.factory.user.create({ role: "contributor" });
     const { secret } = await h.factory.apiToken.create({
       userId: user.id,

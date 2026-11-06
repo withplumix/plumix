@@ -461,6 +461,16 @@ msgstr ""
 #~ msgstr "订阅者 — 仅可读"
 
 #. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.contributor"
+#~ msgstr "贡献者"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.subscriber"
+#~ msgstr "订阅者"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — 子项无法被选为父项。"
@@ -1191,11 +1201,6 @@ msgstr ""
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.continueWith"
 msgstr "使用 {label} 继续"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.contributor"
-msgstr "贡献者"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2295,6 +2300,11 @@ msgstr "管理"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.mastodon"
 msgstr "Mastodon 链接"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+msgid "userRole.member"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3455,11 +3465,6 @@ msgstr "状态"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.status"
 msgstr "状态"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.subscriber"
-msgstr "订阅者"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts

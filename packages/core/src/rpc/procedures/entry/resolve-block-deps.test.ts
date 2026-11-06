@@ -105,7 +105,7 @@ describe("entry.resolveBlockDeps", () => {
   test("404s an entry the caller can't read", async () => {
     const { registry } = navRegistry();
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: registry,
     });
     const other = await h.factory.user.create();

@@ -229,6 +229,10 @@ export async function runCommand(
       configPath: loaded.configPath,
       config: loaded.config,
       runtimeMigrations,
+      plugins: async () => {
+        const { buildApp } = await loadCore();
+        return (await buildApp(loaded.config)).plugins;
+      },
     });
   }
   const app = await resolveCommandApp(command, loaded.config, name);

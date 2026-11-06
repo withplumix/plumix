@@ -466,7 +466,7 @@ describe("the sitemap index", () => {
   test("a member's request lists what a crawler's would", async () => {
     const h = await createHarness([eduscopePlugin]);
     await seedEduscope(h);
-    const member = await h.seedUser("subscriber");
+    const member = await h.seedUser("member");
 
     const res = await h.fetch("/sitemap-entries-page-1.xml", { as: member });
     const body = await res.text();
@@ -1204,7 +1204,7 @@ describe("a contributed sitemap", () => {
     test("is left out, never asked, when anonymous visitors are refused", async () => {
       const { plugin, count, urls } = policiedSource(authenticatedPolicy);
       const h = await createHarness([plugin]);
-      const member = await h.seedUser("subscriber");
+      const member = await h.seedUser("member");
 
       const index = await bodyOf(h, "/sitemap.xml");
       const asMember = await (

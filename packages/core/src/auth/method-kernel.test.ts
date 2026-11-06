@@ -120,7 +120,7 @@ describe("a plugin's sign-in method", () => {
   test("signs a new user up under selfSignup with its defaultRole", async () => {
     const h = await createDispatcherHarness({
       config: fixtureSite({
-        auth: { selfSignup: { defaultRole: "contributor" } },
+        auth: { selfSignup: { defaultRole: "author" } },
       }),
     });
     await h.seedUser("admin");
@@ -131,13 +131,13 @@ describe("a plugin's sign-in method", () => {
     const user = await h.db.query.users.findFirst({
       where: (u, { eq }) => eq(u.email, "bob@anywhere.example"),
     });
-    expect(user?.role).toBe("contributor");
+    expect(user?.role).toBe("author");
   });
 
   test("signs up the email exactly as the method proved it", async () => {
     const h = await createDispatcherHarness({
       config: fixtureSite({
-        auth: { selfSignup: { defaultRole: "contributor" } },
+        auth: { selfSignup: { defaultRole: "author" } },
       }),
     });
     await h.seedUser("admin");
@@ -147,7 +147,7 @@ describe("a plugin's sign-in method", () => {
     const user = await h.db.query.users.findFirst({
       where: (u, { eq }) => eq(u.email, "Bob@Anywhere.example"),
     });
-    expect(user?.role).toBe("contributor");
+    expect(user?.role).toBe("author");
   });
 
   test("refuses a domain that isn't allowed with ?fixture_error=domain_not_allowed", async () => {

@@ -12,16 +12,22 @@ import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { entryChanges } from "../../../db/schema/entry_changes.js";
 import { entry } from "../../../hooks/entry.js";
+import { HookRegistry } from "../../../hooks/registry.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredEntryType } from "../../../plugin/registry.js";
 import { upsertAutosave } from "../../../revisions/repository.js";
 import { NAMED_TEMPLATE_META_KEY } from "../../../route/render/template-builders.js";
+import { installPlugins } from "../../../runtime/install-plugins.js";
 import { defaultTestTheme } from "../../../test/default-theme.js";
 import { currentEtag } from "../../../test/entry-etag.js";
 import { editorUser } from "../../../test/factories.js";
-import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
+import {
+  pooledEntryTypeRegistry,
+  pooledEntryTypesPlugin,
+} from "../../../test/pooled-entry-types.js";
+import { CONTRIBUTOR_ROLE } from "../../../test/roles.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { entryRpc } from "../../filters.js";
 
@@ -159,7 +165,11 @@ describe("entry.update", () => {
         });
       },
     });
-    const plugins = await pooledEntryTypeRegistry(desk);
+    const { registry: plugins } = await installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [pooledEntryTypesPlugin, desk],
+      registry: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     const editDesk = async (authAs: "contributor" | "author") => {
       const h = await createRpcHarness({ authAs, plugins });
       const row = await h.factory.draft.create({
@@ -181,9 +191,9 @@ describe("entry.update", () => {
     expect((await editDesk("author")).meta.desk).toBe("city");
   });
 
-  test("contributor edits their own draft of a pooled type via entry:post:edit_own, not another's", async () => {
+  test("an author edits their own draft of a pooled type via entry:post:edit_own, not another's", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: await pooledEntryTypeRegistry(),
     });
     const own = await h.factory.draft.create({
@@ -245,8 +255,8 @@ describe("entry.update", () => {
     expect(updated.title).toBe("");
   });
 
-  test("contributor cannot edit someone else's draft — FORBIDDEN reports the stronger cap (no authorship probe)", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+  test("an author cannot edit someone else's draft — FORBIDDEN reports the stronger cap (no authorship probe)", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
     const other = await h.factory.author.create();
     const mine = await h.factory.draft.create({
       authorId: other.id,
@@ -264,8 +274,8 @@ describe("entry.update", () => {
     });
   });
 
-  test("subscriber editing own draft is also told edit_any (no authorship oracle)", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member editing own draft is also told edit_any (no authorship oracle)", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "self",
@@ -398,8 +408,11 @@ describe("entry.update", () => {
     expect(updated.publishedAt?.getTime()).toBeLessThan(tomorrow.getTime());
   });
 
-  test("contributor cannot promote their own draft to published", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+  test("a contributor cannot promote their own draft to published", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "solo",
@@ -512,7 +525,7 @@ describe("entry.update", () => {
   });
 
   test("rejects reparenting under a post the caller cannot read", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({
       title: "mine",
       slug: "mine",
@@ -1479,7 +1492,7 @@ describe("entry.update", () => {
     });
 
     test("an unauthorised caller with a stale copy still gets FORBIDDEN (no CONFLICT oracle)", async () => {
-      const h = await createRpcHarness({ authAs: "subscriber" });
+      const h = await createRpcHarness({ authAs: "member" });
       const own = await h.factory.draft.create({
         authorId: h.user.id,
         slug: "oc-no-oracle",
@@ -2460,7 +2473,10 @@ describe("entry.update — a writer without edit_layout", () => {
   async function contentOnlyWriter(
     authAs: "contributor" | "author" = "contributor",
   ) {
-    const h = await createRpcHarness({ authAs });
+    const h = await createRpcHarness({
+      authAs,
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "content-only",

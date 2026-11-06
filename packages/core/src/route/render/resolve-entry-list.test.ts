@@ -879,7 +879,7 @@ describe("resolveEntryList and an entry's access policy", () => {
   test.each([
     ["an editor holding edit_any", "editor", "other", false],
     ["the author holding edit_own", "author", "viewer", false],
-    ["a reader who may edit nothing", "subscriber", "other", true],
+    ["a reader who may edit nothing", "member", "other", true],
   ] as const)(
     "%s: a paywalled body is withheld unless they may edit the entry",
     async (_who, role, writer, gated) => {

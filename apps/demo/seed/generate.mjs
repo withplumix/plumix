@@ -30,12 +30,12 @@ const author = {
 
 // A second account, so a visitor has someone besides themselves to edit,
 // disable and delete in Users. Authors nothing.
-const contributor = {
+const member = {
   id: 2,
-  email: "contributor@plumix.example",
-  slug: "a-contributor",
-  name: "A Contributor",
-  role: "contributor",
+  email: "member@plumix.example",
+  slug: "a-member",
+  name: "A Member",
+  role: "member",
 };
 
 const settings = [
@@ -450,7 +450,7 @@ emit(
   `INSERT OR IGNORE INTO users (id, email, slug, name, avatar_url, role, meta) VALUES (${author.id}, ${q(author.email)}, ${q(author.slug)}, ${q(author.name)}, ${q(author.avatarUrl)}, ${q(author.role)}, '{}');`,
 );
 emit(
-  `INSERT OR IGNORE INTO users (id, email, slug, name, role, meta) VALUES (${contributor.id}, ${q(contributor.email)}, ${q(contributor.slug)}, ${q(contributor.name)}, ${q(contributor.role)}, '{}');`,
+  `INSERT OR IGNORE INTO users (id, email, slug, name, role, meta) VALUES (${member.id}, ${q(member.email)}, ${q(member.slug)}, ${q(member.name)}, ${q(member.role)}, '{}');`,
 );
 emit("");
 

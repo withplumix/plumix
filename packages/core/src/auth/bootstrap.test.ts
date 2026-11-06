@@ -9,7 +9,7 @@ describe("first-user-admin bootstrap", () => {
     const result = await provisionUser(db, {
       meta: {},
       email: "first@example.com",
-      defaultRole: "subscriber",
+      defaultRole: "member",
     });
     expect(result.bootstrapped).toBe(true);
     expect(result.user.role).toBe("admin");
@@ -25,6 +25,18 @@ describe("first-user-admin bootstrap", () => {
     });
     expect(result.bootstrapped).toBe(false);
     expect(result.user.role).toBe("author");
+  });
+
+  // The column's SQL default is still `subscriber`, so this proves the insert
+  // names the role.
+  test("a later user given no defaultRole is stored as a member", async () => {
+    const db = await createTestDb();
+    await provisionUser(db, { meta: {}, email: "first@example.com" });
+    const { user } = await provisionUser(db, {
+      meta: {},
+      email: "second@example.com",
+    });
+    expect(user.role).toBe("member");
   });
 
   test("concurrent first-user provisions with different emails elect exactly one admin", async () => {

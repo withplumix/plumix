@@ -66,9 +66,9 @@ describe("entry.revisions.list", () => {
     expect(newest.authorEmail).toBe(h.user.email);
   });
 
-  test("contributor without read_revisions gets FORBIDDEN", async () => {
+  test("an author without read_revisions gets FORBIDDEN", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: registryWithRevisions(),
     });
     const created = await h.client.entry.create({ title: "P", slug: "p" });
@@ -254,7 +254,7 @@ describe("entry.revisions.get", () => {
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  test("contributor without edit caps gets FORBIDDEN on setMessage", async () => {
+  test("an author without read_revisions is refused setMessage on another's entry", async () => {
     const editor = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithRevisions(),
@@ -274,22 +274,22 @@ describe("entry.revisions.get", () => {
     const [row] = listed.revisions;
     if (!row) throw new Error("expected a revision");
 
-    const contributor = await createRpcHarness({
-      authAs: "contributor",
+    const author = await createRpcHarness({
+      authAs: "author",
       plugins: registryWithRevisions(),
     });
-    // Contributor lacks `read_revisions` on a foreign-authored entry —
+    // An author lacks `read_revisions` on a foreign-authored entry —
     // the read gate fires before the edit gate, so the rejection is
     // the same NOT_FOUND that `get` raises (avoids leaking existence).
     await expect(
-      contributor.client.entry.revisions.setMessage({
+      author.client.entry.revisions.setMessage({
         revisionId: row.id,
-        message: "from contributor",
+        message: "from author",
       }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  test("contributor gets FORBIDDEN on entry.revisions.get", async () => {
+  test("an author is refused entry.revisions.get", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithRevisions(),
@@ -308,7 +308,7 @@ describe("entry.revisions.get", () => {
     const revisionId = first.id;
 
     const h2 = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: registryWithRevisions(),
     });
     await expect(

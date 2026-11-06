@@ -21,7 +21,7 @@ test("a theme's account page renames the signed-in member", async ({
   const member = await factoriesFor(db).user.create({
     email: "member@example.test",
     name: "Old Name",
-    role: "subscriber",
+    role: "member",
   });
   const { storageState } = await actingAs(db, member);
   db.$client.close();
@@ -41,7 +41,7 @@ test("a theme's account page renames the signed-in member", async ({
  * The baseline is restored once per worker, not per test, so each test signs
  * in as its own member.
  */
-async function visitAsSubscriber(
+async function visitAsMember(
   context: BrowserContext,
   page: Page,
   email: string,
@@ -51,7 +51,7 @@ async function visitAsSubscriber(
   });
   const member = await factoriesFor(db).user.create({
     email,
-    role: "subscriber",
+    role: "member",
   });
   const { storageState } = await actingAs(db, member);
   db.$client.close();
@@ -65,7 +65,7 @@ test("useCan renders the same on the server and after hydration", async ({
   context,
   page,
 }) => {
-  const response = await visitAsSubscriber(
+  const response = await visitAsMember(
     context,
     page,
     "can-hydration@example.test",
@@ -80,7 +80,7 @@ test("useCan renders the same on the server and after hydration", async ({
 });
 
 test("useCan turns false on sign-out", async ({ context, page }) => {
-  await visitAsSubscriber(context, page, "can-sign-out@example.test");
+  await visitAsMember(context, page, "can-sign-out@example.test");
   await expect(page.getByTestId("account-name-input")).toBeVisible();
 
   await page.getByTestId("account-sign-out").click();

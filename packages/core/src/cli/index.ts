@@ -24,6 +24,7 @@ export {
   scheduledTaskTimeoutMs,
   scheduledTasksFor,
 } from "../runtime/contract/schedules.js";
+export { contributorRoleSnippet } from "./contributor-role.js";
 export { CORE_DATA_MIGRATIONS } from "./data-migrations.js";
 export { CORE_MIGRATIONS_FOLDER } from "./migrations.js";
 export { CORE_SCHEMA_MODULE, generateSchemaSource } from "./schema-codegen.js";

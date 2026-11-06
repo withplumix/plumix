@@ -70,12 +70,18 @@ history, such as the search plugin's FTS5 table in
 
 Core and the audit-log, comments, forms and search plugins ship histories. Roles live in config,
 not the database ([ADR 0055](../adr/0055-a-role-is-a-set-of-capabilities-declared-in-code.md)): the
-users table's role column and the invite token's role are free text naming one.
+users table's role column and the invite token's role are free text naming one. Core's one data
+migration renames `subscriber` to `member` and leaves `contributor` rows alone; before anything is
+written, `plumix migrate`, `plumix dev` and `migrateBeforeDeploy` refuse a database whose users hold
+`contributor` while the config declares no such role, printing one to paste
+(`assertContributorRoleDeclared`). The column's SQL default is still `subscriber`, because changing
+it rebuilds the table, so every core insert names the role.
 
 - `packages/plumix/src/cli/migrate/owners.ts`: `resolveOwners`, `TRACKING_TABLE_PREFIX`, `sitePlugins`.
 - `packages/plumix/src/cli/migrate/apply.ts`: `applyOwners`, `adoptLegacyDatabase`, `reportStatus`.
 - `packages/plumix/src/cli/migrate/data.ts`, `data-load.ts`, `data-modules.ts`: `DATA_MIGRATIONS_TABLE`, `applyDataMigrations`.
 - `packages/plumix/src/cli/migrate/built.ts`: `copyOwnerHistories`, `applyBuiltMigrations`.
+- `packages/plumix/src/cli/migrate/contributors.ts`: `assertContributorRoleDeclared`. `packages/core/src/cli/contributor-role.ts`: `contributorRoleSnippet`.
 - `packages/core/src/db/data-migration.ts`: `defineDataMigration`. `packages/core/src/cli/data-migrations.ts`: `CORE_DATA_MIGRATIONS`.
 - `packages/core/src/cli/migrations.ts`: `CORE_MIGRATIONS_FOLDER`. `packages/core/migrations/`: core's history, `0000_tables` to `0003_edit_leases`.
 - `packages/runtimes/*/src/commands/migrations.ts`: each runtime's `open` and `openRun`.

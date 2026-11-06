@@ -14,13 +14,7 @@ function taxonomyRegistry() {
     toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
   );
   const caps: Record<string, readonly DefaultRole[]> = {
-    "term:category:read": [
-      "subscriber",
-      "contributor",
-      "author",
-      "editor",
-      "admin",
-    ],
+    "term:category:read": ["member", "author", "editor", "admin"],
     "term:category:edit": ["editor", "admin"],
   };
   for (const [name, roles] of Object.entries(caps)) {
@@ -100,7 +94,7 @@ describe("term.lease.acquire", () => {
 
   test("a caller who can't edit the term can't lease it", async () => {
     const h = await createRpcHarness({
-      authAs: "subscriber",
+      authAs: "member",
       plugins: taxonomyRegistry(),
     });
     const term = await h.factory.term.create({ taxonomy: "category" });

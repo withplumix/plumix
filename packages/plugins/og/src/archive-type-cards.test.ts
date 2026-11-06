@@ -221,7 +221,7 @@ describe("a plugin archive's card", () => {
 
   test("is withheld from an archive whose policy refuses anonymous visitors", async () => {
     const harness = await directoryHarness();
-    const member = await harness.seedUser("subscriber");
+    const member = await harness.seedUser("member");
 
     // The page renders for a member, but a scraper is turned away from it.
     const page = await harness.fetch("/members/london", { as: member });

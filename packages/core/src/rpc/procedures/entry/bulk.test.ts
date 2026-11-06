@@ -46,7 +46,7 @@ describe("entry.trashMany", () => {
   });
 
   test("fail-all: a forbidden row rejects the whole batch, nothing is trashed", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({ authAs: "author" });
     const mine = await h.factory.published.create({
       authorId: h.user.id,
       slug: "mine",

@@ -123,7 +123,7 @@ describe("the card in the page head", () => {
       siteDefaultImage: SITE_DEFAULT,
     });
     await seedEntry(harness, { type: "gated", slug: "locked" });
-    const member = await harness.seedUser("subscriber");
+    const member = await harness.seedUser("member");
 
     // A scraper carries no session and the gate turns it away, so the head must
     // not name the card however privileged the reader.
@@ -152,7 +152,7 @@ describe("the card in the page head", () => {
       slug: "locked",
       meta: { [ACCESS_POLICY_META_KEY]: "members" },
     });
-    const member = await harness.seedUser("subscriber");
+    const member = await harness.seedUser("member");
 
     const response = await harness.dispatch(
       await harness.authenticateRequest(

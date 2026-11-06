@@ -44,8 +44,8 @@ describe("entry.restore", () => {
     ).resolves.toMatchObject({ title: "Edited after restore" });
   });
 
-  test("contributor cannot restore (no post:delete cap)", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+  test("an author cannot restore (no post:delete cap)", async () => {
+    const h = await createRpcHarness({ authAs: "author" });
     const target = await h.factory.trashed.create({
       authorId: h.user.id,
       slug: "locked",

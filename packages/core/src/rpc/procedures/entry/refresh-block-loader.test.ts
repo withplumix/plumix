@@ -102,7 +102,7 @@ describe("entry.refreshBlockLoader", () => {
 
   test("404s a draft the caller can't read", async () => {
     const h = await createRpcHarness({
-      authAs: "contributor",
+      authAs: "author",
       plugins: loaderRegistry(),
     });
     const other = await h.factory.user.create();

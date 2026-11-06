@@ -160,7 +160,7 @@ async function mintPat(
     scopes = null,
     expiresAt,
   }: {
-    role?: "subscriber" | "editor" | "admin";
+    role?: "member" | "editor" | "admin";
     scopes?: string[] | null;
     expiresAt?: Date;
   } = {},
@@ -281,7 +281,7 @@ describe("REST API — an entry's access policy", () => {
 
   test("a signed-in member's list shows both", async () => {
     const { h } = await pagesHarness();
-    const { secret } = await mintPat(h, { role: "subscriber" });
+    const { secret } = await mintPat(h, { role: "member" });
 
     const res = await h.dispatch(bearerGet("/_plumix/api/v1/pages", secret));
 

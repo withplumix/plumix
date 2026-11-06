@@ -75,11 +75,11 @@ describe("createAdminBarChrome", () => {
     expect(await renderChrome(null)).toBe("");
   });
 
-  test("renders nothing for a subscriber, who may not use the admin", async () => {
-    expect(await renderChrome({ ...user, role: "subscriber" })).toBe("");
+  test("renders nothing for a member, who may not use the admin", async () => {
+    expect(await renderChrome({ ...user, role: "member" })).toBe("");
   });
 
-  test("does not ask a node whether it is visible for a subscriber", async () => {
+  test("does not ask a node whether it is visible for a member", async () => {
     const plugins = createPluginRegistry();
     const visible = vi.fn(() => true);
     plugins.adminBarNodes.set("shop:orders", {
@@ -90,12 +90,12 @@ describe("createAdminBarChrome", () => {
       registeredBy: "shop",
     });
 
-    await renderChrome({ ...user, role: "subscriber" }, plugins);
+    await renderChrome({ ...user, role: "member" }, plugins);
 
     expect(visible).not.toHaveBeenCalled();
   });
 
-  test.each<DefaultRole>(["contributor", "admin"])(
+  test.each<DefaultRole>(["author", "admin"])(
     "renders the bar for a %s",
     async (role) => {
       expect(await renderChrome({ ...user, role })).toContain(

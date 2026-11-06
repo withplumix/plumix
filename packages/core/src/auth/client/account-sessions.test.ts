@@ -25,7 +25,7 @@ function clientOf(h: DispatcherHarness, token: string) {
 /** One user signed in on this device and on another. */
 async function twoSessions() {
   const h = await createDispatcherHarness();
-  const user = await h.seedUser("subscriber");
+  const user = await h.seedUser("member");
   const here = await createSession(h.db, { userId: user.id });
   const other = await createSession(h.db, { userId: user.id });
   return { h, user, here, other, ...clientOf(h, here.token) };
@@ -44,7 +44,7 @@ describe("authClient.sessions.list", () => {
 
   test("resolves each session with its address, agent and dates as Dates", async () => {
     const h = await createDispatcherHarness();
-    const user = await h.seedUser("subscriber");
+    const user = await h.seedUser("member");
     const here = await createSession(h.db, {
       userId: user.id,
       ipAddress: "203.0.113.7",

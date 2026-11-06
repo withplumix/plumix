@@ -22,12 +22,8 @@ describe("createCapabilityResolver", () => {
 
   test("denies a core capability to the roles that don't receive it", () => {
     const resolver = createCapabilityResolver(emptyRegistry);
-    expect(resolver.hasCapability("contributor", "entry:post:publish")).toBe(
-      false,
-    );
-    expect(resolver.hasCapability("subscriber", "entry:post:edit_any")).toBe(
-      false,
-    );
+    expect(resolver.hasCapability("member", "entry:post:publish")).toBe(false);
+    expect(resolver.hasCapability("member", "entry:post:edit_any")).toBe(false);
   });
 
   test("returns false for unknown capability (no implicit grant)", () => {
@@ -73,9 +69,9 @@ describe("createCapabilityResolver", () => {
       registeredBy: "blog",
     });
     const resolver = createCapabilityResolver(registry);
-    expect(
-      resolver.hasCapability("contributor", "entry:landing_page:publish"),
-    ).toBe(false);
+    expect(resolver.hasCapability("member", "entry:landing_page:publish")).toBe(
+      false,
+    );
     expect(resolver.hasCapability("author", "entry:landing_page:publish")).toBe(
       true,
     );
@@ -135,12 +131,12 @@ describe("a registered capability's receiving roles", () => {
     const registry = createPluginRegistry();
     registry.capabilities.set("menu:manage", {
       name: "menu:manage",
-      grantTo: ["contributor", "admin"],
+      grantTo: ["author", "admin"],
       registeredBy: "menus",
     });
     const resolver = createCapabilityResolver(registry);
     expect(resolver.hasCapability("admin", "menu:manage")).toBe(true);
-    expect(resolver.hasCapability("contributor", "menu:manage")).toBe(true);
+    expect(resolver.hasCapability("author", "menu:manage")).toBe(true);
     // Ranking above a named role grants nothing.
     expect(resolver.hasCapability("editor", "menu:manage")).toBe(false);
   });
@@ -157,7 +153,7 @@ describe("a registered capability's receiving roles", () => {
     expect(capabilitiesForRole("author", registry)).not.toContain(
       "menu:manage",
     );
-    expect(capabilitiesForRole("subscriber", registry)).not.toContain(
+    expect(capabilitiesForRole("member", registry)).not.toContain(
       "menu:manage",
     );
   });

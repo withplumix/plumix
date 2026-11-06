@@ -261,8 +261,8 @@ workerd. It reads source: `pnpm test:unit` needs no build.
 
 ```ts
 // packages/core/src/entries/read-service.test.ts; authedCtx and listInput are this file's helpers
-test("clamps a subscriber to published entries by default", async () => {
-  const h = await createRpcHarness({ authAs: "subscriber" });
+test("clamps a member to published entries by default", async () => {
+  const h = await createRpcHarness({ authAs: "member" });
   await h.factory.published.create({ authorId: h.user.id, slug: "pub" });
   await h.factory.draft.create({ authorId: h.user.id, slug: "draft" });
 

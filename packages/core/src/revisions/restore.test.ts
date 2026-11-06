@@ -378,9 +378,9 @@ describe("entry.revisions.restore", () => {
 
   test("rejects with FORBIDDEN when the viewer lacks read_revisions", async () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
-    const subscriber = await h.actingAs("subscriber");
+    const member = await h.actingAs("member");
     await expect(
-      subscriber.client.entry.revisions.restore({
+      member.client.entry.revisions.restore({
         revisionId,
         ifMatch: await currentEtag(h.db, entryId),
       }),
@@ -697,7 +697,7 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
     expect(onUpdated.calls).toEqual([]);
   });
 
-  test("rejects with FORBIDDEN when viewer lacks restore_revision (subscriber)", async () => {
+  test("rejects with FORBIDDEN when viewer lacks restore_revision (member)", async () => {
     const h = await createRpcHarness({
       authAs: "editor",
       plugins: registryWithAutosave(),
@@ -717,11 +717,11 @@ describe("entry.revisions.restore — autosave destination (#292)", () => {
       where: eq(entries.type, REVISION_TYPE),
     });
     if (!revision) throw new Error("expected one revision");
-    // The read gate fires first, so the subscriber is refused on
+    // The read gate fires first, so the member is refused on
     // read_revisions.
-    const subscriber = await h.actingAs("subscriber");
+    const member = await h.actingAs("member");
     await expect(
-      subscriber.client.entry.revisions.restore({
+      member.client.entry.revisions.restore({
         revisionId: revision.id,
         ifMatch: await currentEtag(h.db, created.id),
       }),

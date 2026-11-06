@@ -9,13 +9,17 @@ import { resolveEntryList } from "../../../route/render/resolve-entry-list.js";
 import { forEntryType } from "../../../route/render/template-builders.js";
 import { resolveTemplate } from "../../../route/render/template-hierarchy.js";
 import { defaultTestTheme } from "../../../test/default-theme.js";
+import { CONTRIBUTOR_ROLE } from "../../../test/roles.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 import { entryRpc } from "../../filters.js";
 import { registerCoreLookupAdapters } from "../lookup-adapters.js";
 
 describe("entry.create", () => {
-  test("contributor can create a draft", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+  test("a contributor can create a draft", async () => {
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     const created = await h.client.entry.create({
       title: "Hello",
       slug: "hello",
@@ -26,7 +30,7 @@ describe("entry.create", () => {
   });
 
   test("creates an untitled draft — omitted title is stored as empty", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({ authAs: "author" });
     const created = await h.client.entry.create({ slug: "untitled-draft" });
     // Read surfaces render a localized "Untitled" fallback for the "" title.
     expect(created.title).toBe("");
@@ -73,7 +77,7 @@ describe("entry.create", () => {
   });
 
   test("INVALID_BLOCK_CONTENT when v2 content carries an unknown block type", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({ authAs: "author" });
     const error = await h.client.entry
       .create({
         title: "t",
@@ -100,8 +104,8 @@ describe("entry.create", () => {
     expect(issues.map((i) => i.code)).toContain("unknown_block_type");
   });
 
-  test("forbidden for a subscriber (no post:create)", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("forbidden for a member (no post:create)", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await expect(
       h.client.entry.create({ title: "t", slug: "s" }),
     ).rejects.toMatchObject({
@@ -111,7 +115,10 @@ describe("entry.create", () => {
   });
 
   test("forbidden when contributor tries to publish directly", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     await expect(
       h.client.entry.create({
         title: "now",
@@ -125,7 +132,10 @@ describe("entry.create", () => {
   });
 
   test("forbidden when contributor tries to schedule — same gate as publish", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
     await expect(
       h.client.entry.create({
         title: "later",
@@ -249,8 +259,8 @@ describe("entry.create", () => {
   });
 
   test("rejects a parentId the caller cannot see (undistinguished 404)", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
-    // Another author's draft — contributor lacks post:edit_any, doesn't own it.
+    const h = await createRpcHarness({ authAs: "author" });
+    // Another author's draft — an author lacks post:edit_any, doesn't own it.
     const other = await h.factory.admin.create({ email: "a@example.test" });
     const secret = await h.factory.draft.create({
       title: "hidden",
@@ -850,7 +860,10 @@ describe("entry.create — a writer without edit_layout", () => {
   });
 
   test("refuses content holding a block", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
 
     await expect(
       h.client.entry.create({
@@ -871,7 +884,10 @@ describe("entry.create — a writer without edit_layout", () => {
   });
 
   test("creates an empty tree", async () => {
-    const h = await createRpcHarness({ authAs: "contributor" });
+    const h = await createRpcHarness({
+      authAs: "contributor",
+      plugins: createPluginRegistry(undefined, CONTRIBUTOR_ROLE),
+    });
 
     const created = await h.client.entry.create({
       title: "Hello",

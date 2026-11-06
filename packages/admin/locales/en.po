@@ -461,6 +461,16 @@ msgstr ""
 #~ msgstr "Subscriber — read only"
 
 #. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.contributor"
+#~ msgstr "Contributor"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.subscriber"
+#~ msgstr "Subscriber"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -1191,11 +1201,6 @@ msgstr "Continue with {label}"
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.continueWith"
 msgstr "Continue with {label}"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.contributor"
-msgstr "Contributor"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2295,6 +2300,11 @@ msgstr "Management"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.mastodon"
 msgstr "Mastodon URL"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+msgid "userRole.member"
+msgstr "Member"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3455,11 +3465,6 @@ msgstr "Status"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.status"
 msgstr "Status"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.subscriber"
-msgstr "Subscriber"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts

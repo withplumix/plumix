@@ -122,7 +122,7 @@ describe("the settings screen", () => {
     ]);
   });
 
-  test("a contributor cannot reach any of them", async () => {
+  test("only settings:manage reaches any of them", async () => {
     const h = await createHarness();
 
     for (const group of h.app.plugins.settingsPages.get("seo")?.groups ?? []) {

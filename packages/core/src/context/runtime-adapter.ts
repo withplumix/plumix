@@ -1,6 +1,9 @@
 import type { PlumixConfig } from "../config.js";
 import type { HookRegistry } from "../hooks/registry.js";
-import type { RegisteredScheduledTask } from "../plugin/registry.js";
+import type {
+  PluginRegistry,
+  RegisteredScheduledTask,
+} from "../plugin/registry.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { AssetsBinding, SyncRow } from "../runtime/contract/slots.js";
 import type { AppContext, DataMigrationDb } from "./app-context.js";
@@ -118,6 +121,8 @@ export interface PlumixHandler {
 export interface CommandApp {
   readonly config: PlumixConfig;
   readonly hooks: HookRegistry;
+  /** Every plugin installed, so a command can read what they register. */
+  readonly plugins: PluginRegistry;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
 }
 

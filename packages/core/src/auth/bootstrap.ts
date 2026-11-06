@@ -24,7 +24,7 @@ export async function provisionUser(
     readonly meta: JsonObject;
   },
 ): Promise<BootstrappedUser> {
-  const defaultRole = input.defaultRole ?? "subscriber";
+  const defaultRole = input.defaultRole ?? "member";
 
   for (let attempt = 1; ; attempt++) {
     const slug = await deriveUserSlug(db, input.name);

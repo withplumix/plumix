@@ -278,6 +278,7 @@ describe("plumix deploy — data migrations", { timeout: 30_000 }, () => {
 
   const SEED_BETA = `await db.run("INSERT INTO settings (\\"group\\", key, value) VALUES ('flags', 'beta', 'true')");`;
 
+  // The site's records; core records its own data migrations beside them.
   async function recorded(): Promise<unknown[]> {
     const proxy = await getPlatformProxy<{ DB: D1Database }>({
       configPath: join(dir, "wrangler.jsonc"),
@@ -285,7 +286,7 @@ describe("plumix deploy — data migrations", { timeout: 30_000 }, () => {
     });
     try {
       const { results } = await proxy.env.DB.prepare(
-        "SELECT owner, name FROM __plumix_data_migrations",
+        "SELECT owner, name FROM __plumix_data_migrations WHERE owner = 'site'",
       ).all();
       return results;
     } finally {

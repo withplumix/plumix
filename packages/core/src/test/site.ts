@@ -13,10 +13,9 @@ import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
 import type { PluginRpcClient } from "../plugin/registry.js";
 import type { AppRouterClient } from "../rpc/router.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
-import type { DefaultRole } from "../users/contract/roles.js";
 import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
-import type { Factories } from "./factories.js";
+import type { Factories, SeededRole } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import type { TestRunReport, TestSchedule } from "./schedule.js";
 import type { Travel } from "./site-clock.js";
@@ -92,7 +91,7 @@ export interface TestSite<
    * first call in each test.
    */
   readonly actingAs: (
-    principal: User | DefaultRole,
+    principal: User | SeededRole,
   ) => TestSite<TFactories, TRpc>;
   /** Moves this site's clock forward, and no other site's. */
   readonly travel: (by: Travel) => void;
@@ -117,7 +116,7 @@ type InstalledRpc<TPlugins extends readonly AnyPluginDescriptor[]> =
     : Record<never, never>;
 
 /** `null` is a visitor; a bare role is a user not created yet. */
-type Principal = User | { readonly role: DefaultRole } | null;
+type Principal = User | { readonly role: SeededRole } | null;
 
 interface Session {
   readonly user: User;

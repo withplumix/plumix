@@ -24,14 +24,8 @@ function taxonomyRegistry(): MutablePluginRegistry {
     toRegisteredTermTaxonomy("category", { label: "Categories" }, "test"),
   );
   const caps: Record<string, readonly DefaultRole[]> = {
-    "term:category:read": [
-      "subscriber",
-      "contributor",
-      "author",
-      "editor",
-      "admin",
-    ],
-    "term:category:assign": ["contributor", "author", "editor", "admin"],
+    "term:category:read": ["member", "author", "editor", "admin"],
+    "term:category:assign": ["author", "editor", "admin"],
     "term:category:edit": ["editor", "admin"],
     "term:category:delete": ["editor", "admin"],
   };
@@ -222,13 +216,7 @@ describe("term meta: registration + round-trip via term.update", () => {
       toRegisteredTermTaxonomy("tag", { label: "Tags" }, "test"),
     );
     const tagCaps: Record<string, readonly DefaultRole[]> = {
-      "term:tag:read": [
-        "subscriber",
-        "contributor",
-        "author",
-        "editor",
-        "admin",
-      ],
+      "term:tag:read": ["member", "author", "editor", "admin"],
       "term:tag:edit": ["editor", "admin"],
     };
     for (const [name, roles] of Object.entries(tagCaps)) {

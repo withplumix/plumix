@@ -398,7 +398,7 @@ describe("menu RPC", () => {
     });
 
     test("rejects a caller without the menu capability", async () => {
-      const h = await buildHarness("subscriber", {}, [contentHost]);
+      const h = await buildHarness("member", {}, [contentHost]);
       await expect(
         h.client.menu.searchTargets({ kind: "entry", target: "post" }),
       ).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -1956,8 +1956,8 @@ describe("menu RPC", () => {
       await expect(h.client.menu.create({ name: "" })).rejects.toThrow();
     });
 
-    test("subscriber cannot create", async () => {
-      const h = await buildHarness("subscriber");
+    test("member cannot create", async () => {
+      const h = await buildHarness("member");
       await expect(h.client.menu.create({ name: "Nope" })).rejects.toThrow();
     });
   });
@@ -2098,13 +2098,13 @@ describe("menu RPC", () => {
   });
 
   describe("authorization", () => {
-    test("subscriber cannot list / save / delete / assign", async () => {
-      const h = await buildHarness("subscriber");
+    test("member cannot list / save / delete / assign", async () => {
+      const h = await buildHarness("member");
       await expect(h.client.menu.list()).rejects.toThrow();
     });
 
-    test("subscriber cannot list locations", async () => {
-      const h = await buildHarness("subscriber", {
+    test("member cannot list locations", async () => {
+      const h = await buildHarness("member", {
         primary: { label: "Primary" },
       });
       await expect(h.client.menu.locations.list()).rejects.toThrow();

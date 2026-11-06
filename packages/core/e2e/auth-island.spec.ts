@@ -17,7 +17,7 @@ test("an auth island shows the signed-in visitor", async ({
   });
   const reader = await factoriesFor(db).user.create({
     email: "reader@example.test",
-    role: "subscriber",
+    role: "member",
   });
   const { storageState } = await actingAs(db, reader);
   db.$client.close();

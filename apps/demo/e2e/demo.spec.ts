@@ -255,7 +255,7 @@ test("users and the profile offer only what the demo serves, and each of it succ
 
   // Another user: rename, disable, delete.
   await page.goto("users/2/edit");
-  await page.getByTestId("user-edit-name-input").fill("Renamed Contributor");
+  await page.getByTestId("user-edit-name-input").fill("Renamed Member");
   const updated = page.waitForResponse((r) => r.url().endsWith("/user/update"));
   await page.getByTestId("user-edit-submit").click();
   expect((await updated).status()).toBe(200);

@@ -199,12 +199,12 @@ describe("entryLookupAdapter", () => {
   });
 
   test("list() hides another author's unpublished entries from a viewer without edit rights", async () => {
-    // A subscriber role is public-reachable wherever `auth.selfSignup` is on,
+    // A member role is public-reachable wherever `auth.selfSignup` is on,
     // so it must not enumerate titles of unpublished entries.
     const h = await createRpcHarness({ authAs: "admin" });
-    const subscriber = await userFactory
+    const member = await userFactory
       .transient({ db: h.context.db })
-      .create({ role: "subscriber" });
+      .create({ role: "member" });
     const published = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Shipped", status: "published" });
@@ -216,7 +216,7 @@ describe("entryLookupAdapter", () => {
       .create({ authorId: h.user.id, title: "Queued", status: "scheduled" });
 
     const rows = await entryLookupAdapter.list(
-      withUser(h.context, subscriber, null),
+      withUser(h.context, member, null),
       { scope: POST, limit: 100 },
     );
     expect(rows.map((row) => row.id)).toEqual([String(published.id)]);
@@ -224,7 +224,7 @@ describe("entryLookupAdapter", () => {
     // The same ids asked for by id, so the batch path can't answer what
     // the search path refuses.
     const byId = await entryLookupAdapter.list(
-      withUser(h.context, subscriber, null),
+      withUser(h.context, member, null),
       {
         ids: [String(published.id), String(draft.id), String(scheduled.id)],
         scope: POST,
@@ -233,23 +233,23 @@ describe("entryLookupAdapter", () => {
     expect(byId.map((row) => row.id)).toEqual([String(published.id)]);
   });
 
-  test("list() keeps a contributor's own unpublished entries, not a colleague's", async () => {
-    // `edit_own` is what a contributor has instead of `edit_any`: their
+  test("list() keeps an author's own unpublished entries, not a colleague's", async () => {
+    // `edit_own` is what an author has instead of `edit_any`: their
     // own draft is theirs to pick, and the hidden half has to be the
     // colleague's rather than every unpublished row.
     const h = await createRpcHarness({ authAs: "admin" });
-    const contributor = await userFactory
+    const writer = await userFactory
       .transient({ db: h.context.db })
-      .create({ role: "contributor" });
+      .create({ role: "author" });
     const mine = await entryFactory
       .transient({ db: h.context.db })
-      .create({ authorId: contributor.id, title: "Mine", status: "draft" });
+      .create({ authorId: writer.id, title: "Mine", status: "draft" });
     const theirs = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, title: "Theirs", status: "draft" });
 
     const rows = await entryLookupAdapter.list(
-      withUser(h.context, contributor, null),
+      withUser(h.context, writer, null),
       { scope: POST, limit: 100 },
     );
     const ids = rows.map((row) => row.id);
@@ -305,12 +305,12 @@ describe("entryLookupAdapter", () => {
       toRegisteredEntryType("page", { label: "Pages", isPublic: true }, null),
     );
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
-    const contributor = await userFactory
+    const writer = await userFactory
       .transient({ db: h.context.db })
-      .create({ role: "contributor" });
+      .create({ role: "author" });
     const ownDraft = await entryFactory
       .transient({ db: h.context.db })
-      .create({ type: "post", status: "draft", authorId: contributor.id });
+      .create({ type: "post", status: "draft", authorId: writer.id });
     const livePage = await entryFactory
       .transient({ db: h.context.db })
       .create({ type: "page", status: "published", authorId: h.user.id });
@@ -319,10 +319,10 @@ describe("entryLookupAdapter", () => {
       .create({ type: "page", status: "draft", authorId: h.user.id });
     const trashedOwn = await entryFactory
       .transient({ db: h.context.db })
-      .create({ type: "post", status: "trash", authorId: contributor.id });
+      .create({ type: "post", status: "trash", authorId: writer.id });
 
     const rows = await entryLookupAdapter.list(
-      withUser(h.context, contributor, null),
+      withUser(h.context, writer, null),
       { scope: { entryTypes: ["post", "page"] }, limit: 100 },
     );
     const ids = rows.map((row) => row.id);
@@ -539,22 +539,22 @@ describe("entryLookupAdapter", () => {
     expect(asAdmin.map((row) => row.id)).toEqual([String(draft.id)]);
   });
 
-  test("hydrate() shows a contributor their own unpublished entry", async () => {
+  test("hydrate() shows an author their own unpublished entry", async () => {
     // `edit_own` over one's own rows is the rule every other read surface uses,
     // so an author's preview hydrates their own draft.
     const h = await createRpcHarness({ authAs: "admin" });
-    const contributor = await userFactory
+    const writer = await userFactory
       .transient({ db: h.context.db })
-      .create({ role: "contributor" });
+      .create({ role: "author" });
     const mine = await entryFactory
       .transient({ db: h.context.db })
-      .create({ authorId: contributor.id, type: "post", status: "draft" });
+      .create({ authorId: writer.id, type: "post", status: "draft" });
     const theirs = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post", status: "draft" });
 
     const rows = await entryLookupAdapter.hydrate(
-      withUser(h.context, contributor, null),
+      withUser(h.context, writer, null),
       { ids: [String(mine.id), String(theirs.id)], scope: POST },
     );
     expect(rows.map((row) => row.id)).toEqual([String(mine.id)]);
@@ -565,18 +565,18 @@ describe("entryLookupAdapter", () => {
     // drafts only by authorship resolves to "my own drafts", which is the
     // shape a preview surface asks for.
     const h = await createRpcHarness({ authAs: "admin" });
-    const contributor = await userFactory
+    const writer = await userFactory
       .transient({ db: h.context.db })
-      .create({ role: "contributor" });
+      .create({ role: "author" });
     const mine = await entryFactory
       .transient({ db: h.context.db })
-      .create({ authorId: contributor.id, type: "post", status: "draft" });
+      .create({ authorId: writer.id, type: "post", status: "draft" });
     const theirs = await entryFactory
       .transient({ db: h.context.db })
       .create({ authorId: h.user.id, type: "post", status: "draft" });
 
     const rows = await entryLookupAdapter.hydrate(
-      withUser(h.context, contributor, null),
+      withUser(h.context, writer, null),
       {
         ids: [String(mine.id), String(theirs.id)],
         scope: { ...POST, status: "draft" },

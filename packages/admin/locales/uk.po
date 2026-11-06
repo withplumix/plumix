@@ -461,6 +461,16 @@ msgstr ""
 #~ msgstr "Передплатник — лише читання"
 
 #. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.contributor"
+#~ msgstr "Дописувач"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+#~ msgid "userRole.subscriber"
+#~ msgstr "Передплатник"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -1191,11 +1201,6 @@ msgstr ""
 #: src/routes/_auth/-login-screen.tsx
 msgid "login.oauth.continueWith"
 msgstr "Продовжити з {label}"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.contributor"
-msgstr "Дописувач"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -2295,6 +2300,11 @@ msgstr "Керування"
 #: src/lib/core-settings-i18n.ts
 msgid "core.settings.site.mastodon"
 msgstr "Посилання на Mastodon"
+
+#. js-lingui-explicit-id
+#: src/lib/core-role-labels-i18n.ts
+msgid "userRole.member"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
@@ -3455,11 +3465,6 @@ msgstr "Статус"
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.status"
 msgstr "Статус"
-
-#. js-lingui-explicit-id
-#: src/lib/core-role-labels-i18n.ts
-msgid "userRole.subscriber"
-msgstr "Передплатник"
 
 #. js-lingui-explicit-id
 #: src/lib/editor-command-i18n.ts

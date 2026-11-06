@@ -26,7 +26,7 @@ export interface AdminEntryGroup extends Omit<SearchGroup, "items"> {
 
 /**
  * A surface showing more than a title asks for `edit`: `entry:<type>:read`
- * reaches subscribers, so with open signup every reader holds it.
+ * reaches members, so with open signup every reader holds it.
  */
 export interface AdminEntryScopeOptions {
   readonly reach?: "read" | "edit";

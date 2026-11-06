@@ -188,7 +188,7 @@ describe("comments read path through the dispatcher", () => {
     await commentFactory
       .transient({ db: harness.db })
       .create({ entryId: entry.id, status: "approved", bodyMd: "for members" });
-    const member = await harness.seedUser("subscriber");
+    const member = await harness.seedUser("member");
 
     const response = await harness.fetch("/posts/members-only", { as: member });
 

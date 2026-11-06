@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { eq } from "../../../db/index.js";
+import { eq, sql } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { sessions } from "../../../db/schema/sessions.js";
 import { users } from "../../../db/schema/users.js";
@@ -17,8 +17,8 @@ describe("user.list", () => {
     expect(rows.length).toBeGreaterThanOrEqual(2); // the authed editor + the created user
   });
 
-  test("subscriber cannot list users", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member cannot list users", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await expect(h.client.user.list({})).rejects.toMatchObject({
       code: "FORBIDDEN",
       data: { capability: "user:list" },
@@ -28,7 +28,7 @@ describe("user.list", () => {
   test("role filter narrows results", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
     await h.factory.editor.create({ email: "e@example.test" });
-    await h.factory.subscriber.create({ email: "s@example.test" });
+    await h.factory.member.create({ email: "s@example.test" });
     const editors = await h.client.user.list({ role: "editor" });
     expect(editors.every((u) => u.role === "editor")).toBe(true);
     expect(editors.some((u) => u.email === "e@example.test")).toBe(true);
@@ -45,13 +45,13 @@ describe("user.list", () => {
 
 describe("user.get", () => {
   test("self-lookup always allowed (no user:list needed)", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     const got = await h.client.user.get({ id: h.user.id });
     expect(got.id).toBe(h.user.id);
   });
 
-  test("subscriber looking up another user is FORBIDDEN", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member looking up another user is FORBIDDEN", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const other = await h.factory.user.create({ email: "other@example.test" });
     await expect(h.client.user.get({ id: other.id })).rejects.toMatchObject({
       code: "FORBIDDEN",
@@ -60,7 +60,7 @@ describe("user.get", () => {
 
   test("editor can look up any user", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const other = await h.factory.subscriber.create();
+    const other = await h.factory.member.create();
     const got = await h.client.user.get({ id: other.id });
     expect(got.id).toBe(other.id);
   });
@@ -84,6 +84,17 @@ describe("user.invite", () => {
     expect(user.role).toBe("author");
     expect(typeof inviteToken).toBe("string");
     expect(inviteToken.length).toBeGreaterThan(20);
+  });
+
+  test("an invite naming no role invites a member, on the user and its token", async () => {
+    const h = await createRpcHarness({ authAs: "admin" });
+    const { user } = await h.client.user.invite({ email: "new@example.test" });
+    expect(user.role).toBe("member");
+    expect(
+      await h.db.all(
+        sql`SELECT role FROM auth_tokens WHERE type = 'invite' AND email = 'new@example.test'`,
+      ),
+    ).toEqual([{ role: "member" }]);
   });
 
   test("editor cannot invite (user:create is admin-only)", async () => {
@@ -132,7 +143,7 @@ describe("user.invite", () => {
     const onInvited = h.spyEvent(user.invited);
     const { user: invited, inviteToken } = await h.client.user.invite({
       email: "plugin@example.test",
-      role: "subscriber",
+      role: "member",
     });
     onInvited.assertCalledOnce();
     const payload = onInvited.lastPayload;
@@ -160,7 +171,7 @@ describe("a role the site declares in config", () => {
 
   test("a user can be given it, and then holds its capabilities", async () => {
     const h = await createRpcHarness({ authAs: "admin", plugins: plugins() });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     await h.client.user.update({
       id: target.id,
       ifMatch: await currentUserEtag(h.db, target.id),
@@ -204,7 +215,7 @@ describe("assigning a role, whose capabilities the actor must hold", () => {
   const plugins = () =>
     createPluginRegistry(undefined, {
       promoter: {
-        extends: "subscriber",
+        extends: "member",
         can: {
           admin: ["access"],
           user: ["list", "create", "edit", "promote"],
@@ -220,7 +231,7 @@ describe("assigning a role, whose capabilities the actor must hold", () => {
 
   test("a role with a capability the actor lacks is refused", async () => {
     const h = await promoter();
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     await expect(
       h.client.user.update({
         id: target.id,
@@ -230,7 +241,7 @@ describe("assigning a role, whose capabilities the actor must hold", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(
       await h.db.query.users.findFirst({ where: eq(users.id, target.id) }),
-    ).toMatchObject({ role: "subscriber" });
+    ).toMatchObject({ role: "member" });
   });
 
   test("a role within the actor's capabilities is assigned", async () => {
@@ -239,9 +250,9 @@ describe("assigning a role, whose capabilities the actor must hold", () => {
     const updated = await h.client.user.update({
       id: target.id,
       ifMatch: await currentUserEtag(h.db, target.id),
-      role: "subscriber",
+      role: "member",
     });
-    expect(updated.role).toBe("subscriber");
+    expect(updated.role).toBe("member");
   });
 
   test("an invite for a role with a capability the actor lacks is refused", async () => {
@@ -253,8 +264,8 @@ describe("assigning a role, whose capabilities the actor must hold", () => {
 });
 
 describe("user.update", () => {
-  test("subscriber can edit own profile (name)", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member can edit own profile (name)", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const updated = await h.client.user.update({
       id: h.user.id,
       ifMatch: await currentUserEtag(h.db, h.user.id),
@@ -263,8 +274,8 @@ describe("user.update", () => {
     expect(updated.name).toBe("Renamed");
   });
 
-  test("subscriber cannot change own role", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member cannot change own role", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     await expect(
       h.client.user.update({
         id: h.user.id,
@@ -277,8 +288,8 @@ describe("user.update", () => {
     });
   });
 
-  test("subscriber cannot edit another user", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member cannot edit another user", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const other = await h.factory.user.create({ email: "o@example.test" });
     await expect(
       h.client.user.update({
@@ -350,8 +361,8 @@ describe("user.update", () => {
     expect(updated.role).toBe("editor");
   });
 
-  test("subscriber can edit own author slug", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+  test("member can edit own author slug", async () => {
+    const h = await createRpcHarness({ authAs: "member" });
     const updated = await h.client.user.update({
       id: h.user.id,
       ifMatch: await currentUserEtag(h.db, h.user.id),
@@ -387,7 +398,7 @@ describe("user.update", () => {
   });
 
   test("re-saving a user's own slug unchanged is a no-op, not a conflict", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     const current = await h.client.user.get({ id: h.user.id });
     const updated = await h.client.user.update({
       id: h.user.id,
@@ -398,7 +409,7 @@ describe("user.update", () => {
   });
 
   test("rejects a slug that isn't URL-safe kebab-case", async () => {
-    const h = await createRpcHarness({ authAs: "subscriber" });
+    const h = await createRpcHarness({ authAs: "member" });
     await expect(
       h.client.user.update({
         id: h.user.id,
@@ -453,7 +464,7 @@ describe("user.disable", () => {
 describe("user.delete", () => {
   test("admin can delete a user with no authored entries", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     const deleted = await h.client.user.delete({ id: target.id });
     expect(deleted.id).toBe(target.id);
 
@@ -501,7 +512,7 @@ describe("user.delete", () => {
 
   test("editor cannot delete users", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     await expect(h.client.user.delete({ id: target.id })).rejects.toMatchObject(
       {
         code: "FORBIDDEN",
@@ -514,7 +525,7 @@ describe("user.delete", () => {
 describe("user.enable", () => {
   test("admin can re-enable a disabled user", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     await h.client.user.disable({ id: target.id });
     const re = await h.client.user.enable({ id: target.id });
     expect(re.disabledAt).toBeNull();
@@ -522,14 +533,14 @@ describe("user.enable", () => {
 
   test("already-active target is a no-op (idempotent)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     const result = await h.client.user.enable({ id: target.id });
     expect(result.disabledAt).toBeNull();
   });
 
   test("editor cannot enable (user:edit is admin-only here)", async () => {
     const h = await createRpcHarness({ authAs: "editor" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     await expect(h.client.user.enable({ id: target.id })).rejects.toMatchObject(
       {
         code: "FORBIDDEN",
@@ -542,7 +553,7 @@ describe("user.enable", () => {
 describe("user events", () => {
   test("user.updated fires after update with previous row", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create({ name: "Before" });
+    const target = await h.factory.member.create({ name: "Before" });
     const spy = h.spyEvent(user.updated);
     await h.client.user.update({
       id: target.id,
@@ -556,7 +567,7 @@ describe("user events", () => {
 
   test("user.statusChanged fires on disable with enabled=false", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     const spy = h.spyEvent(user.statusChanged);
     await h.client.user.disable({ id: target.id });
     spy.assertCalledOnce();
@@ -565,7 +576,7 @@ describe("user events", () => {
 
   test("user.statusChanged fires on re-enable with enabled=true", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     await h.client.user.disable({ id: target.id });
     const spy = h.spyEvent(user.statusChanged);
     await h.client.user.enable({ id: target.id });
@@ -575,7 +586,7 @@ describe("user events", () => {
 
   test("user.statusChanged does NOT fire on an already-active enable (idempotent short-circuit)", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     const spy = h.spyEvent(user.statusChanged);
     await h.client.user.enable({ id: target.id });
     spy.assertNotCalled();
@@ -583,7 +594,7 @@ describe("user events", () => {
 
   test("user.deleted fires with reassignedTo=null when the user had no entries", async () => {
     const h = await createRpcHarness({ authAs: "admin" });
-    const target = await h.factory.subscriber.create();
+    const target = await h.factory.member.create();
     const spy = h.spyEvent(user.deleted);
     await h.client.user.delete({ id: target.id });
     spy.assertCalledOnce();

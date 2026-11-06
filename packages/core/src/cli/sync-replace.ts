@@ -431,7 +431,7 @@ async function resolveAuthors(
         await freeSlug(executor, String(author.slug)),
         author.name ?? null,
         author.avatar_url ?? null,
-        author.role ?? "subscriber",
+        author.role ?? "member",
         Math.floor(now.getTime() / 1000),
       ],
     );

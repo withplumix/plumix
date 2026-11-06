@@ -16,8 +16,7 @@ import type {
 export const DEFAULT_ROLE_LABELS: Readonly<
   Record<DefaultRole, MessageDescriptor>
 > = {
-  subscriber: { id: "userRole.subscriber", message: "Subscriber" },
-  contributor: { id: "userRole.contributor", message: "Contributor" },
+  member: { id: "userRole.member", message: "Member" },
   author: { id: "userRole.author", message: "Author" },
   editor: { id: "userRole.editor", message: "Editor" },
   admin: { id: "userRole.admin", message: "Administrator" },

@@ -33,8 +33,8 @@ async function signedInAs(role: DefaultRole) {
 }
 
 describe("the session's capabilities", () => {
-  test("a subscriber's session reports editing their own profile, not creating posts", async () => {
-    const { session } = await signedInAs("subscriber");
+  test("a member's session reports editing their own profile, not creating posts", async () => {
+    const { session } = await signedInAs("member");
 
     await session.refresh();
 
@@ -69,7 +69,7 @@ describe("authClient.can", () => {
   });
 
   test("answers from the signed-in session's capabilities", async () => {
-    const { authClient, session } = await signedInAs("subscriber");
+    const { authClient, session } = await signedInAs("member");
 
     await session.refresh();
 
@@ -78,7 +78,7 @@ describe("authClient.can", () => {
   });
 
   test("turns false after sign-out", async () => {
-    const { authClient, session } = await signedInAs("subscriber");
+    const { authClient, session } = await signedInAs("member");
     await session.refresh();
 
     await authClient.signOut();

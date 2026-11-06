@@ -367,11 +367,11 @@ describe("the card preview in the entry editor", () => {
 
   test("refuses a caller who may not edit the entry", async () => {
     const harness = await previewHarness();
-    const subscriber = await harness.seedUser("subscriber");
+    const member = await harness.seedUser("member");
     const id = await seedEntry(harness);
 
     const response = await harness.fetch("/_plumix/rpc/og/preview", {
-      as: subscriber,
+      as: member,
       json: { json: { entryId: id }, meta: [] },
     });
 

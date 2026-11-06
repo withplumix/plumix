@@ -262,7 +262,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
-      defaultRole: "subscriber",
+      defaultRole: "member",
     });
 
     expect(sent).toHaveLength(1);
@@ -281,7 +281,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
-      defaultRole: "subscriber",
+      defaultRole: "member",
     });
 
     expect(sent).toHaveLength(0);
@@ -299,7 +299,7 @@ describe("requestMagicLink", () => {
       origin: "https://cms.example",
       basePath: "",
       mail: mailFor(db, mailer),
-      defaultRole: "subscriber",
+      defaultRole: "member",
     });
 
     expect(sent).toHaveLength(0);

@@ -225,7 +225,7 @@ describe("public route dispatch — CDN", () => {
       cdn,
       config: { plugins: [sitemap] },
     });
-    const reader = await harness.seedUser("subscriber");
+    const reader = await harness.seedUser("member");
 
     const response = await harness.fetch("/sitemap.xml", { as: reader });
     await harness.drainDeferred();
@@ -294,7 +294,7 @@ describe("public route dispatch — access policy", () => {
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },
     });
-    const reader = await harness.seedUser("subscriber");
+    const reader = await harness.seedUser("member");
 
     const response = await harness.fetch("/feed", { as: reader });
 
@@ -375,7 +375,7 @@ describe("public route dispatch — access policy", () => {
     const harness = await createDispatcherHarness({
       config: { plugins: [plugin] },
     });
-    const reader = await harness.seedUser("subscriber");
+    const reader = await harness.seedUser("member");
 
     const response = await harness.fetch("/feed", { as: reader });
 

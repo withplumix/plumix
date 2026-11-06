@@ -30,7 +30,7 @@ export function registerCoreLookupAdapters(
     kind: "term",
     adapter: termLookupAdapter,
     // Term names + slugs are public (`term:<taxonomy>:read` is on the
-    // subscriber baseline); per-taxonomy scoping is enforced inside
+    // member baseline); per-taxonomy scoping is enforced inside
     // the adapter via `inArray(terms.taxonomy, …)`.
     capability: null,
     registeredBy: null,

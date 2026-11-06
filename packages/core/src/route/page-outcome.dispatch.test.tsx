@@ -88,7 +88,7 @@ describe("an archive resolve that throws an outcome", () => {
       cdn,
       config: { plugins: [loginPlugin], theme: loginTheme },
     });
-    const user = await h.seedUser("subscriber");
+    const user = await h.seedUser("member");
 
     const response = await h.dispatch(
       await h.authenticateRequest(

@@ -383,7 +383,7 @@ describe("visibleEntryTypes", () => {
   });
 
   test("hides entry types whose `showInSidebar` is false", () => {
-    // Contributors hold `entry:media:edit_own`, so the capability gate alone
+    // Authors hold `entry:media:edit_own`, so the capability gate alone
     // would still show a type that opted out of the sidebar.
     const sourceWithHidden: PlumixManifest = {
       entryTypes: [

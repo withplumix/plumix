@@ -28,14 +28,8 @@ function taxonomyRegistry() {
     ),
   );
   const caps: Record<string, readonly DefaultRole[]> = {
-    "term:category:read": [
-      "subscriber",
-      "contributor",
-      "author",
-      "editor",
-      "admin",
-    ],
-    "term:category:assign": ["contributor", "author", "editor", "admin"],
+    "term:category:read": ["member", "author", "editor", "admin"],
+    "term:category:assign": ["author", "editor", "admin"],
     "term:category:edit": ["editor", "admin"],
     "term:category:delete": ["editor", "admin"],
   };
@@ -63,7 +57,7 @@ function withIconField(plugins: MutablePluginRegistry): MutablePluginRegistry {
 describe("term.list", () => {
   test("returns terms in the requested taxonomy", async () => {
     const plugins = taxonomyRegistry();
-    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const h = await createRpcHarness({ authAs: "member", plugins });
     await h.factory.term.create({
       taxonomy: "category",
       name: "Alpha",
@@ -92,7 +86,7 @@ describe("term.list", () => {
 
   test("parentId=null returns only top-level terms", async () => {
     const plugins = taxonomyRegistry();
-    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const h = await createRpcHarness({ authAs: "member", plugins });
     const root = await h.factory.term.create({
       taxonomy: "category",
       name: "Root",
@@ -115,7 +109,7 @@ describe("term.list", () => {
 describe("term.get", () => {
   test("returns the term", async () => {
     const plugins = taxonomyRegistry();
-    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const h = await createRpcHarness({ authAs: "member", plugins });
     const row = await h.factory.term.create({
       taxonomy: "category",
       name: "Got",
@@ -128,7 +122,7 @@ describe("term.get", () => {
 
   test("404 when the term does not exist", async () => {
     const plugins = taxonomyRegistry();
-    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const h = await createRpcHarness({ authAs: "member", plugins });
     await expect(h.client.term.get({ id: 9999 })).rejects.toMatchObject({
       code: "NOT_FOUND",
       data: { kind: "term", id: 9999 },
@@ -255,9 +249,9 @@ describe("term.update", () => {
     expect(updated.name).toBe("New Name");
   });
 
-  test("subscriber cannot update", async () => {
+  test("member cannot update", async () => {
     const plugins = taxonomyRegistry();
-    const h = await createRpcHarness({ authAs: "subscriber", plugins });
+    const h = await createRpcHarness({ authAs: "member", plugins });
     const row = await h.factory.term.create({
       taxonomy: "category",
       name: "Name",

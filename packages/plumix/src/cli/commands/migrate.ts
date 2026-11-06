@@ -20,6 +20,7 @@ import type {
   CommandDefinition,
   MigrationDatabase,
   MigrationOwner,
+  PluginRegistry,
   PlumixConfig,
   RuntimeMigrations,
   TargetOptionValues,
@@ -35,6 +36,7 @@ import {
   reportPending,
   reportStatus,
 } from "../migrate/apply.js";
+import { assertContributorRoleDeclared } from "../migrate/contributors.js";
 import { loadDataMigrations } from "../migrate/data-load.js";
 import {
   applyDataMigrations,
@@ -111,6 +113,8 @@ export interface MigrationTarget {
   readonly configPath: string;
   readonly config: PlumixConfig;
   readonly runtimeMigrations: RuntimeMigrations | undefined;
+  /** Read only to print a refusal; `plumix dev` builds it on demand. */
+  readonly plugins: () => Promise<PluginRegistry>;
 }
 
 function migrationTarget(ctx: CommandContext): MigrationTarget {
@@ -119,6 +123,7 @@ function migrationTarget(ctx: CommandContext): MigrationTarget {
     configPath: ctx.configPath,
     config: ctx.app.config,
     runtimeMigrations: ctx.runtimeMigrations,
+    plugins: () => Promise.resolve(ctx.app.plugins),
   };
 }
 
@@ -260,6 +265,7 @@ function adoptAndApply(
   database: DatabaseChoice,
 ): MigrationWork {
   return async (db, owners, data, migrations) => {
+    await assertContributorRoleDeclared(db, target.config, target.plugins);
     await adoptLegacyDatabase(
       db,
       owners,

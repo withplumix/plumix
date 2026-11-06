@@ -580,7 +580,7 @@ async up({ db }) {
       );
 
       expect(lines.join("\n")).toMatch(
-        /^→ local · site\.sqlite\ncore: applied 5 migrations\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n@acme\/plugin-widgets: applied 1 migration\n {2}applied 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
+        /^→ local · site\.sqlite\ncore: applied 5 migrations\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n@acme\/plugin-widgets: applied 1 migration\n {2}applied 1970-01-01T00:00:01\.000Z [0-9a-f]{8}\ncore: applied 1 data migration\n {2}applied rename-subscriber-to-member$/,
       );
     });
 
@@ -737,6 +737,7 @@ async up({ db }) {
         })),
       );
       expect(lines.filter((line) => line.includes("data migration"))).toEqual([
+        "core: applied 1 data migration",
         "@acme/plugin-b: applied 2 data migrations",
         "@acme/plugin-a: applied 1 data migration",
         "site: applied 3 data migrations",
@@ -822,9 +823,11 @@ async up({ db }) {
       expect(query("SELECT name FROM runs ORDER BY n")).toEqual([
         { name: "first" },
       ]);
-      expect(query(`SELECT owner, name FROM __plumix_data_migrations`)).toEqual(
-        [{ owner: "@acme/plugin-flags", name: "first" }],
-      );
+      expect(
+        query(
+          `SELECT owner, name FROM __plumix_data_migrations WHERE owner != 'core'`,
+        ),
+      ).toEqual([{ owner: "@acme/plugin-flags", name: "first" }]);
     });
 
     test("the next run applies a failed data migration once its cause is fixed", async () => {
@@ -839,7 +842,7 @@ async up({ db }) {
       );
       expect(
         query(
-          `SELECT owner, name FROM __plumix_data_migrations ORDER BY owner, name`,
+          `SELECT owner, name FROM __plumix_data_migrations WHERE owner != 'core' ORDER BY owner, name`,
         ),
       ).toEqual([
         { owner: "@acme/plugin-flags", name: "after" },
@@ -873,6 +876,83 @@ async up({ db }) {
         message: expect.stringMatching(/^site .+"site1"/) as unknown,
       });
       expect(names("table")).not.toContain("runs");
+    });
+  });
+
+  describe("retiring the default contributor role", () => {
+    function insertUser(slug: string, role: string): void {
+      const raw = new DatabaseSync(join(dir, "site.sqlite"));
+      try {
+        raw
+          .prepare(`INSERT INTO users (email, slug, role) VALUES (?, ?, ?)`)
+          .run(`${slug}@example.test`, slug, role);
+      } finally {
+        raw.close();
+      }
+    }
+
+    // A site migrated before the rename shipped: core's data migration is
+    // pending, and its users hold the old default roles.
+    async function siteBeforeTheRename(...roles: string[]) {
+      await migrateCommand.run(applyCtx([]));
+      query(`DELETE FROM __plumix_data_migrations WHERE owner = 'core'`);
+      for (const role of roles) insertUser(role, role);
+    }
+
+    const withRoles = (
+      roles: PlumixApp["config"]["roles"],
+      context = applyCtx([]),
+    ): CommandContext => ({
+      ...context,
+      app: { ...context.app, config: { ...context.app.config, roles } },
+    });
+
+    const usersByRole = () =>
+      query("SELECT slug, role FROM users ORDER BY slug");
+
+    test("with contributors and no contributor role, fails before any migration, printing the role", async () => {
+      await siteBeforeTheRename("subscriber", "contributor");
+
+      const failure = migrateCommand.run(applyCtx([]));
+
+      await expect(failure).rejects.toMatchObject({
+        code: "migrate_contributor_role_missing",
+        message: expect.stringContaining("1 user holds") as unknown,
+        hint: expect.stringContaining(
+          'contributor: {\n  "label": "Contributor"',
+        ) as unknown,
+      });
+      expect(usersByRole()).toEqual([
+        { slug: "contributor", role: "contributor" },
+        { slug: "subscriber", role: "subscriber" },
+      ]);
+      expect(
+        query(`SELECT name FROM __plumix_data_migrations WHERE owner = 'core'`),
+      ).toEqual([]);
+    });
+
+    test("with the contributor role declared, contributors keep it and subscribers become members", async () => {
+      await siteBeforeTheRename("subscriber", "contributor");
+
+      await migrateCommand.run(
+        withRoles({ contributor: { can: { admin: ["access"] } } }),
+      );
+
+      expect(usersByRole()).toEqual([
+        { slug: "contributor", role: "contributor" },
+        { slug: "subscriber", role: "member" },
+      ]);
+    });
+
+    test("with no contributors, migrates without the role", async () => {
+      await siteBeforeTheRename("subscriber", "editor");
+
+      await migrateCommand.run(applyCtx([]));
+
+      expect(usersByRole()).toEqual([
+        { slug: "editor", role: "editor" },
+        { slug: "subscriber", role: "member" },
+      ]);
     });
   });
 
@@ -1034,6 +1114,7 @@ export default [
       expect(lines).toEqual([
         "core: applied 5 migrations",
         "@acme/plugin-widgets: applied 1 migration",
+        "core: applied 1 data migration",
         "site: applied 1 data migration",
       ]);
     });
@@ -1049,11 +1130,14 @@ export default [
       expect(lines).toEqual([
         "core: up to date",
         "@acme/plugin-widgets: up to date",
+        "core: data migrations up to date",
         "site: data migrations up to date",
       ]);
-      expect(query(`SELECT owner, name FROM __plumix_data_migrations`)).toEqual(
-        [{ owner: "site", name: "rename-beta" }],
-      );
+      expect(
+        query(
+          `SELECT owner, name FROM __plumix_data_migrations WHERE owner != 'core'`,
+        ),
+      ).toEqual([{ owner: "site", name: "rename-beta" }]);
     });
 
     test("lays each owner's history out under migrations/<owner>/", async () => {
@@ -1082,6 +1166,7 @@ export default [
       expect(lines).toEqual([
         "core: applied 5 migrations",
         "@acme/plugin-widgets: applied 1 migration",
+        "core: applied 1 data migration",
       ]);
     });
 
@@ -1096,6 +1181,7 @@ export default [
       expect(lines).toEqual([
         "core: up to date",
         "@acme/plugin-widgets: up to date",
+        "core: data migrations up to date",
       ]);
     });
   });
@@ -1155,7 +1241,13 @@ export default [
 
     function devTarget(plugins: PlumixApp["config"]["plugins"]) {
       const { cwd, configPath, app, runtimeMigrations } = applyCtx([], plugins);
-      return { cwd, configPath, config: app.config, runtimeMigrations };
+      return {
+        cwd,
+        configPath,
+        config: app.config,
+        runtimeMigrations,
+        plugins: () => Promise.resolve(app.plugins),
+      };
     }
 
     const columns = (table: string): unknown[] =>
@@ -1207,9 +1299,11 @@ export default [
       expect(query("SELECT nickname FROM widgets")).toEqual([
         { nickname: "nick" },
       ]);
-      expect(query("SELECT owner, name FROM __plumix_data_migrations")).toEqual(
-        [{ owner: "site", name: "nickname-widgets" }],
-      );
+      expect(
+        query(
+          "SELECT owner, name FROM __plumix_data_migrations WHERE owner != 'core'",
+        ),
+      ).toEqual([{ owner: "site", name: "nickname-widgets" }]);
     });
 
     test("a second start writes nothing", async () => {
@@ -1651,7 +1745,7 @@ export default [
       await migrateCommand.run(applyCtx(["status"], plugins));
 
       expect(lines.join("\n")).toMatch(
-        /^→ local · site\.sqlite\ncore: 0 applied, 5 pending\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n@acme\/plugin-widgets: 0 applied, 1 pending\n {2}pending 1970-01-01T00:00:01\.000Z [0-9a-f]{8}$/,
+        /^→ local · site\.sqlite\ncore: 0 applied, 5 pending\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n@acme\/plugin-widgets: 0 applied, 1 pending\n {2}pending 1970-01-01T00:00:01\.000Z [0-9a-f]{8}\ncore: 0 data migrations applied, 1 pending\n {2}pending rename-subscriber-to-member$/,
       );
     });
     test("lists each owner's applied and pending data migrations after the schema status", async () => {
@@ -1700,7 +1794,7 @@ export default [
 
     const schema = () =>
       query(
-        "SELECT type, name, sql FROM sqlite_master WHERE tbl_name NOT LIKE '\\_\\_drizzle%' ESCAPE '\\' ORDER BY name",
+        "SELECT type, name, sql FROM sqlite_master WHERE tbl_name NOT LIKE '\\_\\_drizzle%' ESCAPE '\\' AND tbl_name != '__plumix_data_migrations' ORDER BY name",
       );
 
     test("records every owner migration as applied without running DDL, and the next run applies nothing", async () => {
@@ -1721,7 +1815,11 @@ export default [
 
       lines.length = 0;
       await migrateCommand.run(applyCtx([]));
-      expect(lines).toEqual(["→ local · site.sqlite", "core: up to date"]);
+      expect(lines).toEqual([
+        "→ local · site.sqlite",
+        "core: up to date",
+        "core: data migrations up to date",
+      ]);
     });
 
     test("ignores the data-migrations tracking table as bookkeeping", async () => {
