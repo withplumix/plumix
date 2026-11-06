@@ -17,6 +17,8 @@ import type {
 import type { McpTool } from "../context/mcp-tool.js";
 import type { DocumentManifest } from "../document-manifest.js";
 import type { SetupEvents, SetupFilters } from "../hooks/define.js";
+import type { EntryTypeHandle } from "../hooks/entry.js";
+import type { TermTaxonomyHandle } from "../hooks/term.js";
 import type {
   ActionArgs,
   ActionFn,
@@ -106,8 +108,13 @@ export interface PluginSetupContextBase {
     options?: HookOptions,
   ): void;
 
-  registerEntryType(name: string, options: EntryTypeOptions): void;
-  registerTermTaxonomy(name: string, options: TermTaxonomyOptions): void;
+  /** Returns `entry.for(name)`: the type's own events and filters. */
+  registerEntryType(name: string, options: EntryTypeOptions): EntryTypeHandle;
+  /** Returns `term.for(name)`: the taxonomy's own events. */
+  registerTermTaxonomy(
+    name: string,
+    options: TermTaxonomyOptions,
+  ): TermTaxonomyHandle;
   /**
    * The box's fields are also the meta storage schema. Throws
    * `DuplicateRegistrationError` on id collision; `buildManifest` rejects two

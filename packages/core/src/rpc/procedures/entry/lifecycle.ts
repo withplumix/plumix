@@ -15,6 +15,7 @@ import {
   loadAuthoredEntry,
 } from "../../../entries/authored.js";
 import { assertCanDeleteEntry } from "../../../entries/editability.js";
+import { entry } from "../../../hooks/entry.js";
 import {
   pruneOldRevisions,
   snapshotAsRevision,
@@ -23,16 +24,12 @@ import {
 export async function applyEntryBeforeSave(
   ctx: AppContext,
   type: string,
-  entry: NewEntry,
+  prepared: NewEntry,
 ): Promise<NewEntry> {
-  const afterSpecific = await ctx.hooks.applyFilter(
-    `entry:${type}:before_save`,
-    entry,
-  );
-  return ctx.hooks.applyFilter("entry:before_save", afterSpecific);
+  return ctx.filters.apply(entry.for(type).beforeSave, prepared);
 }
 
-/** The columns `patch` names, as `before_save` left them. */
+/** The columns `patch` names, as `beforeSave` left them. */
 export function preparedColumns<T extends object>(
   prepared: T,
   patch: Partial<T>,
@@ -44,25 +41,21 @@ export function preparedColumns<T extends object>(
 
 export async function fireEntryTransition(
   ctx: AppContext,
-  entry: Entry,
-  oldStatus: EntryStatus,
+  row: Entry,
+  previousStatus: EntryStatus,
 ): Promise<void> {
-  if (entry.status === oldStatus) return;
-  await ctx.hooks.doAction(
-    `entry:${entry.type}:transition`,
-    entry,
-    oldStatus,
-    ctx,
-  );
-  await ctx.hooks.doAction("entry:transition", entry, oldStatus, ctx);
+  if (row.status === previousStatus) return;
+  await ctx.events.emit(entry.for(row.type).transition, {
+    entry: row,
+    previousStatus,
+  });
 }
 
 export async function fireEntryPublished(
   ctx: AppContext,
-  entry: Entry,
+  row: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:published`, entry, ctx);
-  await ctx.hooks.doAction("entry:published", entry, ctx);
+  await ctx.events.emit(entry.for(row.type).published, { entry: row });
 }
 
 /**
@@ -78,35 +71,31 @@ export function publishedAtForTransition(
 
 export async function fireEntryUpdated(
   ctx: AppContext,
-  entry: Entry,
+  row: Entry,
   previous: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:updated`, entry, previous, ctx);
-  await ctx.hooks.doAction("entry:updated", entry, previous, ctx);
+  await ctx.events.emit(entry.for(row.type).updated, { entry: row, previous });
 }
 
 export async function fireEntryTrashed(
   ctx: AppContext,
-  entry: Entry,
+  row: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:trashed`, entry, ctx);
-  await ctx.hooks.doAction("entry:trashed", entry, ctx);
+  await ctx.events.emit(entry.for(row.type).trashed, { entry: row });
 }
 
 export async function fireEntryRestored(
   ctx: AppContext,
-  entry: Entry,
+  row: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:restored`, entry, ctx);
-  await ctx.hooks.doAction("entry:restored", entry, ctx);
+  await ctx.events.emit(entry.for(row.type).restored, { entry: row });
 }
 
 export async function fireEntryDeleted(
   ctx: AppContext,
-  entry: Entry,
+  row: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(`entry:${entry.type}:deleted`, entry, ctx);
-  await ctx.hooks.doAction("entry:deleted", entry, ctx);
+  await ctx.events.emit(entry.for(row.type).deleted, { entry: row });
 }
 
 /** Keyed on the live entry's type, not the autosave row's `type='autosave'`. */
@@ -115,13 +104,10 @@ export async function fireEntryAutosaveSaved(
   autosave: Entry,
   live: Entry,
 ): Promise<void> {
-  await ctx.hooks.doAction(
-    `entry:${live.type}:autosave_saved`,
+  await ctx.events.emit(entry.for(live.type).autosaveSaved, {
     autosave,
-    live,
-    ctx,
-  );
-  await ctx.hooks.doAction("entry:autosave_saved", autosave, live, ctx);
+    entry: live,
+  });
 }
 
 export async function fireEntryAutosaveDiscarded(
@@ -129,18 +115,15 @@ export async function fireEntryAutosaveDiscarded(
   live: Entry,
   authorId: number,
 ): Promise<void> {
-  await ctx.hooks.doAction(
-    `entry:${live.type}:autosave_discarded`,
-    live,
+  await ctx.events.emit(entry.for(live.type).autosaveDiscarded, {
+    entry: live,
     authorId,
-    ctx,
-  );
-  await ctx.hooks.doAction("entry:autosave_discarded", live, authorId, ctx);
+  });
 }
 
 /**
  * `liveType` is the public type even when the snapshot landed on an
- * autosave row, so subscribers fire under the same namespace.
+ * autosave row, so subscribers scoped to the type hear it.
  */
 export async function fireEntryRevisionRestored(
   ctx: AppContext,
@@ -148,18 +131,10 @@ export async function fireEntryRevisionRestored(
   destination: Entry,
   liveType: string,
 ): Promise<void> {
-  await ctx.hooks.doAction(
-    `entry:${liveType}:revision_restored`,
+  await ctx.events.emit(entry.for(liveType).revisionRestored, {
     revision,
     destination,
-    ctx,
-  );
-  await ctx.hooks.doAction(
-    "entry:revision_restored",
-    revision,
-    destination,
-    ctx,
-  );
+  });
 }
 
 /**
@@ -211,7 +186,7 @@ export async function loadDeletableEntries(
   ids: readonly number[],
   guards: DeletableGuards,
 ): Promise<Entry[]> {
-  // Dedupe so a repeated id can't double-fire lifecycle hooks or inflate
+  // Dedupe so a repeated id can't double-fire lifecycle events or inflate
   // the result count — bulk ops act on each entry once.
   const uniqueIds = [...new Set(ids)];
   const rows = await loadAuthoredEntries(ctx.db, uniqueIds);
@@ -253,9 +228,8 @@ export async function wouldCreateParentCycle(
 
 /**
  * No-op when the type doesn't opt into `supports: ['revisions']`.
- * Fires `entry:<type>:revision_created` + the generic variant once
- * the snapshot lands; `revision_pruned` only fires when the cap
- * pushed rows past `maxRevisions`.
+ * Emits `entry.revisionCreated` once the snapshot lands;
+ * `revisionPruned` only when the cap pushed rows past `maxRevisions`.
  */
 export async function captureRevisionIfSupported(
   ctx: AuthenticatedAppContext,
@@ -269,26 +243,18 @@ export async function captureRevisionIfSupported(
     authorId: ctx.user.id,
     apiToken: ctx.apiToken,
   });
-  // Prune BEFORE the created hook fires so subscribers see the
+  // Prune BEFORE `revisionCreated` is emitted so subscribers see the
   // post-prune list rather than a transient N+1 window.
   const pruned = await pruneOldRevisions(ctx.db, {
     entryId: updated.id,
     maxRevisions: cap,
   });
-  await ctx.hooks.doAction(
-    `entry:${updated.type}:revision_created`,
-    revision,
-    updated,
-    ctx,
-  );
-  await ctx.hooks.doAction("entry:revision_created", revision, updated, ctx);
+  const events = entry.for(updated.type);
+  await ctx.events.emit(events.revisionCreated, { revision, entry: updated });
   if (pruned > 0) {
-    await ctx.hooks.doAction(
-      `entry:${updated.type}:revision_pruned`,
-      updated,
-      pruned,
-      ctx,
-    );
-    await ctx.hooks.doAction("entry:revision_pruned", updated, pruned, ctx);
+    await ctx.events.emit(events.revisionPruned, {
+      entry: updated,
+      prunedCount: pruned,
+    });
   }
 }

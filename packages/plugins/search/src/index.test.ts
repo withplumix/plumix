@@ -3,7 +3,7 @@ import type { DispatcherHarness } from "plumix/test";
 import { eq, etagOf, sql } from "plumix/db";
 import { text } from "plumix/fields";
 import { definePlugin } from "plumix/plugin";
-import { entries } from "plumix/schema";
+import { entries, terms } from "plumix/schema";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchHarness } from "./test/db.js";
@@ -41,6 +41,53 @@ describe("search()", () => {
     await h.drainDeferred();
 
     expect(await matches("hydroponics")).toHaveLength(1);
+  });
+
+  test("trashing and restoring an entry acknowledge their feed changes with no scheduled run", async () => {
+    const created = (await rpc("entry/create", {
+      title: "Hydroponics in winter",
+      slug: "hydroponics",
+      status: "published",
+    })) as { id: number };
+    await h.drainDeferred();
+
+    await rpc("entry/trash", { id: created.id });
+    await h.drainDeferred();
+    const afterTrash = await h.db.all(sql`SELECT id FROM entry_changes`);
+    await rpc("entry/restore", { id: created.id });
+    await h.drainDeferred();
+
+    expect(afterTrash).toEqual([]);
+    expect(await h.db.all(sql`SELECT id FROM entry_changes`)).toEqual([]);
+  });
+
+  test("a term saved, renamed and deleted through the application is indexed with no scheduled run", async () => {
+    const created = (await rpc("term/create", {
+      taxonomy: "category",
+      name: "Gardening",
+      slug: "gardening",
+    })) as { id: number };
+    await h.drainDeferred();
+    const afterCreate = await matches("gardening");
+    const [stored] = await h.db
+      .select({ version: terms.version })
+      .from(terms)
+      .where(eq(terms.id, created.id));
+
+    await rpc("term/update", {
+      id: created.id,
+      name: "Orchards",
+      ifMatch: etagOf(stored?.version ?? new Date(0)),
+    });
+    await h.drainDeferred();
+    const afterRename = await matches("orchards");
+
+    await rpc("term/delete", { id: created.id });
+    await h.drainDeferred();
+
+    expect(afterCreate).toEqual([created.id]);
+    expect(afterRename).toEqual([created.id]);
+    expect(await matches("orchards")).toEqual([]);
   });
 
   test("a save the index cannot absorb still succeeds, and stays on the feed", async () => {

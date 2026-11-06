@@ -14,6 +14,8 @@ import type {
   BlockRenderInput,
   defineEvent,
   defineFilter,
+  entry,
+  EntryTypeHandle,
   EventDefinition,
   FilterDefinition,
   PluginSetupContext,
@@ -22,9 +24,11 @@ import type {
   SetupEvents,
   SetupFilters,
   sync,
+  term,
+  TermTaxonomyHandle,
   user,
 } from "./plugin.js";
-import type { User } from "./schema/index.js";
+import type { Entry, NewEntry, Term, User } from "./schema/index.js";
 import type { DocumentManifest } from "./theme/index.js";
 
 describe("plumix/plugin", () => {
@@ -65,6 +69,33 @@ describe("plumix/plugin", () => {
     expectTypeOf<(typeof sync)["after"]>().toEqualTypeOf<
       EventDefinition<SyncAfterEvent>
     >();
+  });
+
+  test("carries core's entry subject, scoped to the registered type's handle", () => {
+    expectTypeOf<(typeof entry)["published"]>().toEqualTypeOf<
+      EventDefinition<{ readonly entry: Entry }>
+    >();
+    expectTypeOf<(typeof entry)["beforeSave"]>().toEqualTypeOf<
+      FilterDefinition<NewEntry, undefined, false>
+    >();
+    expectTypeOf<
+      ReturnType<(typeof entry)["for"]>
+    >().toEqualTypeOf<EntryTypeHandle>();
+    expectTypeOf<
+      ReturnType<PluginSetupContext["registerEntryType"]>
+    >().toEqualTypeOf<EntryTypeHandle>();
+  });
+
+  test("carries core's term subject, scoped to the registered taxonomy's handle", () => {
+    expectTypeOf<(typeof term)["updated"]>().toEqualTypeOf<
+      EventDefinition<{ readonly term: Term; readonly previous: Term }>
+    >();
+    expectTypeOf<
+      ReturnType<(typeof term)["for"]>
+    >().toEqualTypeOf<TermTaxonomyHandle>();
+    expectTypeOf<
+      ReturnType<PluginSetupContext["registerTermTaxonomy"]>
+    >().toEqualTypeOf<TermTaxonomyHandle>();
   });
 
   test("carries core's user subject", () => {

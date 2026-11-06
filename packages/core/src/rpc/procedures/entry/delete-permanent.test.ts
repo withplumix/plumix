@@ -4,6 +4,7 @@ import type { AppContext } from "../../../context/app-context.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import { eq, like, or } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { entry } from "../../../hooks/entry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("entry.deletePermanent", () => {
@@ -24,15 +25,14 @@ describe("entry.deletePermanent", () => {
       slug: `autosave:${String(target.id)}:${String(h.user.id)}`,
     });
 
-    const onDelete = vi.fn<(post: Entry, ctx: AppContext) => void>();
-    h.hooks.addAction("entry:deleted", onDelete);
+    const onDelete =
+      vi.fn<(payload: { entry: Entry }, ctx: AppContext) => void>();
+    h.hooks.on(entry.deleted, onDelete);
 
     const result = await h.client.entry.deletePermanent({ id: target.id });
     expect(result.id).toBe(target.id);
-    expect(onDelete).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ id: target.id }),
-      expect.anything(),
-    );
+    expect(onDelete).toHaveBeenCalledOnce();
+    expect(onDelete.mock.calls[0]?.[0].entry).toMatchObject({ id: target.id });
     expect(onDelete.mock.calls[0]?.[1].user?.id).toBe(h.user.id);
 
     const leftovers = await h.db.query.entries.findMany({

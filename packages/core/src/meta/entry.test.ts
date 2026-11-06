@@ -8,6 +8,7 @@ import type {
 import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { entry } from "../hooks/entry.js";
 import {
   createPluginRegistry,
   findEntryMetaField,
@@ -474,7 +475,7 @@ describe("entry.get settles an unsettled row", () => {
 
   test("announces the settle once, and a settled row not at all", async () => {
     const { h, row } = await seedUnsettled();
-    const changed = h.spyAction("entry:meta_changed");
+    const changed = h.spyEvent(entry.metaChanged);
 
     await h.client.entry.get({ id: row.id });
     await h.client.entry.get({ id: row.id });

@@ -31,6 +31,8 @@ import { coreMarks, isReservedBlockName } from "../blocks/index.js";
 import { pluginStore } from "../context/stores.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { registerDevItem } from "../dev/registrations.js";
+import { entry } from "../hooks/entry.js";
+import { term } from "../hooks/term.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
@@ -153,6 +155,7 @@ function createContextBase({
         () => toRegisteredEntryType(name, options, pluginId),
       );
       addDerivedCaps(deriveEntryTypeCapabilities(registered));
+      return entry.for(name);
     },
 
     registerTermTaxonomy: (name, options) => {
@@ -160,6 +163,7 @@ function createContextBase({
         toRegisteredTermTaxonomy(name, options, pluginId),
       );
       addDerivedCaps(deriveTermTaxonomyCapabilities(name, options));
+      return term.for(name);
     },
 
     registerEntryMetaBox: makeMetaBoxRegistrar(

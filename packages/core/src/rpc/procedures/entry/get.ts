@@ -8,6 +8,7 @@ import { resolveEntryMeta, settleEntryMeta } from "../../../meta/entry.js";
 import { getAutosave } from "../../../revisions/repository.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { entryRpc } from "../../filters.js";
 import { toRpcEntryReadError } from "./read-errors.js";
 import { entryGetInputSchema } from "./schemas.js";
 
@@ -15,10 +16,7 @@ export const get = base
   .use(authenticated)
   .input(entryGetInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:entry.get:input",
-      input,
-    );
+    const filtered = await context.filters.apply(entryRpc.get.input, input);
 
     try {
       // Only the editor's read heals the row, since a human is about to see and
@@ -30,10 +28,7 @@ export const get = base
       // against live.
       const etag = etagOf(row.updatedAt);
       if (!filtered.preview) {
-        const output = await context.hooks.applyFilter(
-          "rpc:entry.get:output",
-          live,
-        );
+        const output = await context.filters.apply(entryRpc.get.output, live);
         return { ...output, etag };
       }
 
@@ -59,7 +54,7 @@ export const get = base
             meta: await resolveEntryMeta(context, live, autosave.meta),
           }
         : live;
-      const output = await context.hooks.applyFilter("rpc:entry.get:output", {
+      const output = await context.filters.apply(entryRpc.get.output, {
         ...overlaid,
         _preview: {
           source: autosave ? ("autosave" as const) : ("live" as const),

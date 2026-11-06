@@ -1,6 +1,7 @@
 import { etagOf } from "../../../db/concurrency.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { entryRpc } from "../../filters.js";
 import { entryRows } from "./concurrency.js";
 import {
   entryDeletableGuards,
@@ -13,10 +14,7 @@ export const trash = base
   .use(authenticated)
   .input(entryTrashInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:entry.trash:input",
-      input,
-    );
+    const filtered = await context.filters.apply(entryRpc.trash.input, input);
 
     const existing = await loadDeletableEntry(
       context,
@@ -32,8 +30,8 @@ export const trash = base
     }
 
     if (result.written) await fireEntryTrashed(context, result.row);
-    const output = await context.hooks.applyFilter(
-      "rpc:entry.trash:output",
+    const output = await context.filters.apply(
+      entryRpc.trash.output,
       result.row,
     );
     return { ...output, etag: etagOf(result.row.updatedAt) };

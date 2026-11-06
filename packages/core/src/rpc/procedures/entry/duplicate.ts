@@ -8,6 +8,7 @@ import { canReadEntry } from "../../../entries/visibility.js";
 import { resolveEntryMeta } from "../../../meta/entry.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { entryRpc } from "../../filters.js";
 import { assertContentValidAgainstRegistries } from "./content.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
 
@@ -21,8 +22,8 @@ export const duplicate = base
   .use(authenticated)
   .input(entryDuplicateInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:entry.duplicate:input",
+    const filtered = await context.filters.apply(
+      entryRpc.duplicate.input,
       input,
     );
 
@@ -110,9 +111,9 @@ export const duplicate = base
 
     const meta = await resolveEntryMeta(context, created, created.meta);
 
-    const output = await context.hooks.applyFilter(
-      "rpc:entry.duplicate:output",
-      { ...created, meta },
-    );
+    const output = await context.filters.apply(entryRpc.duplicate.output, {
+      ...created,
+      meta,
+    });
     return { ...output, etag: etagOf(created.updatedAt) };
   });

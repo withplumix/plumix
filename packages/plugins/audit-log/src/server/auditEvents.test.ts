@@ -6,8 +6,8 @@ import type {
   PluginSetupContext,
   SetupEvents,
 } from "plumix/plugin";
-import type { Term, User } from "plumix/schema";
-import { auth, HookRegistry, user } from "plumix/plugin";
+import type { Entry, Term, User } from "plumix/schema";
+import { auth, entry, HookRegistry, term, user } from "plumix/plugin";
 import {
   createDispatcherHarness,
   createTestContext,
@@ -204,12 +204,14 @@ const subjectUser = {
 describe("registerAuditEvents — entry surface (regression)", () => {
   test("entry:published produces a row keyed on the entry", async () => {
     const h = harness();
-    await h.fire("entry:published", {
-      id: 5,
-      title: "Hello",
-      slug: "hello",
-      type: "post",
-      status: "published",
+    await h.emit(entry.published, {
+      entry: {
+        id: 5,
+        title: "Hello",
+        slug: "hello",
+        type: "post",
+        status: "published",
+      } as unknown as Entry,
     });
     expect(h.state.rows).toHaveLength(1);
     expect(h.state.rows[0]).toMatchObject({
@@ -413,7 +415,7 @@ describe("registerAuditEvents — term surface", () => {
       parentId: 9,
       meta: {},
     } as unknown as Term;
-    await h.fire("term:updated", next, previous);
+    await h.emit(term.updated, { term: next, previous });
 
     const row = h.state.rows[0];
     if (!row) throw new Error("expected a captured row");
@@ -430,11 +432,13 @@ describe("registerAuditEvents — term surface", () => {
 
   test("term:deleted produces a final row even though the source row is gone", async () => {
     const h = harness();
-    await h.fire("term:deleted", {
-      id: 3,
-      taxonomy: "category",
-      name: "Old news",
-      slug: "old-news",
+    await h.emit(term.deleted, {
+      term: {
+        id: 3,
+        taxonomy: "category",
+        name: "Old news",
+        slug: "old-news",
+      } as unknown as Term,
     });
     expect(h.state.rows[0]).toMatchObject({
       event: "term:deleted",
@@ -502,7 +506,10 @@ describe("registerAuditEvents — entry backfill", () => {
       meta: { fresh: 1 },
       updatedAt: new Date("2026-05-10T18:00:00Z"),
     };
-    await h.fire("entry:updated", next, previous);
+    await h.emit(entry.updated, {
+      entry: next as unknown as Entry,
+      previous: previous as unknown as Entry,
+    });
     const row = h.state.rows[0];
     expect(row?.event).toBe("entry:updated");
     expect(row?.subjectType).toBe("entry");
@@ -513,11 +520,10 @@ describe("registerAuditEvents — entry backfill", () => {
 
   test("entry:transition records the from→to status pair", async () => {
     const h = harness();
-    await h.fire(
-      "entry:transition",
-      { ...subjectEntry, status: "published" },
-      "draft",
-    );
+    await h.emit(entry.transition, {
+      entry: { ...subjectEntry, status: "published" } as unknown as Entry,
+      previousStatus: "draft" as const,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "entry:transition",
       subjectType: "entry",
@@ -527,7 +533,9 @@ describe("registerAuditEvents — entry backfill", () => {
 
   test("entry:trashed produces a row keyed on the entry", async () => {
     const h = harness();
-    await h.fire("entry:trashed", subjectEntry);
+    await h.emit(entry.trashed, {
+      entry: subjectEntry as unknown as Entry,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "entry:trashed",
       subjectType: "entry",
@@ -538,7 +546,9 @@ describe("registerAuditEvents — entry backfill", () => {
 
   test("entry:restored produces a row keyed on the entry", async () => {
     const h = harness();
-    await h.fire("entry:restored", subjectEntry);
+    await h.emit(entry.restored, {
+      entry: subjectEntry as unknown as Entry,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "entry:restored",
       subjectType: "entry",
@@ -549,7 +559,9 @@ describe("registerAuditEvents — entry backfill", () => {
 
   test("entry:deleted produces a row keyed on the entry", async () => {
     const h = harness();
-    await h.fire("entry:deleted", subjectEntry);
+    await h.emit(entry.deleted, {
+      entry: subjectEntry as unknown as Entry,
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "entry:deleted",
       subjectType: "entry",
@@ -560,11 +572,13 @@ describe("registerAuditEvents — entry backfill", () => {
 
   test("entry:meta_changed records set/removed key names only", async () => {
     const h = harness();
-    await h.fire(
-      "entry:meta_changed",
-      { id: 11, type: "post" },
-      { set: { coAuthor: "alice", featured: true }, removed: ["draftNote"] },
-    );
+    await h.emit(entry.metaChanged, {
+      entry: { id: 11, type: "post" },
+      changes: {
+        set: { coAuthor: "alice", featured: true },
+        removed: ["draftNote"],
+      },
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "entry:meta_changed",
       subjectType: "entry",
@@ -739,11 +753,13 @@ describe("registerAuditEvents — auth backfill", () => {
 describe("registerAuditEvents — term backfill", () => {
   test("term:created produces a row keyed on the term", async () => {
     const h = harness();
-    await h.fire("term:created", {
-      id: 9,
-      taxonomy: "category",
-      name: "News",
-      slug: "news",
+    await h.emit(term.created, {
+      term: {
+        id: 9,
+        taxonomy: "category",
+        name: "News",
+        slug: "news",
+      } as unknown as Term,
     });
     expect(h.state.rows[0]).toMatchObject({
       event: "term:created",
@@ -755,11 +771,10 @@ describe("registerAuditEvents — term backfill", () => {
 
   test("term:meta_changed records taxonomy + key names only", async () => {
     const h = harness();
-    await h.fire(
-      "term:meta_changed",
-      { id: 9, taxonomy: "category" },
-      { set: { ordering: 5 }, removed: ["sunset"] },
-    );
+    await h.emit(term.metaChanged, {
+      term: { id: 9, taxonomy: "category" },
+      changes: { set: { ordering: 5 }, removed: ["sunset"] },
+    });
     expect(h.state.rows[0]).toMatchObject({
       event: "term:meta_changed",
       subjectType: "term",
@@ -807,7 +822,7 @@ describe("auditEvents table", () => {
       "auth:signedIn",
       "auth:signedOut",
       "entry:deleted",
-      "entry:meta_changed",
+      "entry:metaChanged",
       "entry:published",
       "entry:restored",
       "entry:transition",
@@ -816,7 +831,7 @@ describe("auditEvents table", () => {
       "settings:group_changed",
       "term:created",
       "term:deleted",
-      "term:meta_changed",
+      "term:metaChanged",
       "term:updated",
       "user:deleted",
       "user:invited",

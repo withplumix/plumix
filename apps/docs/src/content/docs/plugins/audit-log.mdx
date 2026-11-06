@@ -20,7 +20,7 @@ What it registers:
 - An `audit_log:read` capability, registered with no `grantTo`, so only `admin` holds it by default. The page and the procedure behind it both check it, so only a role holding `audit_log:read` sees the feed; a role you declare grants it with `audit_log: ["read"]`.
 - One listener per audited event. Nothing needs wiring in your own code.
 - A daily scheduled task that deletes rows older than 90 days.
-- An `audit` helper on the per-request context, so any plugin's routes, hooks and RPC procedures can record their own events.
+- An `audit` helper on the per-request context, so any plugin's routes, event handlers and RPC procedures can record their own events.
 
 Each row stores the event name, the subject acted on, the actor who did it, and a JSON `properties` object. When the plugin writes a row, it copies the labels into it. Those are the subject's title or email and the actor's email. A row therefore still reads correctly after the entry or user it names has been deleted.
 
@@ -93,16 +93,25 @@ Then:
 
 ## What it records
 
-Every row below records an event core already fires. Entry, term and settings rows carry the name core fires them under. User and auth rows carry the name in the first column, recorded from the `user` and `auth` events in `plumix/plugin` shown beside it.
+Every row below records an event core already fires. Settings rows carry the name core fires them under. Entry, term, user and auth rows carry the name in the first column, recorded from the `entry`, `term`, `user` and `auth` events in `plumix/plugin` shown beside it.
 
-| Subject          | Events                                                                                                                           |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `entry`          | `entry:updated`, `entry:transition`, `entry:published`, `entry:trashed`, `entry:restored`, `entry:deleted`, `entry:meta_changed` |
-| `term`           | `term:created`, `term:updated`, `term:deleted`, `term:meta_changed`                                                              |
-| `settings_group` | `settings:group_changed`                                                                                                         |
+| Subject          | Events                   |
+| ---------------- | ------------------------ |
+| `settings_group` | `settings:group_changed` |
 
 | Row event                     | Subject       | Recorded from               |
 | ----------------------------- | ------------- | --------------------------- |
+| `entry:updated`               | `entry`       | `entry.updated`             |
+| `entry:transition`            | `entry`       | `entry.transition`          |
+| `entry:published`             | `entry`       | `entry.published`           |
+| `entry:trashed`               | `entry`       | `entry.trashed`             |
+| `entry:restored`              | `entry`       | `entry.restored`            |
+| `entry:deleted`               | `entry`       | `entry.deleted`             |
+| `entry:meta_changed`          | `entry`       | `entry.metaChanged`         |
+| `term:created`                | `term`        | `term.created`              |
+| `term:updated`                | `term`        | `term.updated`              |
+| `term:deleted`                | `term`        | `term.deleted`              |
+| `term:meta_changed`           | `term`        | `term.metaChanged`          |
 | `user:updated`                | `user`        | `user.updated`              |
 | `user:status_changed`         | `user`        | `user.statusChanged`        |
 | `user:deleted`                | `user`        | `user.deleted`              |
@@ -175,14 +184,14 @@ The `subject` is what the event happened to. `type` and `id` are yours to choose
 
 The context declares `audit` as optional. `ctx.audit?.log(...)` therefore compiles in a plugin that does not know whether the audit log is installed, and does nothing when it is not. The declaration comes from the plugin's package, so the call type-checks once `@plumix/plugin-audit-log` is a dependency.
 
-A hook listener receives a plain `AppContext`, whose `user` may be null because the hook can fire for a visitor. Checking `ctx.user` does not narrow the object's type, so pass a copy with the user pinned:
+An event handler receives a plain `AppContext`, whose `user` may be null because the event can fire for a visitor. Checking `ctx.user` does not narrow the object's type, so pass a copy with the user pinned:
 
 ```ts no-typecheck
-import { definePlugin } from "plumix/plugin";
+import { definePlugin, entry as entrySubject } from "plumix/plugin";
 
 export const pageWatch = definePlugin("page-watch", {
   setup: (ctx) => {
-    ctx.addAction("entry:published", (entry, appCtx) => {
+    ctx.events.on(entrySubject.published, ({ entry }, appCtx) => {
       if (!appCtx.user) return;
       appCtx.audit?.log(
         { ...appCtx, user: appCtx.user },

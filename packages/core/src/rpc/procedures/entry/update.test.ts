@@ -11,6 +11,7 @@ import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { entryChanges } from "../../../db/schema/entry_changes.js";
+import { entry } from "../../../hooks/entry.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
@@ -22,6 +23,7 @@ import { currentEtag } from "../../../test/entry-etag.js";
 import { editorUser } from "../../../test/factories.js";
 import { pooledEntryTypeRegistry } from "../../../test/pooled-entry-types.js";
 import { createRpcHarness } from "../../../test/rpc.js";
+import { entryRpc } from "../../filters.js";
 
 /**
  * Register a `post` entry type carrying a selectable per-entry access space, so
@@ -302,8 +304,8 @@ describe("entry.update", () => {
       slug: "promote",
     });
 
-    const onPublish = h.spyAction("entry:published");
-    const onTransition = h.spyAction("entry:transition");
+    const onPublish = h.spyEvent(entry.published);
+    const onTransition = h.spyEvent(entry.transition);
 
     const updated = await h.client.entry.update({
       id: own.id,
@@ -433,13 +435,13 @@ describe("entry.update", () => {
     });
   });
 
-  test("empty patch is a no-op and does not fire entry:updated", async () => {
+  test("empty patch is a no-op and does not fire entry.updated", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "noop",
     });
-    const onUpdate = h.spyAction("entry:updated");
+    const onUpdate = h.spyEvent(entry.updated);
 
     const returned = await h.client.entry.update({
       id: own.id,
@@ -460,14 +462,14 @@ describe("entry.update", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  test("concurrent publish transitions from one copy: one publishes, entry:published fires once", async () => {
+  test("concurrent publish transitions from one copy: one publishes, entry.published fires once", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const own = await h.factory.draft.create({
       authorId: h.user.id,
       slug: "race-to-publish",
     });
     const ifMatch = etagOf(own.updatedAt);
-    const onPublish = h.spyAction("entry:published");
+    const onPublish = h.spyEvent(entry.published);
 
     const outcomes = await Promise.allSettled([
       h.client.entry.update({ id: own.id, status: "published", ifMatch }),
@@ -483,7 +485,7 @@ describe("entry.update", () => {
     onPublish.assertCalledOnce();
   });
 
-  test("entry:before_save cannot overwrite immutable fields", async () => {
+  test("entry.beforeSave cannot overwrite immutable fields", async () => {
     const h = await createRpcHarness({ authAs: "author" });
     const impostor = await h.factory.admin.create({
       email: "impostor@example.test",
@@ -493,7 +495,7 @@ describe("entry.update", () => {
       slug: "locked",
     });
 
-    h.hooks.addFilter("entry:before_save", (post) => ({
+    h.hooks.add(entry.beforeSave, (post) => ({
       ...post,
       authorId: impostor.id,
       type: "leaked",
@@ -1304,7 +1306,7 @@ describe("entry.update", () => {
     expect(reloaded.title).toBe("p3");
   });
 
-  test("rpc:entry.update:input can inject derived meta before sanitization; entry:meta_changed fires with the final bag", async () => {
+  test("entry.rpc.update.input can inject derived meta before sanitization; entry.metaChanged fires with the final bag", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("test-derived", {
       id: "test-derived",
@@ -1325,7 +1327,7 @@ describe("entry.update", () => {
     // Derived meta at the input stage: mirror `title` into `title_lc` on
     // every update. Replaces the old `rpc:entry.meta:write` filter —
     // plugins operate on the raw input before sanitization.
-    h.hooks.addFilter("rpc:entry.update:input", (input) => {
+    h.hooks.add(entryRpc.update.input, (input) => {
       const title = input.meta?.title;
       if (typeof title !== "string") return input;
       return {
@@ -1333,7 +1335,7 @@ describe("entry.update", () => {
         meta: { ...input.meta, title_lc: title.toLowerCase() },
       };
     });
-    const onUpdated = h.spyAction("entry:meta_changed");
+    const onUpdated = h.spyEvent(entry.metaChanged);
 
     const post = await h.client.entry.create({ title: "p", slug: "p" });
     await h.client.entry.update({
@@ -1348,13 +1350,13 @@ describe("entry.update", () => {
       title_lc: "shouting",
     });
     onUpdated.assertCalledOnce();
-    expect(onUpdated.lastArgs?.[1]).toEqual({
+    expect(onUpdated.lastPayload?.changes).toEqual({
       set: { title: "SHOUTING", title_lc: "shouting" },
       removed: [],
     });
   });
 
-  test("rpc:entry.get:output can decorate the returned meta bag without touching storage", async () => {
+  test("entry.rpc.get.output can decorate the returned meta bag without touching storage", async () => {
     const plugins = createPluginRegistry();
     plugins.entryMetaBoxes.set("test-title", {
       id: "test-title",
@@ -1370,7 +1372,7 @@ describe("entry.update", () => {
     // the old `rpc:entry.meta:read` filter — plugins subscribe to the
     // post-level output filter (or all three: create/update/get) and
     // mutate `output.meta`.
-    h.hooks.addFilter("rpc:entry.get:output", (output) => ({
+    h.hooks.add(entryRpc.get.output, (output) => ({
       ...output,
       meta: { ...output.meta, _derived: "always-there" },
     }));
@@ -1502,14 +1504,12 @@ describe("entry.update", () => {
         slug: "oc-mid-save",
       });
       // A plugin's own write, landing after the save read the entry.
-      // @ts-expect-error -- `applyFilter` awaits a handler's promise; the
-      // registry types `entry:before_save` handlers as sync.
-      h.hooks.addFilter("entry:before_save", async (entry) => {
+      h.hooks.add(entry.beforeSave, async (row) => {
         await h.db
           .update(entries)
           .set({ title: "theirs" })
           .where(eq(entries.id, own.id));
-        return entry;
+        return row;
       });
 
       await expect(
@@ -1646,9 +1646,9 @@ describe("entry.update", () => {
         authorId: h.user.id,
         slug: "oc-deleted",
       });
-      h.spyFilter("entry:before_save").override(async (entry) => {
+      h.spyFilter(entry.beforeSave).override(async (row) => {
         await h.db.delete(entries).where(eq(entries.id, own.id));
-        return entry;
+        return row;
       });
 
       await expect(
@@ -1663,7 +1663,7 @@ describe("entry.update", () => {
       });
     });
 
-    test("a save that changes only meta runs no entry:before_save filter", async () => {
+    test("a save that changes only meta runs no entry.beforeSave filter", async () => {
       const plugins = createPluginRegistry();
       registerSeoMetaBox(plugins);
       const h = await createRpcHarness({ authAs: "editor", plugins });
@@ -1671,7 +1671,7 @@ describe("entry.update", () => {
         authorId: h.user.id,
         slug: "oc-meta-only-filter",
       });
-      const beforeSave = h.spyFilter("entry:before_save");
+      const beforeSave = h.spyFilter(entry.beforeSave);
 
       await h.client.entry.update({
         id: own.id,
@@ -1682,7 +1682,7 @@ describe("entry.update", () => {
       beforeSave.assertNotCalled();
     });
 
-    test("a save that changes only meta fires no entry:updated", async () => {
+    test("a save that changes only meta fires no entry.updated", async () => {
       const plugins = createPluginRegistry();
       registerSeoMetaBox(plugins);
       const h = await createRpcHarness({ authAs: "editor", plugins });
@@ -1690,7 +1690,7 @@ describe("entry.update", () => {
         authorId: h.user.id,
         slug: "oc-meta-only-hook",
       });
-      const onUpdated = h.spyAction("entry:updated");
+      const onUpdated = h.spyEvent(entry.updated);
 
       await h.client.entry.update({
         id: own.id,

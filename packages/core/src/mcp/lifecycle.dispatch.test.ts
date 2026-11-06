@@ -6,6 +6,7 @@ import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
+import { entry } from "../hooks/entry.js";
 import { definePlugin } from "../plugin/define.js";
 import { getAutosaveEdits } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -135,6 +136,22 @@ describe("MCP content_publish", () => {
     expect(written.status).toBe("published");
     expect(written.etag).not.toBe(etag);
     expect((await rowOf(h, id))?.status).toBe("published");
+  });
+
+  test("emits the type's published event once, as an editor's publish does", async () => {
+    const h = await mcpHarness();
+    const secret = await mintPat(h);
+    const { id, etag } = await draftOf(h, secret);
+    const published = h.spyEvent(entry.for("post").published);
+
+    await callTool(h, secret, "content_publish", {
+      type: "post",
+      id,
+      ifMatch: etag,
+    });
+
+    published.assertCalledOnce();
+    expect(published.lastPayload?.entry.id).toBe(id);
   });
 
   test("publishes a published entry's pending draft, which the admin then sees live", async () => {

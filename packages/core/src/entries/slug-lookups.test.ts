@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
+import { term as termEvents } from "../hooks/term.js";
 import { userEvents } from "../hooks/user.js";
 import { definePlugin } from "../plugin/define.js";
 import { createTracedContext } from "../test/traced-context.js";
@@ -72,7 +73,10 @@ describe("slug lookups after a write in the same request", () => {
         .update(terms)
         .set({ slug: "headlines" })
         .where(eq(terms.id, term.id));
-      await ctx.hooks.doAction("term:updated", renamed, term, ctx);
+      await ctx.events.emit(termEvents.updated, {
+        term: renamed,
+        previous: term,
+      });
       return [
         ...lookups,
         await findTermBySlug(ctx, "category", "news"),
@@ -94,7 +98,7 @@ describe("slug lookups after a write in the same request", () => {
     const [before, after] = await run(async () => {
       const missed = await findTermBySlug(ctx, "category", "news");
       const term = await harness.factory.category.create({ slug: "news" });
-      await ctx.hooks.doAction("term:created", term, ctx);
+      await ctx.events.emit(termEvents.created, { term });
       return [missed, await findTermBySlug(ctx, "category", "news")];
     });
 
@@ -111,7 +115,7 @@ describe("slug lookups after a write in the same request", () => {
     const [before, after] = await run(async () => {
       const found = await findTermBySlug(ctx, "category", "news");
       await ctx.db.delete(terms).where(eq(terms.id, term.id));
-      await ctx.hooks.doAction("term:deleted", term, ctx);
+      await ctx.events.emit(termEvents.deleted, { term });
       return [found, await findTermBySlug(ctx, "category", "news")];
     });
 

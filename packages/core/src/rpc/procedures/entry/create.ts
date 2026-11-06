@@ -27,6 +27,7 @@ import { startingMeta } from "../../../plugin/fields/starting-meta.js";
 import { listEntryMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { entryRpc } from "../../filters.js";
 import {
   assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
@@ -44,10 +45,7 @@ export const create = base
   .use(authenticated)
   .input(entryCreateInputSchema)
   .handler(async ({ input, context }) => {
-    const filtered = await context.hooks.applyFilter(
-      "rpc:entry.create:input",
-      input,
-    );
+    const filtered = await context.filters.apply(entryRpc.create.input, input);
 
     const written = await createEntry(context, filtered, () => {
       const namespace = entryCapabilityNamespace(
@@ -69,7 +67,7 @@ export const create = base
         }
       }
     });
-    const output = await context.hooks.applyFilter("rpc:entry.create:output", {
+    const output = await context.filters.apply(entryRpc.create.output, {
       ...written.entry,
       meta: written.meta,
     });

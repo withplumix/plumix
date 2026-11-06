@@ -29,6 +29,7 @@ import { render } from "../hooks/render.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
+import { entryRpc } from "../rpc/filters.js";
 import { defineTemplate } from "../template.js";
 import { testConfig } from "../test/config.js";
 import {
@@ -919,7 +920,7 @@ describe("dispatcher — error boundary", () => {
 
   test("unhandled handler exceptions return 500 JSON (no raw throw)", async () => {
     const h = await createDispatcherHarness();
-    h.app.hooks.addFilter("rpc:entry.list:input", () => {
+    h.app.hooks.add(entryRpc.list.input, () => {
       throw new Error("boom");
     });
 

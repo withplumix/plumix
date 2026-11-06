@@ -2,7 +2,7 @@
 
 Hooks are core's named extension points, the "hooks" half of the "Plugin system and hooks" component in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). They are moving, one subject at a time, from string names to declared values ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)):
 
-- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render`, `sync`, `user` and `auth` subjects have moved.
+- **Declared events and filters.** An **event** announces that something happened; a **filter** changes a value core is about to use. Each is a value declared with `defineEvent<Payload>(id)` or `defineFilter<Value, Input>(id, { sync })` from `plumix/plugin`, with an id written `<owner>:<name>`, a `DeclarationId` the compiler checks. A plugin subscribes in `setup` or `afterSetup` with `ctx.events.on(event, handler, { order })` and `ctx.filters.add(filter, handler, { order })`, and code fires them through the request's `ctx.events.emit(event, payload)` and `ctx.filters.apply(filter, value, input)`. Core's `block`, `render`, `sync`, `entry`, `term`, `user` and `auth` subjects have moved.
 - **String names.** Every other extension point is still a string name: a filter is a pipeline, an action announces something, plugin authors subscribe through `ctx.addFilter` / `ctx.addAction`, and core and plugins fire them through `ctx.hooks`. The names are types, declared by augmenting `FilterRegistry` and `ActionRegistry`.
 
 Both live in one `HookRegistry` per app, in `packages/core/src/hooks/`.
@@ -51,7 +51,7 @@ const stars = await ctx.filters.apply(review.stars, 5, { review });
 
 `ctx` in a handler is the `AppContext` that fired it. Core's contexts that change what a handler reads (`withUser`, `withSignal`, the dispatcher's rooted and sessionless contexts, REST's anonymous one) rebind through `rebindDispatch`, as they rebind `settings`. A context spread without rebinding hands handlers the one it was spread from: `asAuthenticated` in `rpc/procedures/entry/writes.ts` changes only the type, so nothing differs; a plugin can't reach `rebindDispatch`, so the og plugin's locale-pinned card context fires with the request's locale.
 
-Handlers run `early`, then unset, then `late`. Within each band core's own handlers run first, then the plugins' in the site's `plugins` config order, then in registration order, so a plugin's `afterSetup` handler still runs before a later plugin's `setup` one.
+Handlers run `early`, then unset, then `late`. Within each band scoped handlers run before unscoped ones (see below), then core's own handlers run first, then the plugins' in the site's `plugins` config order, then in registration order, so a plugin's `afterSetup` handler still runs before a later plugin's `setup` one.
 
 Core's subjects are exported from `plumix/plugin`. `block` (`packages/core/src/hooks/block-render.ts`) is fired from `route/render/render-template.tsx`:
 
@@ -78,6 +78,23 @@ Core's subjects are exported from `plumix/plugin`. `block` (`packages/core/src/h
 `render.document` also runs on an error page (`data.kind === "error"`), where a throwing handler is logged through `ctx.logger` and the page renders its unfiltered document, so the error page still renders. `render.archiveEntries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
 
 `sync` (`packages/core/src/hooks/sync.ts`) holds `sync.after`, an event with the `SyncAfterEvent` (`{ scopes, direction }`) as its payload, emitted by `settleSync` in `context/settle-sync.ts` once per sync, on a pull and a push alike.
+
+`entry` and `term` hold the content lifecycle. `entry`'s events and `beforeSave` filter live in `packages/core/src/hooks/entry.ts`, `term`'s events in `hooks/term.ts`, and their `rpc` input and output filters in `rpc/filters.ts`, because their types come from the procedures' schemas; `hooks/public-hooks.ts` joins them into the values `plumix/plugin` exports. Payloads are objects keyed by glossary nouns:
+
+| Value                                                                                               | Kind         | Payload or value                                                                    | Fired from                               |
+| --------------------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------- | ---------------------------------------- |
+| `entry.published`, `trashed`, `restored`, `deleted`                                                 | event        | `{ entry }`                                                                         | `rpc/procedures/entry/lifecycle.ts`      |
+| `entry.updated`                                                                                     | event        | `{ entry, previous }`                                                               | `rpc/procedures/entry/lifecycle.ts`      |
+| `entry.transition`                                                                                  | event        | `{ entry, previousStatus }`, only when the status changed                           | `rpc/procedures/entry/lifecycle.ts`      |
+| `entry.revisionCreated`, `revisionPruned`, `revisionRestored`                                       | event        | `{ revision, entry }`, `{ entry, prunedCount }`, `{ revision, destination }`        | `rpc/procedures/entry/lifecycle.ts`      |
+| `entry.autosaveSaved`, `autosaveDiscarded`                                                          | event        | `{ autosave, entry }`, `{ entry, authorId }`; scoped by the live entry's type       | `rpc/procedures/entry/lifecycle.ts`      |
+| `entry.metaChanged`                                                                                 | event        | `{ entry: { id, type }, changes }`                                                  | `meta/entry.ts`                          |
+| `entry.beforeSave`                                                                                  | async filter | the `NewEntry` about to be written; a throw refuses the save with its error         | `applyEntryBeforeSave` in `lifecycle.ts` |
+| `entry.rpc.<list\|get\|create\|update\|trash\|restore\|deletePermanent\|duplicate>.<input\|output>` | async filter | the procedure's input or output, unscoped                                           | `rpc/procedures/entry/**`                |
+| `term.created`, `deleted`, `updated`, `metaChanged`                                                 | event        | `{ term }`, `{ term }`, `{ term, previous }`, `{ term: { id, taxonomy }, changes }` | `rpc/procedures/term/**`, `meta/term.ts` |
+| `term.rpc.<list\|get\|create\|update\|delete>.<input\|output>`                                      | async filter | the procedure's input or output, unscoped                                           | `rpc/procedures/term/**`                 |
+
+`entry.for(type)` and `term.for(taxonomy)` return the same events (and `entry.beforeSave`) carrying a `scope`; `registerEntryType` and `registerTermTaxonomy` return exactly that view, so `const product = ctx.registerEntryType("product", …)` exposes `product.published`. A scoped declaration keeps its parent's id. Each event is emitted once, through `entry.for(row.type)` or `term.for(row.taxonomy)`, and `HookRegistry` runs the unscoped handlers and those whose scope matches; emitting an unscoped declaration runs only unscoped handlers. At equal order, scoped handlers run before unscoped ones, which keeps the type-specific-first layering of `beforeSave`. After every plugin's `setup` and `afterSetup`, `installPlugins` fails boot with `PluginDefinitionError` (`handler_scoped_to_unknown_name`) on a scope naming no registered entry type or taxonomy, listing the registered names. The `rpc` filters are unscoped: a list's input names no single type.
 
 `user` (`packages/core/src/hooks/user.ts` holds its events; `packages/core/src/rpc/procedures/user/subject.ts` adds the filters, whose types live in `rpc/`) is fired from `rpc/procedures/user/**`:
 
@@ -124,11 +141,11 @@ sequenceDiagram
   H-->>C: resolves once all handlers settle
 ```
 
-Entry actions also feed webhooks:
+Entry events also feed webhooks:
 
 ```mermaid
 flowchart LR
-  proc["entry procedures<br/>(admin, MCP, scheduled publish)"] -->|"doAction entry:published, …"| H["HookRegistry"]
+  proc["entry procedures<br/>(admin, MCP, scheduled publish)"] -->|"emit entry.for(type).published, …"| H["HookRegistry"]
   H --> purge["registerCorePurgeInvalidator<br/>(cdn/purge.ts)"]
   H --> wh["webhooks module"]
   wh -->|"one job per matching webhook"| q["queue slot"]
@@ -156,17 +173,16 @@ Execution (`HookExecutor`, on `ctx.hooks`; public type):
 
 Core's hook names, by the module that declares them (paths under `packages/core/src/`):
 
-| Declared in    | Names                                                                                                                                                  | Fired from                                               |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| `rpc/hooks.ts` | `rpc:<entry\|term\|settings>.<proc>:input` / `:output` filters; `entry:before_save` and `entry:<type>:before_save`                                     | `rpc/procedures/**`                                      |
-| `rpc/hooks.ts` | `entry:published\|updated\|trashed\|restored\|deleted\|transition` plus `entry:<type>:…`; `entry:revision_*`, `entry:autosave_*`, `entry:meta_changed` | `rpc/procedures/entry/lifecycle.ts`, `meta/entry.ts`     |
-| `rpc/hooks.ts` | `term:*`, `settings:group_changed`                                                                                                                     | `rpc/procedures/**`, `meta/term.ts`, `settings/write.ts` |
+| Declared in    | Names                                           | Fired from          |
+| -------------- | ----------------------------------------------- | ------------------- |
+| `rpc/hooks.ts` | `rpc:settings.<proc>:input` / `:output` filters | `rpc/procedures/**` |
+| `rpc/hooks.ts` | `settings:group_changed`                        | `settings/write.ts` |
 
 First-party plugins declare their own the same way: `comment:*` (`plugins/comments/src/server/hooks.ts`), `form:submitted` (`plugins/forms`), `feed:items` (`plugins/feeds`), `menu:tree`, `menu:item`, `menu:saved`, `menu:deleted` (`plugins/menu`), `seo:*` (`plugins/seo/src/`).
 
 ## How it works
 
-`HookRegistry` holds one sorted-on-read list per string name, and one per declared event or filter id. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from entry and term actions and `user` events). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
+`HookRegistry` holds one sorted-on-read list per string name, and one per declared event or filter id. Entries carry the plugin id from the setup context (`null` for core), which feeds telemetry and failure logs. `applyFilter` and `doAction` wrap each handler in a telemetry span and a `hookStore` frame. `applyFilterSync` and `applyFilterIsolated` run untraced. `buildApp` creates the registry before plugins install and registers core's own handlers first: `registerCorePurgeInvalidator` (which queues cache tags from the `entry`, `term` and `user` events). Dev panels and hints are registrations, not hooks (see [dev tooling](./dev-tooling.md)).
 
 The admin bar takes no hook. Its nodes, core's included, are registrations made with `registerAdminBarNode` and held in the plugin registry's `adminBarNodes` (see [Plugin system](./plugin-system.md)), so no handler can remove another plugin's node ([ADR 0052](../adr/0052-a-plugin-extends-core-through-declared-events-filters-and-registrations.md)).
 
@@ -174,15 +190,16 @@ Document tags take no hook either. A plugin adds them with `registerDocumentMani
 
 Handlers take their context as an argument; most payloads end in `ctx: AppContext`. A handler can also read `requestStore`.
 
-Every path that changes an entry fires the same actions. The scheduled publish (`publishDueScheduledEntries` in `rpc/procedures/entry/publish-scheduled.ts`) fires `updated`, `transition` and `published` through `lifecycle.ts`, as an editor's publish does. An agent's MCP write goes through the same procedures, so it runs the `rpc:*:input` and `before_save` filters and fires the same entry actions (see [MCP](./mcp.md)).
+Every path that changes an entry emits the same events. The scheduled publish (`publishDueScheduledEntries` in `rpc/procedures/entry/publish-scheduled.ts`) emits `entry.updated`, `entry.transition` and `entry.published` through `lifecycle.ts`, as an editor's publish does. An agent's MCP write goes through the same procedures, so it runs the `entry.rpc.*.input` and `entry.beforeSave` filters and emits the same entry events (see [MCP](./mcp.md)).
 
-Webhooks are declared in code per entry type: several per type, each a URL, custom headers (secrets through `EnvInput`), the events it wants (publish, unpublish, trash, delete, scheduled publish) and a payload (the full entry, none, or chosen fields). A core module registered in `buildApp` beside `registerCorePurgeInvalidator` subscribes to `entry:published`, `entry:transition`, `entry:trashed` and `entry:deleted`, and enqueues one delivery per matching webhook through the job queue behind the `queue` slot. Publishing an entry, by hand or by the scheduled task, sends a POST to each webhook its entry type declares for publish.
+Webhooks are declared in code per entry type: several per type, each a URL, custom headers (secrets through `EnvInput`), the events it wants (publish, unpublish, trash, delete, scheduled publish) and a payload (the full entry, none, or chosen fields). A core module registered in `buildApp` beside `registerCorePurgeInvalidator` subscribes to `entry.published`, `entry.transition`, `entry.trashed` and `entry.deleted`, and enqueues one delivery per matching webhook through the job queue behind the `queue` slot. Publishing an entry, by hand or by the scheduled task, sends a POST to each webhook its entry type declares for publish.
 
 - `packages/core/src/hooks/define.ts`: `defineEvent`, `defineFilter`, and the subscribing and firing types.
 - `packages/core/src/hooks/dispatch.ts`: `bindDispatch`, `rebindDispatch`, which build `ctx.events` and `ctx.filters`.
 - `packages/core/src/hooks/block-render.ts`: core's `block` subject.
 - `packages/core/src/hooks/registry.ts`: `HookRegistry` (`getEventHandlers` lists an event's handlers in firing order, for a test that moves them between registries), `HookExecutor`, `isolate`, `sortEntries`, `sortSubscriptions`.
 - `packages/core/src/hooks/render.ts`, `sync.ts`, `auth.ts`, `user.ts`: core's `render`, `sync` and `auth` subjects, and the events of `user`, whose filters `rpc/procedures/user/subject.ts` adds.
+- `packages/core/src/hooks/entry.ts`, `term.ts`: the `entry` and `term` events, `entry.beforeSave`, and `.for`; `rpc/filters.ts` holds their `rpc` filters, joined in `hooks/public-hooks.ts`.
 - `packages/core/src/hooks/types.ts`: `FilterRegistry`, `ActionRegistry`, `FilterName`, `ActionName`, `FilterFn`, `ActionFn`, `DEFAULT_HOOK_PRIORITY`.
 - `packages/core/src/hooks/public-hooks.ts`: side-effect imports that keep each augmentation in the published declarations. Imported from `packages/core/src/index.ts`.
 - `packages/core/src/hooks/errors.ts`: `HookExecutionError`.
@@ -198,9 +215,9 @@ Related but separate: a field's `.validate()` and `.sanitize()` are per-field ca
 - Two declarations sharing an id fail boot with `DuplicateRegistrationError`, naming the id and both owners, whether or not anything subscribes. An event and a filter can't share one either.
 - One failing event handler never stops the others or the caller. Its failure is logged as an error through the firing `ctx.logger`, naming the event and the plugin (`core` for core's own), marks its own `event:` span `error`, and is returned by `emit`.
 - A throwing filter handler's error reaches the caller of `apply` unchanged.
-- Behaviour of the declared API is guarded by `packages/core/src/hooks/registry.test.ts` (ordering, failure, cloning, telemetry), its types by `packages/core/src/hooks/define.test.ts`, and the boot check by `packages/core/src/runtime/install-plugins.test.ts`.
+- Behaviour of the declared API is guarded by `packages/core/src/hooks/registry.test.ts` (ordering, failure, cloning, telemetry), its types by `packages/core/src/hooks/define.test.ts` and `entry.test.ts`, and the boot checks by `packages/core/src/runtime/install-plugins.test.ts`. Scoped dispatch through RPC, the before-save order and veto are guarded by `packages/core/tests/feature/subscribing-to-an-entry-type.test.ts`.
 
-- A hook name is a TypeScript contract. A rename breaks at compile time. Core has no runtime name check and keeps no aliases ([ADR 0009](../adr/0009-a-renamed-hook-breaks-at-compile-time.md)). `packages/plumix/src/facade-action-hooks.test.ts` checks that `entry:published` reaches `PluginSetupContext["addAction"]` from the built `dist/`.
+- A hook name is a TypeScript contract. A rename breaks at compile time. Core has no runtime name check and keeps no aliases ([ADR 0009](../adr/0009-a-renamed-hook-breaks-at-compile-time.md)). `packages/plumix/src/facade-action-hooks.test.ts` checks that `user:updated` reaches `PluginSetupContext["addAction"]` from the built `dist/`.
 - An extension point hands out a narrowing query, not a raw filter. `render.archiveEntries` takes and returns an `EntryQuery`, and the public-entries rule is reapplied after it, so a handler can hide an entry but never reveal one ([ADR 0007](../adr/0007-an-extension-point-hands-out-a-query-not-a-filter.md), [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md)).
 - Each async filter step works on its own copy, so one handler's mutation can't leak into the next. Sync filters are not copied and must treat the value as read-only.
 - One failing action handler never stops the others or the caller. Its failure is logged as an error through the request's `ctx.logger`, naming the hook and the plugin (`core` for core's own), and marks its own `hook:` span `error`, never another handler's. Outside a request (at boot) there is no app logger and no trace yet, so it goes to `console.error`. A registry built with `onActionFailure` reports there instead.

@@ -48,6 +48,8 @@ interface ActionEntry {
 interface Subscription {
   readonly plugin: string | null;
   readonly order: HandlerOrder | undefined;
+  /** The name `.for(name)` scoped the declaration to; `undefined` runs for any. */
+  readonly scope: string | undefined;
   /** The plugin's place in the site's `plugins` config; core's is `CORE_RANK`. */
   readonly rank: number;
   readonly insertOrder: number;
@@ -185,7 +187,7 @@ export class HookRegistry implements HookExecutor {
     handler: EventHandler<TPayload>,
     options: SubscribeOptions = {},
   ): void {
-    this.#subscribe(this.#eventHandlers, event.id, handler, options);
+    this.#subscribe(this.#eventHandlers, event, handler, options);
   }
 
   add<TValue, TInput, TSync extends boolean>(
@@ -193,25 +195,43 @@ export class HookRegistry implements HookExecutor {
     handler: FilterHandler<TValue, TInput, TSync>,
     options: SubscribeOptions = {},
   ): void {
-    this.#subscribe(this.#filterHandlers, filter.id, handler, options);
+    this.#subscribe(this.#filterHandlers, filter, handler, options);
   }
 
   #subscribe(
     handlers: Map<string, Subscription[]>,
-    id: string,
+    declaration: { readonly id: string; readonly scope?: string },
     // eslint-disable-next-line plumix/no-unknown-return
     handler: (...args: never[]) => unknown,
     options: SubscribeOptions,
   ): void {
-    const entries = handlers.get(id) ?? [];
+    const entries = handlers.get(declaration.id) ?? [];
     entries.push({
       plugin: options.plugin ?? null,
       order: options.order,
+      scope: declaration.scope,
       rank: options.rank ?? CORE_RANK,
       insertOrder: this.#counter++,
       handler: handler as Subscription["handler"],
     });
-    handlers.set(id, entries);
+    handlers.set(declaration.id, entries);
+  }
+
+  /** Each scoped subscription, for the boot check that its name is registered. */
+  scopedSubscriptions(): readonly {
+    readonly id: string;
+    readonly scope: string;
+    readonly plugin: string | null;
+  }[] {
+    const scoped: { id: string; scope: string; plugin: string | null }[] = [];
+    for (const handlers of [this.#eventHandlers, this.#filterHandlers]) {
+      for (const [id, entries] of handlers) {
+        for (const { scope, plugin } of entries) {
+          if (scope !== undefined) scoped.push({ id, scope, plugin });
+        }
+      }
+    }
+    return scoped;
   }
 
   /** An event's handlers in the order `emit` starts them, for a caller that moves them. */
@@ -219,13 +239,11 @@ export class HookRegistry implements HookExecutor {
     readonly handler: EventHandler<TPayload>;
     readonly plugin: string | null;
   }[] {
-    return sortSubscriptions(this.#eventHandlers.get(event.id) ?? []).map(
-      (entry) => ({
-        // Safety: subscribed through `on`, so typed `EventHandler`.
-        handler: entry.handler as EventHandler<TPayload>,
-        plugin: entry.plugin,
-      }),
-    );
+    return this.#matching(this.#eventHandlers, event).map((entry) => ({
+      // Safety: subscribed through `on`, so typed `EventHandler`.
+      handler: entry.handler as EventHandler<TPayload>,
+      plugin: entry.plugin,
+    }));
   }
 
   async emit<TPayload>(
@@ -233,7 +251,7 @@ export class HookRegistry implements HookExecutor {
     payload: NoInfer<TPayload>,
     ctx: AppContext,
   ): Promise<readonly EventFailure[]> {
-    const sorted = sortSubscriptions(this.#eventHandlers.get(event.id) ?? []);
+    const sorted = this.#matching(this.#eventHandlers, event);
     const runs = sorted.map((entry) =>
       startHandler(() =>
         runTraced(
@@ -268,7 +286,7 @@ export class HookRegistry implements HookExecutor {
     input: TInput | undefined,
     ctx: AppContext,
   ): TSync extends true ? TValue : Promise<TValue> {
-    const sorted = sortSubscriptions(this.#filterHandlers.get(filter.id) ?? []);
+    const sorted = this.#matching(this.#filterHandlers, filter);
     if (filter.sync) {
       let current: unknown = value;
       for (const entry of sorted) {
@@ -285,6 +303,17 @@ export class HookRegistry implements HookExecutor {
       input,
       ctx,
     ) as TSync extends true ? TValue : Promise<TValue>;
+  }
+
+  /** Unscoped handlers, plus those scoped to the name the declaration fires for. */
+  #matching(
+    handlers: Map<string, Subscription[]>,
+    declaration: { readonly id: string; readonly scope?: string },
+  ): Subscription[] {
+    const entries = (handlers.get(declaration.id) ?? []).filter(
+      (entry) => entry.scope === undefined || entry.scope === declaration.scope,
+    );
+    return sortSubscriptions(entries);
   }
 
   async applyFilter<TName extends FilterName>(
@@ -431,6 +460,7 @@ function sortSubscriptions(entries: readonly Subscription[]): Subscription[] {
   return [...entries].sort(
     (a, b) =>
       ORDER_BANDS[a.order ?? "normal"] - ORDER_BANDS[b.order ?? "normal"] ||
+      Number(a.scope === undefined) - Number(b.scope === undefined) ||
       a.rank - b.rank ||
       a.insertOrder - b.insertOrder,
   );

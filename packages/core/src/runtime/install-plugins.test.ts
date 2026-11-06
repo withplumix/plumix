@@ -4,7 +4,9 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 
 import { coreMarks, defineBlock } from "../blocks/index.js";
 import { defineEvent, defineFilter } from "../hooks/define.js";
+import { entry } from "../hooks/entry.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { term } from "../hooks/term.js";
 import { definePlugin } from "../plugin/define.js";
 import {
   DuplicateRegistrationError,
@@ -108,11 +110,11 @@ describe("installPlugins", () => {
     expect(out).toEqual({ title: "seo:hello" });
   });
 
-  test("plugins can subscribe to core-owned hooks without prefix", async () => {
+  test("plugins can subscribe to core's own filters", async () => {
     const hooks = new HookRegistry();
     const stamp = definePlugin("stamp", {
       setup: (ctx) => {
-        ctx.addFilter("entry:before_save", (post) => ({
+        ctx.filters.add(entry.beforeSave, (post) => ({
           ...post,
           title: `[stamped] ${post.title}`,
         }));
@@ -120,8 +122,9 @@ describe("installPlugins", () => {
     });
 
     await installPlugins({ hooks, plugins: [stamp] });
-    const out = await hooks.applyFilter(
-      "entry:before_save",
+    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const out = await ctx.filters.apply(
+      entry.beforeSave,
       examplePost({ title: "hi" }),
     );
     expect(out.title).toBe("[stamped] hi");
@@ -2534,4 +2537,65 @@ describe("declared events and filters", () => {
       await expect(install).rejects.toThrow(message);
     },
   );
+});
+
+describe("scoped events and filters", () => {
+  test("a handler scoped to an unregistered entry type fails boot, listing the registered types", async () => {
+    const shop = definePlugin("shop", {
+      setup: (ctx) => {
+        ctx.registerEntryType("product", { label: "Products" });
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.events.on(entry.for("prodcut").published, () => undefined);
+      },
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [shop],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "shop" subscribes to "entry:published" for entry type "prodcut", ' +
+        "which no plugin registered. Registered entry types: post, product.",
+    );
+  });
+
+  test("a filter scoped to an entry type a later plugin registers boots", async () => {
+    const early = definePlugin("early", {
+      setup: (ctx) => {
+        ctx.filters.add(entry.for("product").beforeSave, (row) => row);
+      },
+    });
+    const shop = definePlugin("shop", {
+      setup: (ctx) => {
+        ctx.registerEntryType("product", { label: "Products" });
+      },
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [early, shop],
+    });
+
+    await expect(install).resolves.toBeDefined();
+  });
+
+  test("a handler scoped to an unregistered taxonomy fails boot, listing the registered taxonomies", async () => {
+    const shop = definePlugin("shop", {
+      setup: (ctx) => {
+        ctx.registerTermTaxonomy("brand", { label: "Brands" });
+        ctx.events.on(term.for("brnad").created, () => undefined);
+      },
+    });
+
+    const install = installPlugins({
+      hooks: new HookRegistry(),
+      plugins: [shop],
+    });
+
+    await expect(install).rejects.toThrow(
+      'Plugin "shop" subscribes to "term:created" for taxonomy "brnad", ' +
+        "which no plugin registered. Registered taxonomies: brand.",
+    );
+  });
 });

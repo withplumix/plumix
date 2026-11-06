@@ -1,8 +1,9 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { AppContext, Db } from "../context/app-context.js";
+import type { Entry } from "../db/schema/entries.js";
+import type { Term } from "../db/schema/terms.js";
 import type { User } from "../db/schema/users.js";
-import type { AnyEventDefinition } from "../hooks/define.js";
 import type { JsonObject } from "../json.js";
 import type { CdnFake } from "../test/cdn-fake.js";
 import { withUser } from "../auth/with-user.js";
@@ -12,7 +13,9 @@ import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
 import { compileEntryQuery, entryQuery } from "../entries/query.js";
+import { entry } from "../hooks/entry.js";
 import { HookRegistry } from "../hooks/registry.js";
+import { term as termEvents } from "../hooks/term.js";
 import { userEvents } from "../hooks/user.js";
 import { definePlugin } from "../plugin/define.js";
 import { term } from "../plugin/fields/term.js";
@@ -195,72 +198,84 @@ describe("purge accumulator", () => {
 });
 
 describe("registerCorePurgeInvalidator", () => {
-  // Loose-typed: payloads differ per event, so the tests fire by name.
-  const fire = async (
-    hooks: HookRegistry,
-    ctx: AppContext,
-    name: string,
-    ...payload: unknown[]
-  ): Promise<void> => {
-    const event = Object.values(userEvents).find(({ id }) => id === name);
-    if (event !== undefined) {
-      await (
-        hooks.emit as (
-          e: AnyEventDefinition,
-          p: unknown,
-          c: AppContext,
-        ) => Promise<unknown>
-      ).call(hooks, event, payload[0], ctx);
-      return;
-    }
-    await (
-      hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>
-    ).call(hooks, name, ...payload, ctx);
-  };
+  // Loose-typed: each action's payload differs, so the tests fire by name.
+  const fire = (hooks: HookRegistry, name: string, ...args: unknown[]) =>
+    (hooks.doAction as (n: string, ...a: unknown[]) => Promise<void>).call(
+      hooks,
+      name,
+      ...args,
+    );
 
-  const entry = { id: 9, type: "post" };
+  type Emit = (hooks: HookRegistry, ctx: AppContext) => Promise<unknown>;
+
+  const row = { id: 9, type: "post" } as Entry;
   const changes = { set: {}, removed: [] };
-  const ENTRY_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
-    ["entry:published", [entry]],
-    ["entry:updated", [entry, entry]],
-    ["entry:meta_changed", [entry, changes]],
-    ["entry:trashed", [entry]],
-    ["entry:restored", [entry]],
-    ["entry:deleted", [entry]],
+  const ENTRY_EVENTS: readonly (readonly [string, Emit])[] = [
+    ["published", (h, ctx) => h.emit(entry.published, { entry: row }, ctx)],
+    [
+      "updated",
+      (h, ctx) => h.emit(entry.updated, { entry: row, previous: row }, ctx),
+    ],
+    [
+      "metaChanged",
+      (h, ctx) => h.emit(entry.metaChanged, { entry: row, changes }, ctx),
+    ],
+    ["trashed", (h, ctx) => h.emit(entry.trashed, { entry: row }, ctx)],
+    ["restored", (h, ctx) => h.emit(entry.restored, { entry: row }, ctx)],
+    ["deleted", (h, ctx) => h.emit(entry.deleted, { entry: row }, ctx)],
   ];
 
   it.each(ENTRY_EVENTS)(
-    "%s purges the entry's pages and its type's",
-    async (event, payload) => {
+    "entry.%s purges the entry's pages and its type's",
+    async (_event, emit) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await fire(hooks, ctx, event, ...payload);
+      await emit(hooks, ctx);
       await flush();
 
       assertOnlyPurged(cdn, ["/post", "/post/9"]);
     },
   );
 
-  const term = { id: 3, taxonomy: "category" };
-  const TERM_LIST_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
-    ["term:created", [term]],
-    ["term:deleted", [term]],
+  const termRow = { id: 3, taxonomy: "category" } as Term;
+  type EmitTerm = (
+    hooks: HookRegistry,
+    ctx: AppContext,
+    row?: Term,
+  ) => Promise<unknown>;
+  const TERM_LIST_EVENTS: readonly (readonly [string, EmitTerm])[] = [
+    [
+      "created",
+      (h, ctx, row = termRow) => h.emit(termEvents.created, { term: row }, ctx),
+    ],
+    [
+      "deleted",
+      (h, ctx, row = termRow) => h.emit(termEvents.deleted, { term: row }, ctx),
+    ],
   ];
-  const TERM_EDIT_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
-    ["term:updated", [term, term]],
-    ["term:meta_changed", [term, changes]],
+  const TERM_EDIT_EVENTS: readonly (readonly [string, Emit])[] = [
+    [
+      "updated",
+      (h, ctx) =>
+        h.emit(termEvents.updated, { term: termRow, previous: termRow }, ctx),
+    ],
+    [
+      "metaChanged",
+      (h, ctx) =>
+        h.emit(termEvents.metaChanged, { term: termRow, changes }, ctx),
+    ],
   ];
 
   it.each(TERM_EDIT_EVENTS)(
-    "%s purges only the pages that rendered the term",
-    async (event, payload) => {
+    "term.%s purges only the pages that rendered the term",
+    async (_event, emit) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await fire(hooks, ctx, event, ...payload);
+      await emit(hooks, ctx);
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3"]);
@@ -268,13 +283,13 @@ describe("registerCorePurgeInvalidator", () => {
   );
 
   it.each(TERM_LIST_EVENTS)(
-    "%s purges the term's pages and its taxonomy's term lists",
-    async (event, payload) => {
+    "term.%s purges the term's pages and its taxonomy's term lists",
+    async (_event, emit) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await fire(hooks, ctx, event, ...payload);
+      await emit(hooks, ctx);
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3", "/category/terms"]);
@@ -283,16 +298,13 @@ describe("registerCorePurgeInvalidator", () => {
 
   // A taxonomy that lists no entry types has term lists all the same.
   it.each(TERM_LIST_EVENTS)(
-    "%s in a taxonomy without entryTypes purges its term lists",
-    async (event, payload) => {
+    "term.%s in a taxonomy without entryTypes purges its term lists",
+    async (_event, emit) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
       const { ctx, cdn, flush } = await fakeCtx();
-      const untyped = payload.map((arg) =>
-        arg === term ? { ...term, taxonomy: "tag" } : arg,
-      );
 
-      await fire(hooks, ctx, event, ...untyped);
+      await emit(hooks, ctx, { ...termRow, taxonomy: "tag" });
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3", "/tag/terms"]);
@@ -306,21 +318,36 @@ describe("registerCorePurgeInvalidator", () => {
     registerCorePurgeInvalidator(hooks);
     const { ctx, cdn, flush } = await fakeCtx();
 
-    await fire(hooks, ctx, "settings:group_changed", { group: "site" });
+    await fire(hooks, "settings:group_changed", { group: "site" }, ctx);
     await flush();
 
     assertOnlyPurged(cdn, ["/settings/site"]);
   });
 
-  const jane = { id: 4, name: "Jane", slug: "jane" };
-  const PURGING_EVENTS: readonly (readonly [string, readonly unknown[]])[] = [
-    ...ENTRY_EVENTS,
-    ...TERM_LIST_EVENTS,
-    ...TERM_EDIT_EVENTS,
-    ["user:updated", [{ user: jane, previous: jane }]],
-    ["user:metaChanged", [{ user: jane, changes }]],
-    ["user:deleted", [{ user: jane, reassignedTo: 1 }]],
-    ["settings:group_changed", [{ group: "site" }]],
+  const jane = { id: 4, name: "Jane", slug: "jane" } as User;
+  const PURGING_EVENTS: readonly (readonly [string, Emit])[] = [
+    ...ENTRY_EVENTS.map(([name, emit]) => [`entry.${name}`, emit] as const),
+    ...[...TERM_LIST_EVENTS, ...TERM_EDIT_EVENTS].map(
+      ([name, emit]) => [`term.${name}`, emit] as const,
+    ),
+    [
+      "user.updated",
+      (h, ctx) =>
+        h.emit(userEvents.updated, { user: jane, previous: jane }, ctx),
+    ],
+    [
+      "user.metaChanged",
+      (h, ctx) => h.emit(userEvents.metaChanged, { user: jane, changes }, ctx),
+    ],
+    [
+      "user.deleted",
+      (h, ctx) =>
+        h.emit(userEvents.deleted, { user: jane, reassignedTo: 1 }, ctx),
+    ],
+    [
+      "settings:group_changed",
+      (h, ctx) => fire(h, "settings:group_changed", { group: "site" }, ctx),
+    ],
   ];
 
   // A memo that loads each key on a miss and records which keys it loaded.
@@ -342,11 +369,11 @@ describe("registerCorePurgeInvalidator", () => {
   // separate lists, and it applies even with no cdn.
   it.each(PURGING_EVENTS)(
     "%s drops the memo entries tagged with what it purges",
-    async (event, payload) => {
+    async (_event, emit) => {
       const hooks = new HookRegistry();
       registerCorePurgeInvalidator(hooks);
       const purging = await fakeCtx();
-      await fire(hooks, purging.ctx, event, ...payload);
+      await emit(hooks, purging.ctx);
       await purging.flush();
       const purged: string[] = [];
       for (const [path, tag] of Object.entries(PAGES)) {
@@ -359,7 +386,7 @@ describe("registerCorePurgeInvalidator", () => {
       await read("untagged");
       loads.length = 0;
 
-      await fire(hooks, ctx, event, ...payload);
+      await emit(hooks, ctx);
       for (const [, tag] of Object.entries(PAGES)) await read(tag, [tag]);
       await read("untagged");
 
@@ -373,8 +400,9 @@ describe("registerCorePurgeInvalidator", () => {
     registerCorePurgeInvalidator(hooks);
     const { ctx, cdn, deferred, flush } = await fakeCtx();
 
-    await fire(hooks, ctx, "entry:published", { id: 9, type: "post" });
-    await fire(hooks, ctx, "entry:published", { id: 8, type: "post" });
+    const post = (id: number) => ({ entry: { id, type: "post" } as Entry });
+    await hooks.emit(entry.published, post(9), ctx);
+    await hooks.emit(entry.published, post(8), ctx);
     await flush();
 
     expect(deferred).toHaveLength(1);

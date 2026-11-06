@@ -149,7 +149,7 @@ export function media(
         ctx.registerFieldType(fieldType);
       }
 
-      ctx.registerEntryType("media", {
+      const mediaType = ctx.registerEntryType("media", {
         label: MEDIA_LABELS.plural,
         labels: MEDIA_LABELS,
         description: MEDIA_DESCRIPTION,
@@ -168,10 +168,10 @@ export function media(
         createMediaRouter({ acceptedTypes, maxUploadSize }),
       );
 
-      ctx.addAction("entry:media:trashed", (entry, appCtx) =>
+      ctx.events.on(mediaType.trashed, ({ entry }, appCtx) =>
         purgeVariants(appCtx, entry),
       );
-      ctx.addAction("entry:media:deleted", (entry, appCtx) =>
+      ctx.events.on(mediaType.deleted, ({ entry }, appCtx) =>
         purgeVariants(appCtx, entry),
       );
 

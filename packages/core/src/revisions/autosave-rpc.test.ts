@@ -8,6 +8,7 @@ import { etagOf } from "../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
+import { entry } from "../hooks/entry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
@@ -399,15 +400,15 @@ describe("entry.update saveAs", () => {
     });
   });
 
-  test("autosave write fires entry:<type>:autosave_saved but NOT entry:updated", async () => {
+  test("autosave write emits entry.autosaveSaved for its type but NOT entry.updated", async () => {
     const h = await publishedPostFixture();
     const autosaveFires: number[] = [];
     const updatedFires: number[] = [];
-    h.hooks.addAction("entry:post:autosave_saved", (autosave) => {
+    h.hooks.on(entry.for("post").autosaveSaved, ({ autosave }) => {
       autosaveFires.push(autosave.id);
     });
-    h.hooks.addAction("entry:post:updated", (entry) => {
-      updatedFires.push(entry.id);
+    h.hooks.on(entry.for("post").updated, ({ entry: row }) => {
+      updatedFires.push(row.id);
     });
     await h.client.entry.update({
       id: h.entryId,
@@ -778,7 +779,7 @@ describe("entry.publish", () => {
       excerpt: "Pending",
       ifMatch: await currentEtag(h.db, h.entryId),
     });
-    const beforeSave = h.spyFilter("entry:before_save");
+    const beforeSave = h.spyFilter(entry.beforeSave);
 
     await expect(
       h.client.entry.publish({
@@ -799,14 +800,12 @@ describe("entry.publish", () => {
     });
     const ifMatch = await currentEtag(h.db, h.entryId);
     // A plugin's own write, landing after the publish read live.
-    // @ts-expect-error -- `applyFilter` awaits a handler's promise; the
-    // registry types `entry:before_save` handlers as sync.
-    h.hooks.addFilter("entry:before_save", async (entry) => {
+    h.hooks.add(entry.beforeSave, async (row) => {
       await h.db
         .update(entries)
         .set({ title: "theirs" })
         .where(eq(entries.id, h.entryId));
-      return entry;
+      return row;
     });
 
     await expect(
@@ -910,10 +909,10 @@ describe("entry.discardDraft", () => {
     expect(result.discarded).toBe(false);
   });
 
-  test("fires entry:<type>:autosave_discarded when a row was actually deleted", async () => {
+  test("emits entry.autosaveDiscarded for its type when a row was actually deleted", async () => {
     const h = await publishedPostFixture();
     const discards: number[] = [];
-    h.hooks.addAction("entry:post:autosave_discarded", (live, authorId) => {
+    h.hooks.on(entry.for("post").autosaveDiscarded, ({ authorId }) => {
       discards.push(authorId);
     });
     await h.client.entry.update({

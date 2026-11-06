@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { AppContext } from "../../../context/app-context.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import { acquireEditLease } from "../../../db/edit-lease.js";
+import { entry } from "../../../hooks/entry.js";
 import { editorUser } from "../../../test/factories.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
@@ -31,15 +32,14 @@ describe("entry.trash", () => {
       slug: "soft",
     });
 
-    const onTrash = vi.fn<(post: Entry, ctx: AppContext) => void>();
-    h.hooks.addAction("entry:trashed", onTrash);
+    const onTrash =
+      vi.fn<(payload: { entry: Entry }, ctx: AppContext) => void>();
+    h.hooks.on(entry.trashed, onTrash);
 
     const result = await h.client.entry.trash({ id: target.id });
     expect(result.status).toBe("trash");
-    expect(onTrash).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ id: target.id }),
-      expect.anything(),
-    );
+    expect(onTrash).toHaveBeenCalledOnce();
+    expect(onTrash.mock.calls[0]?.[0].entry).toMatchObject({ id: target.id });
     expect(onTrash.mock.calls[0]?.[1].user?.id).toBe(h.user.id);
   });
 
@@ -94,7 +94,7 @@ describe("entry.trash", () => {
     await h.client.entry.trash({ id: target.id });
 
     const onTrash = vi.fn();
-    h.hooks.addAction("entry:trashed", onTrash);
+    h.hooks.on(entry.trashed, onTrash);
     const again = await h.client.entry.trash({ id: target.id });
     expect(again.status).toBe("trash");
     expect(onTrash).not.toHaveBeenCalled();

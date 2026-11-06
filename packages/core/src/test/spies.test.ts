@@ -118,9 +118,11 @@ describe("bindFilterSpy", () => {
 
   test("spies a filter name on the hooks it is bound to", () => {
     const hooks = new HookRegistry();
-    const spy = bindFilterSpy(hooks)("entry:before_save");
+    const spy = bindFilterSpy(hooks)("rpc:settings.get:input");
 
     expect(spy.calls).toEqual([]);
-    expect(() => spy.assertCalled()).toThrow("spyFilter(entry:before_save)");
+    expect(() => spy.assertCalled()).toThrow(
+      "spyFilter(rpc:settings.get:input)",
+    );
   });
 });

@@ -1,15 +1,16 @@
 import { describe, expect, test } from "vitest";
 
-import type { ActionArgs } from "../hooks/types.js";
+import type { EventDefinition } from "../hooks/define.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
 } from "../plugin/manifest.js";
-import type { ActionSpy } from "../test/spies.js";
+import type { EventSpy } from "../test/spies.js";
 import type { DefaultRole } from "../users/contract/roles.js";
 import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
+import { term as termEvents } from "../hooks/term.js";
 import { number, text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
@@ -60,8 +61,11 @@ function registerTermMetaFields(
 
 /**
  * Shared scaffold: an admin harness, a category with an `icon_url` field, a
- * "Travel" term and an action spy.
+ * "Travel" term and an event spy.
  */
+type MetaChangedPayload =
+  typeof termEvents.metaChanged extends EventDefinition<infer P> ? P : never;
+
 async function setupTravelCategoryWithIconUrl(): Promise<{
   h: Awaited<ReturnType<typeof createRpcHarness>>;
   created: Awaited<
@@ -69,7 +73,7 @@ async function setupTravelCategoryWithIconUrl(): Promise<{
       Awaited<ReturnType<typeof createRpcHarness>>["client"]["term"]["create"]
     >
   >;
-  spy: ActionSpy<ActionArgs<"term:meta_changed">>;
+  spy: EventSpy<MetaChangedPayload>;
 }> {
   const plugins = taxonomyRegistry();
   registerTermMetaFields(plugins, "category", [
@@ -81,7 +85,7 @@ async function setupTravelCategoryWithIconUrl(): Promise<{
     name: "Travel",
     slug: "travel",
   });
-  const spy = h.spyAction("term:meta_changed");
+  const spy = h.spyEvent(termEvents.metaChanged);
   return { h, created, spy };
 }
 
@@ -252,7 +256,7 @@ describe("term meta: registration + round-trip via term.update", () => {
     });
   });
 
-  test("term.update with an empty meta patch does not fire term:meta_changed", async () => {
+  test("term.update with an empty meta patch does not emit term.metaChanged", async () => {
     const { h, created, spy } = await setupTravelCategoryWithIconUrl();
 
     await h.client.term.update({
@@ -264,7 +268,7 @@ describe("term meta: registration + round-trip via term.update", () => {
     expect(spy.calls).toHaveLength(0);
   });
 
-  test("term:meta_changed fires with the upsert + delete diff", async () => {
+  test("term.metaChanged fires with the upsert + delete diff", async () => {
     const { h, created, spy } = await setupTravelCategoryWithIconUrl();
 
     const set = await h.client.term.update({
@@ -279,11 +283,11 @@ describe("term meta: registration + round-trip via term.update", () => {
     });
 
     expect(spy.calls).toHaveLength(2);
-    expect(spy.calls[0]?.args[1]).toEqual({
+    expect(spy.calls[0]?.payload.changes).toEqual({
       set: { icon_url: "https://example.test/travel.svg" },
       removed: [],
     });
-    expect(spy.calls[1]?.args[1]).toEqual({
+    expect(spy.calls[1]?.payload.changes).toEqual({
       set: {},
       removed: ["icon_url"],
     });
@@ -331,7 +335,7 @@ describe("term.get settles an unsettled row", () => {
       taxonomy: "category",
       meta: { rank: 3 },
     });
-    const spy = h.spyAction("term:meta_changed");
+    const spy = h.spyEvent(termEvents.metaChanged);
 
     await h.client.term.get({ id: term.id });
 
@@ -352,7 +356,7 @@ describe("term.get settles an unsettled row", () => {
       .update(terms)
       .set({ name: "Saved meanwhile" })
       .where(eq(terms.id, term.id));
-    const spy = h.spyAction("term:meta_changed");
+    const spy = h.spyEvent(termEvents.metaChanged);
 
     const settled = await settleTermMeta(h.context, term, term.meta);
 

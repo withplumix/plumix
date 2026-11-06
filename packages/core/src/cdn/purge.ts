@@ -1,6 +1,8 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import type { HookRegistry } from "../hooks/registry.js";
+import { entry } from "../hooks/entry.js";
+import { term } from "../hooks/term.js";
 import { userEvents } from "../hooks/user.js";
 import {
   entryPurgeTags,
@@ -57,25 +59,23 @@ export function flushPurgeTags(ctx: AppContext): void {
  * Handlers stay synchronous for the memo's sake (see `RequestMemo.invalidate`).
  */
 export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
-  // Entry lifecycle actions that change what the public sees — published,
-  // edited, meta-changed, or removed from view (trash/delete) / restored. Every
-  // payload's leading arg carries `{ id, type }`.
+  // Entry events that change what the public sees — published, edited,
+  // meta-changed, or removed from view (trash/delete) / restored. Every
+  // payload's `entry` carries `{ id, type }`.
   const onEntry = (
-    entry: { readonly id: number; readonly type: string },
+    {
+      entry: row,
+    }: { readonly entry: { readonly id: number; readonly type: string } },
     ctx: AppContext,
   ): void => {
-    enqueuePurgeTags(ctx, entryPurgeTags(entry.type, entry.id));
+    enqueuePurgeTags(ctx, entryPurgeTags(row.type, row.id));
   };
-  hooks.addAction("entry:published", onEntry);
-  hooks.addAction("entry:trashed", onEntry);
-  hooks.addAction("entry:restored", onEntry);
-  hooks.addAction("entry:deleted", onEntry);
-  hooks.addAction("entry:updated", (entry, _previous, ctx) =>
-    onEntry(entry, ctx),
-  );
-  hooks.addAction("entry:meta_changed", (entry, _changes, ctx) =>
-    onEntry(entry, ctx),
-  );
+  hooks.on(entry.published, onEntry);
+  hooks.on(entry.trashed, onEntry);
+  hooks.on(entry.restored, onEntry);
+  hooks.on(entry.deleted, onEntry);
+  hooks.on(entry.updated, onEntry);
+  hooks.on(entry.metaChanged, onEntry);
 
   // Only the pages that rendered the user. The slug lookup has no id to be
   // tagged by, so any user write drops it from the memo.
@@ -95,24 +95,25 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   // A new or deleted term changes every list of its taxonomy's terms, as well
   // as the pages that rendered it.
   const onTerm = (
-    term: { readonly id: number; readonly taxonomy: string },
+    {
+      term: row,
+    }: { readonly term: { readonly id: number; readonly taxonomy: string } },
     ctx: AppContext,
   ): void => {
-    enqueuePurgeTags(ctx, [termTag(term.id), taxonomyListTag(term.taxonomy)]);
+    enqueuePurgeTags(ctx, [termTag(row.id), taxonomyListTag(row.taxonomy)]);
     ctx.memo.invalidate([termSlugsTag()]);
   };
-  hooks.addAction("term:created", onTerm);
-  hooks.addAction("term:deleted", onTerm);
-  const onTermEdit = (term: { readonly id: number }, ctx: AppContext): void => {
-    enqueuePurgeTags(ctx, [termTag(term.id)]);
+  hooks.on(term.created, onTerm);
+  hooks.on(term.deleted, onTerm);
+  const onTermEdit = (
+    { term: row }: { readonly term: { readonly id: number } },
+    ctx: AppContext,
+  ): void => {
+    enqueuePurgeTags(ctx, [termTag(row.id)]);
     ctx.memo.invalidate([termSlugsTag()]);
   };
-  hooks.addAction("term:updated", (term, _previous, ctx) =>
-    onTermEdit(term, ctx),
-  );
-  hooks.addAction("term:meta_changed", (term, _changes, ctx) =>
-    onTermEdit(term, ctx),
-  );
+  hooks.on(term.updated, onTermEdit);
+  hooks.on(term.metaChanged, onTermEdit);
 
   // A response that printed a settings group is stored under its tag.
   hooks.addAction("settings:group_changed", (changes, ctx) => {

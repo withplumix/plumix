@@ -1,8 +1,10 @@
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
+import { term } from "../../../hooks/term.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
+import { termRpc } from "../../filters.js";
 import { termWire } from "./helpers.js";
 import { termDeleteInputSchema } from "./schemas.js";
 
@@ -37,8 +39,10 @@ export const del = base
       throw errors.CONFLICT({ data: { reason: "delete_failed" } });
     }
 
-    await context.hooks.doAction("term:deleted", deleted, context);
+    await context.events.emit(term.for(deleted.taxonomy).deleted, {
+      term: deleted,
+    });
     return termWire(
-      await context.hooks.applyFilter("rpc:term.delete:output", deleted),
+      await context.filters.apply(termRpc.delete.output, deleted),
     );
   });

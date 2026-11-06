@@ -13,8 +13,10 @@ import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { ThemeDescriptor } from "../theme.js";
 import { auth } from "../hooks/auth.js";
 import { block } from "../hooks/block-render.js";
+import { entryDeclarations } from "../hooks/entry.js";
 import { render } from "../hooks/render.js";
 import { sync } from "../hooks/sync.js";
+import { termDeclarations } from "../hooks/term.js";
 import { assertValidPluginId } from "../plugin/define.js";
 import {
   DuplicateRegistrationError,
@@ -26,6 +28,7 @@ import {
   createPluginAfterSetupContext,
   createPluginSetupContext,
 } from "../plugin/setup-context.js";
+import { rpcFilterDeclarations } from "../rpc/filters.js";
 import { user } from "../rpc/procedures/user/subject.js";
 
 export interface PluginInstallResult {
@@ -127,6 +130,8 @@ export async function installPlugins({
     await descriptor.afterSetup(ctx, states[index]);
   }
 
+  assertKnownScopes(hooks, registry);
+
   return { hooks, registry, appContextExtensions };
 }
 
@@ -138,7 +143,43 @@ const CORE_DECLARATIONS: readonly Declaration[] = [
   ...Object.values(sync),
   ...Object.values(user),
   ...Object.values(auth),
+  ...entryDeclarations,
+  ...termDeclarations,
+  ...rpcFilterDeclarations,
 ];
+
+/**
+ * After every plugin's `setup`, so a scope may name a type a later plugin
+ * registers; a typo would otherwise drop its handler without a word.
+ */
+function assertKnownScopes(
+  hooks: HookRegistry,
+  registry: PluginRegistry,
+): void {
+  const subjects = [
+    {
+      ids: new Set(entryDeclarations.map(({ id }) => id)),
+      kind: "entry type",
+      registered: registry.entryTypes,
+    },
+    {
+      ids: new Set(termDeclarations.map(({ id }) => id)),
+      kind: "taxonomy",
+      registered: registry.termTaxonomies,
+    },
+  ];
+  for (const { id, scope, plugin } of hooks.scopedSubscriptions()) {
+    const subject = subjects.find(({ ids }) => ids.has(id));
+    if (subject === undefined || subject.registered.has(scope)) continue;
+    throw PluginDefinitionError.handlerScopedToUnknownName({
+      pluginId: plugin ?? "core",
+      declarationId: id,
+      kind: subject.kind,
+      scope,
+      registered: [...subject.registered.keys()].sort(),
+    });
+  }
+}
 
 function assertUniqueDeclarations(
   plugins: readonly AnyPluginDescriptor[],

@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Entry } from "../../../db/schema/entries.js";
 import { eq, inArray, like, or } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
+import { entry } from "../../../hooks/entry.js";
 import { createRpcHarness } from "../../../test/rpc.js";
 
 describe("entry.trashMany", () => {
@@ -17,8 +18,8 @@ describe("entry.trashMany", () => {
       slug: "b",
     });
 
-    const onTrash = vi.fn<(post: Entry) => void>();
-    h.hooks.addAction("entry:trashed", onTrash);
+    const onTrash = vi.fn<(payload: { entry: Entry }) => void>();
+    h.hooks.on(entry.trashed, onTrash);
 
     const result = await h.client.entry.trashMany({ ids: [a.id, b.id] });
     expect(new Set(result.ids)).toEqual(new Set([a.id, b.id]));
@@ -66,7 +67,7 @@ describe("entry.trashMany", () => {
       slug: "dup",
     });
     const onTrash = vi.fn();
-    h.hooks.addAction("entry:trashed", onTrash);
+    h.hooks.on(entry.trashed, onTrash);
     const result = await h.client.entry.trashMany({
       ids: [target.id, target.id],
     });

@@ -6,6 +6,7 @@ import { etagOf } from "../../../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../../../db/edit-lease.js";
 import { eq, inArray } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
+import { term as termEvents } from "../../../hooks/term.js";
 import { text } from "../../../plugin/fields/builder.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../../../plugin/registry.js";
@@ -141,7 +142,7 @@ describe("term.create", () => {
       authAs: "editor",
       plugins: withIconField(taxonomyRegistry()),
     });
-    const metaChanged = h.spyAction("term:meta_changed");
+    const metaChanged = h.spyEvent(termEvents.metaChanged);
 
     await h.client.term.create({
       taxonomy: "category",
@@ -155,7 +156,7 @@ describe("term.create", () => {
       slug: "without",
     });
 
-    expect(metaChanged.calls.map((call) => call.args[1])).toEqual([
+    expect(metaChanged.calls.map((call) => call.payload.changes)).toEqual([
       { set: { icon: "leaf" }, removed: [] },
     ]);
   });
@@ -466,8 +467,8 @@ describe("term.update from a copy", () => {
       plugins: withIconField(taxonomyRegistry()),
     });
     const row = await h.factory.term.create({ taxonomy: "category" });
-    const updated = h.spyAction("term:updated");
-    const metaChanged = h.spyAction("term:meta_changed");
+    const updated = h.spyEvent(termEvents.updated);
+    const metaChanged = h.spyEvent(termEvents.metaChanged);
 
     await h.client.term.update({
       id: row.id,

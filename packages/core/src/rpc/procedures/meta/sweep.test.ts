@@ -5,6 +5,7 @@ import { entries } from "../../../db/schema/entries.js";
 import { settings } from "../../../db/schema/settings.js";
 import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
+import { entry } from "../../../hooks/entry.js";
 import { definePlugin } from "../../../plugin/define.js";
 import { number, toggle } from "../../../plugin/fields/index.js";
 import { AUTOSAVE_TYPE } from "../../../revisions/slug-codec.js";
@@ -279,13 +280,13 @@ describe("sweepUnsettledMeta", () => {
 
   test("announces each settled entry, so the CDN drops its render", async () => {
     const { harness, ctx, post } = await seeded();
-    const announced = harness.spyAction("entry:meta_changed");
+    const announced = harness.spyEvent(entry.metaChanged);
 
     await sweepUnsettledMeta(ctx, { write: true });
 
     announced
       .assertCalledOnce()
-      .assertCalledWith((entry) => entry.id === post.id);
+      .assertCalledWith((payload) => payload.entry.id === post.id);
   });
   // D1 caps the queries one Worker invocation may make, so a large site can't
   // be settled in one call.
