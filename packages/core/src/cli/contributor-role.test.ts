@@ -33,10 +33,7 @@ const site = definePlugin("site", {
   },
 });
 
-/**
- * What core granted `contributor` on this site while it was a default role,
- * pinned from the ladder's resolution before it was retired.
- */
+/** What core grants a `contributor` on this site, pinned from the old ladder. */
 const CONTRIBUTOR_CORE_GRANTS = [
   "admin:access",
   "entry:page:create",

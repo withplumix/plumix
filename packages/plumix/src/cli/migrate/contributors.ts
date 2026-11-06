@@ -19,8 +19,8 @@ async function contributorCount(db: MigrationDatabase): Promise<number> {
 }
 
 /**
- * `contributor` is no longer a default role, so its users keep their rights
- * only through one the config declares. Run before anything is written.
+ * Contributors keep their rights only through a `contributor` role the config
+ * declares. Run before anything is written.
  */
 export async function assertContributorRoleDeclared(
   db: MigrationDatabase,

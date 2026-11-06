@@ -879,7 +879,7 @@ async up({ db }) {
     });
   });
 
-  describe("retiring the default contributor role", () => {
+  describe("a site holding contributors", () => {
     function insertUser(slug: string, role: string): void {
       const raw = new DatabaseSync(join(dir, "site.sqlite"));
       try {
@@ -891,8 +891,7 @@ async up({ db }) {
       }
     }
 
-    // A site migrated before the rename shipped: core's data migration is
-    // pending, and its users hold the old default roles.
+    // Core's data migration is pending and the users hold the given roles.
     async function siteBeforeTheRename(...roles: string[]) {
       await migrateCommand.run(applyCtx([]));
       query(`DELETE FROM __plumix_data_migrations WHERE owner = 'core'`);

@@ -2,10 +2,7 @@ import { sql } from "drizzle-orm";
 
 import type { DataMigration } from "../db/data-migration.js";
 
-/**
- * Raw SQL: the runner's drizzle has no schema or casing, and a rename is no
- * edit to stamp. `plumix migrate` guards the `contributor` rows it leaves.
- */
+/** Raw SQL: the runner's drizzle has no schema or casing. */
 const renameSubscriberToMember: DataMigration = {
   name: "rename-subscriber-to-member",
   async up({ db }) {

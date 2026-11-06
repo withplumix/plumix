@@ -2,7 +2,7 @@ import type { SiteRoles } from "../access/contract/roles.js";
 
 /**
  * A site role that writes posts and tags them but never publishes, the core
- * rights the retired default `contributor` held. Pass it to
+ * rights of a `contributor`. Pass it to
  * `createPluginRegistry(undefined, CONTRIBUTOR_ROLE)` and act as
  * `"contributor"`.
  */

@@ -89,7 +89,6 @@ describe("runCommand", () => {
       open: ({ location }) => {
         events.push(`open ${location}`);
         return Promise.resolve({
-          // Core's data migration writes through it; nothing reads it back.
           drizzle: {
             run: () => Promise.resolve(),
           } as unknown as MigrationDatabase["drizzle"],

@@ -13,9 +13,8 @@ export const users = sqliteTable(
     slug: t.text().notNull(),
     name: t.text(),
     avatarUrl: t.text(),
-    // An undeclared role grants none. The stale default stays: changing it
-    // rebuilds the table, which on D1 drops every session (ADR 0048), so
-    // every insert names a role.
+    // An undeclared role grants none. Every insert names a role, because
+    // changing this default rebuilds the table, which drops D1 sessions.
     role: t.text().notNull().default("subscriber"),
     meta: t.text({ mode: "json" }).$type<JsonObject>().notNull().default({}),
     emailVerifiedAt: t.integer({ mode: "timestamp" }),

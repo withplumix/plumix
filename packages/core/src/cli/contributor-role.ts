@@ -8,7 +8,7 @@ import type {
   RegisteredEntryType,
 } from "../plugin/registry.js";
 
-/** The actions core gave the retired default `contributor` on every type. */
+/** The actions core's default `contributor` held on every type. */
 const ENTRY_ACTIONS: readonly PostCapabilityAction[] = [
   "read",
   "create",
@@ -63,8 +63,8 @@ function termGrants(
 }
 
 /**
- * The `contributor` role a site declares to keep the core rights the retired
- * default gave it, ready to paste into `roles`. A plugin's own grant to
+ * The `contributor` role a site declares to keep the core rights the default
+ * `contributor` held, ready to paste into `roles`. A plugin's own grant to
  * contributors is not carried.
  */
 export function contributorRoleSnippet(plugins: PluginRegistry): string {
