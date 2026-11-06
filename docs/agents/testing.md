@@ -13,8 +13,10 @@ the older harnesses
 helpers, the `fakeFile`/`fakeImage` upload fakes, the mail kit: `fakeMail`, which both harnesses
 and `testSite` install as `h.mail` and `site.mail`, and `renderMail`, and `fakeCdn`, which a test
 hands the dispatcher harness as `cdn` to render, write and assert a page is no longer stored, and
-which `testSite` always swaps in. `plumix/test/conformance` holds the contract suites a
-runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`editor`, `mailbox`, `passkey`, `PNG_1X1`,
+which `testSite` always swaps in, and `site.fetch`, which answers `ctx.fetch` from the routes a test
+declares (`site.fetch.route(method, url, answer)`, a failure or a timeout included) and fails the
+test on any other request, so no test stubs the global `fetch`. `plumix/test/conformance` holds the
+contract suites a runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`editor`, `mailbox`, `passkey`, `PNG_1X1`,
 the shared `runtimeSpec`) from `plumix/test/playwright`.
 
 ## Admin test helpers

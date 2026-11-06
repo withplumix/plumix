@@ -466,3 +466,85 @@ describe("a scheduled task that declares no cron", () => {
     (await beating.runSchedule("0 0 * * SUN")).assertRan("heartbeat:beat");
   });
 });
+
+const forecast = definePlugin("forecast", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/today",
+      auth: "public",
+      handler: async (_request, appCtx) => {
+        const upstream = await appCtx.fetch("https://weather.example/today");
+        return new Response(await upstream.text());
+      },
+    });
+    ctx.registerScheduledTask({
+      id: "refresh",
+      handler: async (appCtx) => {
+        await appCtx.fetch("https://weather.example/refresh", {
+          method: "POST",
+          body: JSON.stringify({ region: "north" }),
+        });
+      },
+    });
+  },
+});
+const forecasting = await testSite({ plugins: [forecast] });
+
+describe("the site's outbound fetches", () => {
+  test("are answered by the routes a test declares", async () => {
+    forecasting.fetch.route(
+      "GET",
+      "https://weather.example/today",
+      new Response("Sunny"),
+    );
+
+    const page = await forecasting.visit("/_plumix/forecast/today");
+
+    page.assertOk().assertSee("Sunny");
+    forecasting.fetch.assertFetched("https://weather.example/today", {
+      method: "GET",
+    });
+  });
+
+  test("answer a scheduled task too", async () => {
+    forecasting.fetch.route(
+      "POST",
+      "https://weather.example/refresh",
+      new Response(null, { status: 204 }),
+    );
+
+    (await forecasting.runTask("forecast:refresh")).assertRan(
+      "forecast:refresh",
+    );
+
+    forecasting.fetch.assertFetched("https://weather.example/refresh", {
+      method: "POST",
+      body: { region: "north" },
+    });
+  });
+
+  test("start each test with nothing fetched", () => {
+    forecasting.fetch.assertNotFetched("https://weather.example/*");
+  });
+
+  test("time out as ctx.fetch does on a declared timeout, at a tightened bound", async () => {
+    forecasting.fetch.route("GET", "https://weather.example/*", "timeout");
+
+    await expect(
+      forecasting.context.fetch("https://weather.example/today", {
+        timeout: 2500,
+      }),
+    ).rejects.toMatchObject({
+      name: "TimeoutError",
+      message: "timed out after 2.5s",
+    });
+  });
+
+  test.fails(
+    "fail the test on an undeclared request, though the site caught it",
+    async () => {
+      await forecasting.visit("/_plumix/forecast/today");
+    },
+  );
+});

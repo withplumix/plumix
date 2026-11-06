@@ -77,6 +77,8 @@ export type { CapturedMail, MailFake } from "./mail-fake.js";
 export { fakeCdn } from "./cdn-fake.js";
 export type { CdnFake } from "./cdn-fake.js";
 
+export type { FetchAnswer, FetchFake } from "./fetch-fake.js";
+
 export { renderMail } from "./render-mail.js";
 export type { RenderMailOptions } from "./render-mail.js";
 

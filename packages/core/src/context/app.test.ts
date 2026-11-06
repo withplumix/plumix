@@ -4,7 +4,7 @@ import type { Mailer } from "../auth/contract/mailer.js";
 import type { AppContext } from "./app-context.js";
 import { testConfig } from "../test/config.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
-import { createAppContext } from "./app.js";
+import { createAppContext, withSignal } from "./app.js";
 
 function captureMailer(): { mailer: Mailer; sent: string[] } {
   const sent: string[] = [];
@@ -355,6 +355,36 @@ describe("createAppContext ctx.fetch timeout", () => {
     await vi.advanceTimersByTimeAsync(500);
 
     expect(failure).toMatchObject({ message: "the visitor left" });
+  });
+
+  test("a context given a signal aborts a call that passes its own", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", silentUpstream());
+    const task = new AbortController();
+    const reason = new Error("the task ran out of time");
+
+    const call = withSignal(ctx, task.signal).fetch("https://slow.example/", {
+      timeout: false,
+      signal: new AbortController().signal,
+    });
+    task.abort(reason);
+
+    await expect(call).rejects.toBe(reason);
+  });
+
+  test("a Request input's own signal still aborts a call on a context given a signal", async () => {
+    const ctx = await fetchContext();
+    vi.stubGlobal("fetch", silentUpstream());
+    const caller = new AbortController();
+    const reason = new Error("the visitor left");
+
+    const call = withSignal(ctx, new AbortController().signal).fetch(
+      new Request("https://slow.example/", { signal: caller.signal }),
+      { timeout: false },
+    );
+    caller.abort(reason);
+
+    await expect(call).rejects.toBe(reason);
   });
 
   test("the platform fetch never receives the timeout key", async () => {

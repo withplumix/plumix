@@ -30,6 +30,7 @@ import type {
   DeferFn,
   Logger,
   LogMeta,
+  PlumixFetch,
 } from "./app-context.js";
 import type {
   RequestTelemetryCollector,
@@ -61,7 +62,7 @@ import { createRequestMemo } from "./memo.js";
 import { bindSettings, rebindSettings } from "./settings-namespace.js";
 import { tryGetContext } from "./stores.js";
 import { NOOP_TELEMETRY } from "./telemetry.js";
-import { createTracedFetch } from "./traced-fetch.js";
+import { callerSignal, createTracedFetch } from "./traced-fetch.js";
 import {
   traceAssets,
   traceCdn,
@@ -106,6 +107,8 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly origin?: EnvInput<string>;
   readonly dev?: DevRuntime;
   readonly clock?: Clock;
+  /** Answers `ctx.fetch` inside its span, in place of the bounded platform `fetch`. */
+  readonly fetch?: PlumixFetch;
   readonly logger?: Logger;
   readonly defer?: DeferFn;
   /**
@@ -316,7 +319,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     signal: neverAborted,
     // Reads `base.telemetry` per call, so the post-vote collector swap below
     // is observed without rebinding.
-    fetch: createTracedFetch(() => base.telemetry, neverAborted),
+    fetch: createTracedFetch(() => base.telemetry, neverAborted, args.fetch),
   };
   // Safety: `TSchema` reaches only `db`, and an entry write reads core's
   // tables, which every site's schema carries.
@@ -395,7 +398,14 @@ export function withSignal<TSchema extends Record<string, unknown>>(
   const derived: AppContext<TSchema> = {
     ...ctx,
     signal,
-    fetch: createTracedFetch(() => ctx.telemetry, signal),
+    // Wraps `ctx.fetch`, so whatever answers it answers here too.
+    fetch: (input, init) => {
+      const caller = callerSignal(input, init);
+      return ctx.fetch(input, {
+        ...init,
+        signal: caller ? AbortSignal.any([caller, signal]) : signal,
+      });
+    },
     settings: rebindSettings(ctx.settings, () => derived),
     ...rebindDispatch(ctx, () => derived),
   };

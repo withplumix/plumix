@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import { beforeEach } from "vitest";
+import { afterEach, beforeEach } from "vitest";
 
 import type { AnyPluginDescriptor, PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app-context.js";
@@ -16,6 +16,7 @@ import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories, SeededRole } from "./factories.js";
+import type { FetchFake } from "./fetch-fake.js";
 import type { MailFake } from "./mail-fake.js";
 import type { TestRunReport, TestSchedule } from "./schedule.js";
 import type { Travel } from "./site-clock.js";
@@ -33,6 +34,7 @@ import { testConfig } from "./config.js";
 import { silentLogger } from "./context.js";
 import { createDeferQueue } from "./defer.js";
 import { factoriesFor, userFactory } from "./factories.js";
+import { fakeFetch } from "./fetch-fake.js";
 import { fakeMail } from "./mail-fake.js";
 import { TestPage } from "./page.js";
 import { appendCookie, buildRequest } from "./request.js";
@@ -73,6 +75,8 @@ export interface TestSite<
   readonly factory: Factories & TFactories;
   /** Every mail the site sent; the site's mailer delivers nothing. */
   readonly mail: MailFake;
+  /** Answers `ctx.fetch` from the routes a test declares; none reaches the network. */
+  readonly fetch: FetchFake;
   readonly env: PlumixEnv;
   /**
    * A fresh context for calling a service directly, as the user `actingAs`
@@ -159,6 +163,9 @@ export async function testSite<
     time.reset();
     signedIn = new WeakMap();
   });
+  afterEach(() => {
+    fakes.fetch.assertAllDeclared();
+  });
   const env = options?.env ?? {};
   const app = await buildApp(withFakes(config, () => fakes));
   const dispatcher = createPlumixDispatcher(app);
@@ -176,6 +183,7 @@ export async function testSite<
         slots: bindSlots(app, env),
       }),
       clock: time.clock,
+      fetch: (input, init) => fakes.fetch.send(input, init),
       logger: silentLogger,
       onMailSent: (sent) => {
         fakes.mail.record(sent);
@@ -248,6 +256,9 @@ export async function testSite<
       factory,
       get mail() {
         return fakes.mail;
+      },
+      get fetch() {
+        return fakes.fetch;
       },
       env,
       get context() {
@@ -353,10 +364,11 @@ async function loadProjectConfig(cwd: string): Promise<PlumixConfig> {
 interface Fakes {
   readonly mail: MailFake;
   readonly cdn: CdnFake;
+  readonly fetch: FetchFake;
 }
 
 function freshFakes(): Fakes {
-  return { mail: fakeMail(), cdn: fakeCdn() };
+  return { mail: fakeMail(), cdn: fakeCdn(), fetch: fakeFetch() };
 }
 
 /** Storage, kv and image delivery have no fake yet, so they stay unbound. */
