@@ -548,3 +548,72 @@ describe("the site's outbound fetches", () => {
     },
   );
 });
+
+const slow = definePlugin("slow", {
+  setup: (ctx) => {
+    ctx.registerRoute({
+      method: "GET",
+      path: "/later",
+      auth: "public",
+      handler: (_request, appCtx) => {
+        appCtx.defer(new Promise((resolve) => setTimeout(resolve, 20)));
+        return new Response("Queued");
+      },
+    });
+  },
+});
+const tracing = await testSite({ plugins: [slow] });
+
+describe("the site's telemetry", () => {
+  test("holds a request's snapshot once the work it deferred settles", async () => {
+    await tracing.visit("/_plumix/slow/later");
+
+    expect(tracing.telemetry.snapshots).toHaveLength(1);
+  });
+
+  test("names the spans it recorded when one is missing", async () => {
+    await tracing.visit("/_plumix/slow/later");
+
+    expect(() => tracing.telemetry.span("render")).toThrow(
+      /Expected a span named "render", but none was recorded\.\nRecorded:\n {2}dispatch\n/,
+    );
+  });
+});
+
+const exported: string[] = [];
+const exporting = await testSite({
+  config: {
+    telemetry: {
+      consumers: [
+        {
+          id: "exporter",
+          onRequestEnd: (snapshot) => {
+            exported.push(snapshot.request.url);
+          },
+        },
+      ],
+    },
+  },
+});
+
+describe("a config's own telemetry consumers", () => {
+  test("are replaced by the site's, so none exports from a test", async () => {
+    await exporting.visit("/");
+
+    expect(exported).toEqual([]);
+    expect(exporting.telemetry.snapshots).toHaveLength(1);
+  });
+});
+
+describe("the site's logger", () => {
+  test("names the lines it logged when one is missing", () => {
+    tracing.context.logger.warn("slow_task");
+
+    expect(() => tracing.logger.assertLogged("error", "slow_task")).toThrow(
+      'Expected "slow_task" to be logged at error, but it was not.\nLogged:\n  warn: slow_task',
+    );
+    expect(() => tracing.logger.assertNothingLogged("warn")).toThrow(
+      "Expected nothing to be logged at warn, but 1 line was.",
+    );
+  });
+});

@@ -79,6 +79,10 @@ export type { CdnFake } from "./cdn-fake.js";
 
 export type { FetchAnswer, FetchFake } from "./fetch-fake.js";
 
+export type { LoggedLine, LoggerFake } from "./logger-fake.js";
+
+export type { TelemetryFake } from "./telemetry-fake.js";
+
 export { renderMail } from "./render-mail.js";
 export type { RenderMailOptions } from "./render-mail.js";
 

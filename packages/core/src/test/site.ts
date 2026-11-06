@@ -6,7 +6,7 @@ import { RPCLink } from "@orpc/client/fetch";
 import { afterEach, beforeEach } from "vitest";
 
 import type { AnyPluginDescriptor, PlumixConfig } from "../config.js";
-import type { AppContext, Db } from "../context/app-context.js";
+import type { AppContext, Db, Logger } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { User } from "../db/schema/users.js";
 import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
@@ -17,9 +17,11 @@ import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories, SeededRole } from "./factories.js";
 import type { FetchFake } from "./fetch-fake.js";
+import type { LoggerFake } from "./logger-fake.js";
 import type { MailFake } from "./mail-fake.js";
 import type { TestRunReport, TestSchedule } from "./schedule.js";
 import type { Travel } from "./site-clock.js";
+import type { TelemetryFake } from "./telemetry-fake.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
@@ -31,10 +33,10 @@ import { createPlumixDispatcher } from "../runtime/dispatcher.js";
 import { bindSlots, requestContextArgs } from "../runtime/handler.js";
 import { fakeCdn } from "./cdn-fake.js";
 import { testConfig } from "./config.js";
-import { silentLogger } from "./context.js";
 import { createDeferQueue } from "./defer.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { fakeFetch } from "./fetch-fake.js";
+import { fakeLogger } from "./logger-fake.js";
 import { fakeMail } from "./mail-fake.js";
 import { TestPage } from "./page.js";
 import { appendCookie, buildRequest } from "./request.js";
@@ -42,6 +44,7 @@ import { findTask, runTasks, scheduleOf } from "./schedule.js";
 import { siteClock } from "./site-clock.js";
 import { createSiteDatabase } from "./site-database.js";
 import { migrationFolders } from "./site-migrations.js";
+import { fakeTelemetry } from "./telemetry-fake.js";
 
 /**
  * A plugin's factory, bound to the site's database as `factoriesFor` binds
@@ -77,6 +80,10 @@ export interface TestSite<
   readonly mail: MailFake;
   /** Answers `ctx.fetch` from the routes a test declares; none reaches the network. */
   readonly fetch: FetchFake;
+  /** Every line the site logged; none reaches the console. */
+  readonly logger: LoggerFake;
+  /** The telemetry snapshot of every request and firing, in place of the config's consumers. */
+  readonly telemetry: TelemetryFake;
   readonly env: PlumixEnv;
   /**
    * A fresh context for calling a service directly, as the user `actingAs`
@@ -85,10 +92,13 @@ export interface TestSite<
   readonly context: AppContext;
   /**
    * Request a path, or an entry at its permalink, as a visitor or the user
-   * `actingAs` names.
+   * `actingAs` names. Deferred work settles before it resolves.
    */
   readonly visit: (target: string | Entry) => Promise<TestPage>;
-  /** Calls a procedure over the wire, through the site's own dispatcher. */
+  /**
+   * Calls a procedure over the wire, through the site's own dispatcher.
+   * Deferred work settles before it resolves.
+   */
   readonly rpc: AppRouterClient & PluginRpcClient<TRpc>;
   /**
    * This site, calling as the user, or as a user of the role created on its
@@ -166,6 +176,21 @@ export async function testSite<
   afterEach(() => {
     fakes.fetch.assertAllDeclared();
   });
+  // Forwards to the current test's fake, as `withFakes` does for the slots.
+  const logger: Logger = {
+    debug: (message, meta) => {
+      fakes.logger.debug(message, meta);
+    },
+    info: (message, meta) => {
+      fakes.logger.info(message, meta);
+    },
+    warn: (message, meta) => {
+      fakes.logger.warn(message, meta);
+    },
+    error: (message, meta) => {
+      fakes.logger.error(message, meta);
+    },
+  };
   const env = options?.env ?? {};
   const app = await buildApp(withFakes(config, () => fakes));
   const dispatcher = createPlumixDispatcher(app);
@@ -184,15 +209,17 @@ export async function testSite<
       }),
       clock: time.clock,
       fetch: (input, init) => fakes.fetch.send(input, init),
-      logger: silentLogger,
+      logger,
       onMailSent: (sent) => {
         fakes.mail.record(sent);
       },
     });
 
-  async function dispatch(request: Request): Promise<Response> {
-    const ctx = contextFor(request);
-    return requestStore.run(ctx, () => dispatcher(ctx));
+  // Deferred work settles before it resolves, so the snapshot is delivered.
+  async function dispatch(ctx: AppContext): Promise<Response> {
+    const response = await requestStore.run(ctx, () => dispatcher(ctx));
+    await drainDeferred();
+    return response;
   }
 
   const factory = {
@@ -260,6 +287,12 @@ export async function testSite<
       get fetch() {
         return fakes.fetch;
       },
+      get logger() {
+        return fakes.logger;
+      },
+      get telemetry() {
+        return fakes.telemetry;
+      },
       env,
       get context() {
         const ctx = contextFor(new Request("https://cms.example/"));
@@ -271,7 +304,7 @@ export async function testSite<
         const path =
           typeof target === "string" ? target : await permalinkOf(target);
         const ctx = contextFor(await signIn(await buildRequest(db, path)));
-        const response = await requestStore.run(ctx, () => dispatcher(ctx));
+        const response = await dispatch(ctx);
         return new TestPage({
           status: response.status,
           headers: response.headers,
@@ -280,7 +313,9 @@ export async function testSite<
           route: ctx.resolvedRoute?.pattern ?? null,
         });
       },
-      rpc: rpcClient(async (request) => dispatch(await signIn(request))),
+      rpc: rpcClient(async (request) =>
+        dispatch(contextFor(await signIn(request))),
+      ),
       actingAs: (next) =>
         siteActingAs(typeof next === "string" ? { role: next } : next),
       travel: time.travel,
@@ -365,19 +400,40 @@ interface Fakes {
   readonly mail: MailFake;
   readonly cdn: CdnFake;
   readonly fetch: FetchFake;
+  readonly logger: LoggerFake;
+  readonly telemetry: TelemetryFake;
 }
 
 function freshFakes(): Fakes {
-  return { mail: fakeMail(), cdn: fakeCdn(), fetch: fakeFetch() };
+  return {
+    mail: fakeMail(),
+    cdn: fakeCdn(),
+    fetch: fakeFetch(),
+    logger: fakeLogger(),
+    telemetry: fakeTelemetry(),
+  };
 }
 
-/** Storage, kv and image delivery have no fake yet, so they stay unbound. */
+/**
+ * Storage, kv and image delivery have no fake yet, so they stay unbound. The
+ * config's own telemetry consumers are replaced, so none exports from a test.
+ */
 function withFakes(config: PlumixConfig, current: () => Fakes): PlumixConfig {
   return {
     ...config,
     database: { kind: "test", connect: () => ({ db: {} }) },
     mailer: { send: (message) => current().mail.send(message) },
     cdn: { kind: "test", connect: () => current().cdn },
+    telemetry: {
+      consumers: [
+        {
+          id: "test-site",
+          onRequestEnd: (snapshot) => {
+            current().telemetry.record(snapshot);
+          },
+        },
+      ],
+    },
     storage: undefined,
     kv: undefined,
     imageDelivery: undefined,

@@ -15,7 +15,10 @@ and `testSite` install as `h.mail` and `site.mail`, and `renderMail`, and `fakeC
 hands the dispatcher harness as `cdn` to render, write and assert a page is no longer stored, and
 which `testSite` always swaps in, and `site.fetch`, which answers `ctx.fetch` from the routes a test
 declares (`site.fetch.route(method, url, answer)`, a failure or a timeout included) and fails the
-test on any other request, so no test stubs the global `fetch`. `plumix/test/conformance` holds the
+test on any other request, so no test stubs the global `fetch`, `site.logger`, which records every
+line the site logged (`assertLogged(level, message)`, `assertNothingLogged(level)`), so no test
+builds a capturing logger, and `site.telemetry`, which records each request's telemetry snapshot
+in place of the config's consumers (`site.telemetry.span(name).attributes`). `plumix/test/conformance` holds the
 contract suites a runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`editor`, `mailbox`, `passkey`, `PNG_1X1`,
 the shared `runtimeSpec`) from `plumix/test/playwright`.
 
