@@ -59,7 +59,7 @@ import { defineTestConfig } from "plumix/vite";
 export default defineTestConfig();
 ```
 
-Run `pnpm exec vitest run`. Every `*.test.ts` and `*.test.tsx` in the package runs in Node.
+Run `pnpm exec vitest run`. It runs two projects in Node: `unit`, every `*.test.ts` and `*.test.tsx` under `src/`, and `feature`, those under `tests/feature/`. Run one with `--project unit` or `--project feature`.
 
 `defineTestConfig` takes overrides and merges them over its config, so a setup file, an alias or a `define` goes there:
 
@@ -75,7 +75,7 @@ export default defineTestConfig({
 });
 ```
 
-Narrow with `exclude`, never with `include`. Vitest adds your `include` to the config's own, which already reaches every `*.test.ts(x)` in the package, wherever it sits.
+The overrides apply to both projects. Narrow with `exclude`, never with `include`: Vitest adds your `include` to each project's own.
 
 ### A server test
 

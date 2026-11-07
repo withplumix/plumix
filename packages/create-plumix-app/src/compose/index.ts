@@ -46,7 +46,13 @@ function tsconfig(runtimeTypes: readonly string[] = []) {
       noEmit: true,
       types: ["node", ...runtimeTypes, "react"],
     },
-    include: ["plumix.config.ts", "theme", ".plumix"],
+    include: [
+      "plumix.config.ts",
+      "vitest.config.ts",
+      "theme",
+      "tests",
+      ".plumix",
+    ],
     exclude: ["node_modules", "dist"],
   };
 }

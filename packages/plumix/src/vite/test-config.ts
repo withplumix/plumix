@@ -1,36 +1,42 @@
-import type { ViteUserConfig } from "vitest/config";
+import type {
+  TestProjectInlineConfiguration,
+  ViteUserConfig,
+} from "vitest/config";
 
 import { loadOnce } from "@plumix/core/support";
 
-// Mirrors `tooling/vitest/tiers.ts`.
+// The exclude mirrors `tooling/vitest/tiers.ts`.
 // Guarded by: packages/plumix/src/vite/test-config.test.ts
 
-/**
- * The globs reach the whole package: a config's own `include` is added to
- * this one, not swapped in. Narrow with `exclude` instead.
- */
-const NODE_TIER = {
-  include: ["**/*.test.{ts,tsx}"],
-  exclude: ["**/*.build.test.{ts,tsx}"],
+/** Unit tests sit beside their source, feature tests in `tests/feature/`. */
+const PROJECTS = {
+  unit: ["src/**/*.test.{ts,tsx}"],
+  feature: ["tests/feature/**/*.test.{ts,tsx}"],
 } as const;
+
+const EXCLUDE = ["**/*.build.test.{ts,tsx}"] as const;
 
 const loadVitestConfig = loadOnce(() => import("vitest/config"));
 
 /**
- * Needs `vitest` installed, but only when vitest reads the config, not when
- * `plumix/vite` is imported.
+ * Needs `vitest` installed only when vitest reads the config. An override's
+ * `include` is added to each project's, not swapped in: narrow with `exclude`.
  */
 export function defineTestConfig(
   overrides: ViteUserConfig = {},
 ): () => Promise<ViteUserConfig> {
   return async () => {
     const { configDefaults, mergeConfig } = await loadVitestConfig();
-    const node: ViteUserConfig = {
+    const projects: TestProjectInlineConfiguration[] = Object.entries(
+      PROJECTS,
+    ).map(([name, include]) => ({
+      extends: true,
       test: {
-        include: [...NODE_TIER.include],
-        exclude: [...configDefaults.exclude, ...NODE_TIER.exclude],
+        name,
+        include: [...include],
+        exclude: [...configDefaults.exclude, ...EXCLUDE],
       },
-    };
-    return mergeConfig(node, overrides);
+    }));
+    return mergeConfig({ test: { projects } }, overrides);
   };
 }

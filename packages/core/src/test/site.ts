@@ -1,9 +1,8 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { pathToFileURL } from "node:url";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
-import { afterEach, beforeEach } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 import type { AnyPluginDescriptor, PlumixConfig } from "../config.js";
 import type { AppContext, Db, Logger } from "../context/app-context.js";
@@ -423,9 +422,12 @@ async function loadProjectConfig(cwd: string): Promise<PlumixConfig> {
       `testSite: no plumix.config.{ts,js,mjs} in ${cwd}. Run the test from the project, or pass { plugins } to boot core plus the plugins you list.`,
     );
   }
-  const module = (await import(
-    /* @vite-ignore */ pathToFileURL(path).href
-  )) as { readonly default: PlumixConfig };
+  // Through Vitest's runner, as a test's own import would be: from an
+  // installed `plumix`, a native import cannot load the config's TSX theme.
+  // eslint-disable-next-line plumix/no-module-mocking -- loads the config, mocks nothing
+  const module = await vi.importActual<{ readonly default: PlumixConfig }>(
+    path,
+  );
   return module.default;
 }
 

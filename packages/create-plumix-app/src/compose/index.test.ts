@@ -122,3 +122,19 @@ describe("compose — what the runtime decides about the base skeleton", () => {
     expect(bare["README.md"]).not.toContain("wrangler");
   });
 });
+
+describe("compose — tests", () => {
+  it("ships a feature test that `pnpm test` runs and `typecheck` checks", async () => {
+    const files = await composeWith(runtime, []);
+    const pkg = JSON.parse(files["package.json"] ?? "{}") as PackageJson;
+
+    expect(pkg.scripts?.test).toBe("vitest run");
+    expect(pkg.devDependencies?.vitest).toMatch(/^\^?\d/);
+    expect(files["vitest.config.ts"]).toContain("defineTestConfig()");
+    expect(files["tests/feature/home.test.ts"]).toContain('site.visit("/")');
+    expect(
+      (JSON.parse(files["tsconfig.json"] ?? "{}") as { include: string[] })
+        .include,
+    ).toEqual(expect.arrayContaining(["tests", "vitest.config.ts"]));
+  });
+});
