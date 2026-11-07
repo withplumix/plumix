@@ -5,10 +5,6 @@ import type { User } from "../../src/db/schema/users.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
 
-// Exercises the edit gate end-to-end through the real public render path:
-// resolveSingle → resolveEditMode → PlumixProvider mode → injectEditorBootstrap.
-// The `data-plumix-editor` marker is the injected runtime script.
-
 const blogPlugin = definePlugin("blog", {
   setup: (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });

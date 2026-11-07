@@ -43,7 +43,7 @@ describe("a public page's locale", () => {
     page.assertSee('<html lang="en" dir="ltr">');
   });
 
-  test("authenticated visitor of a public URL still sees the site default (WP frontend vs admin split)", async () => {
+  test("authenticated visitor of a public URL still sees the site default", async () => {
     const admin = await site.factory.user.create({
       role: "admin",
       meta: { locale: "ar" },

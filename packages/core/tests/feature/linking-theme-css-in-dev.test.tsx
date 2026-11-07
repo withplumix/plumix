@@ -93,7 +93,7 @@ describe("dev theme CSS is linked in <head> to avoid FOUC (#1701)", () => {
       const page = await aliasedCssSite.visit(post);
 
       page.assertDontSee('<link rel="stylesheet"');
-      // Still loaded via the client-entry import, unchanged from before.
+      // Still loaded via the client-entry import.
       page.assertSeeInOrder([
         "<head>",
         '<script type="module" src="/.plumix/client-entry.ts"></script>',
