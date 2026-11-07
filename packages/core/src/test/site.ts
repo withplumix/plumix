@@ -9,6 +9,7 @@ import type { AnyPluginDescriptor, PlumixConfig } from "../config.js";
 import type { AppContext, Db, Logger } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { User } from "../db/schema/users.js";
+import type { HookRegistry } from "../hooks/registry.js";
 import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
 import type { PluginRpcClient } from "../plugin/registry.js";
 import type { AppRouterClient } from "../rpc/router.js";
@@ -16,8 +17,10 @@ import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { ConnectedKv, ObjectStorage } from "../runtime/contract/slots.js";
 import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
+import type { EventsFake } from "./events-fake.js";
 import type { Factories, SeededRole } from "./factories.js";
 import type { FetchFake } from "./fetch-fake.js";
+import type { FiltersFake } from "./filters-fake.js";
 import type { LoggerFake } from "./logger-fake.js";
 import type { MailFake } from "./mail-fake.js";
 import type { FetchOptions } from "./request.js";
@@ -38,8 +41,10 @@ import { memoryKv } from "../runtime/memory-kv.js";
 import { fakeCdn } from "./cdn-fake.js";
 import { testConfig } from "./config.js";
 import { createDeferQueue } from "./defer.js";
+import { fakeEvents } from "./events-fake.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { fakeFetch } from "./fetch-fake.js";
+import { fakeFilters } from "./filters-fake.js";
 import { fakeLogger } from "./logger-fake.js";
 import { fakeMail } from "./mail-fake.js";
 import { TestPage } from "./page.js";
@@ -96,6 +101,13 @@ export interface TestSite<
    * browser's presigned PUT, and the site serves what it holds at its URLs.
    */
   readonly storage: StorageFake;
+  /** Every event the site emitted; its handlers still run. */
+  readonly events: EventsFake;
+  /**
+   * Every filter the site applied. A test changes a filter's result by
+   * adding a handler, as a plugin does.
+   */
+  readonly filters: FiltersFake;
   readonly env: PlumixEnv;
   /**
    * A fresh context for calling a service directly, as the user `actingAs`
@@ -211,6 +223,7 @@ export async function testSite<
   const env = options?.env ?? {};
   const app = await buildApp(withFakes(config, () => fakes));
   const dispatcher = createPlumixDispatcher(app);
+  const hooks = recordingHooks(app.hooks, () => fakes);
 
   const contextFor = (request: Request): AppContext =>
     createAppContext({
@@ -224,6 +237,7 @@ export async function testSite<
         assets: undefined,
         slots: bindSlots(app, env),
       }),
+      hooks,
       clock: time.clock,
       fetch: (input, init) => fakes.fetch.send(input, init),
       logger,
@@ -323,6 +337,12 @@ export async function testSite<
       },
       get storage() {
         return fakes.storage;
+      },
+      get events() {
+        return fakes.events;
+      },
+      get filters() {
+        return fakes.filters;
       },
       env,
       get context() {
@@ -437,6 +457,8 @@ interface Fakes {
   readonly telemetry: TelemetryFake;
   readonly storage: StorageFake;
   readonly kv: ConnectedKv;
+  readonly events: EventsFake;
+  readonly filters: FiltersFake;
 }
 
 function freshFakes(storage: ObjectStorage | undefined): Fakes {
@@ -448,7 +470,39 @@ function freshFakes(storage: ObjectStorage | undefined): Fakes {
     telemetry: fakeTelemetry(),
     storage: fakeStorage(storage),
     kv: memoryKv().connect(),
+    events: fakeEvents(),
+    filters: fakeFilters(),
   };
+}
+
+/**
+ * The app's hooks, recording each emit and apply into the current fakes before its
+ * handlers run. Every context the site builds dispatches through it.
+ */
+function recordingHooks(
+  hooks: HookRegistry,
+  current: () => Fakes,
+): HookRegistry {
+  const emit: HookRegistry["emit"] = (event, payload, ctx) => {
+    current().events.record(event, payload);
+    return hooks.emit(event, payload, ctx);
+  };
+  const apply: HookRegistry["apply"] = (filter, value, input, ctx) => {
+    current().filters.record(filter, input);
+    return hooks.apply(filter, value, input, ctx);
+  };
+  return new Proxy(hooks, {
+    get: (target, key) => {
+      if (key === "emit") return emit;
+      if (key === "apply") return apply;
+      const value: unknown = Reflect.get(target, key, target);
+      if (typeof value !== "function") return value;
+      // Safety: a registry method, bound since its private fields are read
+      // only on the registry itself.
+      const method = value as (...args: unknown[]) => unknown;
+      return method.bind(target);
+    },
+  });
 }
 
 /**

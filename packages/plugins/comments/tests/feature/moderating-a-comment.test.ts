@@ -1,7 +1,7 @@
 import { testSite } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
-import { comments } from "../../src/index.js";
+import { comment as commentEvents, comments } from "../../src/index.js";
 import { commentFactory } from "../../src/test/factories.js";
 import { testBlog } from "../../src/test/harness.js";
 
@@ -24,6 +24,9 @@ describe("moderating a comment", () => {
     const approved = await editor.rpc.comments.approve({ id: comment.id });
 
     expect(approved).toEqual({ status: "approved" });
+    site.events.assertEmitted(commentEvents.approved, {
+      comment: { id: comment.id, status: "approved" },
+    });
   });
 
   test("a member is refused", async () => {

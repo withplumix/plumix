@@ -115,6 +115,52 @@ test("a published recipe is listed on its archive", async () => {
 });
 ```
 
+### Events and filters
+
+`testSite` from `plumix/test` boots core and the plugins you list. It records every event the site emitted and every filter it applied, so a test asserts on them after the call, with no listener set up first. Each assertion takes the value your plugin declared with `defineEvent` or `defineFilter`, never its id as a string, so renaming or removing one breaks the test when it compiles:
+
+```ts no-typecheck
+// src/rating.test.ts
+import { testSite } from "plumix/test";
+import { test } from "vitest";
+
+import { recipe, recipes } from "./index.js";
+
+const site = await testSite({ plugins: [recipes()] });
+
+test("rating a recipe announces the rating", async () => {
+  const dish = await site.factory.published.create({ type: "recipe" });
+
+  await site.actingAs("member").rpc.recipes.rate({ id: dish.id, stars: 5 });
+
+  site.events.assertEmitted(recipe.rated, { entryId: dish.id, stars: 5 });
+  site.filters.assertApplied(recipe.stars, { entryId: dish.id });
+});
+```
+
+| Assertion                                    | Passes when                                                        |
+| -------------------------------------------- | ------------------------------------------------------------------ |
+| `site.events.assertEmitted(event, payload?)` | the event was emitted, with a payload that has every key you pass. |
+| `site.events.assertNotEmitted(event)`        | the event was never emitted.                                       |
+| `site.filters.assertApplied(filter, input?)` | the filter was applied, with an input that has every key you pass. |
+| `site.filters.assertNotApplied(filter)`      | the filter was never applied.                                      |
+
+`site.events.emitted(event)` returns each payload the event was emitted with, in order. A key you pass is matched deeply, and a key you leave out is not checked. An event or filter you scope with `.for(name)` matches only what fired for that name, while the unscoped one matches it for any name, as its handlers do. A failed assertion throws a plain `Error` that lists everything emitted or applied, with its payload or input. Each test starts with nothing recorded.
+
+Recording changes nothing: every handler still runs. To change what a filter returns in a test, add a handler the way a plugin does, in a plugin the test installs:
+
+```ts no-typecheck
+import { definePlugin } from "plumix/plugin";
+
+const generous = definePlugin("generous", {
+  setup: (ctx) => {
+    ctx.filters.add(recipe.stars, (stars) => Math.min(stars + 1, 5));
+  },
+});
+
+const site = await testSite({ plugins: [recipes(), generous] });
+```
+
 ### Uploads
 
 `fakeFile` and `fakeImage` build an upload as a value. `fakeFile(name, { content, size, type, lastModified })` returns a real `File`, typed from its extension unless you say otherwise. `fakeImage(name, { width, height })` returns a valid PNG of that size, which a browser decodes and a magic-byte check accepts. Node has `File`, `Blob`, `FormData` and `fetch`, so the procedure gets the same `File` a browser would send.
