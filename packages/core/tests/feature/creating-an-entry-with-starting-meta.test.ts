@@ -92,26 +92,29 @@ describe("creating an entry with starting meta", () => {
     const created = await site
       .actingAs(admin)
       .rpc.entry.create({ slug: "rule" });
-    const [row] = await site.context.db
+    const rows = await site.context.db
       .select()
       .from(entries)
       .where(eq(entries.id, created.id));
-    if (!row) throw new Error("the created entry is not stored");
-    const [resolved] = await resolveEntryList(site.actingAs(admin).context, [
-      row,
-    ]);
-    if (!resolved) throw new Error("resolveEntryList returned no entry");
+    const resolved = await resolveEntryList(site.actingAs(admin).context, rows);
     const warm = forEntryType("post")
       .whereMeta("tone", "warm")
       .template(() => null);
 
-    const matched = resolveTemplate(
-      [warm],
-      { kind: "entry", entryType: "post", slug: row.slug, databaseId: row.id },
-      { kind: "entry", entry: resolved },
+    const matched = resolved.map((entry) =>
+      resolveTemplate(
+        [warm],
+        {
+          kind: "entry",
+          entryType: "post",
+          slug: "rule",
+          databaseId: created.id,
+        },
+        { kind: "entry", entry },
+      ),
     );
 
-    expect(matched).toBe(warm);
+    expect(matched).toEqual([warm]);
   });
 });
 

@@ -188,8 +188,6 @@ describe("the emailChange mail", () => {
     expect(sent?.html).toContain(`<a href="${url ?? ""}">`);
   });
 
-  // The German catalog itself is checked where the mail renders it, in
-  // src/rpc/procedures/user/email-change.test.ts.
   test("is in the user's own locale, German here", async () => {
     const user = await bilingualSite.factory.user.create({
       email: "klaus@old.example",

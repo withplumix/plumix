@@ -25,43 +25,36 @@ import { testSite } from "../../src/test/site.js";
  */
 const CASES: readonly {
   readonly type: string;
-  readonly entryType: string;
   readonly field: MetaBoxField;
   readonly cleared: unknown;
 }[] = [
   {
     type: "number",
-    entryType: "with_number",
     field: number("v").default(3).build(),
     cleared: null,
   },
   {
     type: "date",
-    entryType: "with_date",
     field: date("v").default("2026-01-01").build(),
     cleared: null,
   },
   {
     type: "link",
-    entryType: "with_link",
     field: link("v").default({ url: "/pricing" }).build(),
     cleared: null,
   },
   {
     type: "json",
-    entryType: "with_json",
     field: json("v").default({ a: 1 }).build(),
     cleared: null,
   },
   {
     type: "single reference",
-    entryType: "with_reference",
     field: entry("v", ["post"]).returns("id").default("1").build(),
     cleared: null,
   },
   {
     type: "group",
-    entryType: "with_group",
     field: group("v")
       .fields([text("title")])
       .default({ title: "Untitled" })
@@ -70,7 +63,6 @@ const CASES: readonly {
   },
   {
     type: "repeater",
-    entryType: "with_repeater",
     field: repeater("v")
       .fields([text("q")])
       .default([{ q: "Why?" }])
@@ -79,32 +71,30 @@ const CASES: readonly {
   },
 ];
 
-const site = await testSite({
-  plugins: [
-    definePlugin("defaults", {
-      // Each field alone in a box on its own entry type.
-      setup: (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        for (const { entryType, field } of CASES) {
-          ctx.registerEntryType(entryType, { label: entryType });
-          ctx.registerEntryMetaBox(`box_${entryType}`, {
-            label: "Box",
-            entryTypes: [entryType],
-            fields: [field],
-          });
-        }
-      },
-    }),
-  ],
-});
-
 describe("clearing a defaulted field", () => {
   test.each(CASES)(
     "$type: cleared stays empty in the read, the seed and the render path",
-    async ({ entryType, field, cleared }) => {
+    async ({ field, cleared }) => {
+      const site = await testSite({
+        plugins: [
+          definePlugin("defaults", {
+            setup: (ctx) => {
+              ctx.registerEntryType("post", {
+                label: "Posts",
+                isPublic: true,
+              });
+              ctx.registerEntryMetaBox("box", {
+                label: "Box",
+                entryTypes: ["post"],
+                fields: [field],
+              });
+            },
+          }),
+        ],
+      });
       const admin = site.actingAs("admin");
       const created = await admin.rpc.entry.create({
-        type: entryType,
+        type: "post",
         slug: "defaulted",
       });
       expect(Object.hasOwn(created.meta, "v")).toBe(true);
