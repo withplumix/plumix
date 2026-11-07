@@ -1,11 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../../context/app-context.js";
-import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { definePlugin } from "../../plugin/define.js";
-import { installPlugins } from "../../runtime/install-plugins.js";
-import { createTestContext } from "../../test/context.js";
-import { createTestDb } from "../../test/harness.js";
+import { testSite } from "../../test/site.js";
 import { pageNotFound } from "../contract/page-outcome.js";
 import { resolveArchiveTypePage } from "./archive-type-page.js";
 
@@ -33,17 +29,11 @@ const archives = definePlugin("archives", {
   },
 });
 
-async function archiveContext(): Promise<AppContext> {
-  const { registry } = await installPlugins({
-    handlers: new HandlerRegistry(),
-    plugins: [archives],
-  });
-  return createTestContext({ db: await createTestDb(), plugins: registry });
-}
+const site = await testSite({ plugins: [archives] });
 
 describe("resolveArchiveTypePage", () => {
   test("is null for a listing archive with a declared title whose resolver returns null", async () => {
-    const ctx = await archiveContext();
+    const ctx = site.context;
 
     const page = await resolveArchiveTypePage(ctx, {
       name: "closed-rooms",
@@ -54,7 +44,7 @@ describe("resolveArchiveTypePage", () => {
   });
 
   test("is null when the archive's resolver throws pageNotFound()", async () => {
-    const ctx = await archiveContext();
+    const ctx = site.context;
 
     const page = await resolveArchiveTypePage(ctx, {
       name: "lost-series",
@@ -65,7 +55,7 @@ describe("resolveArchiveTypePage", () => {
   });
 
   test("lets any other error the resolver throws propagate", async () => {
-    const ctx = await archiveContext();
+    const ctx = site.context;
 
     await expect(
       resolveArchiveTypePage(ctx, {

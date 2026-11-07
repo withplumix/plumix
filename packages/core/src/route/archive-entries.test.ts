@@ -1,13 +1,11 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import type { DispatcherHarness } from "../test/dispatcher.js";
 import { definePlugin } from "../plugin/define.js";
-import { createTestContext } from "../test/context.js";
-import { createDispatcherHarness } from "../test/dispatcher.js";
+import { testSite } from "../test/site.js";
 import { archiveAtPath, archiveBaseRoutes } from "./archive-entries.js";
 import { listEntryPage } from "./render/entry-listing.js";
 
-const site = definePlugin("site", {
+const archives = definePlugin("site", {
   setup: (ctx) => {
     ctx.registerEntryType("post", {
       label: "Posts",
@@ -49,19 +47,7 @@ const site = definePlugin("site", {
   },
 });
 
-function readerOf({ app, db }: Pick<DispatcherHarness, "app" | "db">) {
-  return createTestContext({
-    db,
-    handlers: app.handlers,
-    plugins: app.plugins,
-  });
-}
-
-let h: DispatcherHarness;
-
-beforeEach(async () => {
-  h = await createDispatcherHarness({ config: { plugins: [site] } });
-});
+const site = await testSite({ plugins: [archives] });
 
 describe("archiveAtPath", () => {
   test.each([
@@ -84,7 +70,7 @@ describe("archiveAtPath", () => {
     ["/2026/04", { kind: "date" }, { year: "2026", month: "04" }],
     ["/talks/news", { kind: "archiveType", name: "talks" }, { track: "news" }],
   ])("%s is its archive", (path, archive, params) => {
-    const found = archiveAtPath(readerOf(h), path);
+    const found = archiveAtPath(site.context, path);
     expect(found?.archive).toEqual(archive);
     expect(found?.params).toEqual(params);
   });
@@ -97,66 +83,88 @@ describe("archiveAtPath", () => {
     ["params a plugin archive declines", "/talks/none"],
     ["an unknown path", "/no/such/thing"],
   ])("%s is no archive", (_what, path) => {
-    expect(archiveAtPath(readerOf(h), path)).toBeNull();
+    expect(archiveAtPath(site.context, path)).toBeNull();
   });
 
-  test.each(["/", "/all-pages", "/topic/t", "/talks/t", "/2026"])(
+  test.each([
+    ["/", ["untagged", "tagged"]],
+    ["/all-pages", ["a-page"]],
+    ["/topic/t", ["tagged"]],
+    ["/talks/t", ["a-page", "tagged"]],
+    ["/2026", ["untagged", "tagged"]],
+  ])(
     "the query at %s lists what the archive's page lists",
-    async (path) => {
-      const ctx = createTestContext({
-        db: h.db,
-        handlers: h.app.handlers,
-        plugins: h.app.plugins,
-      });
-      const author = await h.factory.author.create({ slug: "jane" });
-      const topic = await h.factory.term.create({
+    async (path, listed) => {
+      const author = await site.factory.author.create({ slug: "jane" });
+      const topic = await site.factory.term.create({
         taxonomy: "topic",
         slug: "t",
       });
-      for (const [type, slug] of [
-        ["post", "tagged"],
-        ["post", "untagged"],
-        ["page", "a-page"],
-      ] as const) {
-        const entry = await h.factory.entry.create({
-          type,
-          slug,
-          title: `Title ${slug}`,
-          status: "published",
-          authorId: author.id,
-          publishedAt: new Date("2026-04-10T12:00:00Z"),
-        });
-        if (slug !== "untagged") {
-          await h.factory.entryTerm.create({
-            entryId: entry.id,
-            termId: topic.id,
-          });
-        }
-      }
+      const publishedAt = new Date("2026-04-10T12:00:00Z");
+      const tagged = await site.factory.published.create({
+        type: "post",
+        slug: "tagged",
+        title: "Title tagged",
+        authorId: author.id,
+        publishedAt,
+      });
+      await site.factory.published.create({
+        type: "post",
+        slug: "untagged",
+        title: "Title untagged",
+        authorId: author.id,
+        publishedAt,
+      });
+      const aPage = await site.factory.published.create({
+        type: "page",
+        slug: "a-page",
+        title: "Title a-page",
+        authorId: author.id,
+        publishedAt,
+      });
+      await site.factory.entryTerm.create({
+        entryId: tagged.id,
+        termId: topic.id,
+      });
+      await site.factory.entryTerm.create({
+        entryId: aPage.id,
+        termId: topic.id,
+      });
+      const ctx = site.context;
 
-      const found = archiveAtPath(readerOf(h), path);
+      const found = archiveAtPath(ctx, path);
       if (found === null) throw new Error(`no archive at ${path}`);
       const listing = await listEntryPage(ctx, found.entries, {
         page: 1,
         perPage: 20,
       });
-      const body = await (
-        await h.dispatch(new Request(`https://cms.example${path}`))
-      ).text();
-      const onPage = ["tagged", "untagged", "a-page"].filter((slug) =>
-        body.includes(`Title ${slug}`),
-      );
-      expect(onPage).not.toEqual([]);
-      expect(listing?.entries.map((entry) => entry.slug).sort()).toEqual(
-        onPage.sort(),
-      );
+
+      expect(listing?.entries.map((entry) => entry.slug)).toEqual(listed);
+      const page = await site.visit(path);
+      page.assertSeeInOrder(listed.map((slug) => `Title ${slug}`));
     },
   );
 });
 
+const rooted = await testSite({
+  plugins: [
+    definePlugin("rooted", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
+      },
+    }),
+  ],
+});
+
+const withoutAuthorOrDate = await testSite({
+  plugins: [archives],
+  config: { routes: { author: false, date: false } },
+});
+
 describe("archiveBaseRoutes", () => {
   test("lists every entry-query archive's unpaginated routes", () => {
-    expect(archiveBaseRoutes(h.app.plugins)).toEqual(
+    expect(archiveBaseRoutes(site.context.plugins)).toEqual(
       expect.arrayContaining([
         { archive: { kind: "frontPage" }, pattern: "/" },
         { archive: { kind: "author" }, pattern: "/authors/:slug" },
@@ -178,30 +186,22 @@ describe("archiveBaseRoutes", () => {
     );
   });
 
-  test("names no front page at the root a rule claims for another archive", async () => {
-    const rooted = definePlugin("rooted", {
-      setup: (ctx) => {
-        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.registerRewriteRule("/", { kind: "entryType", entryType: "post" });
-      },
-    });
-    const { app, db } = await createDispatcherHarness({
-      config: { plugins: [rooted] },
-    });
+  test("names no front page at the root a rule claims for another archive", () => {
+    const ctx = rooted.context;
 
     expect(
-      archiveBaseRoutes(app.plugins).filter((route) => route.pattern === "/"),
+      archiveBaseRoutes(ctx.plugins).filter((route) => route.pattern === "/"),
     ).toEqual([
       { archive: { kind: "entryType", entryType: "post" }, pattern: "/" },
     ]);
-    expect(archiveAtPath(readerOf({ app, db }), "/")?.archive).toEqual({
+    expect(archiveAtPath(ctx, "/")?.archive).toEqual({
       kind: "entryType",
       entryType: "post",
     });
   });
 
   test("leaves out later pages, search and archives without entries", () => {
-    const patterns = archiveBaseRoutes(h.app.plugins).map(
+    const patterns = archiveBaseRoutes(site.context.plugins).map(
       (route) => route.pattern,
     );
     expect(patterns.filter((pattern) => pattern.includes("/page/"))).toEqual(
@@ -214,18 +214,16 @@ describe("archiveBaseRoutes", () => {
     expect(patterns).not.toContain("/compare/:id");
   });
 
-  test("names no author or date archive where the site turned those routes off", async () => {
-    const { app, db } = await createDispatcherHarness({
-      config: { plugins: [site], routes: { author: false, date: false } },
-    });
+  test("names no author or date archive where the site turned those routes off", () => {
+    const ctx = withoutAuthorOrDate.context;
 
-    const kinds = archiveBaseRoutes(app.plugins).map(
+    const kinds = archiveBaseRoutes(ctx.plugins).map(
       (route) => route.archive.kind,
     );
     expect(kinds).not.toContain("author");
     expect(kinds).not.toContain("date");
     expect(kinds).toContain("frontPage");
-    expect(archiveAtPath(readerOf({ app, db }), "/authors/jane")).toBeNull();
-    expect(archiveAtPath(readerOf({ app, db }), "/2026/04")).toBeNull();
+    expect(archiveAtPath(ctx, "/authors/jane")).toBeNull();
+    expect(archiveAtPath(ctx, "/2026/04")).toBeNull();
   });
 });
