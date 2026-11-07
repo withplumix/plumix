@@ -329,6 +329,16 @@ describe("a client's metadata document over time", () => {
     await expect(resolving).rejects.toEqual(new ClientMetadataError("timeout"));
   });
 
+  test("a fetch aborted with the request is unreachable, not a timeout", async () => {
+    const resolving = createClientMetadataResolver({
+      fetch: () => Promise.reject(new DOMException("aborted", "AbortError")),
+    }).resolve(CLIENT_ID);
+
+    await expect(resolving).rejects.toEqual(
+      new ClientMetadataError("unreachable"),
+    );
+  });
+
   test("a body that stalls past 5 seconds is refused", async () => {
     // ctx.fetch's deadline errors the body it already answered.
     const stalled = new Response(
