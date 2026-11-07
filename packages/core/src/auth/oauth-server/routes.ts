@@ -33,7 +33,7 @@ export { handleAuthorizationServerMetadata } from "./metadata.js";
 
 /**
  * Must match the admin router's `/auth/authorize` page.
- * Guarded by: packages/core/src/auth/oauth-server/routes.test.ts
+ * Guarded by: packages/core/tests/feature/authorizing-an-mcp-client.test.ts
  */
 const CONSENT_PATH = "/_plumix/admin/auth/authorize";
 

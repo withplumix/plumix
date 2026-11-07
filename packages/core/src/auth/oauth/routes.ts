@@ -101,6 +101,7 @@ export async function handleOAuthCallback(
       redirectUri,
       codeVerifier: stored.codeVerifier,
       env: ctx.env,
+      fetch: ctx.fetch,
     });
   } catch (error) {
     if (error instanceof OAuthError) {

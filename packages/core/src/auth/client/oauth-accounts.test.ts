@@ -1,47 +1,54 @@
 import { describe, expect, test } from "vitest";
 
-import type {
-  CreateDispatcherHarnessOptions,
-  DispatcherHarness,
-} from "../../test/dispatcher.js";
-import {
-  createDispatcherHarness,
-  plumixRequest,
-} from "../../test/dispatcher.js";
-import { SESSION_COOKIE_NAME } from "../cookies.js";
-import { createSession } from "../sessions.js";
+import type { User } from "../../db/schema/users.js";
+import type { FetchOptions } from "../../test/request.js";
+import type { TestSite } from "../../test/site.js";
+import { fakeMail } from "../../test/mail-fake.js";
+import { testSite } from "../../test/site.js";
 import { createAuthClient } from "./auth-client.js";
 
-/** An auth client whose every request reaches core's real handlers. */
-function clientOf(h: DispatcherHarness, token: string) {
+const site = await testSite({ plugins: [] });
+const emailSite = await testSite({
+  plugins: [],
+  config: {
+    mailer: fakeMail(),
+    auth: { magicLink: { siteName: "Test Site" } },
+  },
+});
+
+/** An auth client signed in as `user`, whose every request reaches the site's real handlers. */
+function clientOf(on: TestSite, user: User) {
+  const signedIn = on.actingAs(user);
   return createAuthClient({
     basePath: () => "",
-    fetch: (url, init) => {
-      const headers = new Headers(init.headers);
-      headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
-      return h.dispatch(plumixRequest(url, { ...init, headers }));
+    fetch: async (url, init) => {
+      const page = await signedIn.visit(url, {
+        method: init.method as FetchOptions["method"],
+        headers: init.headers,
+        body: init.body ?? undefined,
+      });
+      return new Response(page.body === "" ? null : page.body, {
+        status: page.status,
+        headers: page.headers,
+      });
     },
     navigate: () => undefined,
   }).authClient;
 }
 
-async function signedInClient(
-  config?: CreateDispatcherHarnessOptions["config"],
-) {
-  const h = await createDispatcherHarness({ config });
-  const user = await h.seedUser("member");
-  const { token } = await createSession(h.db, { userId: user.id });
-  return { h, user, authClient: clientOf(h, token) };
+async function signedInClient(on: TestSite = site) {
+  const user = await on.factory.member.create();
+  return { user, authClient: clientOf(on, user) };
 }
 
 describe("authClient.oauth.accounts and unlink", () => {
   test("a user with a passkey lists a linked provider and unlinks it", async () => {
-    const { h, user, authClient } = await signedInClient();
-    await h.factory.credential.create({
+    const { user, authClient } = await signedInClient();
+    await site.factory.credential.create({
       userId: user.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
-    await h.factory.oauthAccount.create({
+    await site.factory.oauthAccount.create({
       userId: user.id,
       provider: "github",
       providerAccountId: "gh-42",
@@ -67,8 +74,8 @@ describe("authClient.oauth.accounts and unlink", () => {
   });
 
   test("an only way in resolves last_sign_in_method, and the link stays", async () => {
-    const { h, user, authClient } = await signedInClient();
-    await h.factory.oauthAccount.create({
+    const { user, authClient } = await signedInClient();
+    await site.factory.oauthAccount.create({
       userId: user.id,
       provider: "github",
     });
@@ -81,10 +88,8 @@ describe("authClient.oauth.accounts and unlink", () => {
   });
 
   test("an only link unlinks on a site that signs in by email", async () => {
-    const { h, user, authClient } = await signedInClient({
-      auth: { magicLink: { siteName: "Test Site" } },
-    });
-    await h.factory.oauthAccount.create({
+    const { user, authClient } = await signedInClient(emailSite);
+    await emailSite.factory.oauthAccount.create({
       userId: user.id,
       provider: "github",
     });
@@ -96,12 +101,12 @@ describe("authClient.oauth.accounts and unlink", () => {
   });
 
   test("two concurrent unlinks of the last two providers can't both succeed", async () => {
-    const { h, user, authClient } = await signedInClient();
-    await h.factory.oauthAccount.create({
+    const { user, authClient } = await signedInClient();
+    await site.factory.oauthAccount.create({
       userId: user.id,
       provider: "github",
     });
-    await h.factory.oauthAccount.create({
+    await site.factory.oauthAccount.create({
       userId: user.id,
       provider: "google",
     });
@@ -118,22 +123,21 @@ describe("authClient.oauth.accounts and unlink", () => {
   });
 
   test("another user's link is neither listed nor unlinked", async () => {
-    const { h, user, authClient } = await signedInClient();
-    await h.factory.credential.create({
+    const { user, authClient } = await signedInClient();
+    await site.factory.credential.create({
       userId: user.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
-    const other = await h.seedUser("member");
-    await h.factory.credential.create({
+    const other = await site.factory.member.create();
+    await site.factory.credential.create({
       userId: other.id,
       publicKey: Buffer.from([4, 5, 6]),
     });
-    await h.factory.oauthAccount.create({
+    await site.factory.oauthAccount.create({
       userId: other.id,
       provider: "github",
     });
-    const { token } = await createSession(h.db, { userId: other.id });
-    const theirs = clientOf(h, token);
+    const theirs = clientOf(site, other);
 
     const listed = await authClient.oauth.accounts();
     const unlinked = await authClient.oauth.unlink("github");

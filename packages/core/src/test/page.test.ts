@@ -289,3 +289,23 @@ describe("a page's header and body assertions", () => {
     );
   });
 });
+
+describe("what a page answered", () => {
+  test("reads the status", async () => {
+    const page = await site.visit("/_plumix/probe/forbidden");
+
+    expect(page.status).toBe(403);
+  });
+
+  test("reads a header", async () => {
+    const page = await site.visit("/_plumix/probe/moved");
+
+    expect(page.headers.get("location")).toBe("/there");
+  });
+
+  test("reads the body", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
+    expect(JSON.parse(page.body)).toEqual({ greeting: "hi", count: 1 });
+  });
+});

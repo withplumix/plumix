@@ -24,6 +24,20 @@ export class TestPage {
     this.#response = response;
   }
 
+  /** For a test no assertion fits, such as a redirect carrying a random value. */
+  get status(): number {
+    return this.#response.status;
+  }
+
+  get headers(): Headers {
+    return this.#response.headers;
+  }
+
+  /** The body as text; `JSON.parse` it for a JSON answer. */
+  get body(): string {
+    return this.#response.body;
+  }
+
   assertOk(): this {
     return this.#assertStatus("assertOk", 200);
   }

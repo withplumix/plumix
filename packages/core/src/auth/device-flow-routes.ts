@@ -11,7 +11,7 @@ const DEVICE_CODE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
 /**
  * Must match the admin router's `/auth/device` page.
- * Guarded by: packages/core/src/auth/device-flow-routes.test.ts
+ * Guarded by: packages/core/tests/feature/signing-in-a-device.test.ts
  */
 const VERIFICATION_PATH = "/_plumix/admin/auth/device";
 

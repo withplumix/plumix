@@ -62,6 +62,20 @@ describe("a declared route", () => {
     expect(await again.text()).toBe("up");
   });
 
+  test("lets a caller stop reading a body partway", async () => {
+    const fetch = fakeFetch();
+    fetch.route(
+      "GET",
+      "https://api.example/feed",
+      new Response("x".repeat(1024)),
+    );
+    const response = await fetch.send("https://api.example/feed");
+
+    const cancelled = response.body?.cancel();
+
+    await expect(cancelled).resolves.toBeUndefined();
+  });
+
   test("answers only its own method", async () => {
     const fetch = fakeFetch();
     fetch.route("POST", "https://api.example/", new Response("posted"));

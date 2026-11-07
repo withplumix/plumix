@@ -2,9 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { User } from "../db/schema/users.js";
 import type { AuthResult, RequestAuthenticator } from "./authenticator.js";
-import { createTestContext } from "../test/context.js";
-import { userFactory } from "../test/factories.js";
-import { createTestDb } from "../test/harness.js";
+import { testSite } from "../test/site.js";
 import { createApiToken } from "./api-tokens.js";
 import {
   apiTokenAuthenticator,
@@ -18,9 +16,22 @@ import {
 import { SESSION_COOKIE_NAME } from "./cookies.js";
 import { createSession } from "./sessions.js";
 
+/** What the configured authenticator below resolves, set by each test. */
+let resolveAs: AuthResult | null = null;
+
+const site = await testSite({ plugins: [] });
+const configured = await testSite({
+  plugins: [],
+  config: {
+    auth: {
+      authenticator: { authenticate: () => Promise.resolve(resolveAs) },
+    },
+  },
+});
+
 describe("sessionAuthenticator", () => {
   test("returns null when the request has no session cookie", async () => {
-    const db = await createTestDb();
+    const { db } = site.context;
     const request = new Request("https://cms.example/admin");
 
     const user = await sessionAuthenticator().authenticate(request, db, {
@@ -30,7 +41,7 @@ describe("sessionAuthenticator", () => {
   });
 
   test("returns null for a malformed / unknown cookie", async () => {
-    const db = await createTestDb();
+    const { db } = site.context;
     const request = new Request("https://cms.example/admin", {
       headers: { cookie: `${SESSION_COOKIE_NAME}=not-a-real-token` },
     });
@@ -42,8 +53,8 @@ describe("sessionAuthenticator", () => {
   });
 
   test("returns the user for a valid session cookie", async () => {
-    const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({
+    const { db } = site.context;
+    const seeded = await site.factory.user.create({
       email: "alice@example.com",
       role: "editor",
     });
@@ -63,7 +74,7 @@ describe("sessionAuthenticator", () => {
 
 describe("apiTokenAuthenticator", () => {
   test("returns null when no Authorization header is present", async () => {
-    const db = await createTestDb();
+    const { db } = site.context;
     const request = new Request("https://cms.example/admin");
 
     const user = await apiTokenAuthenticator().authenticate(request, db, {
@@ -73,7 +84,7 @@ describe("apiTokenAuthenticator", () => {
   });
 
   test("returns null when the header isn't `Bearer …`", async () => {
-    const db = await createTestDb();
+    const { db } = site.context;
     const request = new Request("https://cms.example/admin", {
       headers: { authorization: "Basic dXNlcjpwYXNz" },
     });
@@ -85,8 +96,8 @@ describe("apiTokenAuthenticator", () => {
   });
 
   test("returns the user for a valid bearer token", async () => {
-    const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({
+    const { db } = site.context;
+    const seeded = await site.factory.user.create({
       email: "bot@cms.example",
       role: "editor",
     });
@@ -112,8 +123,8 @@ describe("apiTokenAuthenticator", () => {
   });
 
   test("surfaces tokenScopes when the token has them", async () => {
-    const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({});
+    const { db } = site.context;
+    const seeded = await site.factory.user.create({});
     const { secret } = await createApiToken(db, {
       userId: seeded.id,
       name: "scoped",
@@ -134,7 +145,7 @@ describe("apiTokenAuthenticator", () => {
   });
 
   test("returns null for an unknown token", async () => {
-    const db = await createTestDb();
+    const { db } = site.context;
     const request = new Request("https://cms.example/admin", {
       headers: { authorization: "Bearer pl_pat_unknownsecret" },
     });
@@ -148,9 +159,9 @@ describe("apiTokenAuthenticator", () => {
 
 describe("chainAuthenticators / defaultAuthenticator", () => {
   test("first non-null wins, later authenticators are short-circuited", async () => {
-    const db = await createTestDb();
-    const userA = await userFactory.transient({ db }).create({});
-    const userB = await userFactory.transient({ db }).create({});
+    const { db } = site.context;
+    const userA = await site.factory.user.create({});
+    const userB = await site.factory.user.create({});
 
     let secondCalled = false;
     const first: RequestAuthenticator = {
@@ -174,8 +185,8 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
   });
 
   test("falls through to a later authenticator when the first returns null", async () => {
-    const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({});
+    const { db } = site.context;
+    const seeded = await site.factory.user.create({});
 
     const empty: RequestAuthenticator = {
       authenticate: () => Promise.resolve(null),
@@ -247,8 +258,8 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
   });
 
   test("default chain authenticates via session cookie", async () => {
-    const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({});
+    const { db } = site.context;
+    const seeded = await site.factory.user.create({});
     const { token } = await createSession(db, { userId: seeded.id });
     const request = new Request("https://cms.example/admin", {
       headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
@@ -261,8 +272,8 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
   });
 
   test("default chain authenticates via bearer token when no session cookie is present", async () => {
-    const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({});
+    const { db } = site.context;
+    const seeded = await site.factory.user.create({});
     const { secret } = await createApiToken(db, {
       userId: seeded.id,
       name: "mcp",
@@ -283,8 +294,8 @@ describe("RequestAuthenticator interface", () => {
   test("a one-method custom authenticator slots in", async () => {
     // Smoke test for the contract — any object satisfying the interface
     // can replace the default: a pure function from request → user.
-    const db = await createTestDb();
-    const seeded = await userFactory.transient({ db }).create({
+    const { db } = site.context;
+    const seeded = await site.factory.user.create({
       email: "trusted@enterprise.example",
       role: "admin",
     });
@@ -395,14 +406,9 @@ describe("requestHasSession", () => {
 
 describe("authenticateSession", () => {
   async function resolveWith(result: (user: User) => AuthResult | null) {
-    const db = await createTestDb();
-    const user = await userFactory.transient({ db }).create({});
-    const ctx = createTestContext({
-      db,
-      request: new Request("https://cms.example/admin"),
-      authenticator: { authenticate: () => Promise.resolve(result(user)) },
-    });
-    return { user, resolved: await authenticateSession(ctx) };
+    const user = await configured.factory.user.create({});
+    resolveAs = result(user);
+    return { user, resolved: await authenticateSession(configured.context) };
   }
 
   test("returns a session caller as resolved", async () => {
