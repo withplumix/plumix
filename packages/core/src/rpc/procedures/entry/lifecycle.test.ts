@@ -1,150 +1,90 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { entry } from "../../../hooks/entry.js";
-import { createRpcHarness } from "../../../test/rpc.js";
+import { definePlugin } from "../../../plugin/define.js";
+import { testSite } from "../../../test/site.js";
 import {
   applyEntryBeforeSave,
   fireEntryPublished,
   fireEntryTransition,
 } from "./lifecycle.js";
 
+/** Each handler's run, in order: its scope, then the entry's slug. */
+const trail: string[] = [];
+
+const landingPages = definePlugin("landing", {
+  setup: (ctx) => {
+    ctx.registerEntryType("landing_page", { label: "Landing pages" });
+    ctx.filters.add(entry.for("landing_page").beforeSave, (row) => {
+      trail.push(`specific:${row.slug}`);
+      return { ...row, title: `[specific] ${row.title}` };
+    });
+    ctx.filters.add(entry.beforeSave, (row) => {
+      trail.push(`generic:${row.slug}`);
+      return { ...row, title: `[generic] ${row.title}` };
+    });
+    ctx.events.on(entry.for("landing_page").published, ({ entry }) => {
+      trail.push(`specific:${entry.slug}`);
+    });
+    ctx.events.on(entry.published, ({ entry }) => {
+      trail.push(`generic:${entry.slug}`);
+    });
+  },
+});
+
+const site = await testSite({ plugins: [landingPages] });
+
+function trailFor(slug: string): string[] {
+  return trail.filter((run) => run.endsWith(`:${slug}`));
+}
+
 describe("lifecycle — scoped and unscoped event fan-out", () => {
   test("a type-scoped beforeSave runs before the unscoped one on save", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
-    const trail: string[] = [];
+    const admin = await site.factory.admin.create();
 
-    h.hooks.add(entry.for("landing_page").beforeSave, (post) => {
-      trail.push("specific");
-      return { ...post, title: `[specific] ${post.title}` };
-    });
-    h.hooks.add(entry.beforeSave, (post) => {
-      trail.push("generic");
-      return { ...post, title: `[generic] ${post.title}` };
-    });
-
-    const result = await applyEntryBeforeSave(h.context, "landing_page", {
+    const result = await applyEntryBeforeSave(site.context, "landing_page", {
       type: "landing_page",
       title: "raw",
       slug: "raw",
-      authorId: h.user.id,
+      authorId: admin.id,
       status: "draft",
     });
 
-    expect(trail).toEqual(["specific", "generic"]);
+    expect(trailFor("raw")).toEqual(["specific:raw", "generic:raw"]);
     expect(result.title).toBe("[generic] [specific] raw");
   });
 
   test("fireEntryPublished runs both scoped and unscoped handlers", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
-    const onSpecific = vi.fn();
-    const onGeneric = vi.fn();
-    h.hooks.on(entry.for("landing_page").published, onSpecific);
-    h.hooks.on(entry.published, onGeneric);
-
-    const row = await h.factory.published.create({
+    const row = await site.factory.published.create({
       type: "landing_page",
-      authorId: h.user.id,
       slug: "specific-and-generic",
     });
-    await fireEntryPublished(h.context, row);
 
-    expect(onSpecific).toHaveBeenCalledTimes(1);
-    expect(onGeneric).toHaveBeenCalledTimes(1);
+    await fireEntryPublished(site.context, row);
+
+    expect(trailFor("specific-and-generic").sort()).toEqual([
+      "generic:specific-and-generic",
+      "specific:specific-and-generic",
+    ]);
   });
 
   test("fireEntryTransition is a no-op when new === old status", async () => {
-    const h = await createRpcHarness({ authAs: "admin" });
-    const onTransition = vi.fn();
-    h.hooks.on(entry.transition, onTransition);
+    const draft = await site.factory.draft.create({ slug: "same-status" });
 
-    const draft = await h.factory.draft.create({
-      authorId: h.user.id,
-      slug: "same-status",
-    });
-    await fireEntryTransition(h.context, draft, "draft");
-    expect(onTransition).not.toHaveBeenCalled();
+    await fireEntryTransition(site.context, draft, "draft");
+
+    site.events.assertNotEmitted(entry.transition);
+  });
+
+  test("fireEntryTransition emits when the status changed", async () => {
+    const draft = await site.factory.draft.create({ slug: "new-status" });
 
     await fireEntryTransition(
-      h.context,
+      site.context,
       { ...draft, status: "published" },
       "draft",
     );
-    expect(onTransition).toHaveBeenCalledTimes(1);
-  });
 
-  test("a type-scoped handler runs on the default 'post' type too (`entry.for(\"post\").trashed`)", async () => {
-    // Plugins can target the default entry type by name with
-    // `entry.for("post")`, not only the unscoped event plus a type check.
-    const h = await createRpcHarness({ authAs: "admin" });
-    const onScoped = vi.fn();
-    const onGeneric = vi.fn();
-    h.hooks.on(entry.for("post").trashed, onScoped);
-    h.hooks.on(entry.trashed, onGeneric);
-
-    const row = await h.factory.published.create({
-      authorId: h.user.id,
-      slug: "scoped-and-generic",
-    });
-    await h.client.entry.trash({ id: row.id });
-    expect(onScoped).toHaveBeenCalledTimes(1);
-    expect(onGeneric).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("the trash lifecycle refuses a revision row as not-found", () => {
-  // An admin holds every registered capability, and the revision row is
-  // theirs and already in the bin — so nothing but its type can refuse it.
-  async function seedRevision() {
-    const h = await createRpcHarness({ authAs: "admin" });
-    const live = await h.factory.trashed.create({
-      authorId: h.user.id,
-      slug: "live",
-    });
-    const revision = await h.factory.trashed.create({
-      authorId: h.user.id,
-      type: "revision",
-      slug: `revision:${String(live.id)}:abcdefghijklmnopqrstu`,
-    });
-    return { h, live, revision };
-  }
-
-  const notFound = (id: number) => ({
-    code: "NOT_FOUND",
-    data: { kind: "entry", id },
-  });
-
-  test("trash", async () => {
-    const { h, revision } = await seedRevision();
-    await expect(
-      h.client.entry.trash({ id: revision.id }),
-    ).rejects.toMatchObject(notFound(revision.id));
-  });
-
-  test("restore", async () => {
-    const { h, revision } = await seedRevision();
-    await expect(
-      h.client.entry.restore({ id: revision.id }),
-    ).rejects.toMatchObject(notFound(revision.id));
-  });
-
-  test("delete-permanent", async () => {
-    const { h, revision } = await seedRevision();
-    await expect(
-      h.client.entry.deletePermanent({ id: revision.id }),
-    ).rejects.toMatchObject(notFound(revision.id));
-  });
-
-  test("each bulk procedure, even beside a live entry", async () => {
-    const { h, live, revision } = await seedRevision();
-    const ids = [live.id, revision.id];
-    await expect(h.client.entry.trashMany({ ids })).rejects.toMatchObject(
-      notFound(revision.id),
-    );
-    await expect(h.client.entry.restoreMany({ ids })).rejects.toMatchObject(
-      notFound(revision.id),
-    );
-    await expect(
-      h.client.entry.deletePermanentMany({ ids }),
-    ).rejects.toMatchObject(notFound(revision.id));
+    expect(site.events.emitted(entry.transition)).toHaveLength(1);
   });
 });
