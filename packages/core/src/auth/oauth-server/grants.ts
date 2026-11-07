@@ -2,7 +2,7 @@ import type { Db } from "../../context/app-context.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { AuthorizationRequest } from "./authorization-request.js";
 import { now } from "../../clock.js";
-import { and, eq, isNull } from "../../db/index.js";
+import { and, desc, eq, isNull, sql } from "../../db/index.js";
 import { apiTokens } from "../../db/schema/api_tokens.js";
 import { oauthAuthorizationCodes } from "../../db/schema/oauth_authorization_codes.js";
 import { oauthGrants } from "../../db/schema/oauth_grants.js";
@@ -29,6 +29,46 @@ export async function findOAuthGrant(
     )
     .get();
   return row ?? null;
+}
+
+export interface ListedOAuthGrant {
+  readonly id: number;
+  readonly clientId: string;
+  /** The client's name as its latest access token carries it; its host before one. */
+  readonly name: string;
+  readonly host: string;
+  readonly capabilities: readonly string[];
+  readonly lastUsedAt: Date | null;
+}
+
+export async function listOAuthGrants(
+  db: Db,
+  userId: number,
+): Promise<ListedOAuthGrant[]> {
+  const ofGrant = and(
+    eq(apiTokens.userId, oauthGrants.userId),
+    eq(apiTokens.clientId, oauthGrants.clientId),
+  );
+  const rows = await db
+    .select({
+      id: oauthGrants.id,
+      clientId: oauthGrants.clientId,
+      capabilities: oauthGrants.scopes,
+      tokenName: sql<
+        string | null
+      >`(select ${apiTokens.name} from ${apiTokens} where ${ofGrant} order by ${apiTokens.createdAt} desc limit 1)`,
+      lastUsedAt:
+        sql`(select max(${apiTokens.lastUsedAt}) from ${apiTokens} where ${ofGrant})`.mapWith(
+          apiTokens.lastUsedAt,
+        ),
+    })
+    .from(oauthGrants)
+    .where(eq(oauthGrants.userId, userId))
+    .orderBy(desc(oauthGrants.createdAt), desc(oauthGrants.id));
+  return rows.map(({ tokenName, ...row }) => {
+    const host = new URL(row.clientId).host;
+    return { ...row, name: tokenName ?? host, host };
+  });
 }
 
 export function oauthGrantCovers(
@@ -207,6 +247,31 @@ export async function spendRefreshToken(
   if (spent.length > 0) return true;
   await revokeOAuthGrantTokens(db, access);
   return false;
+}
+
+/**
+ * Revokes the grant with its access and refresh tokens, so the client's next
+ * authorization asks for consent. `false` when `userId` holds no grant `id`.
+ */
+export async function revokeOAuthGrant(
+  db: Db,
+  grant: { readonly id: number; readonly userId: number },
+): Promise<boolean> {
+  const row = await db
+    .select({ clientId: oauthGrants.clientId })
+    .from(oauthGrants)
+    .where(
+      and(eq(oauthGrants.id, grant.id), eq(oauthGrants.userId, grant.userId)),
+    )
+    .get();
+  if (row === undefined) return false;
+  await revokeOAuthGrantTokens(db, {
+    grantId: grant.id,
+    userId: grant.userId,
+    clientId: row.clientId,
+  });
+  await db.delete(oauthGrants).where(eq(oauthGrants.id, grant.id));
+  return true;
 }
 
 /** Access tokens first, so a failure part-way never leaves one live. */

@@ -4,6 +4,7 @@ import { deviceFlowRouter } from "./device-flow/index.js";
 import { loginLinks } from "./login-links.js";
 import { oauthAccountsRouter } from "./oauth-accounts/index.js";
 import { oauthConsentRouter } from "./oauth-consent/index.js";
+import { oauthGrantsRouter } from "./oauth-grants/index.js";
 import { session } from "./session.js";
 import { sessionsRouter } from "./sessions/index.js";
 import { signInMethods } from "./sign-in-methods.js";
@@ -18,6 +19,7 @@ export const authRouter = {
   apiTokens: apiTokensRouter,
   deviceFlow: deviceFlowRouter,
   oauthConsent: oauthConsentRouter,
+  oauthGrants: oauthGrantsRouter,
 } as const;
 
 export type AuthRouter = typeof authRouter;

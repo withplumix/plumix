@@ -761,6 +761,11 @@ msgid "auth.acceptInvite.title"
 msgstr "Accept your invite"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.access"
+msgstr "Access"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.title"
 msgstr "Account status"
@@ -769,6 +774,11 @@ msgstr "Account status"
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.keyword.accounts"
 msgstr "accounts"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.actions"
+msgstr "Actions"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -863,6 +873,11 @@ msgid "userRole.admin"
 msgstr "Administrator"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.description"
+msgstr "Agents connected through OAuth. Revoking one disconnects it at once, and it must ask for approval to connect again."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.all"
 msgstr "All"
@@ -888,6 +903,11 @@ msgid "users.list.roleFilter.all"
 msgstr "All roles"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.empty.description"
+msgstr "An agent that connects through OAuth shows up here."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/authorize.tsx
 msgid "auth.authorize.description"
 msgstr "An app wants to work on this site as you. It gets only what you approve, and never more than you can do."
@@ -896,6 +916,11 @@ msgstr "An app wants to work on this site as you. It gets only what you approve,
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API tokens"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.app"
+msgstr "App"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/-consent-card.tsx
@@ -986,6 +1011,11 @@ msgstr "Can't do that — this is the last administrator. Promote someone else f
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.reassignToSelf"
 msgstr "Can't reassign to the user being deleted."
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.cancel"
+msgstr "Cancel"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1199,6 +1229,11 @@ msgstr "Confirmation sent to {email}. The change takes effect once they click th
 #: src/routes/_authenticated/auth/authorize.tsx
 msgid "auth.authorize.title"
 msgstr "Connect an app"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.title"
+msgstr "Connected apps"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx
@@ -2205,6 +2240,11 @@ msgid "users.list.column.lastSignIn"
 msgstr "Last sign-in"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.lastUsed"
+msgstr "Last used"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.lastUsed"
 msgstr "Last used"
@@ -2255,6 +2295,11 @@ msgstr "Loading"
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.loading.aria"
 msgstr "Loading {label}"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.loading"
+msgstr "Loading apps…"
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
@@ -2518,6 +2563,11 @@ msgid "profile.passkeys.enroll.networkError"
 msgstr "Network error. Check your connection and try again."
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.never"
+msgstr "Never"
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.lastSignIn.never"
 msgstr "Never"
@@ -2558,6 +2608,11 @@ msgid "listPagination.next.label"
 msgstr "Next"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.access.none"
+msgstr "No access"
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr "No account found for that email."
@@ -2566,6 +2621,11 @@ msgstr "No account found for that email."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
 msgstr "No caps"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.empty.title"
+msgstr "No connected apps"
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -3052,6 +3112,16 @@ msgid "editor.revisions.sheet.title"
 msgstr "Revisions"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.button"
+msgstr "Revoke"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.confirm"
+msgstr "Revoke"
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.button"
 msgstr "Revoke"
@@ -3066,11 +3136,22 @@ msgstr "Revoke"
 msgid "profile.sessions.revoke.button"
 msgstr "Revoke"
 
+#. name: the connected app's name, from its OAuth client metadata (e.g. 'Claude')
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.title"
+msgstr "Revoke \"{name}\"?"
+
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.title"
 msgstr "Revoke \"{name}\"?"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.pending"
+msgstr "Revoking…"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3696,6 +3777,11 @@ msgstr "The account this confirmation belongs to is disabled."
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.notLoaded.body"
 msgstr "The admin manifest declares a page at <code>{path}</code> but no React component has been registered for it."
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.description"
+msgstr "The app is disconnected immediately. Its next connection asks for approval again."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx

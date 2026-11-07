@@ -71,6 +71,7 @@ import {
 import { Textarea } from "@plumix/admin-ui/textarea";
 import { vMessage } from "@plumix/core/validation";
 
+import { AdminConnectedApps, SelfConnectedApps } from "./connected-apps.js";
 import {
   mintApiTokenErrorDescriptor,
   revokeApiTokenErrorDescriptor,
@@ -191,6 +192,7 @@ export function SelfApiTokensCard(): ReactNode {
       mintPending={create.isPending}
       onRevoke={(id, cbs) => revoke.mutate(id, cbs)}
       revokePending={revoke.isPending}
+      connectedApps={<SelfConnectedApps />}
     />
   );
 }
@@ -217,6 +219,7 @@ export function AdminApiTokensCard({ userId }: { userId: number }): ReactNode {
       isLoading={list.isLoading}
       onRevoke={(id, cbs) => revoke.mutate(id, cbs)}
       revokePending={revoke.isPending}
+      connectedApps={<AdminConnectedApps userId={userId} />}
     />
   );
 }
@@ -244,6 +247,7 @@ function ApiTokensCardView({
   mintPending = false,
   onRevoke,
   revokePending,
+  connectedApps,
 }: {
   mode: "self" | "admin";
   tokens: readonly TokenRow[];
@@ -255,6 +259,7 @@ function ApiTokensCardView({
   mintPending?: boolean;
   onRevoke: (id: string, callbacks?: MutationCallbacks<unknown>) => void;
   revokePending: boolean;
+  connectedApps: ReactNode;
 }): ReactNode {
   const label = useLabel();
   const [mintedSecret, setMintedSecret] = useState<{
@@ -417,6 +422,8 @@ function ApiTokensCardView({
             </TableBody>
           </Table>
         )}
+
+        {connectedApps}
       </CardContent>
 
       <SecretShownDialog
