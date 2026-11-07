@@ -252,7 +252,7 @@ export interface PlumixApp {
  * Resolved by the Vite plugin from virtual modules and injected by the
  * generated entry.
  */
-interface RuntimeContext {
+export interface RuntimeContext {
   readonly assetManifest?: AssetManifest;
   readonly pluginCatalogs?: PluginCatalogs;
   /**

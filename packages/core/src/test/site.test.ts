@@ -731,6 +731,28 @@ describe("a config's own telemetry consumers", () => {
   });
 });
 
+const built = await testSite({
+  build: {
+    assetManifest: {
+      "src/theme/index.ts": {
+        file: "_plumix/assets/theme-abc123.js",
+        isEntry: true,
+        css: ["_plumix/assets/theme-def456.css"],
+      },
+    },
+  },
+});
+
+describe("a site given its build's output", () => {
+  test("links the stylesheet its asset manifest names", async () => {
+    const page = await built.visit("/");
+
+    page.assertSee(
+      '<link rel="stylesheet" href="/_plumix/assets/theme-def456.css"',
+    );
+  });
+});
+
 const onLibsql = await testSite({
   config: { database: libsql({ url: ":memory:" }) },
 });

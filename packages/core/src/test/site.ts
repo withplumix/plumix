@@ -12,6 +12,7 @@ import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
 import type { PluginRpcClient } from "../plugin/registry.js";
 import type { AppRouterClient } from "../rpc/router.js";
+import type { RuntimeContext } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { ConnectedKv, ObjectStorage } from "../runtime/contract/slots.js";
 import type { CdnFake } from "./cdn-fake.js";
@@ -78,6 +79,11 @@ export interface TestSiteOptions<
   readonly env?: PlumixEnv;
   /** Config slots beyond `plugins`, as `plumix.config.ts` would write them. */
   readonly config?: TestConfigInput;
+  /**
+   * What a build hands the site: its asset manifest and compiled catalogs.
+   * Unset, it has none, as a site run without a Vite build.
+   */
+  readonly build?: RuntimeContext;
 }
 
 export interface TestSite<
@@ -220,7 +226,10 @@ export async function testSite<
     },
   };
   const env = options?.env ?? {};
-  const app = await buildApp(withFakes(config, () => fakes));
+  const app = await buildApp(
+    withFakes(config, () => fakes),
+    options?.build,
+  );
   const dispatcher = createPlumixDispatcher(app);
   const handlers = recordingHandlers(app.handlers, () => fakes);
 

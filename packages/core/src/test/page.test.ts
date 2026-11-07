@@ -79,6 +79,22 @@ describe("a page's status assertions", () => {
   });
 });
 
+describe("assertStatus", () => {
+  test("passes on the status it names", async () => {
+    const page = await site.visit("/_plumix/probe/moved");
+
+    expect(() => page.assertStatus(302)).not.toThrow();
+  });
+
+  test("names the status it got", async () => {
+    const page = await site.visit("/_plumix/probe/moved");
+
+    expect(() => page.assertStatus(301)).toThrow(
+      "assertStatus: expected status 301, got 302.",
+    );
+  });
+});
+
 describe("assertRedirect", () => {
   test.each(["/there", "https://cms.example/there"])(
     "passes on a redirect to %s",
@@ -137,6 +153,30 @@ describe("a page's text assertions", () => {
 
     expect(() => page.assertDontSee("hi")).toThrow(
       'assertDontSee: expected the page not to contain "hi", but it does.',
+    );
+  });
+});
+
+describe("assertSeeInOrder", () => {
+  test("passes on texts the page holds in that order", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
+    expect(() => page.assertSeeInOrder(["greeting", "count"])).not.toThrow();
+  });
+
+  test("names a first text the page lacks", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
+    expect(() => page.assertSeeInOrder(["bye", "hi"])).toThrow(
+      /^assertSeeInOrder: expected "bye", but it is not there\./,
+    );
+  });
+
+  test("names the text missing after the one before it", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
+    expect(() => page.assertSeeInOrder(["count", "greeting"])).toThrow(
+      /^assertSeeInOrder: expected "greeting" after "count", but it is not there\.\n.*"greeting":"hi"/s,
     );
   });
 });
@@ -210,6 +250,20 @@ describe("a page's header and body assertions", () => {
 
     expect(() => page.assertHeader("x-missing")).toThrow(
       'assertHeader: expected a "x-missing" header, but there is none.',
+    );
+  });
+
+  test("assertHeaderMissing passes on a header the page lacks", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
+    expect(() => page.assertHeaderMissing("x-missing")).not.toThrow();
+  });
+
+  test("assertHeaderMissing names the value it found", async () => {
+    const page = await site.visit("/_plumix/probe/json");
+
+    expect(() => page.assertHeaderMissing("x-probe")).toThrow(
+      'assertHeaderMissing: expected no "x-probe" header, got "yes".',
     );
   });
 
