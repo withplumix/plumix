@@ -1,5 +1,52 @@
 # @plumix/runtime-cloudflare
 
+## 0.16.0
+
+### Minor Changes
+
+- [#3399](https://github.com/withplumix/plumix/pull/3399) [`f823f8a`](https://github.com/withplumix/plumix/commit/f823f8a73d4025be60c4772a274a581f99813fda) Thanks [@nasyrov](https://github.com/nasyrov)! - Refuses listing and unlinking OAuth accounts in the demo runtime, with the rest of `oauthLinking`.
+
+### Patch Changes
+
+- [#3332](https://github.com/withplumix/plumix/pull/3332) [`2d033d6`](https://github.com/withplumix/plumix/commit/2d033d60cc61c790ce50b08601a3a088898b5ed8) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `plumix <command> --help` (or `-h`) running the command: it now prints that command's usage, description and the runtime's target options, and exits before building or migrating. The Cloudflare `deploy` and `preview` descriptions now say that any other options go to wrangler.
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3555](https://github.com/withplumix/plumix/pull/3555) [`bcec2f0`](https://github.com/withplumix/plumix/commit/bcec2f03e5e34009ac8f967e1ff00cbec0d9cffe) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.105.0 and `@orpc/server` to 1.16.1 in the framework and the first-party plugins, `@tanstack/react-router` to 1.170.46 in the framework, `plugin-og` and `plugin-seo`, the other `@orpc/*` packages to 1.16.1, the `@tiptap/*` packages to 3.32.0, `vitest` to 5.0.5 and `@playwright/test` to 1.64.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.66.0, `wrangler` 4.154) in `@plumix/runtime-cloudflare`.
+
+- [#3423](https://github.com/withplumix/plumix/pull/3423) [`f8b937b`](https://github.com/withplumix/plumix/commit/f8b937baead5a683f827242f2320baad10374ae3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `ctx.registerDebugPanel`, `ctx.registerErrorPanel` and `ctx.registerErrorHint`, and removes the `debug:panels`, `error_page:panels` and `error_page:hints` filters they replace.
+
+  - An error panel shows only for the errors its `visible(error)` accepts, and every error when `visible` is unset. A hint takes a `matches(error)` and shows after core's hints.
+  - An id that core or another plugin already registered fails boot. Before, the last panel with an id won.
+  - A `render`, `visible` or `matches` that throws hides only its own item and is logged through the site's logger. Before, a panel that failed to render showed a "failed to render" notice.
+  - A plugin can no longer remove or reorder another plugin's panels or hints.
+  - A runtime adapter adds hints for its platform's errors with the new `RuntimeAdapter.errorHints`. They show after core's and before any plugin's.
+  - The three registrations do nothing outside `plumix dev`.
+
+  Breaking: replace `ctx.addFilter("debug:panels", (panels) => [...panels, panel])` with `ctx.registerDebugPanel(panel)`, and do the same for the error page's panels and hints. A hint registration needs an `id` and a `matches(error)`.
+
+  The og plugin registers its debug panel this way, and the Cloudflare runtime offers its missing-binding hint through `errorHints`. Both need this release of `plumix`.
+
+- [#3559](https://github.com/withplumix/plumix/pull/3559) [`3a597f9`](https://github.com/withplumix/plumix/commit/3a597f9e1ae6114df5ed8f1fd5a7e12e8ff7b25f) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads every current time in core, the first-party plugins and the runtimes through `now()`, so a test site's `site.travel` and `site.freezeTime` now move token and invite expiry, edit leases, retention cutoffs, rate-limit windows and `updatedAt` stamps too. A column's SQL `unixepoch()` default, such as `createdAt`, still stamps real time.
+
+- [#3551](https://github.com/withplumix/plumix/pull/3551) [`7165465`](https://github.com/withplumix/plumix/commit/71654650046dfd95923315db5c3c8cbe1de90a7f) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes the role rank ladder; nothing ranks one role above another any more. Removed with no shims:
+
+  - `canAccessAdmin` and `STAFF_MIN_ROLE`: check `ctx.auth.can("admin:access")`.
+  - `ROLE_LEVEL`, `roleLevel` and `CapabilityResolver`'s `requiredRole`: ask whether the principal holds a capability with `ctx.auth.can(capability)`.
+  - `rolePolicy(role)` and the built-in `role:<name>` segment: gate with `capabilityPolicy(capability)`, which grants the `capability:<name>` segment.
+  - `registerCapability(name, minRole)` and `registerCapability(name, { minRole, defaultGrants })`: use `registerCapability(name, { grantTo: [...] })`, or no grant for `admin` alone.
+  - A single role as an entry type's or taxonomy's `capabilities` override, such as `{ delete: "editor" }`: name the receiving roles, `{ delete: ["editor"] }`.
+  - The `plugin:manage` capability, which guarded nothing. No role holds it.
+  - `USER_ROLES` and the `UserRole` type from `plumix/schema`: a user's role is any role the config declares. `DefaultRole` from `plumix/auth` names the roles core ships.
+
+  `CORE_CAPABILITIES`, `POST_TYPE_CAPABILITY_ACTIONS` and `TERM_TAXONOMY_CAPABILITY_ACTIONS` now map each capability to the default roles that receive it instead of a minimum role. A `user()` field's `.roles()` and `cfAccess({ defaultRole })` accept a role the config declares.
+
+- [#3558](https://github.com/withplumix/plumix/pull/3558) [`3929b09`](https://github.com/withplumix/plumix/commit/3929b098e3b5eeabf39f28837911e3f993599176) Thanks [@nasyrov](https://github.com/nasyrov)! - Renames the `subscriber` role to `member` and retires `contributor` as a default role. The default roles are now `member`, `author`, `editor` and `admin`, with `member` holding exactly what `subscriber` held. A data migration renames `subscriber` to `member` on every user and pending invite. New invites, self-signups, anonymous REST requests and users that `plumix import` or `plumix sync` create without a role now get `member`, and the `memberUser` test factory replaces `subscriberUser` and `contributorUser`.
+
+  To keep your contributors, declare a `contributor` role in `plumix({ roles })`. While any user holds `contributor` and the config declares no such role, `plumix migrate`, `plumix dev` and `plumix deploy` stop before changing anything and print a `contributor` role to paste, granting the core rights contributors had on your site. It doesn't include a plugin's own grant to contributors: if you use the media plugin, add `entry:media:delete` to that role, as `"delete"` in its `entry.media` list, so contributors can still delete their own uploads. A site with no contributors migrates without declaring the role.
+
+- [#3479](https://github.com/withplumix/plumix/pull/3479) [`d75c0a0`](https://github.com/withplumix/plumix/commit/d75c0a096aa11af62e293f792e6087694e052b75) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes block strings, mails, the welcome screen and the admin bar rendering in English on a site that enables a regional locale: the generated server entry now hands core the closest catalog for each enabled locale, which `plumix build` works out. Upgrade `plumix` with the adapter.
+
 ## 0.15.0
 
 ### Minor Changes

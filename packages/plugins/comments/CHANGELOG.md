@@ -1,5 +1,29 @@
 # @plumix/plugin-comments
 
+## 0.7.0
+
+### Minor Changes
+
+- [#3563](https://github.com/withplumix/plumix/pull/3563) [`290c634`](https://github.com/withplumix/plumix/commit/290c634f16aa20e15ddfe392e58a5cab62c7815a) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `comment`, exported from `@plumix/plugin-comments`, holding the plugin's events `created`, `approved`, `spam`, `trashed` and `deleted` and its async filter `moderate`, so another plugin subscribes with `ctx.events.on(comment.approved, …)` or `ctx.filters.add(comment.moderate, …)` with no `declare module`. Event handlers receive `{ comment }` and the request's `ctx` second. Moderation still purges the entry's cached page as before.
+
+  Breaking: the `comment:*` string names are removed from `FilterRegistry` and `ActionRegistry`. Replace `addAction("comment:approved", (comment, ctx) => …)` with `ctx.events.on(comment.approved, ({ comment }, ctx) => …)`, and `addFilter("comment:moderate", (status, candidate) => …)` with `ctx.filters.add(comment.moderate, (status, candidate) => …)`. Spies in tests take the value: `spyEvent(comment.created)`, `spyFilter(comment.moderate)`.
+
+- [#3405](https://github.com/withplumix/plumix/pull/3405) [`dd0a359`](https://github.com/withplumix/plumix/commit/dd0a3596705427b670e793a7e30a9023bd935877) Thanks [@nasyrov](https://github.com/nasyrov)! - Purges a comment's entry page only when visitors would see the change: a comment is approved or restored to approved, an approved comment is spammed, trashed or deleted, or a new comment arrives approved. Moving a comment between held, spam and trash now leaves the page cached, and an approval no longer purges other pages stored under the entry. Requires `plumix` 0.27.0 or later.
+
+- [#3491](https://github.com/withplumix/plumix/pull/3491) [`65a1e0c`](https://github.com/withplumix/plumix/commit/65a1e0c275d5d163584f3183362ad4c3dcac757c) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the plugin's RPC router in its descriptor's type, so a test site that installs it lists its procedures on `site.rpc.comments`. `@orpc/server` moves to the plugin's dependencies, since its published types now name it.
+
+### Patch Changes
+
+- [#3506](https://github.com/withplumix/plumix/pull/3506) [`2284a0b`](https://github.com/withplumix/plumix/commit/2284a0b71cc85d43a5575a077fcc5c5f8fd45245) Thanks [@nasyrov](https://github.com/nasyrov)! - Capabilities now name the default roles that receive them. `registerCapability(name, { grantTo: ["editor"] })` grants a plugin capability to exactly those roles plus `admin`, and one registered without `grantTo` goes to `admin` alone. An entry type's or taxonomy's `capabilities` override maps an action to a list of roles, such as `{ delete: ["author", "editor"] }`. Two types that pool one `capabilityType` with different grants now boot and combine them, where they used to throw. The registered capability carries `grantTo` in place of `minRole` and `defaultGrants`. The first-party plugins use the new form, with every role's rights unchanged.
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3555](https://github.com/withplumix/plumix/pull/3555) [`bcec2f0`](https://github.com/withplumix/plumix/commit/bcec2f03e5e34009ac8f967e1ff00cbec0d9cffe) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.105.0 and `@orpc/server` to 1.16.1 in the framework and the first-party plugins, `@tanstack/react-router` to 1.170.46 in the framework, `plugin-og` and `plugin-seo`, the other `@orpc/*` packages to 1.16.1, the `@tiptap/*` packages to 3.32.0, `vitest` to 5.0.5 and `@playwright/test` to 1.64.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.66.0, `wrangler` 4.154) in `@plumix/runtime-cloudflare`.
+
+- [#3566](https://github.com/withplumix/plumix/pull/3566) [`6234429`](https://github.com/withplumix/plumix/commit/6234429ebdd0078617960a96e132f776a6b8d957) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes security advisories by raising dependency floors: `dompurify` to 3.4.17 and `sanitize-html` to 2.18.1 in the framework, and `markdown-it` to 15.0.3 in `@plumix/plugin-comments`.
+
+- [#3559](https://github.com/withplumix/plumix/pull/3559) [`3a597f9`](https://github.com/withplumix/plumix/commit/3a597f9e1ae6114df5ed8f1fd5a7e12e8ff7b25f) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads every current time in core, the first-party plugins and the runtimes through `now()`, so a test site's `site.travel` and `site.freezeTime` now move token and invite expiry, edit leases, retention cutoffs, rate-limit windows and `updatedAt` stamps too. A column's SQL `unixepoch()` default, such as `createdAt`, still stamps real time.
+
 ## 0.6.0
 
 ### Minor Changes
