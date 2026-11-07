@@ -1,5 +1,27 @@
 # @plumix/core
 
+## 0.27.0
+
+### Minor Changes
+
+- [#3501](https://github.com/withplumix/plumix/pull/3501) [`bdb8718`](https://github.com/withplumix/plumix/commit/bdb8718c76b553b5da40e9668a766406db9d2fd9) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds authorization discovery to the MCP endpoint. It serves RFC 9728 protected-resource metadata at `/.well-known/oauth-protected-resource` and at the path-specific URI for `/_plumix/mcp`, including under a `basePath`. A 401 now carries a `WWW-Authenticate: Bearer` challenge with `resource_metadata` and `scope`. An MCP tool can declare the `capability` it needs, and a token whose capabilities don't cover it gets 403 `insufficient_scope` naming the scope to ask for.
+
+- [#3560](https://github.com/withplumix/plumix/pull/3560) [`b51fb6b`](https://github.com/withplumix/plumix/commit/b51fb6b174bef266e152c5b7888cd1593c4ad4a4) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds OAuth sign-in for MCP clients, so Claude, ChatGPT or VS Code can connect to a site with only its URL. The person approves the client on a new admin consent page and can untick capabilities of the requested `read`, `draft` or `full` scope; the client gets a one-hour token that works only on `/_plumix/mcp`. Run the core migration before deploying: it adds the `oauth_grants` and `oauth_authorization_codes` tables.
+
+- [#3571](https://github.com/withplumix/plumix/pull/3571) [`6da672a`](https://github.com/withplumix/plumix/commit/6da672a8c60e414fbb72208fd4b3d211b62acd24) Thanks [@nasyrov](https://github.com/nasyrov)! - Keeps OAuth clients connected with rotating refresh tokens: `/_plumix/oauth/token` now also returns a refresh token that lasts 30 days and is replaced on every use, so an MCP client never holds a long-lived secret. Presenting a refresh token that was already used revokes every access and refresh token of that grant, so a stolen one locks the thief out. Run the core migration before deploying: it adds the `oauth_refresh_tokens` table.
+
+- [#3575](https://github.com/withplumix/plumix/pull/3575) [`6bf712c`](https://github.com/withplumix/plumix/commit/6bf712cef2854b194ac08665c4b2985e5a4cc024) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a Connected apps section to the profile's API tokens card. It lists each OAuth client a person approved, with its access and when it was last used, and revoking one disconnects it at once and makes its next connection ask for consent again. An admin with `user:manage_tokens` can list and revoke another user's connected apps.
+
+### Patch Changes
+
+- [#3431](https://github.com/withplumix/plumix/pull/3431) [`f739142`](https://github.com/withplumix/plumix/commit/f739142caf44f5b5d0a90fb990203ef90fc344d4) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `auth.apiTokens.create`, `auth.deviceFlow.approve` and `user.requestEmailChange` accepting an API-token caller. They now need a signed-in session, and an API-token request gets `UNAUTHORIZED`.
+
+- [#3414](https://github.com/withplumix/plumix/pull/3414) [`484d78a`](https://github.com/withplumix/plumix/commit/484d78a1baff570b72b4415dc73531d3f301587b) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `ctx.registerMark` accepting a core mark's name such as `bold` or `highlight`: a plugin mark that reuses a core mark name now throws at setup. Name plugin marks `pluginId/markName`.
+
+- [#3430](https://github.com/withplumix/plumix/pull/3430) [`4598b09`](https://github.com/withplumix/plumix/commit/4598b09d1dc0d47494d199fcfe573d94f00c37e6) Thanks [@nasyrov](https://github.com/nasyrov)! - Marks `actingAs` and `openPlaygroundDb` from `plumix/test/playwright` as stable: neither carries `@experimental` any more, and their signatures and behavior are unchanged.
+
+- [#3428](https://github.com/withplumix/plumix/pull/3428) [`fff1361`](https://github.com/withplumix/plumix/commit/fff13613a4d8190639c94d750fc2c043ac7f7c3d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the admin-area list for a browser asking for Traditional Chinese (`zh-TW`, `zh-HK`): it is now English instead of Simplified Chinese. Negotiation follows the CLDR parent locales, so `de-AT` still gets German and `zh-SG` gets Simplified Chinese.
+
 ## 0.26.0
 
 ### Patch Changes

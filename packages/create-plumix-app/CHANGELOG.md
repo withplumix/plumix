@@ -1,5 +1,11 @@
 # create-plumix-app
 
+## 0.10.0
+
+### Minor Changes
+
+- [#3574](https://github.com/withplumix/plumix/pull/3574) [`29e9d5a`](https://github.com/withplumix/plumix/commit/29e9d5a322a881ff392fc6f23a58b27addf24454) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds tests to a new site: Vitest, a `vitest.config.ts` calling `defineTestConfig()`, a `test` script, and `tests/feature/home.test.ts`, which visits `/` and asserts the page renders through the `fallback` template. `pnpm test` passes with no edits.
+
 ## 0.9.0
 
 ### Minor Changes

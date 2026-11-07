@@ -1,5 +1,25 @@
 # @plumix/plugin-menu
 
+## 0.7.0
+
+### Minor Changes
+
+- [#3563](https://github.com/withplumix/plumix/pull/3563) [`290c634`](https://github.com/withplumix/plumix/commit/290c634f16aa20e15ddfe392e58a5cab62c7815a) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `menu`, exported from `@plumix/plugin-menu/server`, holding the plugin's events `saved` and `deleted` and its async filters `tree` and `item`, so another plugin subscribes with `ctx.filters.add(menu.tree, …)` or `ctx.events.on(menu.saved, …)` with no `declare module`. It is exported from `/server` because the root's `menu()` factory, which still installs the plugin, takes the name. Payloads are unchanged, and saving or deleting a menu still purges the pages that render it. The plugin now needs `plumix` 0.27.0 or later.
+
+  Breaking: the `menu:tree`, `menu:item`, `menu:saved` and `menu:deleted` string names are removed from `FilterRegistry` and `ActionRegistry`. Replace `addFilter("menu:item", …)` with `ctx.filters.add(menu.item, …)`, `addFilter("menu:tree", …)` with `ctx.filters.add(menu.tree, …)`, and `addAction("menu:saved", …)` with `ctx.events.on(menu.saved, …)`.
+
+- [#3491](https://github.com/withplumix/plumix/pull/3491) [`65a1e0c`](https://github.com/withplumix/plumix/commit/65a1e0c275d5d163584f3183362ad4c3dcac757c) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the plugin's RPC router in its descriptor's type, so a test site that installs it lists its procedures on `site.rpc.menu`. `@orpc/server` moves to the plugin's dependencies, since its published types now name it.
+
+### Patch Changes
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3555](https://github.com/withplumix/plumix/pull/3555) [`bcec2f0`](https://github.com/withplumix/plumix/commit/bcec2f03e5e34009ac8f967e1ff00cbec0d9cffe) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.105.0 and `@orpc/server` to 1.16.1 in the framework and the first-party plugins, `@tanstack/react-router` to 1.170.46 in the framework, `plugin-og` and `plugin-seo`, the other `@orpc/*` packages to 1.16.1, the `@tiptap/*` packages to 3.32.0, `vitest` to 5.0.5 and `@playwright/test` to 1.64.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.66.0, `wrangler` 4.154) in `@plumix/runtime-cloudflare`.
+
+- [#3410](https://github.com/withplumix/plumix/pull/3410) [`efa3e67`](https://github.com/withplumix/plumix/commit/efa3e6765587c53e6e9173cee721302c0041ae34) Thanks [@nasyrov](https://github.com/nasyrov)! - Writes menu locations through `ctx.settings`, so assigning or clearing a location moves the `menu_locations` group's `etag` and an older copy of the group is refused as a conflict. Deleting a menu bound to a location now fires `settings.groupChanged` before `menu:deleted`, not after.
+
+- [#3559](https://github.com/withplumix/plumix/pull/3559) [`3a597f9`](https://github.com/withplumix/plumix/commit/3a597f9e1ae6114df5ed8f1fd5a7e12e8ff7b25f) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads every current time in core, the first-party plugins and the runtimes through `now()`, so a test site's `site.travel` and `site.freezeTime` now move token and invite expiry, edit leases, retention cutoffs, rate-limit windows and `updatedAt` stamps too. A column's SQL `unixepoch()` default, such as `createdAt`, still stamps real time.
+
 ## 0.6.0
 
 ### Minor Changes
