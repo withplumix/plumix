@@ -761,6 +761,11 @@ msgid "auth.acceptInvite.title"
 msgstr "Einladung annehmen"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.access"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.title"
 msgstr "Kontostatus"
@@ -768,6 +773,11 @@ msgstr "Kontostatus"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.keyword.accounts"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.actions"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -863,6 +873,11 @@ msgid "userRole.admin"
 msgstr "Administrator"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.all"
 msgstr "Alle"
@@ -888,6 +903,11 @@ msgid "users.list.roleFilter.all"
 msgstr "Alle Rollen"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/authorize.tsx
 msgid "auth.authorize.description"
 msgstr ""
@@ -896,6 +916,11 @@ msgstr ""
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API-Tokens"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.app"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/-consent-card.tsx
@@ -986,6 +1011,11 @@ msgstr "Das ist nicht möglich — dies ist der letzte Administrator. Befördern
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.reassignToSelf"
 msgstr "Eine Neuzuweisung an den zu löschenden Benutzer ist nicht möglich."
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.cancel"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1198,6 +1228,11 @@ msgstr "Bestätigung an {email} gesendet. Die Änderung tritt in Kraft, sobald d
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/authorize.tsx
 msgid "auth.authorize.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2205,6 +2240,11 @@ msgid "users.list.column.lastSignIn"
 msgstr "Letzte Anmeldung"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.lastUsed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.lastUsed"
 msgstr "Zuletzt verwendet"
@@ -2255,6 +2295,11 @@ msgstr "Wird geladen"
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.loading.aria"
 msgstr "{label} wird geladen"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.loading"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
@@ -2518,6 +2563,11 @@ msgid "profile.passkeys.enroll.networkError"
 msgstr "Netzwerkfehler. Verbindung prüfen und erneut versuchen."
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.never"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.lastSignIn.never"
 msgstr "Nie"
@@ -2558,6 +2608,11 @@ msgid "listPagination.next.label"
 msgstr "Weiter"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.access.none"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr "Für diese E-Mail wurde kein Konto gefunden."
@@ -2566,6 +2621,11 @@ msgstr "Für diese E-Mail wurde kein Konto gefunden."
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
 msgstr "Keine Rechte"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.empty.title"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -3052,6 +3112,16 @@ msgid "editor.revisions.sheet.title"
 msgstr "Revisionen"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.button"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.button"
 msgstr "Widerrufen"
@@ -3066,11 +3136,22 @@ msgstr "Widerrufen"
 msgid "profile.sessions.revoke.button"
 msgstr "Beenden"
 
+#. name: the connected app's name, from its OAuth client metadata (e.g. 'Claude')
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.title"
+msgstr ""
+
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.title"
 msgstr "\"{name}\" widerrufen?"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.pending"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3696,6 +3777,11 @@ msgstr "Das Konto, zu dem diese Bestätigung gehört, ist deaktiviert."
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.notLoaded.body"
 msgstr "Das Admin-Manifest deklariert eine Seite unter <code>{path}</code>, aber für sie wurde keine React-Komponente registriert."
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.description"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx

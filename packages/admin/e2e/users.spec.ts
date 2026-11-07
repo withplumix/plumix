@@ -72,6 +72,7 @@ const SELF_EDIT_LISTS = {
   "/auth/credentials/list": [],
   "/auth/sessions/list": [],
   "/auth/apiTokens/list": [],
+  "/auth/oauthGrants/list": [],
 } as const;
 
 test.describe("/users", () => {
@@ -1005,6 +1006,105 @@ test.describe("/users/$id/edit — API tokens (admin oversight)", () => {
 
     expect(revokes[0]).toMatchObject({ id: "tok-v" });
     await expect(page.getByTestId("api-tokens-empty")).toBeVisible();
+  });
+});
+
+test.describe("/users/$id/edit — connected apps", () => {
+  test("revokes a connected app via confirm dialog and refetches the list", async ({
+    page,
+  }) => {
+    const revokes: unknown[] = [];
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": user({ id: 1, email: "admin@example.test", role: "admin" }),
+      "/auth/credentials/list": [],
+      "/auth/sessions/list": [],
+      "/auth/apiTokens/list": [],
+    });
+    await page.route("**/_plumix/rpc/auth/oauthGrants/list", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody(
+          revokes.length === 0
+            ? [
+                {
+                  id: 7,
+                  clientId: "https://agent.example/oauth/client.json",
+                  name: "Example Agent",
+                  host: "agent.example",
+                  capabilities: ["entry:post:read"],
+                  lastUsedAt: null,
+                },
+              ]
+            : [],
+        ),
+      }),
+    );
+    await page.route("**/_plumix/rpc/auth/oauthGrants/revoke", (route) => {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      revokes.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ id: 7 }),
+      });
+    });
+
+    await page.goto("users/1/edit");
+    await expect(page.getByTestId("connected-apps-row-7")).toContainText(
+      "Example Agent",
+    );
+    await page.getByTestId("connected-apps-revoke-7").click();
+    await page.getByTestId("connected-apps-revoke-confirm-button").click();
+
+    await expect(page.getByTestId("connected-apps-empty")).toBeVisible();
+    expect(revokes).toEqual([{ id: 7 }]);
+  });
+
+  test("an admin revokes another user's app via adminRevoke", async ({
+    page,
+  }) => {
+    const revokes: unknown[] = [];
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/user/get": user({
+        id: 42,
+        email: "victim@example.test",
+        role: "editor",
+      }),
+      "/auth/apiTokens/adminList": {
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+      },
+      "/auth/oauthGrants/adminList": [
+        {
+          id: 7,
+          clientId: "https://agent.example/oauth/client.json",
+          name: "Example Agent",
+          host: "agent.example",
+          capabilities: ["entry:post:read"],
+          lastUsedAt: null,
+        },
+      ],
+    });
+    await page.route("**/_plumix/rpc/auth/oauthGrants/adminRevoke", (route) => {
+      const body = route.request().postDataJSON() as { json?: unknown };
+      revokes.push(body.json);
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: rpcOkBody({ id: 7 }),
+      });
+    });
+
+    await page.goto("users/42/edit");
+    await page.getByTestId("connected-apps-revoke-7").click();
+    await page.getByTestId("connected-apps-revoke-confirm-button").click();
+
+    await expect.poll(() => revokes).toEqual([{ userId: 42, id: 7 }]);
   });
 });
 

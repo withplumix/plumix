@@ -761,6 +761,11 @@ msgid "auth.acceptInvite.title"
 msgstr "接受邀请"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.access"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.status.title"
 msgstr "账户状态"
@@ -768,6 +773,11 @@ msgstr "账户状态"
 #. js-lingui-explicit-id
 #: src/lib/core-nav-i18n.ts
 msgid "core.adminNav.keyword.accounts"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.actions"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -863,6 +873,11 @@ msgid "userRole.admin"
 msgstr "管理员"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.statusFilter.all"
 msgstr "全部"
@@ -888,6 +903,11 @@ msgid "users.list.roleFilter.all"
 msgstr "所有角色"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.empty.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/authorize.tsx
 msgid "auth.authorize.description"
 msgstr ""
@@ -896,6 +916,11 @@ msgstr ""
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.title"
 msgstr "API 令牌"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.app"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/-consent-card.tsx
@@ -986,6 +1011,11 @@ msgstr "无法执行此操作 — 这是最后一个管理员。请先提升其�
 #: src/routes/_authenticated/users/$id/edit.tsx
 msgid "userEdit.error.reassignToSelf"
 msgstr "无法将内容重新分配给正在删除的用户。"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.cancel"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
@@ -1198,6 +1228,11 @@ msgstr "确认邮件已发送至 {email}。点击链接后更改生效。"
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/authorize.tsx
 msgid "auth.authorize.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2205,6 +2240,11 @@ msgid "users.list.column.lastSignIn"
 msgstr "上次登录"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.lastUsed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.lastUsed"
 msgstr "上次使用"
@@ -2255,6 +2295,11 @@ msgstr "加载中"
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.loading.aria"
 msgstr "正在加载 {label}"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.loading"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/editor/revisions/RevisionsSheet.tsx
@@ -2518,6 +2563,11 @@ msgid "profile.passkeys.enroll.networkError"
 msgstr "网络错误。请检查您的连接并重试。"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.never"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.lastSignIn.never"
 msgstr "从未"
@@ -2558,6 +2608,11 @@ msgid "listPagination.next.label"
 msgstr "下一页"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.access.none"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/lib/passkey-errors.ts
 msgid "passkey.error.userNotFound"
 msgstr "未找到此电子邮箱对应的账户。"
@@ -2566,6 +2621,11 @@ msgstr "未找到此电子邮箱对应的账户。"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.scope.empty"
 msgstr "无权限"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.empty.title"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/index.tsx
@@ -3052,6 +3112,16 @@ msgid "editor.revisions.sheet.title"
 msgstr "修订版本"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.button"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.button"
 msgstr "撤销"
@@ -3066,11 +3136,22 @@ msgstr "撤销"
 msgid "profile.sessions.revoke.button"
 msgstr "登出"
 
+#. name: the connected app's name, from its OAuth client metadata (e.g. 'Claude')
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.title"
+msgstr ""
+
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.title"
 msgstr "撤销 \"{name}\"？"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.pending"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
@@ -3696,6 +3777,11 @@ msgstr "此确认所属的账户已停用。"
 #: src/routes/_authenticated/pages/$.tsx
 msgid "pluginPage.notLoaded.body"
 msgstr "管理后台清单在 <code>{path}</code> 处声明了页面，但未注册其 React 组件。"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.description"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/auth/device.tsx

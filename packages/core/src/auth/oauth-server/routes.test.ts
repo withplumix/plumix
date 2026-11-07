@@ -1032,3 +1032,294 @@ describe("consent", () => {
     });
   });
 });
+
+async function grantsRpc<T>(
+  h: DispatcherHarness,
+  procedure: "list" | "revoke" | "adminList" | "adminRevoke",
+  input: Record<string, unknown>,
+  as: User,
+): Promise<{ status: number; body: T }> {
+  const res = await h.dispatch(
+    await buildRequest(h.db, `/_plumix/rpc/auth/oauthGrants/${procedure}`, {
+      json: { json: input },
+      as,
+    }),
+  );
+  const body = (await res.json()) as { json: T };
+  return { status: res.status, body: body.json };
+}
+
+interface ListedGrant {
+  readonly id: number;
+  readonly clientId: string;
+  readonly name: string;
+  readonly host: string;
+  readonly capabilities: readonly string[];
+  readonly lastUsedAt: string | null;
+}
+
+describe("a person's connected apps", () => {
+  test("lists each client they granted with its name, host, capabilities and last use", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-11-01T10:00:00Z"));
+      const h = await mcpHarness();
+      const user = await seed(h);
+      const token = await connect(h, user, {
+        scope: "read",
+        capabilities: ["entry:post:read"],
+      });
+      vi.setSystemTime(new Date("2026-11-01T10:30:00Z"));
+      await callTool(h, token, "content_list", { type: "post" });
+
+      const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, user);
+
+      expect(body).toMatchObject([
+        {
+          clientId: CLIENT_ID,
+          name: "Example Agent",
+          host: "agent.example",
+          capabilities: ["entry:post:read"],
+          lastUsedAt: "2026-11-01T10:30:00.000Z",
+        },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("leaves out another person's grants", async () => {
+    const h = await mcpHarness();
+    await connect(h, await seed(h));
+
+    const { body } = await grantsRpc<ListedGrant[]>(
+      h,
+      "list",
+      {},
+      await seed(h),
+    );
+
+    expect(body).toEqual([]);
+  });
+
+  test("names a client by its host until it has exchanged a code", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    await approve(h, user, authorizationParams(await pkce()));
+
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, user);
+
+    expect(body).toMatchObject([
+      { name: "agent.example", host: "agent.example", lastUsedAt: null },
+    ]);
+  });
+});
+
+describe("revoking a connected app", () => {
+  async function connectedGrant(
+    h: DispatcherHarness,
+    user: User,
+  ): Promise<number> {
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, user);
+    const [grant] = body;
+    if (grant === undefined) throw new Error("the user has no connected app");
+    return grant.id;
+  }
+
+  test("refuses its access token at once", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    const token = await connect(h, user);
+    const id = await connectedGrant(h, user);
+
+    await grantsRpc(h, "revoke", { id }, user);
+
+    const call = await callTool(h, token, "content_list", { type: "post" });
+    expect(call.status).toBe(401);
+  });
+
+  test("answers with the revoked grant", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    await connect(h, user);
+    const id = await connectedGrant(h, user);
+
+    const revoked = await grantsRpc(h, "revoke", { id }, user);
+
+    expect(revoked).toEqual({ status: 200, body: { id } });
+  });
+
+  test("refuses its refresh token", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    const keys = await pkce();
+    const redirect = await approve(h, user, authorizationParams(keys));
+    const { body: pair } = await exchange(
+      h,
+      exchangeForm(redirect.searchParams.get("code") ?? "", keys),
+    );
+    const id = await connectedGrant(h, user);
+
+    await grantsRpc(h, "revoke", { id }, user);
+
+    const refreshed = await exchange(h, {
+      grant_type: "refresh_token",
+      refresh_token: pair.refresh_token as string,
+      client_id: CLIENT_ID,
+    });
+    expect(refreshed).toEqual({
+      status: 400,
+      body: { error: "invalid_grant" },
+    });
+  });
+
+  test("sends the client's next authorization to consent", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    await connect(h, user);
+    const id = await connectedGrant(h, user);
+
+    await grantsRpc(h, "revoke", { id }, user);
+
+    const location = locationOf(
+      await authorize(h, authorizationParams(await pkce()), user),
+    );
+    expect(location.pathname).toBe("/_plumix/admin/auth/authorize");
+  });
+
+  test("drops it from the person's connected apps", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    await connect(h, user);
+    const id = await connectedGrant(h, user);
+
+    await grantsRpc(h, "revoke", { id }, user);
+
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, user);
+    expect(body).toEqual([]);
+  });
+
+  test("another person's grant is NOT_FOUND and leaves their token working", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    const token = await connect(h, owner);
+    const id = await connectedGrant(h, owner);
+
+    const { status } = await grantsRpc(h, "revoke", { id }, await seed(h));
+
+    const call = await callTool(h, token, "content_list", { type: "post" });
+    expect(status).toBe(404);
+    expect(call.status).toBe(200);
+  });
+});
+
+describe("another person's connected apps", () => {
+  test("an admin lists them", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    await connect(h, owner);
+
+    const { body } = await grantsRpc<ListedGrant[]>(
+      h,
+      "adminList",
+      { userId: owner.id },
+      await seed(h, "admin"),
+    );
+
+    expect(body).toMatchObject([
+      { clientId: CLIENT_ID, name: "Example Agent" },
+    ]);
+  });
+
+  test("an editor can't list them", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    await connect(h, owner);
+
+    const { status } = await grantsRpc(
+      h,
+      "adminList",
+      { userId: owner.id },
+      await seed(h),
+    );
+
+    expect(status).toBe(403);
+  });
+
+  test("an admin revokes one, which refuses its access token", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    const token = await connect(h, owner);
+    const admin = await seed(h, "admin");
+    const { body } = await grantsRpc<ListedGrant[]>(
+      h,
+      "adminList",
+      { userId: owner.id },
+      admin,
+    );
+
+    await grantsRpc(
+      h,
+      "adminRevoke",
+      { userId: owner.id, id: body[0]?.id },
+      admin,
+    );
+
+    const call = await callTool(h, token, "content_list", { type: "post" });
+    expect(call.status).toBe(401);
+  });
+
+  test("an editor can't revoke one", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    const token = await connect(h, owner);
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, owner);
+
+    const { status } = await grantsRpc(
+      h,
+      "adminRevoke",
+      { userId: owner.id, id: body[0]?.id },
+      await seed(h),
+    );
+
+    const call = await callTool(h, token, "content_list", { type: "post" });
+    expect(status).toBe(403);
+    expect(call.status).toBe(200);
+  });
+
+  test("an admin's revoke answers with the revoked grant", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    await connect(h, owner);
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, owner);
+    const id = body[0]?.id;
+
+    const revoked = await grantsRpc(
+      h,
+      "adminRevoke",
+      { userId: owner.id, id },
+      await seed(h, "admin"),
+    );
+
+    expect(revoked).toEqual({ status: 200, body: { id } });
+  });
+
+  test("an admin's revoke naming another owner is NOT_FOUND", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    const token = await connect(h, owner);
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, owner);
+    const bystander = await seed(h);
+
+    const { status } = await grantsRpc(
+      h,
+      "adminRevoke",
+      { userId: bystander.id, id: body[0]?.id },
+      await seed(h, "admin"),
+    );
+
+    const call = await callTool(h, token, "content_list", { type: "post" });
+    expect(status).toBe(404);
+    expect(call.status).toBe(200);
+  });
+});
