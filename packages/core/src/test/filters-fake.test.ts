@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { FiltersFake } from "./filters-fake.js";
 import { defineFilter } from "../hooks/define.js";
 import { scopeDeclarations } from "../hooks/scope.js";
 import { fakeFilters } from "./filters-fake.js";
@@ -52,13 +53,9 @@ describe("assertApplied", () => {
   });
 
   test("takes the declared filter, not its id", () => {
-    const filters = fakeFilters();
-    filters.record(price.label, undefined);
-
-    expect(() => {
-      // @ts-expect-error a filter is asserted by its declaration
-      filters.assertApplied("shop:label");
-    }).toThrow();
+    expectTypeOf<string>().not.toExtend<
+      Parameters<FiltersFake["assertApplied"]>[0]
+    >();
   });
 });
 
@@ -72,14 +69,20 @@ describe("assertNotApplied", () => {
     }).not.toThrow();
   });
 
-  test("fails for an applied filter, saying how often", () => {
+  test("passes for a filter applied only for another name", () => {
     const filters = fakeFilters();
-    filters.record(price.label, undefined);
     filters.record(price.label, undefined);
 
     expect(() => {
       filters.assertNotApplied(scopeDeclarations(price, "gift").label);
     }).not.toThrow();
+  });
+
+  test("fails for an applied filter, saying how often", () => {
+    const filters = fakeFilters();
+    filters.record(price.label, undefined);
+    filters.record(price.label, undefined);
+
     expect(() => {
       filters.assertNotApplied(price.label);
     }).toThrow(

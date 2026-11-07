@@ -1,6 +1,6 @@
 import type { FilterDefinition } from "../hooks/define.js";
-import type { Declared, PartialMatch } from "./events-fake.js";
-import { covers, describeValue, nameOf, timesOf } from "./events-fake.js";
+import type { Declared, PartialMatch } from "./declared.js";
+import { covers, describeValue, nameOf, timesOf } from "./declared.js";
 import { partialMatch } from "./match.js";
 
 interface AppliedFilter {

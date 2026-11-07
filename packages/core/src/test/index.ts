@@ -84,7 +84,8 @@ export type { LoggedLine, LoggerFake } from "./logger-fake.js";
 export type { TelemetryFake } from "./telemetry-fake.js";
 
 export type { StorageFake } from "./storage-fake.js";
-export type { EventsFake, PartialMatch } from "./events-fake.js";
+export type { PartialMatch } from "./declared.js";
+export type { EventsFake } from "./events-fake.js";
 export type { FiltersFake } from "./filters-fake.js";
 
 export { renderMail } from "./render-mail.js";

@@ -1,5 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { PartialMatch } from "./declared.js";
+import type { EventsFake } from "./events-fake.js";
 import { defineEvent } from "../hooks/define.js";
 import { scopeDeclarations } from "../hooks/scope.js";
 import { fakeEvents } from "./events-fake.js";
@@ -67,23 +69,21 @@ describe("assertEmitted", () => {
   });
 
   test("takes the declared event, not its id", () => {
-    const events = fakeEvents();
-    events.record(order.placed, { id: 1, total: 30 });
-
-    expect(() => {
-      // @ts-expect-error an event is asserted by its declaration
-      events.assertEmitted("shop:placed");
-    }).toThrow();
+    expectTypeOf<string>().not.toExtend<
+      Parameters<EventsFake["assertEmitted"]>[0]
+    >();
   });
 
   test("takes only keys of the event's payload", () => {
-    const events = fakeEvents();
-    events.record(order.placed, { id: 1, total: 30 });
+    interface Payload {
+      readonly id: number;
+      readonly total: number;
+    }
 
-    expect(() => {
-      // @ts-expect-error `sku` is not in the payload
-      events.assertEmitted(order.placed, { sku: "a" });
-    }).toThrow();
+    expectTypeOf(fakeEvents().assertEmitted<Payload>)
+      .parameter(1)
+      .toEqualTypeOf<PartialMatch<Payload> | undefined>();
+    expectTypeOf<{ sku: string }>().not.toExtend<PartialMatch<Payload>>();
   });
 });
 
