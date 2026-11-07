@@ -98,6 +98,28 @@ describe("an async filter", () => {
     });
   });
 
+  test("still runs a handler on a value carrying a function", async () => {
+    const themed = defineFilter<{ render: () => string }>("test:themed", {
+      sync: false,
+    });
+    const seen: string[] = [];
+    const handlers = new HandlerRegistry();
+    handlers.add(themed, (value) => {
+      seen.push(value.render());
+      return value;
+    });
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
+
+    const result = await ctx.filters.apply(themed, {
+      render: () => "from the theme",
+    });
+
+    expect({ seen, rendered: result.render() }).toEqual({
+      seen: ["from the theme"],
+      rendered: "from the theme",
+    });
+  });
+
   test("passes the input and the context to every handler", async () => {
     const titled = defineFilter<string, { readonly suffix: string }>(
       "test:titled",

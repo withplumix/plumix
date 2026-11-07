@@ -112,7 +112,7 @@ async function seedItem(
   return entry.id;
 }
 
-describe("menu hook surface", () => {
+describe("menu filter surface", () => {
   let b: Bundle;
 
   beforeEach(async () => {
