@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { JsonObject } from "../../json.js";
+import type { TestSite } from "../../test/site.js";
 import type { TemplateData } from "../../theme.js";
 import type { ResolvedNode } from "./rule-resolver.js";
 import { ACCESS_POLICY_META_KEY } from "../../access/contract/meta-key.js";
@@ -11,6 +12,7 @@ import {
   grant,
 } from "../../access/policy.js";
 import { withUser } from "../../auth/with-user.js";
+import { requestStore } from "../../context/stores.js";
 import { eq } from "../../db/index.js";
 import { users } from "../../db/schema/users.js";
 import { entry } from "../../events-and-filters/entry.js";
@@ -29,7 +31,7 @@ import {
   photoProfilePlugin,
   photoUrl,
 } from "../../test/photo-lookup.js";
-import { createTracedContext } from "../../test/traced-context.js";
+import { testSite } from "../../test/site.js";
 import { resolveEntryList } from "./resolve-entry-list.js";
 import { forEntryType } from "./template-builders.js";
 import { resolveTemplate } from "./template-hierarchy.js";
@@ -87,13 +89,92 @@ const dossierPlugin = definePlugin("test-dossier", {
   },
 });
 
+const refsPlugin = definePlugin("test-refs", {
+  setup: (ctx) => {
+    ctx.registerEntryMetaBox("relations", {
+      label: "Relations",
+      entryTypes: ["post"],
+      fields: [
+        {
+          key: "related",
+          label: "Related",
+          inputType: "entryList",
+          type: "json",
+          referenceTarget: {
+            kind: "entry",
+            scope: { entryTypes: ["post"] },
+            multiple: true,
+          },
+        },
+      ],
+    });
+  },
+});
+
+const teaserPages = definePlugin("teaser-pages", {
+  setup: (ctx) => {
+    ctx.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          {
+            key: "teaser",
+            label: "Teaser",
+            policy: definePolicy({
+              resolve: (c) =>
+                c.user
+                  ? grant("authenticated")
+                  : challenge("paywall", { soft: true }),
+            }),
+          },
+          {
+            key: "paywall",
+            label: "Paywall",
+            policy: definePolicy({
+              resolve: () => challenge("paywall", { soft: true }),
+            }),
+          },
+        ],
+      },
+    });
+  },
+});
+const BODY = {
+  version: "plumix.v2",
+  blocks: [{ id: "p", name: "core/paragraph", attrs: {} }],
+} as const;
+
+const site = await testSite({});
+const portraitSite = await testSite({ plugins: [photoProfilePlugin] });
+const refsSite = await testSite({ plugins: [refsPlugin] });
+const dossierSite = await testSite({ plugins: [dossierPlugin] });
+const teaserSite = await testSite({ plugins: [teaserPages] });
+
+/**
+ * A cold context on `on`, and the driver queries run inside `run`: an N+1 is
+ * what the database sees.
+ */
+function traced(on: Pick<TestSite, "context" | "factory">) {
+  const ctx = on.context;
+  return {
+    factory: on.factory,
+    ctx,
+    run: <T>(fn: () => Promise<T>): Promise<T> => requestStore.run(ctx, fn),
+    dbQueryCount: (): number =>
+      ctx.telemetry.getSpans().filter((span) => span.name.startsWith("db:"))
+        .length,
+  };
+}
+
 describe("resolveEntryList author memoization", () => {
   test("a second call with an already-seen author skips the author query", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
-    const author = await harness.factory.user.create({ name: "Ada" });
+    const { factory, ctx, run, dbQueryCount } = traced(site);
+    const author = await factory.user.create({ name: "Ada" });
     const [post, other] = await Promise.all([
-      harness.factory.entry.create({ authorId: author.id }),
-      harness.factory.entry.create({ authorId: author.id }),
+      factory.entry.create({ authorId: author.id }),
+      factory.entry.create({ authorId: author.id }),
     ]);
 
     const [first, second] = await run(async () => [
@@ -109,13 +190,13 @@ describe("resolveEntryList author memoization", () => {
   });
 
   test("a mixed batch still resolves authors not yet memoized", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
-    const ada = await harness.factory.user.create({ name: "Ada" });
-    const lin = await harness.factory.user.create({ name: "Lin" });
+    const { factory, ctx, run, dbQueryCount } = traced(site);
+    const ada = await factory.user.create({ name: "Ada" });
+    const lin = await factory.user.create({ name: "Lin" });
     const [adaPost, adaOther, linPost] = await Promise.all([
-      harness.factory.entry.create({ authorId: ada.id }),
-      harness.factory.entry.create({ authorId: ada.id }),
-      harness.factory.entry.create({ authorId: lin.id }),
+      factory.entry.create({ authorId: ada.id }),
+      factory.entry.create({ authorId: ada.id }),
+      factory.entry.create({ authorId: lin.id }),
     ]);
 
     const [, mixed] = await run(async () => [
@@ -129,9 +210,9 @@ describe("resolveEntryList author memoization", () => {
   });
 
   test("a call after renaming the author in the same request reads the new name", async () => {
-    const { harness, ctx, run } = await createTracedContext();
-    const author = await harness.factory.user.create({ name: "Ada" });
-    const post = await harness.factory.entry.create({ authorId: author.id });
+    const { factory, ctx, run } = traced(site);
+    const author = await factory.user.create({ name: "Ada" });
+    const post = await factory.entry.create({ authorId: author.id });
 
     const [before, after] = await run(async () => {
       const first = await resolveEntryList(ctx, [post]);
@@ -153,18 +234,16 @@ describe("resolveEntryList author memoization", () => {
   });
 
   test("a call after a meta-only save of the author in the same request reads the new meta", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [photoProfilePlugin] },
-    });
-    const seed = await harness.factory.user.create({});
+    const { factory, ctx, run } = traced(portraitSite);
+    const seed = await factory.user.create({});
     const [before, after] = await Promise.all([
-      harness.factory.entry.create({ authorId: seed.id }),
-      harness.factory.entry.create({ authorId: seed.id }),
+      factory.entry.create({ authorId: seed.id }),
+      factory.entry.create({ authorId: seed.id }),
     ]);
-    const author = await harness.factory.user.create({
+    const author = await factory.user.create({
       meta: { portrait: String(before.id) },
     });
-    const post = await harness.factory.entry.create({ authorId: author.id });
+    const post = await factory.entry.create({ authorId: author.id });
 
     const [first, second] = await run(async () => {
       const first = await resolveEntryList(ctx, [post]);
@@ -180,9 +259,9 @@ describe("resolveEntryList author memoization", () => {
   });
 
   test("publishing an entry leaves its author memoized", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
-    const author = await harness.factory.user.create({ name: "Ada" });
-    const post = await harness.factory.entry.create({
+    const { factory, ctx, run, dbQueryCount } = traced(site);
+    const author = await factory.user.create({ name: "Ada" });
+    const post = await factory.entry.create({
       authorId: author.id,
       status: "published",
     });
@@ -201,14 +280,14 @@ describe("resolveEntryList author memoization", () => {
 
 describe("resolveEntryList titles", () => {
   test("expands each entry's title shortcodes, sharing the page's settings read", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext();
-    const author = await harness.factory.user.create({});
+    const { factory, ctx, run, dbQueryCount } = traced(site);
+    const author = await factory.user.create({});
     const [best, plain] = await Promise.all([
-      harness.factory.entry.create({
+      factory.entry.create({
         authorId: author.id,
         title: "Best of [year]",
       }),
-      harness.factory.entry.create({ authorId: author.id, title: "Plain" }),
+      factory.entry.create({ authorId: author.id, title: "Plain" }),
     ]);
     const year = new Intl.DateTimeFormat("en", { year: "numeric" }).format(
       new Date(),
@@ -231,36 +310,12 @@ describe("resolveEntryList titles", () => {
 });
 
 describe("resolveEntryList reference meta resolution", () => {
-  const refsPlugin = definePlugin("test-refs", {
-    setup: (ctx) => {
-      ctx.registerEntryMetaBox("relations", {
-        label: "Relations",
-        entryTypes: ["post"],
-        fields: [
-          {
-            key: "related",
-            label: "Related",
-            inputType: "entryList",
-            type: "json",
-            referenceTarget: {
-              kind: "entry",
-              scope: { entryTypes: ["post"] },
-              multiple: true,
-            },
-          },
-        ],
-      });
-    },
-  });
-
   test("templates receive hydrated reference meta, batched across the archive", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      config: { plugins: [refsPlugin] },
-    });
-    const author = await harness.factory.user.create({});
+    const { factory, ctx, run, dbQueryCount } = traced(refsSite);
+    const author = await factory.user.create({});
     const targets = await Promise.all(
       Array.from({ length: 2 }, (_, i) =>
-        harness.factory.entry.create({
+        factory.entry.create({
           authorId: author.id,
           type: "post",
           status: "published",
@@ -271,7 +326,7 @@ describe("resolveEntryList reference meta resolution", () => {
     const targetIds = targets.map((t) => String(t.id));
     // A referenced draft must not leak its title through anonymous
     // resolution — it reads as absent, exactly like a deleted target.
-    const draft = await harness.factory.entry.create({
+    const draft = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "draft",
@@ -279,7 +334,7 @@ describe("resolveEntryList reference meta resolution", () => {
     });
     const rows = await Promise.all(
       Array.from({ length: 3 }, () =>
-        harness.factory.entry.create({
+        factory.entry.create({
           authorId: author.id,
           type: "post",
           status: "published",
@@ -312,17 +367,15 @@ describe("resolveEntryList reference meta resolution", () => {
 
 describe("whereMeta against a real row", () => {
   test("matches the stored value the read bag decoded away", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
-    const subject = await harness.factory.entry.create({
+    const { factory, ctx, run } = traced(dossierSite);
+    const author = await factory.user.create({});
+    const subject = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
       title: "Subject",
     });
-    const row = await harness.factory.entry.create({
+    const row = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
@@ -366,12 +419,10 @@ describe("whereMeta against a real row", () => {
   // `whereMeta` is typed from the declared field but compares `storedMeta`,
   // so a widening decode would make a template branch where the rule didn't.
   test("a boolean reads alike from both bags, so whereMeta agrees with the decoded value", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
+    const { factory, ctx, run } = traced(dossierSite);
+    const author = await factory.user.create({});
     const seed = (meta: JsonObject) =>
-      harness.factory.entry.create({
+      factory.entry.create({
         authorId: author.id,
         type: "post",
         status: "published",
@@ -421,11 +472,9 @@ describe("whereMeta against a real row", () => {
   // A settling write here would sit behind anonymous page views and their
   // CDN purges.
   test("rendering an unsettled row leaves it as stored", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
-    const token = await harness.factory.entry.create({
+    const { factory, ctx, run } = traced(dossierSite);
+    const author = await factory.user.create({});
+    const token = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
@@ -434,7 +483,7 @@ describe("whereMeta against a real row", () => {
 
     await run(() => resolveEntryList(ctx, [token]));
 
-    const stored = await harness.db.query.entries.findFirst({
+    const stored = await ctx.db.query.entries.findFirst({
       where: (row, { eq }) => eq(row.id, token.id),
     });
     expect(stored?.meta).toEqual({ sealed: 1 });
@@ -444,12 +493,10 @@ describe("whereMeta against a real row", () => {
   // `whereMeta` is typed from the declared type, so a widened read left it
   // accepting only the value the comparison could not match.
   test("a string and a number read alike from both bags, so whereMeta agrees with the decoded value", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
+    const { factory, ctx, run } = traced(dossierSite);
+    const author = await factory.user.create({});
     const seed = (meta: JsonObject) =>
-      harness.factory.entry.create({
+      factory.entry.create({
         authorId: author.id,
         type: "post",
         status: "published",
@@ -504,26 +551,24 @@ describe("whereMeta against a real row", () => {
 
 describe("term meta on the render path", () => {
   test("a term's meta is decoded and reference-hydrated, beside the raw storedMeta", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
-    const curator = await harness.factory.entry.create({
+    const { factory, ctx, run } = traced(dossierSite);
+    const author = await factory.user.create({});
+    const curator = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
       title: "Curator",
     });
-    const row = await harness.factory.entry.create({
+    const row = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
     });
-    const term = await harness.factory.term.create({
+    const term = await factory.term.create({
       taxonomy: "dossierTopic",
       meta: { taggedOn: "2026-02-03", curator: String(curator.id) },
     });
-    await harness.factory.entryTerm.create({
+    await factory.entryTerm.create({
       entryId: row.id,
       termId: term.id,
     });
@@ -549,11 +594,9 @@ describe("term meta on the render path", () => {
 
   // A default is written at creation, not on read.
   test("an entry's `.default()` key absent from storage reads as absent", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
-    const row = await harness.factory.entry.create({
+    const { factory, ctx, run } = traced(dossierSite);
+    const author = await factory.user.create({});
+    const row = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
@@ -569,20 +612,18 @@ describe("term meta on the render path", () => {
   // A default is written when the entity is created (ADR 0026); a term that
   // predates it reads the key as absent, as a rule predicate sees it.
   test("a `.default()` key absent from storage reads as absent", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
-    const row = await harness.factory.entry.create({
+    const { factory, ctx, run } = traced(dossierSite);
+    const author = await factory.user.create({});
+    const row = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
     });
-    const term = await harness.factory.term.create({
+    const term = await factory.term.create({
       taxonomy: "dossierTopic",
       meta: {},
     });
-    await harness.factory.entryTerm.create({
+    await factory.entryTerm.create({
       entryId: row.id,
       termId: term.id,
     });
@@ -596,40 +637,38 @@ describe("term meta on the render path", () => {
   });
 
   test("a term on two entries decodes per attachment, in one batched reference query", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      config: { plugins: [dossierPlugin] },
-    });
-    const author = await harness.factory.user.create({});
-    const curator = await harness.factory.entry.create({
+    const { factory, ctx, run, dbQueryCount } = traced(dossierSite);
+    const author = await factory.user.create({});
+    const curator = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
       title: "Curator",
     });
     const [first, second] = await Promise.all([
-      harness.factory.entry.create({ authorId: author.id, type: "post" }),
-      harness.factory.entry.create({ authorId: author.id, type: "post" }),
+      factory.entry.create({ authorId: author.id, type: "post" }),
+      factory.entry.create({ authorId: author.id, type: "post" }),
     ]);
     // `shared` sits on both entries and `solo` on the second only, so a
     // dedupe-by-term-id that forgot to remap indices would misalign here.
-    const shared = await harness.factory.term.create({
+    const shared = await factory.term.create({
       taxonomy: "dossierTopic",
       meta: { taggedOn: "2026-02-03", curator: String(curator.id) },
     });
-    const solo = await harness.factory.term.create({
+    const solo = await factory.term.create({
       taxonomy: "dossierTopic",
       meta: { taggedOn: "2026-04-05", curator: String(curator.id) },
     });
     await Promise.all([
-      harness.factory.entryTerm.create({
+      factory.entryTerm.create({
         entryId: first.id,
         termId: shared.id,
       }),
-      harness.factory.entryTerm.create({
+      factory.entryTerm.create({
         entryId: second.id,
         termId: shared.id,
       }),
-      harness.factory.entryTerm.create({ entryId: second.id, termId: solo.id }),
+      factory.entryTerm.create({ entryId: second.id, termId: solo.id }),
     ]);
 
     const entries = await run(() => resolveEntryList(ctx, [first, second]));
@@ -690,26 +729,27 @@ function photoPlugin(tagged: boolean) {
   });
 }
 
+const taggedSite = await testSite({ plugins: [photoPlugin(true)] });
+const untaggedSite = await testSite({ plugins: [photoPlugin(false)] });
+
 describe("resolveEntryList role images", () => {
-  async function seedListing(role: boolean) {
-    const traced = await createTracedContext({
-      config: { plugins: [photoPlugin(role)] },
-    });
-    const { harness } = traced;
-    const author = await harness.factory.user.create({});
-    const photo = await harness.factory.entry.create({
+  async function seedListing(on: Pick<TestSite, "context" | "factory">) {
+    const listing = traced(on);
+    const { factory } = listing;
+    const author = await factory.user.create({});
+    const photo = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
       title: "Photo",
     });
-    const album = await harness.factory.term.create({
+    const album = await factory.term.create({
       taxonomy: "album",
       meta: { banner: String(photo.id) },
     });
     const rows = await Promise.all(
       Array.from({ length: 3 }, () =>
-        harness.factory.entry.create({
+        factory.entry.create({
           authorId: author.id,
           type: "post",
           status: "published",
@@ -719,14 +759,14 @@ describe("resolveEntryList role images", () => {
     );
     await Promise.all(
       rows.map((row) =>
-        harness.factory.entryTerm.create({ entryId: row.id, termId: album.id }),
+        factory.entryTerm.create({ entryId: row.id, termId: album.id }),
       ),
     );
-    return { ...traced, rows, photo };
+    return { ...listing, rows, photo };
   }
 
   test("projects a group-nested role onto every entry and term, adding no query", async () => {
-    const tagged = await seedListing(true);
+    const tagged = await seedListing(taggedSite);
     const resolved = await tagged.run(() =>
       resolveEntryList(tagged.ctx, tagged.rows),
     );
@@ -739,28 +779,26 @@ describe("resolveEntryList role images", () => {
 
     // The identical site with the role tag removed — the reference fields, and
     // so the hydration batch, are the same. The projection reads that batch.
-    const untagged = await seedListing(false);
+    const untagged = await seedListing(untaggedSite);
     await untagged.run(() => resolveEntryList(untagged.ctx, untagged.rows));
     expect(tagged.dbQueryCount()).toBe(untagged.dbQueryCount());
   });
 
   test("resolves every author's role images in one batch", async () => {
-    const { harness, ctx, run, dbQueryCount } = await createTracedContext({
-      config: { plugins: [photoProfilePlugin] },
-    });
-    const seed = await harness.factory.user.create({});
-    const photo = await harness.factory.entry.create({
+    const { factory, ctx, run, dbQueryCount } = traced(portraitSite);
+    const seed = await factory.user.create({});
+    const photo = await factory.entry.create({
       authorId: seed.id,
       type: "post",
     });
     const authors = await Promise.all(
       Array.from({ length: 2 }, () =>
-        harness.factory.user.create({ meta: { portrait: String(photo.id) } }),
+        factory.user.create({ meta: { portrait: String(photo.id) } }),
       ),
     );
     const rows = await Promise.all(
       authors.map((author) =>
-        harness.factory.entry.create({
+        factory.entry.create({
           authorId: author.id,
           type: "post",
           status: "published",
@@ -782,17 +820,15 @@ describe("resolveEntryList role images", () => {
   });
 
   test("reads null for a payload the adapter refuses", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [photoPlugin(true)] },
-    });
-    const author = await harness.factory.user.create({});
-    const broken = await harness.factory.entry.create({
+    const { factory, ctx, run } = traced(taggedSite);
+    const author = await factory.user.create({});
+    const broken = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
       title: "broken",
     });
-    const row = await harness.factory.entry.create({
+    const row = await factory.entry.create({
       authorId: author.id,
       type: "post",
       status: "published",
@@ -806,54 +842,17 @@ describe("resolveEntryList role images", () => {
 });
 
 describe("resolveEntryList and an entry's access policy", () => {
-  const teaserPages = definePlugin("teaser-pages", {
-    setup: (ctx) => {
-      ctx.registerEntryType("page", {
-        label: "Pages",
-        isPublic: true,
-        access: {
-          default: anonymousPolicy,
-          policies: [
-            {
-              key: "teaser",
-              label: "Teaser",
-              policy: definePolicy({
-                resolve: (c) =>
-                  c.user
-                    ? grant("authenticated")
-                    : challenge("paywall", { soft: true }),
-              }),
-            },
-            {
-              key: "paywall",
-              label: "Paywall",
-              policy: definePolicy({
-                resolve: () => challenge("paywall", { soft: true }),
-              }),
-            },
-          ],
-        },
-      });
-    },
-  });
-  const BODY = {
-    version: "plumix.v2",
-    blocks: [{ id: "p", name: "core/paragraph", attrs: {} }],
-  } as const;
-
   test("drops the body of an entry its policy lists only as a teaser, and flags it", async () => {
-    const { harness, ctx, run } = await createTracedContext({
-      config: { plugins: [teaserPages] },
-    });
-    const author = await harness.seedUser("admin");
-    const open = await harness.factory.entry.create({
+    const { factory, ctx, run } = traced(teaserSite);
+    const author = await factory.user.create({ role: "admin" });
+    const open = await factory.entry.create({
       type: "page",
       slug: "open",
       status: "published",
       authorId: author.id,
       content: BODY,
     });
-    const teaser = await harness.factory.entry.create({
+    const teaser = await factory.entry.create({
       type: "page",
       slug: "teaser",
       status: "published",
@@ -883,12 +882,13 @@ describe("resolveEntryList and an entry's access policy", () => {
   ] as const)(
     "%s: a paywalled body is withheld unless they may edit the entry",
     async (_who, role, writer, gated) => {
-      const { harness, ctx, run } = await createTracedContext({
-        config: { plugins: [teaserPages] },
-      });
-      const viewer = await harness.seedUser(role);
-      const authors = { viewer, other: await harness.seedUser("admin") };
-      const row = await harness.factory.entry.create({
+      const { factory, ctx, run } = traced(teaserSite);
+      const viewer = await factory.user.create({ role: role });
+      const authors = {
+        viewer,
+        other: await factory.user.create({ role: "admin" }),
+      };
+      const row = await factory.entry.create({
         type: "page",
         status: "published",
         authorId: authors[writer].id,

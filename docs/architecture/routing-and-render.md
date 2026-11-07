@@ -64,14 +64,14 @@ Page kinds ([ADR 0025](../adr/0025-a-page-kind-is-named-by-its-subject.md), amen
 ## Invariants
 
 - An archive is one entry query; its listing and feed read the same query, and it holds only public entries. [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md); `packages/core/src/route/archive-entries.test.ts`.
-- A term is found by its slug alone; only core-compiled rules (`isPermalinkRoute`) canonicalise by 301. [ADR 0012](../adr/0012-a-term-is-addressed-by-its-slug.md); `packages/core/src/route/resolve.test.ts`.
+- A term is found by its slug alone; only core-compiled rules (`isPermalinkRoute`) canonicalise by 301. [ADR 0012](../adr/0012-a-term-is-addressed-by-its-slug.md); `packages/core/tests/feature/listing-each-archives-entry-query.test.ts`, `packages/core/tests/feature/listing-a-terms-entries.test.ts`.
 - A plugin gets page data from core's resolvers, never from rows; `buildResolvedEntries` is not exported. [ADR 0015](../adr/0015-a-plugin-gets-page-data-from-core.md); `packages/plumix/src/facade-curated.test.ts`, `packages/core/src/route/render/page-data.test.ts`.
 - Page kinds are named by subject, in camelCase. [ADR 0025](../adr/0025-a-page-kind-is-named-by-its-subject.md).
 - A framework route family set to `false` is never compiled, and an empty date archive answers 404. [ADR 0029](../adr/0029-a-framework-route-a-site-turns-off-is-never-compiled.md); `packages/core/src/route/compile.test.ts`, `packages/core/src/route/render/page-data.test.ts`.
 - The gate runs before any content resolves, so a gated entry type refuses even a URL that would 404. `packages/core/src/access/gate.test.ts`.
 - A render that reads the principal is never shared. [ADR 0030](../adr/0030-a-render-that-reads-the-principal-is-never-shared.md); `packages/core/src/route/render/personal-render.test.ts`, `packages/core/src/access/gate.integration.test.tsx`.
 - Core emits `@view-transition` only when the theme or template opts in, and never in edit or preview. [ADR 0031](../adr/0031-a-theme-opts-into-native-page-transitions-and-owns-their-css.md); `packages/plugins/blog/e2e/view-transitions.spec.ts`.
-- A page outcome is recognised by `Symbol.for("plumix.pageOutcome")`; a redirect outcome leaves `private, no-store`; loaders run before `document()`. [ADR 0032](../adr/0032-a-page-step-ends-the-request-by-throwing-an-outcome.md); `packages/core/src/route/page-outcome.dispatch.test.tsx`.
+- A page outcome is recognised by `Symbol.for("plumix.pageOutcome")`; a redirect outcome leaves `private, no-store`; loaders run before `document()`. [ADR 0032](../adr/0032-a-page-step-ends-the-request-by-throwing-an-outcome.md); `packages/core/tests/feature/ending-a-page-with-an-outcome.test.tsx`.
 - Core's own redirect statuses are fixed: the gate 302, the canonical normalizer 301; only `GET` and `HEAD` reach a public route. [ADR 0033](../adr/0033-a-redirect-status-is-chosen-by-the-framework.md); `packages/core/src/route/index.test.ts`.
 - A view is never stored by the CDN unless it sets `cacheable: true`, and it claims no automatic canonical link. [ADR 0035](../adr/0035-an-app-page-is-a-view-not-an-archive.md); `packages/core/src/route/view.dispatch.test.tsx`.
 - Route code is a server `capabilities` layer folder (`packages/core/layers.ts`). [ADR 0010](../adr/0010-core-is-one-package-of-enforced-layers.md); `packages/core/src/layers.test.ts`.

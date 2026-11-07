@@ -23,7 +23,7 @@ in place of the config's consumers (`site.telemetry.span(name).attributes`), `si
 the in-memory bucket a config that declares `storage` gets (`assertStored(key)`, `assertMissing(key)`),
 built with a config `memoryStorage`'s seed and URL base, which the site serves at its URLs and
 answers a browser's presigned PUT at (`site.visit(uploadUrl, { method, headers, body })`); a config that declares `kv` or `imageDelivery` gets an in-memory kv and an image
-delivery that serves the stored original. `plumix/test/conformance` holds the
+delivery that serves the stored original, at `?w=<width>` for an image that asks for a width; `testSite({ build })` hands the site a build's asset manifest and compiled catalogs. `plumix/test/conformance` holds the
 contract suites a runtime's slots pass. An e2e suite imports `test`, `expect` and its fixtures (`editor`, `mailbox`, `passkey`, `PNG_1X1`,
 the shared `runtimeSpec`) from `plumix/test/playwright`.
 

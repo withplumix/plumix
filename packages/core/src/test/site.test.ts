@@ -1,11 +1,21 @@
+import { createElement } from "react";
 import { inArray } from "drizzle-orm";
 import { Factory } from "fishery";
 import * as v from "valibot";
-import { beforeEach, describe, expect, expectTypeOf, test } from "vitest";
+import {
+  assert,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  test,
+} from "vitest";
 
 import type { Db } from "../context/app-context.js";
 import type { NewSetting, Setting } from "../db/schema/settings.js";
 import type { PluginDescriptor } from "../plugin/define.js";
+import { defineBlock } from "../blocks/index.js";
+import { BlockRenderer } from "../blocks/renderer/index.js";
 import { now } from "../clock.js";
 import { libsql } from "../db/libsql.js";
 import { settings } from "../db/schema/settings.js";
@@ -13,8 +23,10 @@ import { users } from "../db/schema/users.js";
 import { defineEvent, defineFilter } from "../events-and-filters/define.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
+import { fallback } from "../route/render/template-builders.js";
 import { base } from "../rpc/base.js";
 import { memoryStorage } from "../runtime/memory-storage.js";
+import { defineTheme } from "../theme.js";
 import { testSite } from "./site.js";
 
 const posts = definePlugin("posts", {
@@ -184,9 +196,9 @@ describe("the site's storage", () => {
     const delivered = storing.context.imageDelivery?.url(source, {
       width: 640,
     });
+    assert(delivered !== undefined, "the site delivers images");
 
-    expect(delivered).toBe(source);
-    const page = await storing.visit(source);
+    const page = await storing.visit(delivered);
 
     page
       .assertOk()
@@ -202,6 +214,26 @@ const seeded = await testSite({
       seed: { "a.png": new Uint8Array([1]) },
     }),
   },
+});
+
+describe("the site's image delivery", () => {
+  test("names the width it was asked for", async () => {
+    const source = await storing.storage.url("photo.png");
+
+    const delivered = storing.context.imageDelivery?.url(source, {
+      width: 640,
+    });
+
+    expect(delivered).toBe(`${source}?w=640`);
+  });
+
+  test("hands back a source asked for at no width unchanged", async () => {
+    const source = await storing.storage.url("photo.png");
+
+    const delivered = storing.context.imageDelivery?.url(source);
+
+    expect(delivered).toBe(source);
+  });
 });
 
 describe("the site's storage, from the config's memoryStorage", () => {
@@ -728,6 +760,107 @@ describe("a config's own telemetry consumers", () => {
 
     expect(exported).toEqual([]);
     expect(exporting.telemetry.snapshots).toHaveLength(1);
+  });
+});
+
+const built = await testSite({
+  build: {
+    assetManifest: {
+      "src/theme/index.ts": {
+        file: "_plumix/assets/theme-abc123.js",
+        isEntry: true,
+        css: ["_plumix/assets/theme-def456.css"],
+      },
+    },
+  },
+});
+
+describe("a site given its build's output", () => {
+  test("links the stylesheet its asset manifest names", async () => {
+    const page = await built.visit("/");
+
+    page.assertSee(
+      '<link rel="stylesheet" href="/_plumix/assets/theme-def456.css"',
+    );
+  });
+});
+
+const greetingBlock = definePlugin("greeting-block", {
+  setup: (ctx) => {
+    ctx.registerBlock(
+      defineBlock({
+        name: "acme/greeting",
+        render: ({ context }) =>
+          createElement(
+            "p",
+            null,
+            context.t({ id: "acme.greeting", message: "Hello" }),
+          ),
+      }),
+    );
+  },
+});
+
+const localized = await testSite({
+  plugins: [posts, greetingBlock],
+  config: {
+    i18n: { defaultLocale: "de", locales: ["de", "en"] },
+    theme: defineTheme({
+      templates: [
+        fallback(({ data }) =>
+          "entry" in data && data.entry.contentBlocks
+            ? createElement(BlockRenderer, {
+                content: data.entry.contentBlocks,
+              })
+            : null,
+        ),
+      ],
+    }),
+  },
+  build: {
+    pluginCatalogs: {
+      de: [() => Promise.resolve({ messages: { "acme.greeting": ["Hallo"] } })],
+    },
+  },
+});
+
+const regional = await testSite({
+  plugins: [posts],
+  config: { i18n: { defaultLocale: "en", locales: ["en", "de-AT"] } },
+  build: {
+    catalogLocales: {
+      blocks: { en: "en", "de-AT": "de" },
+      mail: { en: "en", "de-AT": "de" },
+      welcome: { en: "en", "de-AT": "de" },
+      "admin-bar": { en: "en", "de-AT": "de" },
+    },
+  },
+});
+
+describe("a site given its build's catalogs", () => {
+  test("renders a block's string from its plugin's compiled catalog", async () => {
+    const post = await localized.factory.published.create({
+      content: {
+        version: "plumix.v2",
+        blocks: [{ id: "g", name: "acme/greeting", attrs: {} }],
+      },
+    });
+
+    const page = await localized.visit(post);
+
+    page.assertSee("<p>Hallo</p>");
+  });
+
+  test("reads a regional locale through the catalog it projects onto", async () => {
+    const admin = await regional.factory.user.create({
+      role: "admin",
+      meta: { locale: "de-AT" },
+    });
+    const post = await regional.factory.published.create({});
+
+    const page = await regional.actingAs(admin).visit(post);
+
+    page.assertSee('data-testid="plumix-admin-bar" dir="ltr" lang="de-AT"');
   });
 });
 

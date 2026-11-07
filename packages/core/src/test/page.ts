@@ -36,6 +36,11 @@ export class TestPage {
     return this.#assertStatus("assertForbidden", 403);
   }
 
+  /** For a status no named assertion covers, such as 410 or 500. */
+  assertStatus(status: number): this {
+    return this.#assertStatus("assertStatus", status);
+  }
+
   /** `to` is a path or an absolute URL, compared resolved against the site. */
   assertRedirect(to: string): this {
     const { status, headers } = this.#response;
@@ -59,6 +64,24 @@ export class TestPage {
     throw new Error(
       `assertSee: expected the page to contain "${text}", but it does not.\n${this.#bodyExcerpt()}`,
     );
+  }
+
+  /** Each text after the one before it, as written or HTML-escaped. */
+  assertSeeInOrder(texts: readonly string[]): this {
+    let from = 0;
+    let previous: string | undefined;
+    for (const text of texts) {
+      const at = this.#indexOf(text, from);
+      if (at === -1) {
+        const where = previous === undefined ? "" : ` after "${previous}"`;
+        throw new Error(
+          `assertSeeInOrder: expected "${text}"${where}, but it is not there.\n${this.#bodyExcerpt()}`,
+        );
+      }
+      from = at + 1;
+      previous = text;
+    }
+    return this;
   }
 
   assertDontSee(text: string): this {
@@ -107,6 +130,14 @@ export class TestPage {
     );
   }
 
+  assertHeaderMissing(name: string): this {
+    const found = this.#response.headers.get(name);
+    if (found === null) return this;
+    throw new Error(
+      `assertHeaderMissing: expected no "${name}" header, got "${found}".`,
+    );
+  }
+
   /** The body may hold more than `expected`, as `toMatchObject` allows. */
   assertJson(expected: unknown): this {
     let body: unknown;
@@ -133,6 +164,13 @@ export class TestPage {
   #contains(text: string): boolean {
     const { body } = this.#response;
     return body.includes(text) || body.includes(escapeHtml(text));
+  }
+
+  #indexOf(text: string, from: number): number {
+    const found = [text, escapeHtml(text)]
+      .map((form) => this.#response.body.indexOf(form, from))
+      .filter((at) => at !== -1);
+    return found.length === 0 ? -1 : Math.min(...found);
   }
 
   #bodyExcerpt(): string {

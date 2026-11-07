@@ -3,15 +3,13 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { AppContext } from "../../context/app-context.js";
 import type { EntryQuery } from "../../entries/contract/query.js";
 import type { JsonObject } from "../../json.js";
-import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { EntryPage } from "./entry-listing.js";
 import { ACCESS_POLICY_META_KEY } from "../../access/contract/meta-key.js";
 import { anonymousPolicy, authenticatedPolicy } from "../../access/policy.js";
+import { requestStore } from "../../context/stores.js";
 import { entryQuery } from "../../entries/query.js";
 import { definePlugin } from "../../plugin/define.js";
-import { createTestContext } from "../../test/context.js";
-import { createDispatcherHarness } from "../../test/dispatcher.js";
-import { createTracedContext } from "../../test/traced-context.js";
+import { testSite } from "../../test/site.js";
 import { listEntryPage } from "./entry-listing.js";
 
 const blog = definePlugin("blog", {
@@ -21,30 +19,49 @@ const blog = definePlugin("blog", {
   },
 });
 
-let h: DispatcherHarness;
-let ctx: AppContext;
-let authorId: number;
-
-beforeEach(async () => {
-  h = await createDispatcherHarness({ config: { plugins: [blog] } });
-  ctx = createTestContext({
-    db: h.db,
-    handlers: h.app.handlers,
-    plugins: h.app.plugins,
-  });
-  authorId = (await h.seedUser("admin")).id;
+const pages = definePlugin("pages", {
+  setup: (setup) => {
+    setup.registerEntryType("page", {
+      label: "Pages",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: [
+          { key: "members", label: "Members", policy: authenticatedPolicy },
+        ],
+      },
+    });
+  },
 });
 
+const site = await testSite({ plugins: [blog] });
+const policied = await testSite({ plugins: [blog, pages] });
+
 async function seed(
-  overrides: Partial<Parameters<typeof h.factory.entry.create>[0]> = {},
+  overrides: Partial<Parameters<typeof site.factory.entry.create>[0]> = {},
 ): Promise<void> {
-  await h.factory.entry.create({
+  await site.factory.entry.create({
     type: "post",
     status: "published",
     publishedAt: new Date("2026-03-04T00:00:00.000Z"),
-    authorId,
     ...overrides,
   });
+}
+
+/**
+ * The driver queries a listing runs, since an N+1 is what the database sees.
+ * Each call takes a cold context, so a warm memo can't undercount.
+ */
+async function listingCost(
+  context: AppContext,
+  perPage: number,
+): Promise<number> {
+  await requestStore.run(context, async () => {
+    await listEntryPage(context, entryQuery(), { page: 1, perPage });
+  });
+  return context.telemetry
+    .getSpans()
+    .filter((span) => span.name.startsWith("db:")).length;
 }
 
 /** The listing a query gives, failing the test where it gives none. */
@@ -53,7 +70,10 @@ async function listing(
   page = 1,
   perPage = 20,
 ): Promise<EntryPage> {
-  const listed = await listEntryPage(ctx, query, { page, perPage });
+  const listed = await listEntryPage(site.context, query, {
+    page,
+    perPage,
+  });
   if (listed === null) throw new Error("query did not resolve");
   return listed;
 }
@@ -147,7 +167,7 @@ describe("listEntryPage paging", () => {
   test("a query that cannot resolve has no listing to give", async () => {
     const unresolvable = entryQuery().inTerm("category", ["nothing-is-here"]);
     expect(
-      await listEntryPage(ctx, unresolvable, { page: 1, perPage: 2 }),
+      await listEntryPage(site.context, unresolvable, { page: 1, perPage: 2 }),
     ).toBe(null);
   });
 
@@ -175,77 +195,41 @@ describe("listEntryPage paging", () => {
   });
 
   test("a listing costs a fixed number of queries whatever the page holds", async () => {
-    // Counted from driver spans because an N+1 is what the database sees.
-    // Each size gets a cold context so a warm memo can't undercount.
-    const cost = async (perPage: number): Promise<number> => {
-      const traced = await createTracedContext({ config: { plugins: [blog] } });
-      // Two authors, so the larger page's author batch covers more than one
-      // and a per-row lookup would show up as a bigger number here.
-      for (const role of ["admin", "editor", "admin"] as const) {
-        await traced.harness.factory.entry.create({
-          type: "post",
-          status: "published",
-          publishedAt: new Date("2026-03-04T00:00:00.000Z"),
-          authorId: (await traced.harness.seedUser(role)).id,
-        });
-      }
-      const before = traced.dbQueryCount();
-      await traced.run(async () => {
-        await listEntryPage(traced.ctx, entryQuery(), { page: 1, perPage });
+    // Two authors, so the larger page's author batch covers more than one
+    // and a per-row lookup would show up as a bigger number here.
+    for (const role of ["admin", "editor", "admin"] as const) {
+      await site.factory.entry.create({
+        type: "post",
+        status: "published",
+        publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+        authorId: (await site.factory.user.create({ role })).id,
       });
-      return traced.dbQueryCount() - before;
-    };
+    }
 
     // Count, page, the authors of the page, the terms of the page.
-    expect(await cost(1)).toBe(4);
-    expect(await cost(20)).toBe(4);
+    expect(await listingCost(site.context, 1)).toBe(4);
+    expect(await listingCost(site.context, 20)).toBe(4);
   });
 
   test("a policied type's listing costs the same fixed number of queries", async () => {
     // Rows are matched by stored key in the listing's own query, so a
     // gated row adds no lookup of its own.
-    const pages = definePlugin("pages", {
-      setup: (setup) => {
-        setup.registerEntryType("page", {
-          label: "Pages",
-          isPublic: true,
-          access: {
-            default: anonymousPolicy,
-            policies: [
-              { key: "members", label: "Members", policy: authenticatedPolicy },
-            ],
-          },
-        });
-      },
-    });
-    const cost = async (perPage: number): Promise<number> => {
-      const traced = await createTracedContext({
-        config: { plugins: [blog, pages] },
+    const metas: JsonObject[] = [
+      { [ACCESS_POLICY_META_KEY]: "members" },
+      {},
+      { [ACCESS_POLICY_META_KEY]: "members" },
+      {},
+    ];
+    for (const meta of metas) {
+      await policied.factory.entry.create({
+        type: "page",
+        status: "published",
+        publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+        meta,
       });
-      const author = await traced.harness.seedUser("admin");
-      const metas: JsonObject[] = [
-        { [ACCESS_POLICY_META_KEY]: "members" },
-        {},
-        { [ACCESS_POLICY_META_KEY]: "members" },
-        {},
-      ];
-      for (const meta of metas) {
-        await traced.harness.factory.entry.create({
-          type: "page",
-          status: "published",
-          publishedAt: new Date("2026-03-04T00:00:00.000Z"),
-          authorId: author.id,
-          meta,
-        });
-      }
-      const before = traced.dbQueryCount();
-      await traced.run(async () => {
-        await listEntryPage(traced.ctx, entryQuery(), { page: 1, perPage });
-      });
-      return traced.dbQueryCount() - before;
-    };
+    }
 
-    expect(await cost(1)).toBe(4);
-    expect(await cost(20)).toBe(4);
+    expect(await listingCost(policied.context, 1)).toBe(4);
+    expect(await listingCost(policied.context, 20)).toBe(4);
   });
 });

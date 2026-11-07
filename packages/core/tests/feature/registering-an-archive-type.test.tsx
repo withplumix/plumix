@@ -1,14 +1,16 @@
 import { describe, expect, test } from "vitest";
 
-import type { DispatcherHarness } from "../test/dispatcher.js";
 import type {
   ArchiveTypeData,
   ListingArchiveData,
-} from "./contract/resolved-entry.js";
-import { definePlugin } from "../plugin/define.js";
-import { createDispatcherHarness } from "../test/dispatcher.js";
-import { defineTheme } from "../theme.js";
-import { fallback, forArchiveType } from "./render/template-builders.js";
+} from "../../src/route/contract/resolved-entry.js";
+import { definePlugin } from "../../src/plugin/define.js";
+import {
+  fallback,
+  forArchiveType,
+} from "../../src/route/render/template-builders.js";
+import { testSite } from "../../src/test/site.js";
+import { defineTheme } from "../../src/theme.js";
 
 /**
  * A plugin's archive type data, declared in the augmentable registry so
@@ -24,7 +26,7 @@ interface EventSeriesData extends ArchiveTypeData {
    */
   readonly year: number;
 }
-declare module "../template-registry.js" {
+declare module "../../src/template-registry.js" {
   interface ArchiveTypeRegistry {
     "event-series": { data: EventSeriesData };
   }
@@ -67,55 +69,44 @@ const eventsTheme = defineTheme({
   ],
 });
 
+const eventsSite = await testSite({
+  plugins: [eventsPlugin],
+  config: { theme: eventsTheme },
+});
+
 describe("archive types (registerArchiveType)", () => {
   test("a plugin route dispatches to its resolver and templates the data", async () => {
-    const h = await createDispatcherHarness({
-      config: { plugins: [eventsPlugin], theme: eventsTheme },
-    });
-    const response = await h.dispatch(
-      new Request("https://cms.example/events/summer"),
-    );
-    expect(response.status).toBe(200);
-    const body = await response.text();
-    // `forArchiveType` matched and the typed `data.series` rendered.
-    expect(body).toContain('data-testid="series"');
-    expect(body).toContain("summer");
-    // The resolver's title reached the document.
-    expect(body).toContain("<title>Series: summer</title>");
+    const page = await eventsSite.visit("/events/summer");
+
+    page
+      .assertOk()
+      // `forArchiveType` matched and the typed `data.series` rendered.
+      .assertSee('data-testid="series"')
+      .assertSee("summer")
+      // The resolver's title reached the document.
+      .assertSee("<title>Series: summer</title>");
   });
 
   test("a colliding data field name isn't mis-classified by the SEO helpers", async () => {
     // The payload carries a `year` field; the page must not be `noindex`-ed as
     // if it were a search page, nor pick up any other date-archive treatment.
-    const h = await createDispatcherHarness({
-      config: { plugins: [eventsPlugin], theme: eventsTheme },
-    });
-    const body = await (
-      await h.dispatch(new Request("https://cms.example/events/summer"))
-    ).text();
-    expect(body).not.toContain("/undefined/");
-    expect(body).not.toContain('name="robots" content="noindex');
+    const page = await eventsSite.visit("/events/summer");
+
+    page
+      .assertDontSee("/undefined/")
+      .assertDontSee('name="robots" content="noindex');
   });
 
   test("the resolver returning null is a 404", async () => {
-    const h = await createDispatcherHarness({
-      config: { plugins: [eventsPlugin], theme: eventsTheme },
-    });
-    const response = await h.dispatch(
-      new Request("https://cms.example/events/missing"),
-    );
-    expect(response.status).toBe(404);
+    const page = await eventsSite.visit("/events/missing");
+
+    page.assertNotFound();
   });
 
   test("the paginated route dispatches with the page param", async () => {
-    const h = await createDispatcherHarness({
-      config: { plugins: [eventsPlugin], theme: eventsTheme },
-    });
-    const response = await h.dispatch(
-      new Request("https://cms.example/events/summer/page/2"),
-    );
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain("summer");
+    const page = await eventsSite.visit("/events/summer/page/2");
+
+    page.assertOk().assertSee("summer");
   });
 
   test("registering the same archive-type name twice throws", async () => {
@@ -131,9 +122,10 @@ describe("archive types (registerArchiveType)", () => {
         });
       },
     });
-    await expect(
-      createDispatcherHarness({ config: { plugins: [dupePlugin] } }),
-    ).rejects.toThrow();
+
+    await expect(testSite({ plugins: [dupePlugin] })).rejects.toThrow(
+      'Plugin "dupe" registers archive type "event-series", which it already registered.',
+    );
   });
 });
 
@@ -145,7 +137,7 @@ interface TalkArchiveData extends ListingArchiveData {
   readonly kind: "archiveType";
   readonly name: "talks";
 }
-declare module "../template-registry.js" {
+declare module "../../src/template-registry.js" {
   interface ArchiveTypeRegistry {
     talks: { data: TalkArchiveData };
   }
@@ -179,54 +171,60 @@ const talksTheme = defineTheme({
   ],
 });
 
-async function talksHarness(): Promise<DispatcherHarness> {
-  const h = await createDispatcherHarness({
-    config: { plugins: [talksPlugin], theme: talksTheme },
+const talksSite = await testSite({
+  plugins: [talksPlugin],
+  config: { theme: talksTheme },
+});
+
+/** Three talks, so two a page makes two pages. */
+async function seedTalks(): Promise<void> {
+  const publishedAt = new Date("2026-01-01T00:00:00Z");
+  await talksSite.factory.published.create({
+    type: "talk",
+    title: "Alpha",
+    publishedAt,
   });
-  const author = await h.seedUser("admin");
-  for (const title of ["Alpha", "Bravo", "Charlie"]) {
-    await h.factory.entry.create({
-      type: "talk",
-      title,
-      status: "published",
-      publishedAt: new Date("2026-01-01T00:00:00Z"),
-      authorId: author.id,
-    });
-  }
-  return h;
+  await talksSite.factory.published.create({
+    type: "talk",
+    title: "Bravo",
+    publishedAt,
+  });
+  await talksSite.factory.published.create({
+    type: "talk",
+    title: "Charlie",
+    publishedAt,
+  });
 }
 
 describe("an archive that declares its entries", () => {
   test("lists its first page under its own route", async () => {
-    const h = await talksHarness();
-    const body = await (
-      await h.dispatch(new Request("https://cms.example/talks"))
-    ).text();
-    expect(body).toContain("Alpha");
-    expect(body).toContain("Bravo");
-    expect(body).not.toContain("Charlie");
-    expect(body).toContain("<title>Talks</title>");
-    // Three entries at two a page: core counted the pages, not the plugin.
-    expect(body).toContain('data-testid="pages">2<');
+    await seedTalks();
+
+    const page = await talksSite.visit("/talks");
+
+    page
+      .assertSee("Alpha")
+      .assertSee("Bravo")
+      .assertDontSee("Charlie")
+      .assertSee("<title>Talks</title>")
+      // Three entries at two a page: core counted the pages, not the plugin.
+      .assertSee('data-testid="pages">2<');
   });
 
   test("serves its later pages at a route core derived", async () => {
-    const h = await talksHarness();
-    const response = await h.dispatch(
-      new Request("https://cms.example/talks/page/2"),
-    );
-    expect(response.status).toBe(200);
-    const body = await response.text();
-    expect(body).toContain("Charlie");
-    expect(body).not.toContain("Alpha");
+    await seedTalks();
+
+    const page = await talksSite.visit("/talks/page/2");
+
+    page.assertOk().assertSee("Charlie").assertDontSee("Alpha");
   });
 
   test("404s the page after the last one", async () => {
-    const h = await talksHarness();
-    const response = await h.dispatch(
-      new Request("https://cms.example/talks/page/3"),
-    );
-    expect(response.status).toBe(404);
+    await seedTalks();
+
+    const page = await talksSite.visit("/talks/page/3");
+
+    page.assertNotFound();
   });
 });
 
@@ -240,7 +238,7 @@ interface RoomArchiveData extends ListingArchiveData {
   readonly room: string;
   readonly showing: number;
 }
-declare module "../template-registry.js" {
+declare module "../../src/template-registry.js" {
   interface ArchiveTypeRegistry {
     rooms: { data: RoomArchiveData };
   }
@@ -282,67 +280,72 @@ const roomsTheme = defineTheme({
   ],
 });
 
-describe("a listed archive's resolver", () => {
-  async function roomsHarness(): Promise<DispatcherHarness> {
-    const h = await createDispatcherHarness({
-      config: { plugins: [roomsPlugin], theme: roomsTheme },
-    });
-    const author = await h.seedUser("admin");
-    await h.factory.entry.create({
-      type: "talk",
-      status: "published",
-      publishedAt: new Date("2026-01-01T00:00:00Z"),
-      authorId: author.id,
-    });
-    return h;
-  }
+const roomsSite = await testSite({
+  plugins: [roomsPlugin],
+  config: { theme: roomsTheme },
+});
 
+/**
+ * Distinct from `entries` declining the params: this one named a term, and
+ * the term is what does not exist. Both are a 404 to a visitor.
+ */
+const lost = definePlugin("lost", {
+  setup: (ctx) => {
+    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+    ctx.registerTermTaxonomy("track", { label: "Tracks" });
+    ctx.registerArchiveType("lost-track", {
+      routes: ["/tracks/:track"],
+      entries: (q, params) => q.inTerm("track", params.track ?? ""),
+      title: "Tracks",
+    });
+  },
+});
+
+const lostSite = await testSite({
+  plugins: [lost],
+  config: { theme: roomsTheme },
+});
+
+describe("a listed archive's resolver", () => {
   test("receives the finished page and adds a title and data to it", async () => {
-    const h = await roomsHarness();
-    const body = await (
-      await h.dispatch(new Request("https://cms.example/rooms/blue"))
-    ).text();
-    expect(body).toContain("<title>Room blue</title>");
-    expect(body).toContain('data-testid="showing">1<');
-    expect(body).toContain('data-testid="total">1<');
+    await roomsSite.factory.published.create({
+      type: "talk",
+      publishedAt: new Date("2026-01-01T00:00:00Z"),
+    });
+
+    const page = await roomsSite.visit("/rooms/blue");
+
+    page
+      .assertSee("<title>Room blue</title>")
+      .assertSee('data-testid="showing">1<')
+      .assertSee('data-testid="total">1<');
   });
 
   test("returning null is still a 404", async () => {
-    const h = await roomsHarness();
-    const response = await h.dispatch(
-      new Request("https://cms.example/rooms/closed"),
-    );
-    expect(response.status).toBe(404);
+    await roomsSite.factory.published.create({
+      type: "talk",
+      publishedAt: new Date("2026-01-01T00:00:00Z"),
+    });
+
+    const page = await roomsSite.visit("/rooms/closed");
+
+    page.assertNotFound();
   });
 
   test("entries returning null 404s before the page is read", async () => {
-    const h = await roomsHarness();
-    const response = await h.dispatch(
-      new Request("https://cms.example/rooms/nowhere"),
-    );
-    expect(response.status).toBe(404);
+    await roomsSite.factory.published.create({
+      type: "talk",
+      publishedAt: new Date("2026-01-01T00:00:00Z"),
+    });
+
+    const page = await roomsSite.visit("/rooms/nowhere");
+
+    page.assertNotFound();
   });
 
   test("a query nothing answers to 404s the page", async () => {
-    // Distinct from `entries` declining the params: this one named a term,
-    // and the term is what does not exist. Both are a 404 to a visitor.
-    const lost = definePlugin("lost", {
-      setup: (ctx) => {
-        ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
-        ctx.registerTermTaxonomy("track", { label: "Tracks" });
-        ctx.registerArchiveType("lost-track", {
-          routes: ["/tracks/:track"],
-          entries: (q, params) => q.inTerm("track", params.track ?? ""),
-          title: "Tracks",
-        });
-      },
-    });
-    const h = await createDispatcherHarness({
-      config: { plugins: [lost], theme: roomsTheme },
-    });
-    const response = await h.dispatch(
-      new Request("https://cms.example/tracks/no-such-track"),
-    );
-    expect(response.status).toBe(404);
+    const page = await lostSite.visit("/tracks/no-such-track");
+
+    page.assertNotFound();
   });
 });
