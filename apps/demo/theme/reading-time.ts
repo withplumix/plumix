@@ -4,7 +4,7 @@ import { blockTextRoster, coreBlocks, countProse } from "@plumix/core/blocks";
 const WORDS_PER_MINUTE = 200;
 
 /**
- * No hook exposes the render registry to a theme component, so this counts
+ * Nothing exposes the render registry to a theme component, so this counts
  * core blocks only; a plugin block's text doesn't move the estimate.
  */
 const CORE_TEXT = blockTextRoster(coreBlocks);

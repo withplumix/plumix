@@ -68,8 +68,8 @@ export function ToolingSection(): ReactNode {
             <p className="text-muted mt-4 text-lg leading-relaxed text-pretty">
               The debug bar sits on each page you open in development: the
               request, the template that rendered it, every query with its
-              timing, and a timeline of hooks and renders. None of it ships to
-              production.
+              timing, and a timeline of events, filters and renders. None of it
+              ships to production.
             </p>
           </div>
           <div className="lg:col-span-6 lg:col-start-7">
@@ -77,7 +77,7 @@ export function ToolingSection(): ReactNode {
               src="/screenshots/debug-bar-timeline.png"
               width={879}
               height={540}
-              alt="The plumix debug bar's timeline panel: dispatch, resolve, render, a hook and three database selects with their durations"
+              alt="The plumix debug bar's timeline panel: dispatch, resolve, render, the render:document filter and three database selects with their durations"
               testId="debug-bar-shot"
             />
           </div>

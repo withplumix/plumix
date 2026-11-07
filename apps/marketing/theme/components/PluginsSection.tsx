@@ -20,7 +20,7 @@ const PLUGINS = [
 const PLUGIN_API = [
   "entry types",
   "fields",
-  "hooks",
+  "events and filters",
   "RPC",
   "REST resources",
   "scheduled tasks",

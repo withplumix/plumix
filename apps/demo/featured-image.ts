@@ -3,7 +3,7 @@ import { definePlugin } from "plumix/plugin";
 import { media } from "@plumix/plugin-media/fields";
 
 /**
- * A theme has no setup hook, so a site that needs one registration of its own
+ * A theme has no setup step, so a site that needs one registration of its own
  * declares it as a one-file plugin like this.
  */
 export const featuredImage = definePlugin("demo-featured-image", {
