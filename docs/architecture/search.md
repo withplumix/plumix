@@ -73,7 +73,7 @@ Key files:
 - External-content deletes name the old column values. Guarded by `src/db/ddl.test.ts`.
 - The plugin's tables ship their own migration history ([ADR 0027](../adr/0027-each-table-owner-ships-its-own-migration-history.md)). Guarded by `src/db/migrations.test.ts`.
 - Access is applied per entry when a search runs, never copied into the projection ([ADR 0037](../adr/0037-a-public-surface-asks-per-entry-not-per-type.md)). Guarded by `src/server/query.test.ts` and `src/index.test.ts`.
-- A site that turns search off never compiles core's search rules, and the plugin still serves `/search/:query` ([ADR 0029](../adr/0029-a-framework-route-a-site-turns-off-is-never-compiled.md)). Guarded by `packages/core/src/route/compile.test.ts` and `packages/core/src/route/resolve.test.ts`.
+- A site that turns search off never compiles core's search rules, and the plugin still serves `/search/:query` ([ADR 0029](../adr/0029-a-framework-route-a-site-turns-off-is-never-compiled.md)). Guarded by `packages/core/src/route/compile.test.ts` and `packages/core/tests/feature/turning-off-a-framework-route.test.ts`.
 - A site can grant `search:reindex` to any role it defines; the plugin names only the default roles that get it (`registerCapability` in `src/index.ts`).
 - A content sync starts a full rebuild (`registerSyncReindex`, [ADR 0039](../adr/0039-a-sync-replaces-a-scope-and-never-merges.md)).
 - `term.metaChanged` has no subscriber, because term meta is never indexed. The backfill comparison mirrors what `indexTerms` writes. Guarded by `src/server/drain.test.ts`.

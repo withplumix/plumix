@@ -90,8 +90,9 @@ describe("an <Image> on a site with image delivery", () => {
   test("preloads a priority image once", async () => {
     const page = await site.visit("/");
 
+    page.assertSeeInOrder(['rel="preload"']);
     expect(() =>
       page.assertSeeInOrder(['rel="preload"', 'rel="preload"']),
-    ).toThrow();
+    ).toThrow("but it is not there");
   });
 });

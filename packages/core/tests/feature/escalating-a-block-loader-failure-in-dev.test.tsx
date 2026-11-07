@@ -1,11 +1,4 @@
-import {
-  afterAll,
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { defineBlock } from "../../src/blocks/index.js";
 import { BlockRenderer } from "../../src/blocks/renderer/index.js";
@@ -110,9 +103,8 @@ function loaderPost(blockName: string) {
   } as const;
 }
 
-const original = process.env.PLUMIX_DEV;
 // The dev gate is read when the app is built, so the dev sites boot with it on.
-process.env.PLUMIX_DEV = "1";
+vi.stubEnv("PLUMIX_DEV", "1");
 const devSite = await testSite({
   plugins: [blogPlugin, throwingLoaderPlugin],
   config: { theme: throwingLoaderTheme },
@@ -121,23 +113,20 @@ const devQuerySite = await testSite({
   plugins: [blogPlugin, failingQueryPlugin],
   config: { theme: throwingLoaderTheme },
 });
-delete process.env.PLUMIX_DEV;
+vi.stubEnv("PLUMIX_DEV", undefined);
 const site = await testSite({
   plugins: [blogPlugin, throwingLoaderPlugin, observer],
   config: { theme: throwingLoaderTheme },
 });
 
-afterAll(() => {
-  if (original === undefined) delete process.env.PLUMIX_DEV;
-  else process.env.PLUMIX_DEV = original;
-});
+vi.unstubAllEnvs();
 
 describe("a block loader that fails with the dev gate on", () => {
   beforeEach(() => {
-    process.env.PLUMIX_DEV = "1";
+    vi.stubEnv("PLUMIX_DEV", "1");
   });
   afterEach(() => {
-    delete process.env.PLUMIX_DEV;
+    vi.unstubAllEnvs();
   });
 
   test("fails to the dev error page naming the block", async () => {

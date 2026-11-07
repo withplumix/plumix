@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeEach, describe, test } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 
 import { definePlugin } from "../../src/plugin/define.js";
 import { entry, fallback } from "../../src/route/render/template-builders.js";
@@ -30,13 +30,7 @@ function themeLinking(themeCss: readonly string[]) {
  * `buildApp` reads the dev gate as it boots, and the render reads it again, so
  * each site boots under the gate its tests then render under.
  */
-const original = process.env.PLUMIX_DEV;
-function restoreDevGate(): void {
-  if (original === undefined) delete process.env.PLUMIX_DEV;
-  else process.env.PLUMIX_DEV = original;
-}
-
-process.env.PLUMIX_DEV = "1";
+vi.stubEnv("PLUMIX_DEV", "1");
 const relativeCssSite = await testSite({
   plugins: [blogPlugin],
   config: { theme: themeLinking(["./theme/app.css"]) },
@@ -45,21 +39,21 @@ const aliasedCssSite = await testSite({
   plugins: [blogPlugin],
   config: { theme: themeLinking(["~/aliased.css", "@acme/ui/style.css"]) },
 });
-delete process.env.PLUMIX_DEV;
+vi.stubEnv("PLUMIX_DEV", undefined);
 const builtSite = await testSite({
   plugins: [blogPlugin],
   config: { theme: themeLinking(["./theme/app.css"]) },
 });
-restoreDevGate();
-
-afterAll(restoreDevGate);
+vi.unstubAllEnvs();
 
 describe("dev theme CSS is linked in <head> to avoid FOUC (#1701)", () => {
   describe("in serve mode", () => {
     beforeEach(() => {
-      process.env.PLUMIX_DEV = "1";
+      vi.stubEnv("PLUMIX_DEV", "1");
     });
-    afterEach(restoreDevGate);
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
 
     test("a render-blocking <link> AND the HMR client-entry script both ship", async () => {
       const post = await relativeCssSite.factory.published.create({
@@ -110,9 +104,11 @@ describe("dev theme CSS is linked in <head> to avoid FOUC (#1701)", () => {
 
   describe("in build mode", () => {
     beforeEach(() => {
-      delete process.env.PLUMIX_DEV;
+      vi.stubEnv("PLUMIX_DEV", undefined);
     });
-    afterEach(restoreDevGate);
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
 
     test("no dev <link> — prod links the hashed CSS from the manifest", async () => {
       const post = await builtSite.factory.published.create({
