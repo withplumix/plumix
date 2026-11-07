@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { RunAgentPhase } from "./agent.js";
+import type { Review } from "./ticket.js";
 import { GATES, GATES_LEFT_TO_CI, underAnOrphanReaper } from "./gates.js";
 import {
   SETUP_STEPS,
@@ -14,6 +15,7 @@ import {
   fixerFor,
   gatesUntilGreen,
   IMPLEMENTER,
+  MAX_REVIEW_FIX_ROUNDS,
   readDeclinedTag,
   readFindingsTag,
   readGuidanceTag,
@@ -21,6 +23,7 @@ import {
   readReviewTag,
   readTemplatedPullRequest,
   reviewBranch,
+  reviewUntilClosed,
 } from "./ticket.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
@@ -478,7 +481,7 @@ describe("afterReview", () => {
     ).toEqual(["criterion 2 unmet"]);
   });
 
-  test("gaps that need a decision park the ticket at once, naming each one", () => {
+  test("gaps that only a decision can close go to the decider at once, naming each one", () => {
     const next = afterReview(
       review([
         {
@@ -489,18 +492,153 @@ describe("afterReview", () => {
       1,
     );
 
-    expect(next.next).toBe("park");
-    expect(next.next === "park" && next.reason).toContain(
+    expect(next.next).toBe("decide");
+    expect(next.next === "decide" && next.reason).toContain(
       "a.ts — the adapter shape departs from the brief",
     );
   });
 
-  test("gaps still open after every fix round park the ticket, naming each one", () => {
-    const next = afterReview(review([{ summary: "criterion 2 unmet" }]), 4);
+  test("gaps on the last round go to the fixer, not to a park", () => {
+    const next = afterReview(
+      review([{ summary: "criterion 2 unmet" }]),
+      MAX_REVIEW_FIX_ROUNDS,
+    );
 
-    expect(next.next).toBe("park");
-    expect(next.next === "park" && next.reason).toContain(
-      "a.ts — criterion 2 unmet",
+    expect(next).toMatchObject({ next: "fix", lastRound: true });
+  });
+
+  test("a decision gap on the last round is decided before the branch ships past it", () => {
+    const next = afterReview(
+      review([
+        { summary: "criterion 2 unmet" },
+        { summary: "the brief contradicts the code", needsADecision: true },
+      ]),
+      MAX_REVIEW_FIX_ROUNDS,
+    );
+
+    expect(next).toMatchObject({ next: "decide", lastRound: true });
+    expect(next.next === "decide" && next.gaps).toHaveLength(2);
+  });
+});
+
+describe("reviewUntilClosed", () => {
+  const copy = { title: "t", body: "b" };
+  const gap = { file: "a.ts", summary: "criterion 2 unmet", why: "w" };
+  const aReview = (specGaps: object[]) =>
+    readReviewTag(reviewBlock({ summary: "", specGaps, notes: [] }))!;
+  const decisionGap = { ...gap, needsADecision: true };
+
+  const loop = (
+    reviews: (Review | null)[],
+    {
+      decide = async () => null,
+      declines = [],
+    }: {
+      decide?: (reason: string) => Promise<string | null>;
+      declines?: boolean[];
+    } = {},
+  ) => {
+    const seen: string[] = [];
+    const briefs: string[] = [];
+    return {
+      seen,
+      briefs,
+      ports: {
+        review: async (pass: number) => {
+          seen.push(`review${pass}`);
+          return reviews.length > 0 ? (reviews.shift() ?? null) : aReview([]);
+        },
+        fixer: {
+          apply: async (phase: string, brief: string) => {
+            seen.push(phase);
+            briefs.push(brief);
+            return {
+              declined: declines.shift()
+                ? { reason: "cannot close it", notThisBranch: false }
+                : null,
+              pullRequestCopy: null,
+            };
+          },
+        },
+        decide: async (reason: string) => {
+          seen.push("decide");
+          return decide(reason);
+        },
+      },
+    };
+  };
+
+  test("the gaps of the last review are fixed and the branch ships without another review", async () => {
+    const { ports, seen } = loop([aReview([gap]), aReview([gap])]);
+
+    const outcome = await reviewUntilClosed(ports, copy);
+
+    expect(outcome.status).toBe("closed");
+    expect(seen).toEqual(["review1", "fix#review1", "review2", "fix#review2"]);
+  });
+
+  test("a decided gap stays on the branch: the fixer closes it with the decision in hand", async () => {
+    const { ports, seen, briefs } = loop([aReview([decisionGap])], {
+      decide: async () => "the ADR settles it",
+    });
+
+    const outcome = await reviewUntilClosed(ports, copy);
+
+    expect(outcome.status).toBe("closed");
+    expect(seen).toEqual(["review1", "decide", "fix#decided1", "review2"]);
+    expect(briefs[0]).toContain("the ADR settles it");
+    expect(briefs[0]).toContain("criterion 2 unmet");
+  });
+
+  test("a fix declined outright goes to the decider and is tried again", async () => {
+    const { ports, seen } = loop([aReview([gap])], {
+      decide: async () => "the brief was wrong",
+      declines: [true, false],
+    });
+
+    const outcome = await reviewUntilClosed(ports, copy);
+
+    expect(outcome.status).toBe("closed");
+    expect(seen).toEqual([
+      "review1",
+      "fix#review1",
+      "decide",
+      "fix#decided1",
+      "review2",
+    ]);
+  });
+
+  test("a gap the documents do not settle goes to a person, marked as already decided", async () => {
+    const { ports } = loop([aReview([decisionGap])]);
+
+    const outcome = await reviewUntilClosed(ports, copy);
+
+    expect(outcome).toMatchObject({ status: "blocked", alreadyDecided: true });
+    expect(outcome.status === "blocked" && outcome.reason).toContain(
+      "criterion 2 unmet",
+    );
+  });
+
+  test("a second decision is a person's, so the decider runs once per ticket", async () => {
+    const { ports, seen } = loop(
+      [aReview([decisionGap]), aReview([decisionGap])],
+      { decide: async () => "settled" },
+    );
+
+    const outcome = await reviewUntilClosed(ports, copy);
+
+    expect(outcome).toMatchObject({ status: "blocked", alreadyDecided: true });
+    expect(seen.filter((step) => step === "decide")).toHaveLength(1);
+  });
+
+  test("an unreadable review blocks the ticket, since the branch is unreviewed", async () => {
+    const { ports } = loop([null]);
+
+    const outcome = await reviewUntilClosed(ports, copy);
+
+    expect(outcome.status).toBe("blocked");
+    expect(outcome.status === "blocked" && outcome.reason).toContain(
+      "unreviewed",
     );
   });
 });

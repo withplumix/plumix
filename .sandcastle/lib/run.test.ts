@@ -657,6 +657,27 @@ describe("runShipLoop", () => {
     expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1, 2]);
   });
 
+  test("a ticket the decider already saw on its branch parks without a second decision", async () => {
+    let decisions = 0;
+    const { ports: p, parked } = ports({
+      nextTicket: drainingFrom([ticket(1)]),
+      ship: async () => ({
+        status: "blocked",
+        reason: "a person must choose",
+        alreadyDecided: true,
+      }),
+      decide: async () => {
+        decisions += 1;
+        return true;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(decisions).toBe(0);
+    expect(parked[0]?.reason).toBe("a person must choose");
+  });
+
   test("a pull request's own failed check is re-run once before any repair", async () => {
     const seen: string[] = [];
     let confirms = 0;
