@@ -82,7 +82,7 @@ flowchart TB
     cdnapi["<b>CDN provider</b><br/><i>[Software System]</i><br/>Optional; caches pages,<br/>purged by tag"]
     llm["<b>LLM provider</b><br/><i>[Software System]</i><br/>Large language model behind<br/>the in-editor agent"]
     otel["<b>Telemetry sink</b><br/><i>[Software System]</i><br/>Any OpenTelemetry endpoint,<br/>behind the telemetry slot"]
-    hooks["<b>Webhook receivers</b><br/><i>[Software System]</i><br/>Notified when content changes"]
+    whrecv["<b>Webhook receivers</b><br/><i>[Software System]</i><br/>Notified when content changes"]
   end
 
   dev -- "Builds, configures and deploys<br/>[code, plumix CLI]" --> site
@@ -99,7 +99,7 @@ flowchart TB
   site -- "Purges cached pages by tag<br/>[HTTPS API, token]" --> cdnapi
   site -- "Asks for page drafts [provider API]" --> llm
   site -- "Exports traces [OTLP over HTTP]" --> otel
-  site -- "Notifies of content changes<br/>[HTTPS POST with its headers]" --> hooks
+  site -- "Notifies of content changes<br/>[HTTPS POST with its headers]" --> whrecv
 
   classDef person fill:#08427b,stroke:#052e56,color:#fff
   classDef system fill:#1168bd,stroke:#0b4884,color:#fff
@@ -109,7 +109,7 @@ flowchart TB
   classDef infra fill:#ffffff,stroke:#438dd5,color:#1a1a1a
   class dev,editor,designer,admin,member,visitor person
   class site system
-  class agent,api,idp,mail,cdnapi,llm,otel,hooks ext
+  class agent,api,idp,mail,cdnapi,llm,otel,whrecv ext
   style people fill:none,stroke:#888,stroke-dasharray:4 4
   style callers fill:none,stroke:#888,stroke-dasharray:4 4
   style used fill:none,stroke:#888,stroke-dasharray:4 4
@@ -152,7 +152,7 @@ flowchart LR
     cdnapi["<b>CDN provider</b><br/><i>[Software System]</i>"]
     llm["<b>LLM provider</b><br/><i>[Software System]</i>"]
     otel["<b>Telemetry sink</b><br/><i>[Software System]</i>"]
-    hooks["<b>Webhook receivers</b><br/><i>[Software System]</i>"]
+    whrecv["<b>Webhook receivers</b><br/><i>[Software System]</i>"]
   end
 
   dev -- "Runs [terminal or CI]" --> cli
@@ -176,7 +176,7 @@ flowchart LR
   app -- "Purges by tag [HTTPS API]" --> cdnapi
   app -- "Asks for page drafts [provider API]" --> llm
   app -- "Exports traces [OTLP over HTTP]" --> otel
-  app -- "Notifies of content changes<br/>[HTTPS POST with its headers]" --> hooks
+  app -- "Notifies of content changes<br/>[HTTPS POST with its headers]" --> whrecv
   app -- "Enqueues background work" --> queue
   queue -- "Delivers queued jobs to [the runtime's queue consumer]" --> app
 
@@ -187,7 +187,7 @@ flowchart LR
   classDef ext fill:#999999,stroke:#6b6b6b,color:#fff
   classDef infra fill:#ffffff,stroke:#438dd5,color:#1a1a1a
   class dev,staff,reader person
-  class agent,api,idp,mail,cdnapi,llm,otel,hooks ext
+  class agent,api,idp,mail,cdnapi,llm,otel,whrecv ext
   class cron infra
   class cli,adminapp,public,app,db,files,kv,queue cont
   style who fill:none,stroke:#888,stroke-dasharray:4 4
@@ -227,7 +227,7 @@ flowchart LR
     cdn["<b>CDN read-through</b><br/><i>[Component: core cdn]</i><br/>Serves stored pages, stores shared ones,<br/>keys by segment, purges by tag"]
     render["<b>Routing and render</b><br/><i>[Component: core route]</i><br/>Resolves URLs, renders pages"]
     content["<b>Content services</b><br/><i>[Component: core entries, terms,<br/>users, revisions]</i><br/>Reads entries, terms and users<br/>with access applied"]
-    pluginsys["<b>Plugin system and hooks</b><br/><i>[Component: core plugin, hooks]</i><br/>Holds what plugins registered,<br/>runs filters and actions"]
+    pluginsys["<b>Plugin system, events and filters</b><br/><i>[Component: core plugin, events-and-filters]</i><br/>Holds what plugins registered,<br/>emits events and applies filters"]
     mailc["<b>Mail</b><br/><i>[Component: core mail]</i><br/>Mails declared by name"]
     slots["<b>Config slots</b><br/><i>[Component: core contracts,<br/>runtime packages]</i><br/>Database, storage, key-value, CDN, mailer,<br/>image delivery, telemetry, queue, LLM"]
     theme["<b>Theme</b><br/><i>[Component: site code, React]</i><br/>Templates, blocks, design tokens"]
@@ -273,7 +273,7 @@ flowchart LR
   surfaces -- "Authenticates, checks capabilities" --> authc
   surfaces -- "Reads through, checks the user may edit the entry" --> content
   surfaces -- "Writes through [guarded UPDATE]" --> slots
-  surfaces -- "Runs filters, actions and registered<br/>procedures, resources and tools from" --> pluginsys
+  surfaces -- "Applies filters, emits events, and runs registered<br/>procedures, resources and tools from" --> pluginsys
   surfaces -- "Sends mail through" --> mailc
   render -- "Reads entries through" --> content
   render -- "Uses registered routes and blocks from" --> pluginsys
@@ -329,23 +329,23 @@ flowchart LR
 
 Where to start, for each component and the containers around it:
 
-| Component               | Code                                                                                                                                        | Read first                                                                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime handler         | `packages/runtimes/*/src/entry-codegen.ts` (generates `.plumix/worker.ts`), `packages/core/src/runtime/handler.ts` (`createRuntimeHandler`) | [runtimes](docs/architecture/runtimes.md)                                                                                       |
-| Dispatcher              | `packages/core/src/runtime/dispatcher.ts` (`createPlumixDispatcher`), `sync-transfer.ts`, `sync-settle.ts`                                  | [routing and render](docs/architecture/routing-and-render.md)                                                                   |
-| Scheduled tasks         | `packages/core/src/runtime/scheduled.ts` (`runScheduledTasks`); the run guard is `scheduled-guard.ts`                                       | [cron](docs/architecture/cron.md)                                                                                               |
-| Auth and access         | `packages/core/src/auth`, `access`                                                                                                          | [auth and access](docs/architecture/auth-and-access.md)                                                                         |
-| RPC, REST and MCP       | `packages/core/src/rpc` (writes: `rpc/procedures/entry/update.ts`, `lifecycle.ts`), `rest`, `mcp`                                           | [RPC and editing](docs/architecture/rpc-and-editing.md), [REST](docs/architecture/rest-api.md), [MCP](docs/architecture/mcp.md) |
-| CDN read-through        | `packages/core/src/cdn`                                                                                                                     | [CDN cache](docs/architecture/cdn-cache.md)                                                                                     |
-| Routing and render      | `packages/core/src/route`                                                                                                                   | [routing and render](docs/architecture/routing-and-render.md)                                                                   |
-| Content services        | `packages/core/src/entries`, `terms`, `users`, `revisions` (reads)                                                                          | [RPC and editing](docs/architecture/rpc-and-editing.md)                                                                         |
-| Plugin system and hooks | `packages/core/src/plugin`, `hooks`                                                                                                         | [plugin system](docs/architecture/plugin-system.md), [hooks](docs/architecture/hooks.md)                                        |
-| Mail                    | `packages/core/src/mail`                                                                                                                    | [mail](docs/architecture/mail.md)                                                                                               |
-| Config slots            | `packages/core/src/runtime/contract/slots.ts`, `auth/contract/mailer.ts`, `context/telemetry.ts`, `packages/runtimes/*`                     | [runtimes](docs/architecture/runtimes.md), [media and storage](docs/architecture/media-and-storage.md)                          |
-| Theme                   | the site's theme, `packages/core/src/blocks`                                                                                                | [blocks and islands](docs/architecture/blocks-and-islands.md)                                                                   |
-| Plugins                 | `packages/plugins/*`                                                                                                                        | [plugin system](docs/architecture/plugin-system.md)                                                                             |
-| Admin and visual editor | `packages/admin`, `admin-editor`, `admin-ui`                                                                                                | [admin and editor](docs/architecture/admin-and-editor.md)                                                                       |
-| plumix CLI and build    | `packages/plumix/src/cli`, `vite`                                                                                                           | [build and CLI](docs/architecture/build-and-cli.md), [sync and import](docs/architecture/sync-and-import.md)                    |
+| Component                         | Code                                                                                                                                        | Read first                                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime handler                   | `packages/runtimes/*/src/entry-codegen.ts` (generates `.plumix/worker.ts`), `packages/core/src/runtime/handler.ts` (`createRuntimeHandler`) | [runtimes](docs/architecture/runtimes.md)                                                                                       |
+| Dispatcher                        | `packages/core/src/runtime/dispatcher.ts` (`createPlumixDispatcher`), `sync-transfer.ts`, `sync-settle.ts`                                  | [routing and render](docs/architecture/routing-and-render.md)                                                                   |
+| Scheduled tasks                   | `packages/core/src/runtime/scheduled.ts` (`runScheduledTasks`); the run guard is `scheduled-guard.ts`                                       | [cron](docs/architecture/cron.md)                                                                                               |
+| Auth and access                   | `packages/core/src/auth`, `access`                                                                                                          | [auth and access](docs/architecture/auth-and-access.md)                                                                         |
+| RPC, REST and MCP                 | `packages/core/src/rpc` (writes: `rpc/procedures/entry/update.ts`, `lifecycle.ts`), `rest`, `mcp`                                           | [RPC and editing](docs/architecture/rpc-and-editing.md), [REST](docs/architecture/rest-api.md), [MCP](docs/architecture/mcp.md) |
+| CDN read-through                  | `packages/core/src/cdn`                                                                                                                     | [CDN cache](docs/architecture/cdn-cache.md)                                                                                     |
+| Routing and render                | `packages/core/src/route`                                                                                                                   | [routing and render](docs/architecture/routing-and-render.md)                                                                   |
+| Content services                  | `packages/core/src/entries`, `terms`, `users`, `revisions` (reads)                                                                          | [RPC and editing](docs/architecture/rpc-and-editing.md)                                                                         |
+| Plugin system, events and filters | `packages/core/src/plugin`, `events-and-filters`                                                                                            | [plugin system](docs/architecture/plugin-system.md), [events and filters](docs/architecture/events-and-filters.md)              |
+| Mail                              | `packages/core/src/mail`                                                                                                                    | [mail](docs/architecture/mail.md)                                                                                               |
+| Config slots                      | `packages/core/src/runtime/contract/slots.ts`, `auth/contract/mailer.ts`, `context/telemetry.ts`, `packages/runtimes/*`                     | [runtimes](docs/architecture/runtimes.md), [media and storage](docs/architecture/media-and-storage.md)                          |
+| Theme                             | the site's theme, `packages/core/src/blocks`                                                                                                | [blocks and islands](docs/architecture/blocks-and-islands.md)                                                                   |
+| Plugins                           | `packages/plugins/*`                                                                                                                        | [plugin system](docs/architecture/plugin-system.md)                                                                             |
+| Admin and visual editor           | `packages/admin`, `admin-editor`, `admin-ui`                                                                                                | [admin and editor](docs/architecture/admin-and-editor.md)                                                                       |
+| plumix CLI and build              | `packages/plumix/src/cli`, `vite`                                                                                                           | [build and CLI](docs/architecture/build-and-cli.md), [sync and import](docs/architecture/sync-and-import.md)                    |
 
 ### Deployment
 
@@ -507,7 +507,7 @@ sequenceDiagram
   participant P as RPC, REST and MCP (entry.update)
   participant A as Auth and access
   participant S as Content services
-  participant H as Plugin system and hooks
+  participant H as Plugin system, events and filters
   participant SL as Config slots (database)
   participant C as CDN read-through
   Note over E: Holds the entry's lease while it is open, renewing it every 30 s (entry.lease.*)
@@ -527,18 +527,18 @@ sequenceDiagram
     D-->>E: CONFLICT
   else the type autosaves and the entry is published
     P->>SL: Writes the editor's draft, not the published entry
-    P->>H: Fires the autosave_saved action
+    P->>H: Emits the entry.autosaveSaved event
     P-->>D: Saved as a draft, with the etag unchanged
     D-->>E: Saved
   else allowed and current
     P->>P: Checks every new block and style value against the allowed blocks and style policy
-    P->>H: Runs the before_save filters
+    P->>H: Runs the entry.beforeSave filter
     P->>SL: UPDATE where updated_at matches the etag
     alt zero rows, another save won the race
       P-->>D: CONFLICT
       D-->>E: CONFLICT
     else one row
-      P->>H: Fires the updated actions and queues purge tags
+      P->>H: Emits entry.updated and queues purge tags
       P-->>D: Saved, with the new etag
       D->>C: Hands the queued tags to a deferred purge
       D-->>E: Saved
@@ -591,11 +591,11 @@ sequenceDiagram
   autonumber
   participant E as Runtime handler
   participant B as App builder
-  participant PS as Plugin system and hooks
+  participant PS as Plugin system, events and filters
   participant P as Plugins
   participant T as Theme
   E->>B: Builds the app from plumix.config.ts, once per process or instance
-  B->>PS: Creates the hook registry and registers core's own handlers
+  B->>PS: Creates the handler registry and registers core's own handlers
   B->>PS: Seeds core's lookups, template deps, settings and scheduled tasks
   B->>T: Reads the theme
   B->>PS: installPlugins with the theme, checking every plugin id
@@ -624,7 +624,7 @@ sequenceDiagram
   participant A as Auth and access
   participant S as Content services
   participant PO as Allowed blocks and style policy
-  participant H as Plugin system and hooks
+  participant H as Plugin system, events and filters
   participant SL as Config slots (database)
   G->>RE: Calls a write tool with its token [MCP over HTTPS]
   RE->>D: Request with its context
@@ -638,7 +638,7 @@ sequenceDiagram
     P-->>G: CONFLICT, with the current concurrency token
   else allowed and current
     P->>PO: Checks every new block and style value against the policy
-    P->>H: Runs the before_save filters
+    P->>H: Runs the entry.beforeSave filter
     P->>SL: Writes through the same procedure as the admin, capturing a revision
     alt zero rows, another save won the race
       P-->>G: CONFLICT
@@ -656,7 +656,7 @@ title: Dynamic diagram - publishing an entry fires its webhooks
 sequenceDiagram
   autonumber
   participant P as RPC, REST and MCP
-  participant H as Plugin system and hooks
+  participant H as Plugin system, events and filters
   participant W as Webhooks
   participant SL as Config slots (queue)
   participant Q as Job queue
@@ -837,19 +837,19 @@ plugins and theme (they run as part of the app), and the runtime and its bound s
 
 What happens when things go wrong, and who handles it.
 
-| When                                 | What happens                                                                                      |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Two people edit the same entry       | The second gets `LOCKED` while the first holds a live lease, unless they choose to take it over   |
-| A save is made from a stale copy     | `CONFLICT`, carrying the current concurrency token                                                |
-| Two saves race                       | The guarded `UPDATE` matches no row for the loser, which gets `CONFLICT`                          |
-| An action handler throws             | The others still run; it is logged to `ctx.logger` and fails its own `hook:` span, never raised   |
-| A filter handler throws              | The request fails, except for isolated array filters, which skip that handler                     |
-| A CDN purge fails                    | It is logged; the write it followed still succeeds                                                |
-| A scheduled task fails               | Its siblings still run; the run reports `failed`                                                  |
-| Two replicas fire the same task      | The run guard lets one run (the in-process timer and `plumix cron run`)                           |
-| A plugin registers something twice   | Boot fails with `DuplicateRegistrationError`                                                      |
-| The config or a task's cron is wrong | Boot fails; the deploy still goes out, and every request returns the boot error until it is fixed |
-| No mailer is configured              | Sending throws `MailerNotConfigured`; surfaces that need mail say so                              |
+| When                                 | What happens                                                                                                            |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Two people edit the same entry       | The second gets `LOCKED` while the first holds a live lease, unless they choose to take it over                         |
+| A save is made from a stale copy     | `CONFLICT`, carrying the current concurrency token                                                                      |
+| Two saves race                       | The guarded `UPDATE` matches no row for the loser, which gets `CONFLICT`                                                |
+| An event handler throws              | The others still run; it is logged to `ctx.logger`, fails its own `event:` span and is returned by `emit`, never raised |
+| A filter handler throws              | The request fails                                                                                                       |
+| A CDN purge fails                    | It is logged; the write it followed still succeeds                                                                      |
+| A scheduled task fails               | Its siblings still run; the run reports `failed`                                                                        |
+| Two replicas fire the same task      | The run guard lets one run (the in-process timer and `plumix cron run`)                                                 |
+| A plugin registers something twice   | Boot fails with `DuplicateRegistrationError`                                                                            |
+| The config or a task's cron is wrong | Boot fails; the deploy still goes out, and every request returns the boot error until it is fixed                       |
+| No mailer is configured              | Sending throws `MailerNotConfigured`; surfaces that need mail say so                                                    |
 
 ## Agents
 
@@ -870,25 +870,25 @@ Agents are users of Plumix twice over: they build sites, and they work inside ru
 
 Where to start for common changes. Each row names the entry point and the page to read first.
 
-| To                        | Start at                                                                                                                                                                                                                                                                                                                                                                          | Read                                                          |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Add a block               | `ctx.registerBlock` in a plugin, or the theme's `blocks`                                                                                                                                                                                                                                                                                                                          | [blocks and islands](docs/architecture/blocks-and-islands.md) |
-| Add a field type          | `ctx.registerFieldType`                                                                                                                                                                                                                                                                                                                                                           | [plugin system](docs/architecture/plugin-system.md)           |
-| Add a hook core fires     | a `defineEvent` or `defineFilter` in its subject (for example `block` in `packages/core/src/hooks/block-render.ts`), listed in `CORE_DECLARATIONS` (`packages/core/src/runtime/install-plugins.ts`), and the caller that fires it through `ctx.events.emit` or `ctx.filters.apply`; a plugin declares its own the same way and lists it in its descriptor's `events` or `filters` | [hooks](docs/architecture/hooks.md)                           |
-| Add an admin procedure    | `packages/core/src/rpc/procedures/`, or `ctx.registerRpcRouter` in a plugin                                                                                                                                                                                                                                                                                                       | [RPC and editing](docs/architecture/rpc-and-editing.md)       |
-| Add a REST resource       | `ctx.registerRestResource`                                                                                                                                                                                                                                                                                                                                                        | [REST](docs/architecture/rest-api.md)                         |
-| Add an agent tool         | `ctx.registerMcpTool`                                                                                                                                                                                                                                                                                                                                                             | [MCP](docs/architecture/mcp.md)                               |
-| Add a scheduled task      | `ctx.registerScheduledTask`                                                                                                                                                                                                                                                                                                                                                       | [cron](docs/architecture/cron.md)                             |
-| Add an admin page         | `ctx.registerAdminPage`                                                                                                                                                                                                                                                                                                                                                           | [admin and editor](docs/architecture/admin-and-editor.md)     |
-| Add a table or change one | the owner's drizzle schema, then `db:generate`                                                                                                                                                                                                                                                                                                                                    | [migrations](docs/architecture/migrations.md)                 |
-| Support a new runtime     | `RuntimeAdapter`, the config slots, and the conformance suites                                                                                                                                                                                                                                                                                                                    | [runtimes](docs/architecture/runtimes.md)                     |
+| To                                | Start at                                                                                                                                                                                                                                                                                                                                                                                       | Read                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Add a block                       | `ctx.registerBlock` in a plugin, or the theme's `blocks`                                                                                                                                                                                                                                                                                                                                       | [blocks and islands](docs/architecture/blocks-and-islands.md) |
+| Add a field type                  | `ctx.registerFieldType`                                                                                                                                                                                                                                                                                                                                                                        | [plugin system](docs/architecture/plugin-system.md)           |
+| Add an event or filter core fires | a `defineEvent` or `defineFilter` in its subject (for example `block` in `packages/core/src/events-and-filters/block-render.ts`), listed in `CORE_DECLARATIONS` (`packages/core/src/runtime/install-plugins.ts`), and the caller that fires it through `ctx.events.emit` or `ctx.filters.apply`; a plugin declares its own the same way and lists it in its descriptor's `events` or `filters` | [events and filters](docs/architecture/events-and-filters.md) |
+| Add an admin procedure            | `packages/core/src/rpc/procedures/`, or `ctx.registerRpcRouter` in a plugin                                                                                                                                                                                                                                                                                                                    | [RPC and editing](docs/architecture/rpc-and-editing.md)       |
+| Add a REST resource               | `ctx.registerRestResource`                                                                                                                                                                                                                                                                                                                                                                     | [REST](docs/architecture/rest-api.md)                         |
+| Add an agent tool                 | `ctx.registerMcpTool`                                                                                                                                                                                                                                                                                                                                                                          | [MCP](docs/architecture/mcp.md)                               |
+| Add a scheduled task              | `ctx.registerScheduledTask`                                                                                                                                                                                                                                                                                                                                                                    | [cron](docs/architecture/cron.md)                             |
+| Add an admin page                 | `ctx.registerAdminPage`                                                                                                                                                                                                                                                                                                                                                                        | [admin and editor](docs/architecture/admin-and-editor.md)     |
+| Add a table or change one         | the owner's drizzle schema, then `db:generate`                                                                                                                                                                                                                                                                                                                                                 | [migrations](docs/architecture/migrations.md)                 |
+| Support a new runtime             | `RuntimeAdapter`, the config slots, and the conformance suites                                                                                                                                                                                                                                                                                                                                 | [runtimes](docs/architecture/runtimes.md)                     |
 
 ## Subsystems
 
 | Area       | Page                                                          | One line                                                                |
 | ---------- | ------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | Extending  | [Plugin system](docs/architecture/plugin-system.md)           | A descriptor declares everything a plugin contributes.                  |
-|            | [Hooks](docs/architecture/hooks.md)                           | Typed filters and actions core fires at fixed points.                   |
+|            | [Events and filters](docs/architecture/events-and-filters.md) | Typed events and filters core emits and applies at fixed points.        |
 | Serving    | [Routing and render](docs/architecture/routing-and-render.md) | A public URL resolves to data, then renders through the theme.          |
 |            | [Blocks and islands](docs/architecture/blocks-and-islands.md) | Content is blocks; client JavaScript is an island a block asks for.     |
 |            | [CDN cache](docs/architecture/cdn-cache.md)                   | Anonymous renders are cached and purged by tag.                         |
@@ -915,8 +915,8 @@ Where to start for common changes. Each row names the entry point and the page t
 - `packages/core`: the engine, one package in five layers that import only downward
   (`packages/core/layers.ts`, [ADR 0010](docs/adr/0010-core-is-one-package-of-enforced-layers.md)):
   - **foundation**: `blocks/`, `i18n/` and small pure helpers.
-  - **contracts**: `plugin/`, `hooks/`, `context/`, `db/schema/`, every `*/contract/` folder, config,
-    theme and template types.
+  - **contracts**: `plugin/`, `events-and-filters/`, `context/`, `db/schema/`, every `*/contract/`
+    folder, config, theme and template types.
   - **capabilities**: `db/`, `meta/`, `access/`, `auth/`, `mail/`, `entries/`, `terms/`, `users/`,
     `revisions/`, `search/`, `seo/`, `images/`, `storage/`, `cdn/`, `route/`.
   - **surfaces**: `rpc/`, `rest/`, `mcp/`, `admin-area/`, `admin-bar/`, `admin/`, `dev/`,
@@ -942,7 +942,7 @@ Where to start for common changes. Each row names the entry point and the page t
   proves it with the conformance suites in `plumix/test/conformance`.
 - **The wire** between the admin and the app process is oRPC, which is internal and may change in any
   minor. REST (`/_plumix/api/v1`) and MCP (`/_plumix/mcp`) are the external APIs.
-- **Stability.** The published surface, hook names, REST v1 and the config shape follow the
+- **Stability.** The published surface, event and filter ids, REST v1 and the config shape follow the
   versioning [`VISION.md`](VISION.md#what-10-means) commits to; internal `@plumix/*` packages, the
   oRPC wire and the admin's markup carry no such promise.
 

@@ -13,8 +13,8 @@ import {
 import { withUser } from "../../auth/with-user.js";
 import { eq } from "../../db/index.js";
 import { users } from "../../db/schema/users.js";
-import { entry } from "../../hooks/entry.js";
-import { userEvents } from "../../hooks/user.js";
+import { entry } from "../../events-and-filters/entry.js";
+import { userEvents } from "../../events-and-filters/user.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/builder.js";
 import { entry as entryRef } from "../../plugin/fields/entry.js";

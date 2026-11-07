@@ -1,7 +1,7 @@
 import { createApiToken } from "../../../../auth/api-tokens.js";
 import { resolveApiTokenPreset } from "../../../../auth/token-presets.js";
 import { now } from "../../../../clock.js";
-import { auth } from "../../../../hooks/auth.js";
+import { auth } from "../../../../events-and-filters/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensCreateInputSchema } from "./schemas.js";

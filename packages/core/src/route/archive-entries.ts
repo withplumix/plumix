@@ -6,7 +6,7 @@ import type {
   RouteIntent,
   RouteRule,
 } from "./contract/intent.js";
-import { render } from "../hooks/render.js";
+import { render } from "../events-and-filters/render.js";
 import {
   listedEntryTypeNames,
   termPageEntryTypeNames,

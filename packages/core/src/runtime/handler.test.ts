@@ -15,7 +15,7 @@ import type {
   ScheduledRunReport,
 } from "../context/runtime-adapter.js";
 import type { TelemetrySnapshot, TelemetrySpan } from "../context/telemetry.js";
-import type { HookRegistry } from "../hooks/registry.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type { DatabaseAdapter } from "./contract/slots.js";
 import type { PlumixHandlerOptions } from "./handler.js";
 import { auth } from "../auth/config.js";
@@ -1160,9 +1160,9 @@ describe("createRuntimeHandler", () => {
     );
   }
 
-  test("runs prepare once per handler, with the app's hooks, before the first request", async () => {
+  test("runs prepare once per handler, with the app's handlers, before the first request", async () => {
     const events: string[] = [];
-    const prepared: HookRegistry[] = [];
+    const prepared: HandlerRegistry[] = [];
     const marking = definePlugin("marking", {
       setup: (ctx) => {
         ctx.registerPublicRoute({
@@ -1176,9 +1176,9 @@ describe("createRuntimeHandler", () => {
     });
     const app = await appWith(
       {
-        prepare: (hooks) => {
+        prepare: (handlers) => {
           events.push("prepare");
-          prepared.push(hooks);
+          prepared.push(handlers);
         },
       },
       [marking],
@@ -1189,7 +1189,7 @@ describe("createRuntimeHandler", () => {
     await handler.fetch(new Request("https://cms.example/mark"), { env: {} });
 
     expect(events).toEqual(["prepare", "request", "request"]);
-    expect(prepared).toEqual([app.hooks]);
+    expect(prepared).toEqual([app.handlers]);
   });
 
   test("the runtime's client address reaches the invocation, over the caller's", async () => {

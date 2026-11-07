@@ -265,10 +265,9 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
-      "the ambient stores and the plumbing around them. A hook handler is " +
-      "handed its context (#2310).",
+      "the ambient stores and the plumbing around them. An event or filter " +
+      "handler is handed its context (#2310).",
     names: [
-      "hookStore",
       "pluginStore",
       "traceStore",
       "txStore",

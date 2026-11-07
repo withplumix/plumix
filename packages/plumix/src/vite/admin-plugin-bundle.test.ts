@@ -8,7 +8,7 @@ import {
   createPluginRegistry,
   defineAuthMethod,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "@plumix/core";
 
@@ -427,7 +427,7 @@ describe("assemblePluginAdminBundle", () => {
     });
 
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [descriptor],
     });
 
@@ -481,7 +481,7 @@ describe("assemblePluginAdminBundle", () => {
     });
 
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [descriptor],
     });
 
@@ -522,7 +522,7 @@ describe("assemblePluginAdminBundle", () => {
     });
 
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [descriptor],
     });
 
@@ -572,7 +572,7 @@ describe("assemblePluginAdminBundle", () => {
     });
 
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [acme, other],
     });
 

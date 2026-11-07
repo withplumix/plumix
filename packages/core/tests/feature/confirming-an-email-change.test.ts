@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { auth } from "../../src/hooks/auth.js";
+import { auth } from "../../src/events-and-filters/auth.js";
 import { fakeMail } from "../../src/test/mail-fake.js";
 import { testSite } from "../../src/test/site.js";
 

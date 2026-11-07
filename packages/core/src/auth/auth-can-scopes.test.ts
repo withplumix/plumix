@@ -7,7 +7,7 @@ import {
   termCapability,
 } from "../access/contract/capability.js";
 import { createAppContext } from "../context/app.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";
 import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
@@ -22,14 +22,14 @@ function buildCtx(args: {
   plugins?: PluginRegistry;
 }) {
   const db = {} as Awaited<ReturnType<typeof createTestDb>>;
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const plugins = args.plugins ?? createPluginRegistry();
   const baseCtx = createAppContext({
     db,
     env: {},
     request: new Request("https://cms.example/"),
     config: testConfig(),
-    hooks,
+    handlers,
     plugins,
   });
   return withUser(
@@ -75,14 +75,14 @@ describe("auth.can — tokenScopes narrowing", () => {
 
   test("unauthenticated context can never grant a capability", () => {
     const db = {} as Awaited<ReturnType<typeof createTestDb>>;
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugins = createPluginRegistry();
     const ctx = createAppContext({
       db,
       env: {},
       request: new Request("https://cms.example/"),
       config: testConfig(),
-      hooks,
+      handlers,
       plugins,
     });
     expect(ctx.auth.can("entry:post:read")).toBe(false);

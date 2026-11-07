@@ -12,7 +12,7 @@ export interface RequestMemo {
     tags?: readonly string[],
   ): Promise<T>;
   /**
-   * Synchronous on purpose: `doAction` settles its handlers, so a rejected
+   * Synchronous on purpose: `emit` settles its handlers, so a rejected
    * async invalidator would leave the memo stale behind only a logged failure.
    */
   invalidate(tags: readonly string[]): void;

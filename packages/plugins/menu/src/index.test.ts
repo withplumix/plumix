@@ -3,7 +3,7 @@ import {
   buildManifest,
   defineEvent,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "plumix/plugin";
 import { describe, expect, expectTypeOf, test } from "vitest";
@@ -13,14 +13,14 @@ import { menu } from "./index.js";
 const ADMIN_ENTRY_PATH = "node_modules/@plumix/plugin-menu/dist/admin/index.js";
 
 async function install() {
-  return installPlugins({ hooks: new HookRegistry(), plugins: [menu()] });
+  return installPlugins({ handlers: new HandlerRegistry(), plugins: [menu()] });
 }
 
 describe("@plumix/plugin-menu", () => {
   test("rejects a malformed location id at install", async () => {
     await expect(
       installPlugins({
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: [menu({ locations: { "Main Nav": { label: "Main" } } })],
       }),
     ).rejects.toThrow(/Main Nav/);
@@ -91,7 +91,7 @@ describe("menu namespace", () => {
       });
 
       const install = installPlugins({
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: [menu(), rival],
       });
 

@@ -1,4 +1,4 @@
-import type { EventDefinition } from "../hooks/define.js";
+import type { EventDefinition } from "../events-and-filters/define.js";
 import type { Declared, PartialMatch } from "./declared.js";
 import { covers, describeValue, nameOf, timesOf } from "./declared.js";
 import { partialMatch } from "./match.js";

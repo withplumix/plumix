@@ -79,13 +79,13 @@ interface MenuRequest {
 
 /**
  * Not part of the package surface. Results align with `requests` by index; each
- * request gets its own hook pass.
+ * request gets its own filter pass.
  */
 export async function resolveMenus(
   ctx: AppContext,
   requests: readonly MenuRequest[],
 ): Promise<(ResolvedMenu | null)[]> {
-  // Only the query cluster is memoized; hooks and `isCurrent` still run per
+  // Only the query cluster is memoized; filters and `isCurrent` still run per
   // call with that call's own context.
   const unique = [...new Set(requests.map((r) => r.slug))];
   const clusters = await memoBatch(

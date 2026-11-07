@@ -5,7 +5,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { AuthenticatedRpcHarness } from "../test/rpc.js";
 import type { DefaultRole } from "../users/contract/roles.js";
 import { withUser } from "../auth/with-user.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import {
   termGetInputSchema,
@@ -26,9 +26,12 @@ const taxonomies = definePlugin("test-tax", {
 });
 
 async function harness(role: DefaultRole): Promise<AuthenticatedRpcHarness> {
-  const hooks = new HookRegistry();
-  const { registry } = await installPlugins({ hooks, plugins: [taxonomies] });
-  return createRpcHarness({ authAs: role, plugins: registry, hooks });
+  const handlers = new HandlerRegistry();
+  const { registry } = await installPlugins({
+    handlers,
+    plugins: [taxonomies],
+  });
+  return createRpcHarness({ authAs: role, plugins: registry, handlers });
 }
 
 function authedCtx(

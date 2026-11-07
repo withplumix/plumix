@@ -44,7 +44,7 @@ export type MenuItemTermMeta = MenuItemDisplayAttrs &
   }>;
 
 /**
- * `entry` / `term` carry the linked id so downstream code (hook
+ * `entry` / `term` carry the linked id so downstream code (event
  * subscribers, render filters) can re-fetch without re-parsing meta.
  */
 export type ResolvedMenuItemSource =

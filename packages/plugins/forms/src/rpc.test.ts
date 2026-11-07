@@ -4,7 +4,7 @@ import { createRouterClient } from "@orpc/server";
 import { text } from "plumix/fields";
 import {
   createPluginRegistry,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "plumix/plugin";
 import { createTestContext, editorUser, factoriesFor } from "plumix/test";
@@ -61,10 +61,10 @@ function stubAuthenticator(user: User): RequestAuthenticator {
 
 async function harness(role: DefaultRole = "editor") {
   const db = await createFormsTestDb();
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
   await installPlugins({
-    hooks,
+    handlers,
     plugins: [forms({ forms: [contact] })],
     registry,
   });
@@ -78,7 +78,7 @@ async function harness(role: DefaultRole = "editor") {
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
-    hooks,
+    handlers,
     plugins: registry,
     user: { id: user.id, email: user.email, role: user.role, meta: {} },
     authenticator: stubAuthenticator(user),

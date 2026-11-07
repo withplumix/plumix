@@ -16,7 +16,7 @@ import type {
   SyncValue,
   TargetOptionValues,
 } from "plumix";
-import type { AppContext, HookRegistry } from "plumix/plugin";
+import type { AppContext, HandlerRegistry } from "plumix/plugin";
 import type {
   SyncContractEnds,
   SyncContractSite,
@@ -125,10 +125,10 @@ function contractSite(proxy: PlatformProxy): SyncContractSite {
 }
 
 /** Runs the contract's `sync.after` handlers as a plugin of the site. */
-function siteConfig(hooks: HookRegistry): PlumixConfig {
+function siteConfig(handlers: HandlerRegistry): PlumixConfig {
   const conformance = definePlugin("conformance", {
     setup: (ctx) => {
-      for (const { handler } of hooks.getEventHandlers(syncEvents.after)) {
+      for (const { handler } of handlers.getEventHandlers(syncEvents.after)) {
         ctx.events.on(syncEvents.after, handler);
       }
     },
@@ -178,12 +178,14 @@ function reuseProxies(states: readonly State[], deployed?: State): ProxyCall[] {
   return calls;
 }
 
-async function twoLocalStates(hooks: HookRegistry): Promise<SyncContractEnds> {
+async function twoLocalStates(
+  handlers: HandlerRegistry,
+): Promise<SyncContractEnds> {
   const local = await localState();
   const remote = await localState();
   reuseProxies([local, remote]);
   vi.spyOn(syncDeps, "report").mockImplementation(() => undefined);
-  const config = siteConfig(hooks);
+  const config = siteConfig(handlers);
   const between: RuntimeSync = {
     open: (options) =>
       sync.open({

@@ -1,17 +1,9 @@
-import type { EventDefinition, FilterDefinition } from "../hooks/define.js";
-import type { HookRegistry } from "../hooks/registry.js";
 import type {
-  ActionArgs,
-  ActionName,
-  FilterInput,
-  FilterName,
-  FilterRest,
-} from "../hooks/types.js";
+  EventDefinition,
+  FilterDefinition,
+} from "../events-and-filters/define.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import { partialMatch } from "./match.js";
-
-export interface ActionCall<TArgs extends readonly unknown[]> {
-  readonly args: TArgs;
-}
 
 export interface EventCall<TPayload> {
   readonly payload: TPayload;
@@ -26,20 +18,6 @@ interface SpyBaseReadonly<TCall> {
   readonly called: boolean;
   readonly callCount: number;
   readonly calls: readonly TCall[];
-}
-
-export interface ActionSpy<
-  TArgs extends readonly unknown[],
-> extends SpyBaseReadonly<ActionCall<TArgs>> {
-  readonly lastArgs: TArgs | undefined;
-  assertCalled(): ActionSpy<TArgs>;
-  assertCalledOnce(): ActionSpy<TArgs>;
-  assertCalledTimes(n: number): ActionSpy<TArgs>;
-  assertNotCalled(): ActionSpy<TArgs>;
-  assertCalledWith(
-    matcher: (...args: TArgs) => boolean | void,
-  ): ActionSpy<TArgs>;
-  reset(): void;
 }
 
 export interface EventSpy<TPayload> extends SpyBaseReadonly<
@@ -135,48 +113,14 @@ function buildSpyBase<TCall, TSpy>(
 }
 
 /**
- * Install a recording listener on the named action. Captures every call's
- * args for later assertion. Adding the spy is non-destructive — other
- * listeners continue to run normally.
- */
-export function spyAction<TName extends ActionName>(
-  hooks: HookRegistry,
-  name: TName,
-): ActionSpy<ActionArgs<TName>> {
-  const calls: ActionCall<ActionArgs<TName>>[] = [];
-  hooks.addAction(name, ((...args: ActionArgs<TName>) => {
-    calls.push({ args });
-  }) as never);
-
-  const label = `spyAction(${name})`;
-  const spy: ActionSpy<ActionArgs<TName>> = {
-    ...buildSpyBase<
-      ActionCall<ActionArgs<TName>>,
-      ActionSpy<ActionArgs<TName>>
-    >(label, calls, () => spy),
-    get lastArgs() {
-      return calls[calls.length - 1]?.args;
-    },
-    assertCalledWith(matcher) {
-      for (const call of calls) {
-        const result = matcher(...call.args);
-        if (result === true || result === undefined) return spy;
-      }
-      throw new Error(`${label}: no call matched the supplied matcher`);
-    },
-  };
-  return spy;
-}
-
-/**
  * Subscribe a recording handler to the event. Other handlers run as before.
  */
 export function spyEvent<TPayload>(
-  hooks: HookRegistry,
+  handlers: HandlerRegistry,
   event: EventDefinition<TPayload>,
 ): EventSpy<TPayload> {
   const calls: EventCall<TPayload>[] = [];
-  hooks.on(event, (payload) => {
+  handlers.on(event, (payload) => {
     calls.push({ payload });
   });
 
@@ -206,21 +150,16 @@ export function spyEvent<TPayload>(
  * filter's values are `structuredClone`d, so match by equality, not `toBe`.
  */
 export function spyFilter<TValue, TInput, TSync extends boolean>(
-  hooks: HookRegistry,
+  handlers: HandlerRegistry,
   filter: FilterDefinition<TValue, TInput, TSync>,
 ): FilterSpy<TValue, readonly [Readonly<TInput>]>;
-export function spyFilter<TName extends FilterName>(
-  hooks: HookRegistry,
-  name: TName,
-): FilterSpy<FilterInput<TName>, FilterRest<TName>>;
 export function spyFilter(
-  hooks: HookRegistry,
-  filter: FilterName | FilterDefinition<unknown, unknown, boolean>,
+  handlers: HandlerRegistry,
+  filter: FilterDefinition<unknown, unknown, boolean>,
 ): FilterSpy<unknown, readonly unknown[]> {
-  if (typeof filter === "string") return spyNamedFilter(hooks, filter);
   const calls: FilterCall<unknown, readonly [unknown]>[] = [];
   let transform: ((value: unknown, input: unknown) => unknown) | null = null;
-  hooks.add(filter, (value, input) => {
+  handlers.add(filter, (value, input) => {
     calls.push({ input: value, rest: [input] });
     return transform ? transform(value, input) : value;
   });
@@ -229,31 +168,13 @@ export function spyFilter(
   });
 }
 
-/** {@link spyFilter} bound to a harness's hooks. */
-export interface BoundFilterSpy {
-  <TValue, TInput, TSync extends boolean>(
-    filter: FilterDefinition<TValue, TInput, TSync>,
-  ): FilterSpy<TValue, readonly [Readonly<TInput>]>;
-  <TName extends FilterName>(
-    name: TName,
-  ): FilterSpy<FilterInput<TName>, FilterRest<TName>>;
-}
+/** {@link spyFilter} bound to a harness's handlers. */
+export type BoundFilterSpy = <TValue, TInput, TSync extends boolean>(
+  filter: FilterDefinition<TValue, TInput, TSync>,
+) => FilterSpy<TValue, readonly [Readonly<TInput>]>;
 
-export function bindFilterSpy(hooks: HookRegistry): BoundFilterSpy {
-  function bound<TValue, TInput, TSync extends boolean>(
-    filter: FilterDefinition<TValue, TInput, TSync>,
-  ): FilterSpy<TValue, readonly [Readonly<TInput>]>;
-  function bound<TName extends FilterName>(
-    name: TName,
-  ): FilterSpy<FilterInput<TName>, FilterRest<TName>>;
-  function bound(
-    filter: FilterName | FilterDefinition<unknown, unknown, boolean>,
-  ): FilterSpy<unknown, readonly unknown[]> {
-    return typeof filter === "string"
-      ? spyFilter(hooks, filter)
-      : spyFilter(hooks, filter);
-  }
-  return bound;
+export function bindFilterSpy(handlers: HandlerRegistry): BoundFilterSpy {
+  return (filter) => spyFilter(handlers, filter);
 }
 
 function filterSpy<TValue, TRest extends readonly unknown[]>(
@@ -280,32 +201,6 @@ function filterSpy<TValue, TRest extends readonly unknown[]>(
     override,
   };
   return spy;
-}
-
-function spyNamedFilter<TName extends FilterName>(
-  hooks: HookRegistry,
-  name: TName,
-): FilterSpy<FilterInput<TName>, FilterRest<TName>> {
-  const calls: FilterCall<FilterInput<TName>, FilterRest<TName>>[] = [];
-  let transform:
-    | ((
-        input: FilterInput<TName>,
-        ...rest: FilterRest<TName>
-      ) => FilterInput<TName> | Promise<FilterInput<TName>>)
-    | null = null;
-
-  hooks.addFilter(name, (async (
-    input: FilterInput<TName>,
-    ...rest: FilterRest<TName>
-  ): Promise<FilterInput<TName>> => {
-    calls.push({ input, rest });
-    if (transform) return transform(input, ...rest);
-    return input;
-  }) as never);
-
-  return filterSpy(`spyFilter(${name})`, calls, (fn) => {
-    transform = fn;
-  });
 }
 
 /**

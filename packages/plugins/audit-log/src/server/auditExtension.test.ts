@@ -14,7 +14,7 @@ import {
   base,
   definePlugin,
   entry,
-  HookRegistry,
+  HandlerRegistry,
 } from "plumix/plugin";
 import {
   createDeferQueue,
@@ -149,7 +149,7 @@ describe("createAuditExtension", () => {
 });
 
 // ──────────────────────────────────────────────────────────────────
-// Integration: public log() + internal hooks share the single per-
+// Integration: public log() + internal handlers share the single per-
 // request flush from the real AuditService. Use a fake storage so we
 // can count `storage.write` invocations end-to-end.
 // ──────────────────────────────────────────────────────────────────
@@ -206,11 +206,11 @@ describe("createAuditExtension — integration with the real AuditService", () =
     const { storage, capture } = captureStorage();
     const service = createAuditService(storage);
     const audit = createAuditExtension(service);
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const setupCtx = {
       events: {
         on: (event, handler, options) => {
-          hooks.on(event, handler, options);
+          handlers.on(event, handler, options);
         },
       } satisfies SetupEvents,
     } as unknown as PluginSetupContext;
@@ -222,7 +222,7 @@ describe("createAuditExtension — integration with the real AuditService", () =
       event: "comment:approved",
       subject: { type: "comment", id: 5, label: "first" },
     });
-    await hooks.emit(
+    await handlers.emit(
       entry.published,
       {
         entry: {

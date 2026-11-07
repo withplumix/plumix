@@ -2,7 +2,7 @@ import type { AppContext, PluginRegistry } from "plumix/plugin";
 import {
   createPluginRegistry,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   registerCoreLookupAdapters,
 } from "plumix/plugin";
@@ -37,11 +37,11 @@ interface TestBundle {
 }
 
 async function bundle(): Promise<TestBundle> {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
   await installPlugins({
-    hooks,
+    handlers,
     plugins: [
       definePlugin("menu-host", {
         setup: (ctx) => {
@@ -61,7 +61,7 @@ async function bundle(): Promise<TestBundle> {
     createTestContext({
       db,
       plugins: registry,
-      hooks,
+      handlers,
       request: new Request("https://test.example/"),
     });
   const ctx = nextRequest();

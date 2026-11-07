@@ -1,6 +1,6 @@
 import type { TemplateData } from "plumix";
 import type { AppContext, RoleImages } from "plumix/plugin";
-import { HookRegistry } from "plumix/plugin";
+import { HandlerRegistry } from "plumix/plugin";
 import { createTestContext, createTestDb } from "plumix/test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -33,20 +33,20 @@ describe("resolveOgImage", () => {
 
   // A real context because `seo.ogImage` subscribers receive it; roles
   // arrive on the entry, so no registry is seeded.
-  const ogContext = (hooks: HookRegistry): AppContext =>
-    createTestContext({ db, hooks });
+  const ogContext = (handlers: HandlerRegistry): AppContext =>
+    createTestContext({ db, handlers });
 
   const siteDefault = "https://cms.example/default-og.png";
 
   test("a filter's image beats the site-wide default", async () => {
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, () => ({
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, () => ({
       url: "https://cms.example/card.png",
       width: 1200,
       height: 630,
     }));
 
-    const image = await resolveOgImage(ogContext(hooks), entryData(), {
+    const image = await resolveOgImage(ogContext(handlers), entryData(), {
       override: null,
       siteDefault,
     });
@@ -59,10 +59,10 @@ describe("resolveOgImage", () => {
   });
 
   test("a filter declining falls through to the site default", async () => {
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, (image) => image);
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, (image) => image);
 
-    const image = await resolveOgImage(ogContext(hooks), entryData(), {
+    const image = await resolveOgImage(ogContext(handlers), entryData(), {
       override: null,
       siteDefault,
     });
@@ -71,15 +71,15 @@ describe("resolveOgImage", () => {
   });
 
   test("the ogImage role outranks the filter, which never runs", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     let ran = false;
-    hooks.add(seo.ogImage, () => {
+    handlers.add(seo.ogImage, () => {
       ran = true;
       return { url: "https://cms.example/card.png" };
     });
 
     const image = await resolveOgImage(
-      ogContext(hooks),
+      ogContext(handlers),
       entryData({ ogImage: share }),
       { override: null, siteDefault },
     );
@@ -93,7 +93,7 @@ describe("resolveOgImage", () => {
     // orphaned reference, or one the adapter refused — and it must not be
     // mistaken for an answer.
     const image = await resolveOgImage(
-      ogContext(new HookRegistry()),
+      ogContext(new HandlerRegistry()),
       entryData({ ogImage: null, featured: null }),
       { override: null, siteDefault },
     );
@@ -102,12 +102,12 @@ describe("resolveOgImage", () => {
   });
 
   test("the SEO box's own URL sits below the role and above the filter", async () => {
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, () => ({
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, () => ({
       url: "https://cms.example/card.png",
     }));
 
-    const image = await resolveOgImage(ogContext(hooks), entryData(), {
+    const image = await resolveOgImage(ogContext(handlers), entryData(), {
       override: "https://cms.example/typed.png",
       siteDefault,
     });
@@ -117,7 +117,7 @@ describe("resolveOgImage", () => {
 
   test("the featured photo beats the site default when no filter answers", async () => {
     const image = await resolveOgImage(
-      ogContext(new HookRegistry()),
+      ogContext(new HandlerRegistry()),
       entryData({ featured: hero }),
       { override: null, siteDefault },
     );
@@ -126,11 +126,11 @@ describe("resolveOgImage", () => {
   });
 
   test("declining leaves the featured photo exactly where it was", async () => {
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, (image) => image);
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, (image) => image);
 
     const image = await resolveOgImage(
-      ogContext(hooks),
+      ogContext(handlers),
       entryData({ featured: hero }),
       { override: null, siteDefault },
     );
@@ -141,13 +141,13 @@ describe("resolveOgImage", () => {
   });
 
   test("the featured photo is passed alongside, to improve on", async () => {
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, (_image, { featured }) =>
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, (_image, { featured }) =>
       featured ? { url: `${featured.url}?w=1200`, width: 1200 } : null,
     );
 
     const image = await resolveOgImage(
-      ogContext(hooks),
+      ogContext(handlers),
       entryData({ featured: hero }),
       { override: null, siteDefault },
     );
@@ -159,15 +159,15 @@ describe("resolveOgImage", () => {
 
   test("a filter may name what its own image shows", async () => {
     const photo = { url: "https://cdn/cat.jpg", alt: "A cat" } as const;
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, (_image, { featured }) =>
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, (_image, { featured }) =>
       featured
         ? { url: `${featured.url}?w=1200`, alt: "The same cat, cropped" }
         : null,
     );
 
     const image = await resolveOgImage(
-      ogContext(hooks),
+      ogContext(handlers),
       entryData({ featured: photo }),
       { override: null, siteDefault },
     );
@@ -181,13 +181,13 @@ describe("resolveOgImage", () => {
   });
 
   test("an image a filter returns outranks the featured photo", async () => {
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, () => ({
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, () => ({
       url: "https://cms.example/card.png",
     }));
 
     const image = await resolveOgImage(
-      ogContext(hooks),
+      ogContext(handlers),
       entryData({ featured: hero }),
       { override: null, siteDefault },
     );
@@ -196,15 +196,15 @@ describe("resolveOgImage", () => {
   });
 
   test("the filter sees the page it is resolving", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const data = entryData();
     const seen: TemplateData[] = [];
-    hooks.add(seo.ogImage, (image, { data: page }) => {
+    handlers.add(seo.ogImage, (image, { data: page }) => {
       seen.push(page);
       return image;
     });
 
-    await resolveOgImage(ogContext(hooks), data, {
+    await resolveOgImage(ogContext(handlers), data, {
       override: null,
       siteDefault,
     });
@@ -213,13 +213,13 @@ describe("resolveOgImage", () => {
   });
 
   test("a non-entry page carries no role image and reaches the filter", async () => {
-    const hooks = new HookRegistry();
-    hooks.add(seo.ogImage, () => ({
+    const handlers = new HandlerRegistry();
+    handlers.add(seo.ogImage, () => ({
       url: "https://cms.example/archive.png",
     }));
     const archive = { kind: "entryType" } as unknown as TemplateData;
 
-    const image = await resolveOgImage(ogContext(hooks), archive, {
+    const image = await resolveOgImage(ogContext(handlers), archive, {
       override: null,
       siteDefault,
     });
@@ -229,7 +229,7 @@ describe("resolveOgImage", () => {
 
   test("with no role, no filter and no site default nothing resolves", async () => {
     const image = await resolveOgImage(
-      ogContext(new HookRegistry()),
+      ogContext(new HandlerRegistry()),
       entryData(),
       { override: null, siteDefault: null },
     );

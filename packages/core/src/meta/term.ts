@@ -12,7 +12,7 @@ import type {
 } from "./core.js";
 import { and, eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
-import { term } from "../hooks/term.js";
+import { term } from "../events-and-filters/term.js";
 import { findTermMetaField, listTermMetaFields } from "../plugin/manifest.js";
 import {
   decodeMetaBag as decodeMetaBagCore,

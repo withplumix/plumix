@@ -2,7 +2,7 @@ import { readSessionCookie } from "../../../../auth/cookies.js";
 import { hashToken } from "../../../../auth/tokens.js";
 import { and, eq, ne } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
-import { auth } from "../../../../hooks/auth.js";
+import { auth } from "../../../../events-and-filters/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { sessionsRevokeOthersInputSchema } from "./schemas.js";
@@ -27,7 +27,7 @@ export const revokeOthers = base
         and(eq(sessions.userId, context.user.id), ne(sessions.id, currentId)),
       )
       .returning({ id: sessions.id });
-    // Emit one hook per revoked row so the audit log captures each
+    // Emit one event per revoked row so the audit log captures each
     // device individually — better UX than a single "N revoked" entry
     // for forensic timelines.
     for (const row of rows) {

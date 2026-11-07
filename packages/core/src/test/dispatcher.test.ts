@@ -4,7 +4,7 @@ import type { AppContext } from "../context/app-context.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { tryGetContext } from "../context/stores.js";
 import { entries } from "../db/schema/entries.js";
-import { defineEvent, defineFilter } from "../hooks/define.js";
+import { defineEvent, defineFilter } from "../events-and-filters/define.js";
 import { definePlugin } from "../plugin/define.js";
 import { memoryKv } from "../runtime/memory-kv.js";
 import { fakeCdn } from "./cdn-fake.js";
@@ -230,7 +230,7 @@ describe("createDispatcherHarness slot binding", () => {
     (await h.fetch("/post/hello")).assertStatus(200);
     await h.drainDeferred();
     cdn.assertStored("/post/hello");
-    // A factory write fires no hook, so nothing purges the stored page.
+    // A factory write emits no event, so nothing purges the stored page.
     await h.db.update(entries).set({ title: "Changed title" });
 
     const second = await h.fetch("/post/hello");

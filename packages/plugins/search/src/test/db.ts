@@ -207,7 +207,7 @@ export async function createSearchHarness(
           db: h.db,
           plugins: h.app.plugins,
           blocks: h.app.blocks,
-          hooks: h.app.hooks,
+          handlers: h.app.handlers,
         }),
       ),
   };

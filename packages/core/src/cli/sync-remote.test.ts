@@ -1,9 +1,9 @@
 import { drizzle } from "drizzle-orm/libsql";
 
 import type { RuntimeSync } from "../context/runtime-adapter.js";
-import type { HookRegistry } from "../hooks/registry.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type { SyncContractEnds } from "../test/conformance/sync.js";
-import { sync } from "../hooks/sync.js";
+import { sync } from "../events-and-filters/sync.js";
 import { describeSyncContract } from "../test/conformance/sync.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { memorySyncEnds } from "../test/sync/memory-ends.js";
@@ -16,8 +16,10 @@ const REMOTE = "https://remote.example";
  * A local memory end, and a remote end that reaches the other memory site
  * through its own sync routes, dispatched in-process.
  */
-async function remoteEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
-  const ends = await memorySyncEnds({ hooks });
+async function remoteEnds(
+  handlers: HandlerRegistry,
+): Promise<SyncContractEnds> {
+  const ends = await memorySyncEnds({ handlers });
   const { client } = ends.remote;
   const h = await createDispatcherHarness({
     db: drizzle(client, { casing: "snake_case" }),
@@ -30,8 +32,8 @@ async function remoteEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
       },
     },
   });
-  for (const { handler, plugin } of hooks.getEventHandlers(sync.after)) {
-    h.app.hooks.on(sync.after, handler, { plugin });
+  for (const { handler, plugin } of handlers.getEventHandlers(sync.after)) {
+    h.app.handlers.on(sync.after, handler, { plugin });
   }
   const operator = await h.factory.user.create({
     id: 1000,

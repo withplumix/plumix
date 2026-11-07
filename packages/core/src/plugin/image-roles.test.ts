@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { ImageRoleScope } from "./image-roles.js";
 import type { MetaBoxField } from "./manifest.js";
 import type { PluginSetupContext } from "./setup-context-types.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { buildManifest } from "./build-manifest.js";
 import { definePlugin } from "./define.js";
@@ -42,7 +42,7 @@ function repeaterField(
 
 async function registryFrom(setup: (ctx: PluginSetupContext) => void) {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [definePlugin("site", { setup })],
   });
   return registry;
@@ -130,7 +130,7 @@ test("a query made while plugins are still registering does not freeze the index
     },
   });
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [early, late],
   });
 
@@ -163,7 +163,7 @@ test("a query made before a later plugin registers its role does not throw for i
   });
 
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [early, late],
   });
 

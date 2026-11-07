@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import { HookRegistry } from "../../hooks/registry.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
@@ -115,7 +115,7 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
   });
 
   test("visibleWhen rides the manifest wire projection", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         const layout = select("layout").options(["standard", "video"]);
@@ -125,7 +125,7 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const wireField = manifest.settingsGroups[0]?.fields.find(
       (f) => f.key === "videoUrl",
@@ -136,7 +136,7 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
   });
 
   test("registration rejects a condition whose driver is not in the same box", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         const layout = select("layout").options(["standard", "video"]);
@@ -147,7 +147,9 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
         });
       },
     });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
+    await expect(
+      installPlugins({ handlers, plugins: [plugin] }),
+    ).rejects.toThrow(
       /"videoUrl" condition references "layout", which is not a field in the same box/,
     );
   });
@@ -205,7 +207,7 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
   });
 
   test("registration accepts a driver declared after its dependent", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         const layout = select("layout").options(["standard", "video"]);
@@ -216,7 +218,7 @@ describe("condition authoring — visibleWhen / orVisibleWhen", () => {
       },
     });
     await expect(
-      installPlugins({ hooks, plugins: [plugin] }),
+      installPlugins({ handlers, plugins: [plugin] }),
     ).resolves.toBeDefined();
   });
 });

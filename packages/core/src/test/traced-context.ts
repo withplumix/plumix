@@ -36,7 +36,7 @@ export async function createTracedContext(
     env: harness.env,
     clientAddress: options.clientAddress,
     request: options.request,
-    hooks: harness.app.hooks,
+    handlers: harness.app.handlers,
     plugins: harness.app.plugins,
     shortcodes: harness.app.shortcodes,
     config: {

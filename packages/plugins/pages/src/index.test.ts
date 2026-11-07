@@ -1,4 +1,4 @@
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { HandlerRegistry, installPlugins } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import type { PagesOptions } from "./index.js";
@@ -6,7 +6,7 @@ import { pages } from "./index.js";
 
 async function install(options?: PagesOptions) {
   return installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [pages(options)],
   });
 }

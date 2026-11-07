@@ -5,14 +5,14 @@ import type { User } from "../../../db/schema/users.js";
 import type { MetaChanges } from "../../../meta/contract/bags.js";
 import type { UserListInput } from "./schemas.js";
 import type { UserListRow } from "./subject.js";
-import { HookRegistry } from "../../../hooks/registry.js";
+import { HandlerRegistry } from "../../../events-and-filters/registry.js";
 import { createPluginRegistry } from "../../../plugin/manifest.js";
 import { createPluginSetupContext } from "../../../plugin/setup-context.js";
 import { user } from "./subject.js";
 
 const ctx = createPluginSetupContext({
   pluginId: "acme",
-  hooks: new HookRegistry(),
+  handlers: new HandlerRegistry(),
   registry: createPluginRegistry(),
   theme: { templates: [] },
 });

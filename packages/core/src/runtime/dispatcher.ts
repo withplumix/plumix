@@ -43,7 +43,7 @@ import { rebindSettings } from "../context/settings-namespace.js";
 import { requestStore } from "../context/stores.js";
 import { devErrorResponse } from "../dev/server/respond.js";
 import { isTrustedDevRequest } from "../dev/trust.js";
-import { rebindDispatch } from "../hooks/dispatch.js";
+import { rebindDispatch } from "../events-and-filters/dispatch.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { loadOnce } from "../load-once.js";
 import {

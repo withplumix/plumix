@@ -5,7 +5,7 @@ import { authTokens } from "../../db/schema/auth_tokens.js";
 import { oauthAccounts } from "../../db/schema/oauth_accounts.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
-import { auth } from "../../hooks/auth.js";
+import { auth } from "../../events-and-filters/auth.js";
 import { silentLogger } from "../../test/context.js";
 import { createDispatcherHarness } from "../../test/dispatcher.js";
 import { github } from "./providers/github.js";

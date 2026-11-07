@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { FiltersFake } from "./filters-fake.js";
-import { defineFilter } from "../hooks/define.js";
-import { scopeDeclarations } from "../hooks/scope.js";
+import { defineFilter } from "../events-and-filters/define.js";
+import { scopeDeclarations } from "../events-and-filters/scope.js";
 import { fakeFilters } from "./filters-fake.js";
 
 const price = {

@@ -52,7 +52,6 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "merges into the interface only through the specifier it names, " +
       "so a second path would split one registry into two views",
     names: [
-      "ActionRegistry",
       "AppContextExtensions",
       "ArchiveTypeOptions",
       "ArchiveTypeRegistry",
@@ -61,7 +60,6 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "EntryMetaContributions",
       "EntryTypeOptions",
       "EntryTypeRegistry",
-      "FilterRegistry",
       "ImageRoles",
       "ListingArchiveTypeOptions",
       "LookupAdapterOptions",
@@ -170,10 +168,6 @@ const ROOT_ONLY_TYPES: readonly RootOnly[] = [
       "UserRouter",
       "UserUpdateInput",
     ],
-  },
-  {
-    reason: "the ambient hook store's frame, withheld with the store",
-    names: ["HookFrame"],
   },
   {
     reason:

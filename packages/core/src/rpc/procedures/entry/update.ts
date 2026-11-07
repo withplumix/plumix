@@ -460,7 +460,7 @@ export async function updateEntry(
       await fireEntryPublished(context, updated);
     }
     // Snapshot timing follows WP's `wp_save_post_revision`: after
-    // the live write commits and after lifecycle hooks fire. No-op
+    // the live write commits and after its events are emitted. No-op
     // when the type doesn't opt into `supports: ['revisions']`.
     await captureRevisionIfSupported(context, updated);
   }

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { and, eq } from "../../src/db/index.js";
 import { settings } from "../../src/db/schema/settings.js";
-import { settings as settingsEvents } from "../../src/hooks/settings.js";
+import { settings as settingsEvents } from "../../src/events-and-filters/settings.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { select, url } from "../../src/plugin/fields/index.js";
 import { testSite } from "../../src/test/site.js";

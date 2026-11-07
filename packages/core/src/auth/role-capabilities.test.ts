@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { SiteRoles } from "../access/contract/roles.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { DefaultRole } from "../users/contract/roles.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
@@ -163,7 +163,7 @@ const PINNED_GRANTS: Readonly<Record<DefaultRole, readonly string[]>> = {
 
 async function installPinnedSite(): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [pinnedSite],
   });
   return registry;
@@ -210,7 +210,7 @@ async function rolesHolding(
   ...plugins: Parameters<typeof installPlugins>[0]["plugins"]
 ): Promise<readonly DefaultRole[]> {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins,
   });
   const resolver = getCapabilityResolver(registry);
@@ -307,7 +307,7 @@ async function installSite(
   ...plugins: Parameters<typeof installPlugins>[0]["plugins"]
 ): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins,
     registry: createPluginRegistry(undefined, roles),
   });

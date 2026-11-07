@@ -8,7 +8,7 @@ import { text } from "plumix/fields";
 import {
   createPluginRegistry,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   registerCoreLookupAdapters,
   settings as settingsEvents,
@@ -36,7 +36,7 @@ interface Harness {
   readonly db: Db;
   readonly factories: Factories;
   readonly registry: PluginRegistry;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly user: User;
   readonly client: {
     readonly menu: {
@@ -100,11 +100,11 @@ async function buildHarness(
 ): Promise<Harness> {
   const db = await createTestDb();
   const factories = factoriesFor(db);
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
   await installPlugins({
-    hooks,
+    handlers,
     plugins: [menu({ locations }), ...extraPlugins],
     registry,
   });
@@ -120,7 +120,7 @@ async function buildHarness(
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
-    hooks,
+    handlers,
     plugins: registry,
     user: { id: user.id, email: user.email, role: user.role, meta: {} },
     authenticator: stubAuthenticator(user),
@@ -134,7 +134,7 @@ async function buildHarness(
   const client = createRouterClient(router, {
     context: ctx,
   }) as unknown as Harness["client"];
-  return { db, factories, registry, hooks, user, client };
+  return { db, factories, registry, handlers, user, client };
 }
 
 async function seedMenu(
@@ -1760,15 +1760,15 @@ describe("menu RPC", () => {
     test("emits menu.deleted with the term id, slug and request context", async () => {
       const h = await buildHarness();
       const m = await seedMenu(h.db, h.factories, "ghost");
-      const calls: { payload: unknown; sameHooks: boolean }[] = [];
-      h.hooks.on(menuSubject.deleted, (payload, ctx) => {
-        calls.push({ payload, sameHooks: ctx.hooks === h.hooks });
+      const calls: { payload: unknown; userId: number | undefined }[] = [];
+      h.handlers.on(menuSubject.deleted, (payload, ctx) => {
+        calls.push({ payload, userId: ctx.user?.id });
       });
 
       await h.client.menu.delete({ termId: m.id });
 
       expect(calls).toEqual([
-        { payload: { termId: m.id, slug: "ghost" }, sameHooks: true },
+        { payload: { termId: m.id, slug: "ghost" }, userId: h.user.id },
       ]);
     });
 
@@ -1792,7 +1792,7 @@ describe("menu RPC", () => {
         value: other.slug,
       });
       const calls: unknown[] = [];
-      h.hooks.on(settingsEvents.groupChanged, (payload) => {
+      h.handlers.on(settingsEvents.groupChanged, (payload) => {
         calls.push({
           group: payload.group,
           removed: [...payload.removed].sort(),
@@ -1857,7 +1857,7 @@ describe("menu RPC", () => {
       const h = await buildHarness("editor", { primary: { label: "Primary" } });
       await seedMenu(h.db, h.factories, "main");
       const calls: unknown[] = [];
-      h.hooks.on(settingsEvents.groupChanged, (payload) => {
+      h.handlers.on(settingsEvents.groupChanged, (payload) => {
         calls.push({
           group: payload.group,
           set: payload.set,

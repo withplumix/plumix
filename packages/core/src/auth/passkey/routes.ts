@@ -11,7 +11,7 @@ import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
-import { auth as authEvents } from "../../hooks/auth.js";
+import { auth as authEvents } from "../../events-and-filters/auth.js";
 import { startingMeta } from "../../plugin/fields/starting-meta.js";
 import { listUserMetaFields } from "../../plugin/manifest.js";
 import { jsonResponse } from "../../runtime/contract/http.js";
@@ -349,7 +349,7 @@ export async function handleSignout(
 ): Promise<Response> {
   const token = readSessionCookie(ctx.request);
   if (token) {
-    // Resolve the user before invalidating so the hook payload carries
+    // Resolve the user before invalidating so the event payload carries
     // the row that was just signed out (for audit attribution).
     const validated = await validateSession(ctx.db, token, app.sessionPolicy);
     await invalidateSession(ctx.db, token);

@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
-import { HookRegistry } from "../../hooks/registry.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
@@ -170,7 +170,7 @@ describe("select().multiple() — cardinality axis", () => {
   });
 
   test("appearance, multiple, and max survive the manifest wire projection", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("choices", {
@@ -183,7 +183,7 @@ describe("select().multiple() — cardinality axis", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
 
     const [single, multi] = manifest.settingsGroups[0]?.fields ?? [];

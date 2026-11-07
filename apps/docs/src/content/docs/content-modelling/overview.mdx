@@ -65,7 +65,7 @@ Every example in this documentation models the same recipe site: a `recipe` entr
 
 `definePlugin(id, { setup })` is all a plugin has to declare. The id has to match `/^[a-z][a-z0-9_-]*$/` and run to at most 64 characters, because it becomes a URL path segment, an RPC namespace key and an admin nav group id with no quoting anywhere. Listing two plugins with the same id throws at boot instead of letting one overwrite the other.
 
-`setup` receives the registration context and may be async. Beyond the content registrations below, that context carries [`registerBlock`](/blocks/overview/), `registerRoute`, `registerRestResource`, `registerSettingsGroup`, `registerScheduledTask`, `addFilter` and `addAction`, among others. One plugin can contribute to any part of the site, which is why a site's own plugin is a reasonable place to put a route or a hook that has nowhere else to go.
+`setup` receives the registration context and may be async. Beyond the content registrations below, that context carries [`registerBlock`](/blocks/overview/), `registerRoute`, `registerRestResource`, `registerSettingsGroup`, `registerScheduledTask`, `events.on` and `filters.add`, among others. One plugin can contribute to any part of the site, which is why a site's own plugin is a reasonable place to put a route or an event handler that has nowhere else to go.
 
 The descriptor has optional slots that other sections of this documentation own: `version`, `schema` and `schemaModule` for a plugin carrying its own database tables, `adminEntry` for admin UI, `i18n` for translation catalogs, `provides` for helpers other plugins consume, and `afterSetup` for registrations derived from what every plugin registered. `provides` runs for every plugin before any `setup` runs, so a plugin that consumes another's helper does not have to be ordered after it; `afterSetup` runs after every `setup`, as [Install order](/plugins/overview/#install-order) covers.
 
@@ -138,7 +138,7 @@ Terms are rows in the shared `terms` table, so a term's slug is unique within it
 
 An entry is in one of four statuses: `draft`, `published`, `scheduled` or `trash`. A new row defaults to `draft`. A public request sees `published` and nothing else, because the read service clamps the status filter to what the caller may see. `trash` is a status rather than a deletion, so the row survives until something removes it.
 
-`scheduled` is the one status with a rule attached. Plumix rejects the write unless the entry carries a `publishedAt` in the future, so no scheduled entry is left with no time to fire at. The core `publish-scheduled` task runs every five minutes, flips each due entry to `published`, keeps the scheduled time as the publish time, and fires the same lifecycle hooks an editor publish fires. Cache purging and sitemap invalidation therefore run either way.
+`scheduled` is the one status with a rule attached. Plumix rejects the write unless the entry carries a `publishedAt` in the future, so no scheduled entry is left with no time to fire at. The core `publish-scheduled` task runs every five minutes, flips each due entry to `published`, keeps the scheduled time as the publish time, and emits the same entry events an editor's publish emits. Cache purging and sitemap invalidation therefore run either way.
 
 <Aside type="caution" title="Scheduling needs a cron trigger">
   The `publish-scheduled` task only fires if your deploy declares a matching

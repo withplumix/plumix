@@ -29,7 +29,7 @@ beforeEach(async () => {
   h = await createDispatcherHarness({ config: { plugins: [blog] } });
   ctx = createTestContext({
     db: h.db,
-    hooks: h.app.hooks,
+    handlers: h.app.handlers,
     plugins: h.app.plugins,
   });
   authorId = (await h.seedUser("admin")).id;

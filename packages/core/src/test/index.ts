@@ -113,10 +113,8 @@ export type {
 export { buildRequest, TestResponse } from "./request.js";
 export type { FetchOptions, HarnessFetchOptions } from "./request.js";
 
-export { spyAction, spyEvent, spyFilter, expectError } from "./spies.js";
+export { spyEvent, spyFilter, expectError } from "./spies.js";
 export type {
-  ActionSpy,
-  ActionCall,
   BoundFilterSpy,
   EventSpy,
   EventCall,

@@ -7,7 +7,7 @@ import { authTokens } from "../../db/schema/auth_tokens.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
-import { auth } from "../../hooks/auth.js";
+import { auth } from "../../events-and-filters/auth.js";
 import { definePlugin } from "../../plugin/define.js";
 import { text } from "../../plugin/fields/index.js";
 import {

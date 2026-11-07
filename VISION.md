@@ -155,7 +155,7 @@ change to its code. Plumix tags it when all of these hold.
 - **The design is built.** The code does what this file and [`ARCHITECTURE.md`](ARCHITECTURE.md)
   describe, and the goals above work end to end.
 - **The floor holds,** and no security advisory is open.
-- **The surface is frozen.** The published exports, hook names and config shape, REST v1's routes,
+- **The surface is frozen.** The published exports, event and filter ids and config shape, REST v1's routes,
   envelope, errors and OpenAPI document, and each MCP tool's name and input schema are in a
   committed API snapshot, and it shows no break across the last three minors. The fields inside
   an entry are the site's content model, not Plumix's contract.

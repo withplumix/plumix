@@ -115,7 +115,7 @@ export const runtime = cloudflare();
 
 ### database
 
-The database adapter. `d1` is the Cloudflare one; `session: "auto"` opts into D1's Sessions API so reads can go to a replica. The alternative shipped today is `libsql` from `plumix/db/libsql`, a single endpoint with strong consistency and no replica hook.
+The database adapter. `d1` is the Cloudflare one; `session: "auto"` opts into D1's Sessions API so reads can go to a replica. The alternative shipped today is `libsql` from `plumix/db/libsql`, a single endpoint with strong consistency and no read replicas.
 
 ```ts no-typecheck
 import { d1 } from "@plumix/runtime-cloudflare";

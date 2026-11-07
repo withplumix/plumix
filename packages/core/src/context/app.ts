@@ -8,7 +8,7 @@ import type {
 import type { StylePolicy } from "../blocks/styles/style-policy.js";
 import type { Clock } from "../clock.js";
 import type { PlumixConfig } from "../config.js";
-import type { HookRegistry } from "../hooks/registry.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type { MailCatalogs } from "../mail/catalogs.js";
 import type { DeclaredMails } from "../mail/declared.js";
 import type { SentMail } from "../mail/sender.js";
@@ -47,7 +47,10 @@ import { installClockSource } from "../clock.js";
 import { debugBarTelemetryConsumer } from "../dev/debug-bar/consumer.js";
 import { devMail } from "../dev/mail/catcher.js";
 import { debugHistoryConsumer } from "../dev/request-history/writer.js";
-import { bindDispatch, rebindDispatch } from "../hooks/dispatch.js";
+import {
+  bindDispatch,
+  rebindDispatch,
+} from "../events-and-filters/dispatch.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { createMailCatalogs } from "../mail/catalogs.js";
 import { declareMails } from "../mail/declared.js";
@@ -95,7 +98,7 @@ export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly config: PlumixConfig;
   /** See {@link AppContextBase.clientAddress}; the runtime supplies it. */
   readonly clientAddress?: string;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly plugins: PluginRegistry;
   readonly blocks?: BlockRegistry;
   readonly allowedBlocks?: ReadonlySet<string>;
@@ -251,8 +254,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     user,
     tokenScopes,
     apiToken: null,
-    hooks: args.hooks,
-    ...bindDispatch(args.hooks, () => coreSchemaView),
+    ...bindDispatch(args.handlers, () => coreSchemaView),
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
     allowedBlocks: args.allowedBlocks,

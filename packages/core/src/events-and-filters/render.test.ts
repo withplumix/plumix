@@ -7,12 +7,12 @@ import type { EntryData } from "../route/contract/resolved-entry.js";
 import type { TemplateData } from "../theme.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createPluginSetupContext } from "../plugin/setup-context.js";
-import { HookRegistry } from "./registry.js";
+import { HandlerRegistry } from "./registry.js";
 import { render } from "./render.js";
 
 const ctx = createPluginSetupContext({
   pluginId: "acme",
-  hooks: new HookRegistry(),
+  handlers: new HandlerRegistry(),
   registry: createPluginRegistry(),
   theme: { templates: [] },
 });

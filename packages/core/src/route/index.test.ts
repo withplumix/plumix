@@ -131,7 +131,7 @@ describe("routePublicRequest — unmatched content", () => {
     const ctx = createTestContext({
       db: harness.db,
       request,
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
     });
     const outcome = routePublicRequest(harness.app, ctx, new URL(request.url));

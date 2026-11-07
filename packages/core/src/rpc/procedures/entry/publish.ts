@@ -94,7 +94,7 @@ export const publish = base
       throw errors.CONFLICT({ data: { reason: "update_failed" } });
     }
 
-    // Drop the autosave before firing hooks so a subscriber that
+    // Drop the autosave before emitting events so a subscriber that
     // re-reads the row state observes a clean "no pending draft"
     // post-publish.
     await deleteAutosave(context.db, {

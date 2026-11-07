@@ -2,7 +2,7 @@ import type { AppContext, PluginRegistry } from "plumix/plugin";
 import { eq } from "plumix/db";
 import {
   createPluginRegistry,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   registerCoreLookupAdapters,
 } from "plumix/plugin";
@@ -27,15 +27,15 @@ import {
 
 interface TestRegistryBundle {
   readonly registry: PluginRegistry;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
 }
 
 async function buildTestRegistry(): Promise<TestRegistryBundle> {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menuPlugin()], registry });
-  return { registry, hooks };
+  await installPlugins({ handlers, plugins: [menuPlugin()], registry });
+  return { registry, handlers };
 }
 
 function ctxFor(
@@ -45,7 +45,7 @@ function ctxFor(
   return createTestContext({
     db,
     plugins: bundle.registry,
-    hooks: bundle.hooks,
+    handlers: bundle.handlers,
     request: new Request("https://test.example/"),
   });
 }
@@ -204,7 +204,7 @@ describe("getMenuForLocation", () => {
       await bind("footer", "shared");
 
       const seen: (string | null)[] = [];
-      bundle.hooks.add(menu.tree, (items, { location }) => {
+      bundle.handlers.add(menu.tree, (items, { location }) => {
         seen.push(location);
         return items;
       });
@@ -259,11 +259,11 @@ describe("getMenuForLocation", () => {
     }
 
     async function ctxWithLocations(): Promise<AppContext> {
-      const hooks = new HookRegistry();
+      const handlers = new HandlerRegistry();
       const registry = createPluginRegistry();
       registerCoreLookupAdapters(registry);
       await installPlugins({
-        hooks,
+        handlers,
         plugins: [
           menuPlugin({
             locations: {
@@ -274,7 +274,7 @@ describe("getMenuForLocation", () => {
         ],
         registry,
       });
-      return ctxFor(db, { registry, hooks });
+      return ctxFor(db, { registry, handlers });
     }
 
     test("rendering a location returns only the levels it declares", async () => {

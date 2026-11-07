@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { StringInputType } from "./index.js";
-import { HookRegistry } from "../../hooks/registry.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
@@ -211,7 +211,7 @@ describe("phantom value typing", () => {
 
 describe("fluent fields register and round-trip the manifest", () => {
   test("settings group: builder registers and ships the compiled wire shape", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("identity", {
@@ -230,7 +230,7 @@ describe("fluent fields register and round-trip the manifest", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
 
     const field = manifest.settingsGroups[0]?.fields[0];
@@ -252,7 +252,7 @@ describe("fluent fields register and round-trip the manifest", () => {
   });
 
   test("entry meta box: .span() is accepted as a hint and stripped from the entry wire", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Post" });
@@ -264,7 +264,7 @@ describe("fluent fields register and round-trip the manifest", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     // The registered (server-side) shape keeps the hint…
     const registered = registry.entryMetaBoxes.get("seo");
@@ -282,7 +282,7 @@ describe("fluent fields register and round-trip the manifest", () => {
   });
 
   test("registration-time key validation applies to compiled builders", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("broken", {
@@ -292,8 +292,8 @@ describe("fluent fields register and round-trip the manifest", () => {
       },
     });
 
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /must match/,
-    );
+    await expect(
+      installPlugins({ handlers, plugins: [plugin] }),
+    ).rejects.toThrow(/must match/);
   });
 });

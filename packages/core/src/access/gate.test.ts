@@ -6,7 +6,7 @@ import type { EntryTypeAccess } from "../plugin/manifest.js";
 import type { RouteMatch } from "../route/match.js";
 import type { AccessPolicy } from "./policy.js";
 import { createRequestMemo } from "../context/memo.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { resolveSingleEntry } from "../route/single-entry.js";
@@ -82,7 +82,7 @@ async function ctx(args: {
 }): Promise<AppContext> {
   const plugins = createPluginRegistry();
   await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     registry: plugins,
     plugins: [
       definePlugin("gate-test", {

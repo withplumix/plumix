@@ -13,11 +13,11 @@ import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
 import { users } from "../db/schema/users.js";
 import { compileEntryQuery, entryQuery } from "../entries/query.js";
-import { entry } from "../hooks/entry.js";
-import { HookRegistry } from "../hooks/registry.js";
-import { settings } from "../hooks/settings.js";
-import { term as termEvents } from "../hooks/term.js";
-import { userEvents } from "../hooks/user.js";
+import { entry } from "../events-and-filters/entry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
+import { settings } from "../events-and-filters/settings.js";
+import { term as termEvents } from "../events-and-filters/term.js";
+import { userEvents } from "../events-and-filters/user.js";
 import { definePlugin } from "../plugin/define.js";
 import { term } from "../plugin/fields/term.js";
 import { toggle } from "../plugin/fields/toggle.js";
@@ -199,7 +199,7 @@ describe("purge accumulator", () => {
 });
 
 describe("registerCorePurgeInvalidator", () => {
-  type Emit = (hooks: HookRegistry, ctx: AppContext) => Promise<unknown>;
+  type Emit = (handlers: HandlerRegistry, ctx: AppContext) => Promise<unknown>;
 
   const row = { id: 9, type: "post" } as Entry;
   const changes = { set: {}, removed: [] };
@@ -221,11 +221,11 @@ describe("registerCorePurgeInvalidator", () => {
   it.each(ENTRY_EVENTS)(
     "entry.%s purges the entry's pages and its type's",
     async (_event, emit) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
+      const handlers = new HandlerRegistry();
+      registerCorePurgeInvalidator(handlers);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await emit(hooks, ctx);
+      await emit(handlers, ctx);
       await flush();
 
       assertOnlyPurged(cdn, ["/post", "/post/9"]);
@@ -234,7 +234,7 @@ describe("registerCorePurgeInvalidator", () => {
 
   const termRow = { id: 3, taxonomy: "category" } as Term;
   type EmitTerm = (
-    hooks: HookRegistry,
+    handlers: HandlerRegistry,
     ctx: AppContext,
     row?: Term,
   ) => Promise<unknown>;
@@ -264,11 +264,11 @@ describe("registerCorePurgeInvalidator", () => {
   it.each(TERM_EDIT_EVENTS)(
     "term.%s purges only the pages that rendered the term",
     async (_event, emit) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
+      const handlers = new HandlerRegistry();
+      registerCorePurgeInvalidator(handlers);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await emit(hooks, ctx);
+      await emit(handlers, ctx);
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3"]);
@@ -278,11 +278,11 @@ describe("registerCorePurgeInvalidator", () => {
   it.each(TERM_LIST_EVENTS)(
     "term.%s purges the term's pages and its taxonomy's term lists",
     async (_event, emit) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
+      const handlers = new HandlerRegistry();
+      registerCorePurgeInvalidator(handlers);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await emit(hooks, ctx);
+      await emit(handlers, ctx);
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3", "/category/terms"]);
@@ -293,11 +293,11 @@ describe("registerCorePurgeInvalidator", () => {
   it.each(TERM_LIST_EVENTS)(
     "term.%s in a taxonomy without entryTypes purges its term lists",
     async (_event, emit) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
+      const handlers = new HandlerRegistry();
+      registerCorePurgeInvalidator(handlers);
       const { ctx, cdn, flush } = await fakeCtx();
 
-      await emit(hooks, ctx, { ...termRow, taxonomy: "tag" });
+      await emit(handlers, ctx, { ...termRow, taxonomy: "tag" });
       await flush();
 
       assertOnlyPurged(cdn, ["/term/3", "/tag/terms"]);
@@ -309,11 +309,11 @@ describe("registerCorePurgeInvalidator", () => {
   // A page that printed a settings group is stored under its tag, so saving
   // the group has to reach the CDN, not only this request's memo.
   it("settings.groupChanged purges the pages that printed the group", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
+    const handlers = new HandlerRegistry();
+    registerCorePurgeInvalidator(handlers);
     const { ctx, cdn, flush } = await fakeCtx();
 
-    await hooks.emit(settings.groupChanged, siteChanged, ctx);
+    await handlers.emit(settings.groupChanged, siteChanged, ctx);
     await flush();
 
     assertOnlyPurged(cdn, ["/settings/site"]);
@@ -365,10 +365,10 @@ describe("registerCorePurgeInvalidator", () => {
   it.each(PURGING_EVENTS)(
     "%s drops the memo entries tagged with what it purges",
     async (_event, emit) => {
-      const hooks = new HookRegistry();
-      registerCorePurgeInvalidator(hooks);
+      const handlers = new HandlerRegistry();
+      registerCorePurgeInvalidator(handlers);
       const purging = await fakeCtx();
-      await emit(hooks, purging.ctx);
+      await emit(handlers, purging.ctx);
       await purging.flush();
       const purged: string[] = [];
       for (const [path, tag] of Object.entries(PAGES)) {
@@ -381,7 +381,7 @@ describe("registerCorePurgeInvalidator", () => {
       await read("untagged");
       loads.length = 0;
 
-      await emit(hooks, ctx);
+      await emit(handlers, ctx);
       for (const [, tag] of Object.entries(PAGES)) await read(tag, [tag]);
       await read("untagged");
 
@@ -391,13 +391,13 @@ describe("registerCorePurgeInvalidator", () => {
   );
 
   it("batches a bulk publish into one purge", async () => {
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
+    const handlers = new HandlerRegistry();
+    registerCorePurgeInvalidator(handlers);
     const { ctx, cdn, deferred, flush } = await fakeCtx();
 
     const post = (id: number) => ({ entry: { id, type: "post" } as Entry });
-    await hooks.emit(entry.published, post(9), ctx);
-    await hooks.emit(entry.published, post(8), ctx);
+    await handlers.emit(entry.published, post(9), ctx);
+    await handlers.emit(entry.published, post(8), ctx);
     await flush();
 
     expect(deferred).toHaveLength(1);

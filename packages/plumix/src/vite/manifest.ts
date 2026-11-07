@@ -16,7 +16,7 @@ import type {
 import {
   buildManifest,
   createPluginRegistry,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "@plumix/core";
 
@@ -60,9 +60,9 @@ export async function computeManifestAndRegistry(
   plugins: PluginDescriptors,
   options: ManifestBuildOptions,
 ): Promise<{ manifest: PlumixManifest; registry: PluginRegistry }> {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const { registry } = await installPlugins({
-    hooks,
+    handlers,
     plugins,
     registry: createPluginRegistry(options.routes, options.roles),
     theme: options.theme,

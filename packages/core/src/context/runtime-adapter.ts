@@ -1,5 +1,5 @@
 import type { PlumixConfig } from "../config.js";
-import type { HookRegistry } from "../hooks/registry.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type {
   PluginRegistry,
   RegisteredScheduledTask,
@@ -120,7 +120,7 @@ export interface PlumixHandler {
  */
 export interface CommandApp {
   readonly config: PlumixConfig;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   /** Every plugin installed, so a command can read what they register. */
   readonly plugins: PluginRegistry;
   readonly scheduledTasks: readonly RegisteredScheduledTask[];
@@ -492,7 +492,7 @@ export interface RuntimeHandlerSpec {
    * One-off setup, run once per handler before its first request, such as a
    * platform check that fails fast.
    */
-  readonly prepare?: (hooks: HookRegistry) => void;
+  readonly prepare?: (handlers: HandlerRegistry) => void;
   /**
    * Platform routing in front of the site; gets the config because support can
    * depend on other slots.

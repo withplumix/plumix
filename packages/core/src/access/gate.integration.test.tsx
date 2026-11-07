@@ -17,7 +17,7 @@ import {
   responseAllowsSharedStorage,
   SEGMENT_KEY_PARAM,
 } from "../cdn/decision.js";
-import { render } from "../hooks/render.js";
+import { render } from "../events-and-filters/render.js";
 import { definePlugin } from "../plugin/define.js";
 import {
   entry,

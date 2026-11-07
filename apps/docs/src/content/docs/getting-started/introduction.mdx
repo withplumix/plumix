@@ -20,7 +20,7 @@ The site is made of four things, and you write three of them.
 
 A **config file**, `plumix.config.ts`, names the runtime adapter, the database, the auth setup, the plugins and the theme. It is the only file the CLI has to find.
 
-**Plugins** register the model. An entry type, a taxonomy, a meta box, a block, a route, a scheduled task and a hook all arrive through a plugin's `setup` function. Most sites keep one local plugin file that never leaves the repository, and add published plugins beside it in the same array.
+**Plugins** register the model. An entry type, a taxonomy, a meta box, a block, a route, a scheduled task and an event handler all arrive through a plugin's `setup` function. Most sites keep one local plugin file that never leaves the repository, and add published plugins beside it in the same array.
 
 A **theme** renders the public site. It is a set of React templates plus design tokens and a document manifest, and the framework picks which template answers a request from the entry type, the taxonomy and the URL.
 

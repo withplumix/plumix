@@ -1,6 +1,6 @@
 # Plugin system
 
-A plugin is a descriptor built with `definePlugin` from `plumix/plugin`, or a factory that takes options and returns one. A site lists descriptors in `plugins` in `plumix.config.ts`. At boot, core installs them in array order into one `PluginRegistry` and one `HookRegistry`, and everything else (routing, RPC, REST, MCP, the plugin manifest, cron) reads from those two objects. Plugin authors write against this surface; site developers only list and configure plugins. It is the "Plugin system and hooks" component, with "Plugins" beside it, in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). The code lives in `packages/core/src/plugin/` and `packages/core/src/runtime/install-plugins.ts`, and is re-exported through `packages/plumix/src/plugin.ts`.
+A plugin is a descriptor built with `definePlugin` from `plumix/plugin`, or a factory that takes options and returns one. A site lists descriptors in `plugins` in `plumix.config.ts`. At boot, core installs them in array order into one `PluginRegistry` and one `HandlerRegistry`, and everything else (routing, RPC, REST, MCP, the plugin manifest, cron) reads from those two objects. Plugin authors write against this surface; site developers only list and configure plugins. It is the "Plugin system, events and filters" component, with "Plugins" beside it, in the component diagram of [`ARCHITECTURE.md`](../../ARCHITECTURE.md). The code lives in `packages/core/src/plugin/` and `packages/core/src/runtime/install-plugins.ts`, and is re-exported through `packages/plumix/src/plugin.ts`.
 
 ## At a glance
 
@@ -14,7 +14,7 @@ flowchart TD
   pr -->|extendPluginContext| se
   pr -->|extendAppContext| app["per-request AppContext"]
   se --> reg["PluginRegistry"]
-  se --> hk["HookRegistry"]
+  se --> hk["HandlerRegistry"]
   as --> reg
   reg --> rt["buildApp: routes, RPC, REST, MCP, cron"]
   reg --> man["buildManifest: the plugin manifest"]
@@ -48,9 +48,7 @@ Contribution kinds. Each `setup` call writes one `PluginRegistry` field (`packag
 
 | Kind                                     | Registration API                                                     | Registry field                                     | Consumer                                                                                    |
 | ---------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Event / filter handler                   | `ctx.events.on`, `ctx.filters.add`                                   | `HookRegistry`, by declaration id                  | `ctx.events.emit`, `ctx.filters.apply`; see [hooks](./hooks.md)                             |
-| Filter / action handler (string names)   | `addFilter`, `addAction`                                             | `HookRegistry`                                     | Firing sites, see [hooks](./hooks.md)                                                       |
-| Plugin-prefixed hook handler             | `registerFilter`, `registerAction`                                   | `HookRegistry` as `<id>:<name>`                    | Whoever fires that name                                                                     |
+| Event / filter handler                   | `ctx.events.on`, `ctx.filters.add`                                   | `HandlerRegistry`, by declaration id               | `ctx.events.emit`, `ctx.filters.apply`; see [events and filters](./events-and-filters.md)   |
 | Entry type                               | `registerEntryType`                                                  | `entryTypes`                                       | `route/compile.ts`, `route/resolve.ts`, `access/gate.ts`, `buildManifest`                   |
 | Taxonomy                                 | `registerTermTaxonomy`                                               | `termTaxonomies`                                   | `route/compile.ts`, `terms/read-service.ts`, `buildManifest`                                |
 | Entry / term / user meta box             | `registerEntryMetaBox`, `registerTermMetaBox`, `registerUserMetaBox` | `entryMetaBoxes`, `termMetaBoxes`, `userMetaBoxes` | `buildManifest`, `rest/projection.ts`, `plugin/image-roles.ts`                              |
@@ -81,11 +79,11 @@ Contribution kinds. Each `setup` call writes one `PluginRegistry` field (`packag
 | Plugin-context helper                    | `provides` → `extendPluginContext`                                   | merged onto every setup ctx                        | Other plugins' `setup`                                                                      |
 | App-context helper                       | `provides` → `extendAppContext`                                      | `appContextExtensions`                             | Runtime adapters merge onto each `AppContext`                                               |
 
-Other public exports from `plumix/plugin`: `applyOverride` / `Overridable` (option overrides that merge objects one level and compose arrays), `installPlugins`, `createPluginRegistry`, `buildManifest`, `HookRegistry`, `defineAuthMethod`, `defineMail`, `defineEvent`, `defineFilter`, and core's `block` subject.
+Other public exports from `plumix/plugin`: `applyOverride` / `Overridable` (option overrides that merge objects one level and compose arrays), `installPlugins`, `createPluginRegistry`, `buildManifest`, `HandlerRegistry`, `defineAuthMethod`, `defineMail`, `defineEvent`, `defineFilter`, and core's `block` subject.
 
 ## How it works
 
-`installPlugins` checks every id and every declared event and filter id, then runs four passes over the array: all `state` factories, all `provides`, all `setup`, all `afterSetup`. Each hook gets the descriptor's own state as its second argument. `setup` and `afterSetup` read the site's theme as `ctx.theme`, so a plugin registers from what the theme declares. `provides` runs fully before any `setup`, so a helper from `extendPluginContext` reaches every plugin whatever the order. `afterSetup` sees `ctx.plugins`, live and read-only, holding every `setup` registration and the `afterSetup` registrations of earlier plugins only.
+`installPlugins` checks every id and every declared event and filter id, then runs four passes over the array: all `state` factories, all `provides`, all `setup`, all `afterSetup`. Each lifecycle step gets the descriptor's own state as its second argument. `setup` and `afterSetup` read the site's theme as `ctx.theme`, so a plugin registers from what the theme declares. `provides` runs fully before any `setup`, so a helper from `extendPluginContext` reaches every plugin whatever the order. `afterSetup` sees `ctx.plugins`, live and read-only, holding every `setup` registration and the `afterSetup` registrations of earlier plugins only.
 
 `buildApp` seeds the registry before plugins run: `createPluginRegistry` adds the `featured` and `ogImage` image roles, then core adds its lookup adapters, template deps, settings and scheduled tasks. It hands `installPlugins` the configured theme. After install it indexes image roles and merges plugin `schema` exports, rejecting a key two owners export.
 

@@ -1,7 +1,7 @@
 import {
   defineFilter,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
@@ -16,7 +16,7 @@ describe("feed namespace", () => {
     });
 
     const install = installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [feeds(), rival],
     });
 

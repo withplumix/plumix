@@ -227,7 +227,7 @@ export interface HarnessOptions extends OgPluginOptions {
   /** The `imageDelivery:` slot, which is what crops a featured photo. */
   readonly imageDelivery?: ImageDelivery;
   /**
-   * Plugins installed ahead of this one, so their hook subscribers sit earlier
+   * Plugins installed ahead of this one, so their filter handlers sit earlier
    * on a filter chain than the card's.
    */
   readonly before?: readonly AnyPluginDescriptor[];

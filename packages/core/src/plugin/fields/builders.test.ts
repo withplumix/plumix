@@ -7,7 +7,7 @@ import type {
   UserReferenceSummary,
 } from "../lookup.js";
 import type { MetaBoxField, NumberMetaBoxField } from "./meta-box-field.js";
-import { HookRegistry } from "../../hooks/registry.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
 import { seedFromMetaBoxes, startingMeta } from "../manifest-types.js";
@@ -334,7 +334,7 @@ describe("range() builder", () => {
 
 describe("manifest round-trip across all built-in builders", () => {
   test("each builder produces a field that survives manifest serialization", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("everything", {
@@ -357,7 +357,7 @@ describe("manifest round-trip across all built-in builders", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
 
     const fields = manifest.settingsGroups[0]?.fields ?? [];
@@ -427,7 +427,7 @@ describe("user() builder", () => {
   });
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("identity", {
@@ -437,7 +437,7 @@ describe("user() builder", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const projected = manifest.settingsGroups[0]?.fields[0];
     expect(projected).toMatchObject({
@@ -493,7 +493,7 @@ describe("entry() builder", () => {
   });
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("blog", {
@@ -502,7 +502,7 @@ describe("entry() builder", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
       key: "homepage",
@@ -544,7 +544,7 @@ describe("term() builder", () => {
   });
 
   test("manifest round-trip preserves referenceTarget on the wire shape", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("classification", {
@@ -553,7 +553,7 @@ describe("term() builder", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
       key: "section",
@@ -644,7 +644,7 @@ describe("reference builder phantom typing", () => {
 
 describe("composite defaults reach the admin through the manifest", () => {
   test("the manifest carries a composite default to startingMeta", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("blog", {
@@ -660,7 +660,7 @@ describe("composite defaults reach the admin through the manifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const fields = buildManifest(registry).settingsGroups[0]?.fields ?? [];
     expect(startingMeta(fields)).toEqual({
       seo: { title: "Untitled" },
@@ -794,7 +794,7 @@ describe("richtext() builder", () => {
   });
 
   test("manifest round-trip preserves all three allowlist arrays on the wire", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("blog", {
@@ -808,7 +808,7 @@ describe("richtext() builder", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     expect(manifest.settingsGroups[0]?.fields[0]).toMatchObject({
       key: "summary",
@@ -962,7 +962,7 @@ describe("repeater() builder", () => {
   });
 
   test("manifest round-trip recurses subFields with sanitize stripped + span dropped", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("blog", {
@@ -976,7 +976,7 @@ describe("repeater() builder", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const entry = manifest.settingsGroups[0]?.fields[0];
     expect(entry).toMatchObject({
@@ -1055,7 +1055,7 @@ describe("group() builder", () => {
   });
 
   test("composite callbacks are typed against the stored shape, not the read shape", () => {
-    // The hooks run on settled cells, where a reference is a bare id, so
+    // The callbacks run on settled cells, where a reference is a bare id, so
     // typing the callback against the read shape would lie.
     group("card")
       .fields([text("title"), entry("related", ["post"])])
@@ -1083,7 +1083,7 @@ describe("group() builder", () => {
   });
 
   test("manifest round-trip projects members into the wire subFields slot", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("blog", {
@@ -1096,7 +1096,7 @@ describe("group() builder", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const entry = manifest.settingsGroups[0]?.fields[0];
     expect(entry).toMatchObject({

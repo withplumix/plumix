@@ -147,7 +147,7 @@ export const mailer = consoleMailer();
 
 ### plumix/plugin
 
-What a plugin writes: `definePlugin` and its registration context, RPC procedures and hooks, entry and URL helpers, the responses a plugin route answers with, dev panels, and the pieces a plugin builds [its own rule kind](/themes/rule-kinds/) from. It also re-exports valibot as `v`, so a plugin can declare its own config schema without a second dependency.
+What a plugin writes: `definePlugin` and its registration context, RPC procedures, events and filters, entry and URL helpers, the responses a plugin route answers with, dev panels, and the pieces a plugin builds [its own rule kind](/themes/rule-kinds/) from. It also re-exports valibot as `v`, so a plugin can declare its own config schema without a second dependency.
 
 ```ts
 import { definePlugin } from "plumix/plugin";
@@ -622,7 +622,7 @@ export function publishedAgo(at: Date): string {
 
 ### plumix/test
 
-The one unit-test import: an in-memory database, a request context factory, entity factories, hook spies and a request builder for server tests; `stubPluginRpc` and `PluginRpcError` for admin code that calls its own procedures; `renderBlockSpecToHtml` and `renderBlockTreeToHtml` for a block; and `fakeFile` and `fakeImage` for an upload. [Testing a plugin](/plugins/testing/) walks through the unit and end-to-end tiers.
+The one unit-test import: an in-memory database, a request context factory, entity factories, event and filter spies and a request builder for server tests; `stubPluginRpc` and `PluginRpcError` for admin code that calls its own procedures; `renderBlockSpecToHtml` and `renderBlockTreeToHtml` for a block; and `fakeFile` and `fakeImage` for an upload. [Testing a plugin](/plugins/testing/) walks through the unit and end-to-end tiers.
 
 ```ts
 import type { AppContext } from "plumix";

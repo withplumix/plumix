@@ -4,7 +4,7 @@ import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import {
   createPluginRegistry,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   registerCoreLookupAdapters,
 } from "plumix/plugin";
@@ -31,7 +31,7 @@ interface Bundle {
   readonly db: Db;
   readonly factories: Factories;
   readonly registry: PluginRegistry;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly ctx: AppContext;
   readonly user: User;
 }
@@ -45,24 +45,24 @@ function stubAuthenticator(user: User): RequestAuthenticator {
 async function setup(): Promise<Bundle> {
   const db = await createTestDb();
   const factories = factoriesFor(db);
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins: [menuPlugin()], registry });
+  await installPlugins({ handlers, plugins: [menuPlugin()], registry });
   const user = await adminUser
     .transient({ db })
-    .create({ email: "hooks@example.test" });
+    .create({ email: "handlers@example.test" });
   const ctx = createTestContext({
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
-    hooks,
+    handlers,
     plugins: registry,
     user: { id: user.id, email: user.email, role: user.role, meta: {} },
     authenticator: stubAuthenticator(user),
     origin: "https://cms.example",
   });
-  return { db, factories, registry, hooks, ctx, user };
+  return { db, factories, registry, handlers, ctx, user };
 }
 
 async function seedMenuTerm(b: Bundle, slug: string): Promise<number> {
@@ -112,7 +112,7 @@ async function seedItem(
   return entry.id;
 }
 
-describe("menu hook surface", () => {
+describe("menu filter surface", () => {
   let b: Bundle;
 
   beforeEach(async () => {
@@ -126,7 +126,7 @@ describe("menu hook surface", () => {
       await seedItem(b, termId, "About", "/about");
 
       const seen: ResolvedMenuItem[] = [];
-      b.hooks.add(menu.item, (item) => {
+      b.handlers.add(menu.item, (item) => {
         seen.push(item);
         return item;
       });
@@ -139,7 +139,7 @@ describe("menu hook surface", () => {
       const termId = await seedMenuTerm(b, "primary");
       await seedItem(b, termId, "Home", "/");
 
-      b.hooks.add(menu.item, (item) => ({
+      b.handlers.add(menu.item, (item) => ({
         ...item,
         cssClasses: [...item.cssClasses, "decorated"],
       }));
@@ -176,7 +176,7 @@ describe("menu hook surface", () => {
         .transient({ db: b.db })
         .create({ entryId: child.id, termId, sortOrder: 0 });
 
-      b.hooks.add(menu.item, (item) => ({
+      b.handlers.add(menu.item, (item) => ({
         ...item,
         cssClasses: [...item.cssClasses, `seen-${item.children.length}`],
       }));
@@ -196,7 +196,7 @@ describe("menu hook surface", () => {
 
       const calls: { termId: number; location: string | null; len: number }[] =
         [];
-      b.hooks.add(menu.tree, (items, ctx) => {
+      b.handlers.add(menu.tree, (items, ctx) => {
         calls.push({
           termId: ctx.termId,
           location: ctx.location,
@@ -214,7 +214,7 @@ describe("menu hook surface", () => {
       await seedItem(b, termId, "Public", "/");
       await seedItem(b, termId, "Hidden", "/secret");
 
-      b.hooks.add(menu.tree, (items) =>
+      b.handlers.add(menu.tree, (items) =>
         items.filter((item) => item.label !== "Hidden"),
       );
 
@@ -232,7 +232,7 @@ describe("menu hook surface", () => {
       });
 
       const seen: { location: string | null; termId: number }[] = [];
-      b.hooks.add(menu.tree, (items, ctx) => {
+      b.handlers.add(menu.tree, (items, ctx) => {
         seen.push({ location: ctx.location, termId: ctx.termId });
         return items;
       });
@@ -252,7 +252,7 @@ describe("menu hook surface", () => {
         removedIds: readonly number[];
         modifiedIds: readonly number[];
       }[] = [];
-      b.hooks.on(menu.saved, (payload) => {
+      b.handlers.on(menu.saved, (payload) => {
         calls.push({
           termId: payload.termId,
           addedIds: payload.addedIds,
@@ -284,7 +284,7 @@ describe("menu hook surface", () => {
     test("subscriber failure does not abort the commit", async () => {
       const termId = await seedMenuTerm(b, "primary");
 
-      b.hooks.on(menu.saved, () => {
+      b.handlers.on(menu.saved, () => {
         throw new Error("subscriber blew up");
       });
 

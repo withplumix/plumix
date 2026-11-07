@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext, Db } from "./app-context.js";
-import { HookRegistry } from "../hooks/registry.js";
-import { settings } from "../hooks/settings.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
+import { settings } from "../events-and-filters/settings.js";
 import { definePlugin } from "../plugin/define.js";
 import { resolveRestPrincipal } from "../rest/principal.js";
 import { createTestContext } from "../test/context.js";
@@ -19,11 +19,11 @@ beforeAll(async () => {
 /** A context whose writes are heard by a subscriber recording its context. */
 function heardContext(overrides: { readonly user?: AppContext["user"] } = {}) {
   const heard: AppContext[] = [];
-  const hooks = new HookRegistry();
-  hooks.on(settings.groupChanged, (_changes, ctx) => {
+  const handlers = new HandlerRegistry();
+  handlers.on(settings.groupChanged, (_changes, ctx) => {
     heard.push(ctx);
   });
-  return { heard, ctx: createTestContext({ db, hooks, ...overrides }) };
+  return { heard, ctx: createTestContext({ db, handlers, ...overrides }) };
 }
 
 // A context derived from another writes as itself, so a subscriber hears the

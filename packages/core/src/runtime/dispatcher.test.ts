@@ -25,7 +25,7 @@ import { entryPurgeTags, termTag } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
 import { etagOf } from "../db/concurrency.js";
-import { render } from "../hooks/render.js";
+import { render } from "../events-and-filters/render.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { fallback } from "../route/render/template-builders.js";
@@ -920,7 +920,7 @@ describe("dispatcher — error boundary", () => {
 
   test("unhandled handler exceptions return 500 JSON (no raw throw)", async () => {
     const h = await createDispatcherHarness();
-    h.app.hooks.add(entryRpc.list.input, () => {
+    h.app.handlers.add(entryRpc.list.input, () => {
       throw new Error("boom");
     });
 
@@ -1621,7 +1621,7 @@ describe("dispatcher — form-post routes (#2018)", () => {
         auth: "public",
         formPost: true,
         handler: async (request, appCtx) => {
-          // `getContext()` is what a hook listener fired by this handler reads,
+          // `getContext()` is what an event handler fired by this handler reads,
           // and it has to agree with the context the handler was handed.
           const ambient = getContext();
           return Response.json({
@@ -2802,7 +2802,7 @@ describe("dispatcher — telemetry consumers", () => {
     });
     expect(snapshot?.request.requestId).toMatch(/[0-9a-f-]{36}/);
     // The envelope id is the context's request id — minted at context
-    // creation, so mid-request consumers (logs, error hooks) and the finished
+    // creation, so mid-request consumers (logs, error handlers) and the finished
     // snapshot correlate on the same value.
     expect(snapshot?.request.requestId).toBe(seenCtx[0]?.requestId);
     expect(snapshot?.request.startedAt).toBeTypeOf("number");
@@ -3109,11 +3109,11 @@ describe("dispatcher — telemetry consumers", () => {
     await h.drainDeferred();
 
     const [snapshot] = snapshots;
-    const hook = flattenSpans(snapshot?.spans ?? []).find(
+    const filterSpan = flattenSpans(snapshot?.spans ?? []).find(
       (span) => span.name === "filter: render:document",
     );
-    expect(hook).toBeDefined();
-    expect(hook?.attributes).toEqual({
+    expect(filterSpan).toBeDefined();
+    expect(filterSpan?.attributes).toEqual({
       "filter.id": "render:document",
       "filter.plugin": "test-decorator",
     });

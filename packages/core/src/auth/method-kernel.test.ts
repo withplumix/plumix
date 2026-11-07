@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { TestConfigInput } from "../test/config.js";
-import { auth } from "../hooks/auth.js";
+import { auth } from "../events-and-filters/auth.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";

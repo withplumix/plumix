@@ -15,7 +15,7 @@ import { assertWritable } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { settings } from "../db/schema/settings.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
-import { settings as settingsEvents } from "../hooks/settings.js";
+import { settings as settingsEvents } from "../events-and-filters/settings.js";
 import { decodeJsonValue } from "../meta/coerce.js";
 import { runFieldPipeline } from "../meta/field-pipeline.js";
 import { isConditionHidden } from "../plugin/fields/condition.js";

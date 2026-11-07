@@ -47,7 +47,7 @@ The first-party plugins register `audit_log:read` and `search:reindex` (granted 
 
 ## How it works
 
-**Sign-in.** `coreAuthMethods` declares `passkey`, `invite`, `magic-link` and `oauth` with `defineAuthMethod`. `declareAuthMethods` merges them with each plugin's `authMethods` at boot and refuses names that would cover `device`, `signout` or `verify-email`, or whose camelCase form is one of the auth client's own keys (`AUTH_CLIENT_KERNEL_KEYS` in `auth/client/kernel-keys.ts`). A method's handler receives a kernel from `createAuthMethodKernel`. The method proves identity and calls `kernel.proveIdentity`. Core then provisions or loads the user, mints the session and cookie (`mintSessionAndCookie`), fires the sign-in action and picks the redirect. There is no password sign-in.
+**Sign-in.** `coreAuthMethods` declares `passkey`, `invite`, `magic-link` and `oauth` with `defineAuthMethod`. `declareAuthMethods` merges them with each plugin's `authMethods` at boot and refuses names that would cover `device`, `signout` or `verify-email`, or whose camelCase form is one of the auth client's own keys (`AUTH_CLIENT_KERNEL_KEYS` in `auth/client/kernel-keys.ts`). A method's handler receives a kernel from `createAuthMethodKernel`. The method proves identity and calls `kernel.proveIdentity`. Core then provisions or loads the user, mints the session and cookie (`mintSessionAndCookie`), emits `auth.signedIn` and picks the redirect. There is no password sign-in.
 
 **Signup and bootstrap.** `allowedDomains` maps an email domain to its signup role. `selfSignup.defaultRole` opens signup to any address (`auth/signup-role.ts`). `provisionUser` in `auth/bootstrap.ts` makes the first user admin in one `INSERT` (`CASE WHEN (SELECT COUNT(*) ...) = 0`), so two concurrent first sign-ups cannot both become admin. `bootstrapVia: "passkey"`, the default, refuses external signup while no user exists. `"first-method-wins"` lets any verified flow create the first admin.
 
@@ -69,7 +69,7 @@ Entry and term capabilities derive from `POST_TYPE_CAPABILITY_ACTIONS` and `TERM
 
 **Connected apps.** The profile's API tokens card lists the person's OAuth grants under Connected apps (`auth.oauthGrants.list`, `listOAuthGrants` in `grants.ts`): each client's name and host, the capabilities the grant holds and the last use of any of its access tokens. The name comes from the client's latest access token, and is its host before the first exchange. `auth.oauthGrants.revoke` revokes the grant's access tokens, then deletes the grant and with it its refresh tokens, so the client's next authorization asks for consent again; another person's grant is `NOT_FOUND`. `adminList` and `adminRevoke` do the same for any user and require `user:manage_tokens`.
 
-**Personal data.** A site admin exports or erases everything the site stores about one person from that user's screen in the admin: the user row and its meta, sessions, credentials, OAuth accounts and API tokens, plus each plugin's share, which a plugin contributes through a hook alongside its tables. Erasing removes the person and keeps the entries they wrote, reassigned to another user.
+**Personal data.** A site admin exports or erases everything the site stores about one person from that user's screen in the admin: the user row and its meta, sessions, credentials, OAuth accounts and API tokens, plus each plugin's share, which a plugin contributes alongside its tables. Erasing removes the person and keeps the entries they wrote, reassigned to another user.
 
 ## Invariants
 

@@ -1,9 +1,9 @@
 import * as v from "valibot";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "../context/app-context.js";
 import type { CdnFake } from "../test/cdn-fake.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
+import { defineEvent } from "../events-and-filters/define.js";
 import { definePlugin } from "../plugin/define.js";
 import { entry } from "../route/render/template-builders.js";
 import { base } from "../rpc/base.js";
@@ -13,6 +13,8 @@ import { createTestContext } from "../test/context.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
 import { createTestDb } from "../test/harness.js";
 import { defineTheme } from "../theme.js";
+
+const fired = defineEvent<undefined>("cache-probe:fired");
 
 /**
  * A plugin with a cacheable page per key that reads its data under that key
@@ -53,7 +55,7 @@ function keyedPlugin(id: string, listensForFired = false) {
         },
       });
       if (listensForFired) {
-        ctx.addAction("cache-probe:fired", (_value, appCtx) => {
+        ctx.events.on(fired, (_payload, appCtx) => {
           appCtx.cache.changed("x");
         });
       }
@@ -62,7 +64,7 @@ function keyedPlugin(id: string, listensForFired = false) {
         path: "/fire",
         auth: "public",
         handler: async (_request, appCtx) => {
-          await appCtx.hooks.doAction("cache-probe:fired", 1, appCtx);
+          await appCtx.events.emit(fired, undefined);
           return new Response(null, { status: 204 });
         },
       });
@@ -83,12 +85,6 @@ function keyedPlugin(id: string, listensForFired = false) {
       });
     },
   });
-}
-
-declare module "../hooks/types.js" {
-  interface ActionRegistry {
-    "cache-probe:fired": (value: number, ctx: AppContext) => void;
-  }
 }
 
 declare module "../blocks/deps.js" {

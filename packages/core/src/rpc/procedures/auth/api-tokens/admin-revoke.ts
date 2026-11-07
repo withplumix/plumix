@@ -1,7 +1,7 @@
 import { now } from "../../../../clock.js";
 import { and, eq, isNull } from "../../../../db/index.js";
 import { apiTokens } from "../../../../db/schema/api_tokens.js";
-import { auth } from "../../../../hooks/auth.js";
+import { auth } from "../../../../events-and-filters/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { requireCapability } from "../../../require-capability.js";

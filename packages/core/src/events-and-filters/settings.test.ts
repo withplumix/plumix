@@ -4,12 +4,12 @@ import type { AppContext } from "../context/app-context.js";
 import type { SettingsBag } from "../db/schema/settings.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createPluginSetupContext } from "../plugin/setup-context.js";
-import { HookRegistry } from "./registry.js";
+import { HandlerRegistry } from "./registry.js";
 import { settings } from "./settings.js";
 
 const ctx = createPluginSetupContext({
   pluginId: "acme",
-  hooks: new HookRegistry(),
+  handlers: new HandlerRegistry(),
   registry: createPluginRegistry(),
   theme: { templates: [] },
 });

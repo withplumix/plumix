@@ -69,7 +69,7 @@ import { registerDevItem } from "../dev/registrations.js";
 import { registerCoreDevRoutes } from "../dev/routes.js";
 import { registerCoreErrorHints } from "../dev/server/hints/core-hints.js";
 import { mergeDocumentManifest } from "../document-merge.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { loadOnce } from "../load-once.js";
 import { createMailCatalogs } from "../mail/catalogs.js";
 import { declareMails } from "../mail/declared.js";
@@ -123,7 +123,7 @@ export function resolveAuthMethods(
 
 export interface PlumixApp {
   readonly config: PlumixConfig;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly plugins: PluginRegistry;
   /**
    * Memoized; deferred so the procedure graph stays off the public render cold
@@ -266,7 +266,7 @@ export async function buildApp(
   config: PlumixConfig,
   runtime: RuntimeContext = {},
 ): Promise<PlumixApp> {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   // `PLUMIX_DEV` must be set before `buildApp`; without a dev object, capture
   // no-ops.
   const dev = process.env.PLUMIX_DEV ? createDevRuntime(config.dev) : undefined;
@@ -280,7 +280,7 @@ export async function buildApp(
   // Unconditional: the request memo drops what a write announced whether or
   // not a cdn is configured, and without one the purge half accumulates
   // nothing.
-  registerCorePurgeInvalidator(hooks);
+  registerCorePurgeInvalidator(handlers);
   const seededRegistry = createPluginRegistry(config.routes, config.roles);
   const bar = barCatalogs(runtime.catalogLocales?.["admin-bar"]);
   registerCoreAdminBarNodes(seededRegistry, bar);
@@ -297,7 +297,7 @@ export async function buildApp(
   }
 
   const { registry, appContextExtensions } = await installPlugins({
-    hooks,
+    handlers,
     plugins: config.plugins,
     registry: seededRegistry,
     theme: config.theme,
@@ -492,7 +492,7 @@ export async function buildApp(
 
   return {
     config,
-    hooks,
+    handlers,
     plugins: registry,
     loadRpcHandler,
     loadRestHandler,

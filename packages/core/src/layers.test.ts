@@ -261,7 +261,7 @@ describe("the subsystems inside a layer form no cycle", () => {
     const graph: Graph = new Map<string, readonly ImportEdge[]>([
       ["context/a.ts", [{ to: "plugin/b.ts", kind: "typeOnly" }]],
       ["plugin/b.ts", [{ to: "context/a.ts", kind: "typeOnly" }]],
-      ["hooks/c.ts", [{ to: "support.ts", kind: "typeOnly" }]],
+      ["events-and-filters/c.ts", [{ to: "support.ts", kind: "typeOnly" }]],
       ["support.ts", [{ to: "theme.ts", kind: "typeOnly" }]],
     ]);
     expect(cycleViolations(graph)).toEqual([
@@ -272,7 +272,7 @@ describe("the subsystems inside a layer form no cycle", () => {
           members: ["app-context", "support.ts"],
         },
         detail:
-          "app-context → support.ts → app-context, via hooks/c.ts → support.ts",
+          "app-context → support.ts → app-context, via events-and-filters/c.ts → support.ts",
       },
     ]);
   });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { defineEvent, defineFilter } from "../hooks/define.js";
+import { defineEvent, defineFilter } from "../events-and-filters/define.js";
 import { createRpcHarness } from "./rpc.js";
 
 const saved = defineEvent<{ readonly id: number }>("acme:saved");

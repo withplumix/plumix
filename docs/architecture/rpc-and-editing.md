@@ -34,24 +34,24 @@ flowchart LR
   mcp["MCP write tools"] --> procs
   assistant["In-editor agent"] --> procs
   procs --> checks["Capability, lease, concurrency token,<br/>allowed blocks and style policy"]
-  checks --> actions["entry actions"]
-  actions --> purge["CDN purge subscriber"]
-  actions --> hooks["Webhooks"]
-  hooks --> queue["Job queue"]
+  checks --> events["entry events"]
+  events --> purge["CDN purge subscriber"]
+  events --> webhooks["Webhooks"]
+  webhooks --> queue["Job queue"]
 ```
 
 ## Surface
 
-| Piece                                                                                                                                                           | Where                                                                                                   | Public?                    |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------- |
-| `appRouter`, `AppRouter`, `AppRouterClient`                                                                                                                     | `packages/core/src/rpc/router.ts`, re-exported from `plumix`                                            | public type                |
-| `base`, `authenticated`, `requireCapability`, `RPC_ERRORS`                                                                                                      | `packages/core/src/rpc/index.ts`                                                                        | public, for plugin routers |
-| `registerRpcRouter(router)`                                                                                                                                     | plugin setup context, mounted at `/_plumix/rpc/<pluginId>/*`                                            | public                     |
-| `createPluginRpcClient<TRouter>(pluginId)`, `PluginRpcClient/Inputs/Outputs`                                                                                    | `plumix/admin` (`packages/plumix/src/admin/plugin-rpc.ts`)                                              | public                     |
-| `etagOf`, `claim`, `claimVersion`, `claimTerm`, `ConflictError`, `ifMatchObject`, `assertWritable`, `acquire/renew/release/takeOverEditLease`, `LockedError`    | `plumix/db` (`packages/core/src/db/public.ts`)                                                          | public, for plugin tables  |
-| `describeRpcError`, `rpcErrorReason`, `rpcErrorCode`, `useEditLease`, `EditLeaseBanner`, `EditConflictDialog`                                                   | `plumix/admin`                                                                                          | public                     |
-| `entry`, `term` and `settings` (their events and their procedures' `rpc.<procedure>.input` / `.output` filters; `settings.for(group)` scopes the settings ones) | `plumix/plugin` (`packages/core/src/hooks/public-hooks.ts`, `packages/core/src/rpc/filters.ts`)         | public                     |
-| `user` (its events and its procedures' `*Input` / `*Output` filters) and `auth`                                                                                 | `plumix/plugin` (`packages/core/src/rpc/procedures/user/subject.ts`, `packages/core/src/hooks/auth.ts`) | public                     |
+| Piece                                                                                                                                                           | Where                                                                                                                | Public?                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `appRouter`, `AppRouter`, `AppRouterClient`                                                                                                                     | `packages/core/src/rpc/router.ts`, re-exported from `plumix`                                                         | public type                |
+| `base`, `authenticated`, `requireCapability`, `RPC_ERRORS`                                                                                                      | `packages/core/src/rpc/index.ts`                                                                                     | public, for plugin routers |
+| `registerRpcRouter(router)`                                                                                                                                     | plugin setup context, mounted at `/_plumix/rpc/<pluginId>/*`                                                         | public                     |
+| `createPluginRpcClient<TRouter>(pluginId)`, `PluginRpcClient/Inputs/Outputs`                                                                                    | `plumix/admin` (`packages/plumix/src/admin/plugin-rpc.ts`)                                                           | public                     |
+| `etagOf`, `claim`, `claimVersion`, `claimTerm`, `ConflictError`, `ifMatchObject`, `assertWritable`, `acquire/renew/release/takeOverEditLease`, `LockedError`    | `plumix/db` (`packages/core/src/db/public.ts`)                                                                       | public, for plugin tables  |
+| `describeRpcError`, `rpcErrorReason`, `rpcErrorCode`, `useEditLease`, `EditLeaseBanner`, `EditConflictDialog`                                                   | `plumix/admin`                                                                                                       | public                     |
+| `entry`, `term` and `settings` (their events and their procedures' `rpc.<procedure>.input` / `.output` filters; `settings.for(group)` scopes the settings ones) | `plumix/plugin` (`packages/core/src/events-and-filters/subjects.ts`, `packages/core/src/rpc/filters.ts`)             | public                     |
+| `user` (its events and its procedures' `*Input` / `*Output` filters) and `auth`                                                                                 | `plumix/plugin` (`packages/core/src/rpc/procedures/user/subject.ts`, `packages/core/src/events-and-filters/auth.ts`) | public                     |
 
 Core namespaces, by area (each `index.ts` under `packages/core/src/rpc/procedures/`):
 
@@ -92,7 +92,7 @@ Error codes (`packages/core/src/rpc-errors.ts`): `UNAUTHORIZED`, `BAD_REQUEST {r
 
 **Agents.** An agent over MCP writes, composes and publishes through the same entry procedures as the admin ([MCP](mcp.md)). Its write tools take `ifMatch`, hold edit leases on the `mcp` surface, and act with the capabilities of the API token the agent connects with. The in-editor agent drafts a page through an RPC procedure that calls the same entry procedures as an editor. It reaches a model through the `llm` config slot (`packages/core/src/runtime/contract/slots.ts`), so model keys stay on the server, and it builds the draft only from the site's blocks and design tokens. Every change an agent makes is a revision authored by the person it acts for: the token's owner over MCP, with the token's id and name in the revision's meta, and the asking editor in the editor.
 
-**Webhooks.** A core module subscribes to the entry actions `lifecycle.ts` fires, as the purge invalidator in `packages/core/src/cdn/purge.ts` does, and enqueues each delivery through the `queue` slot; a scheduled task sends it when the job queue hands it back. Webhooks are declared in code per entry type. Publishing an entry sends a POST, with its headers and payload, to each webhook its entry type declares for publish; unpublish, trash, delete and scheduled publish do the same for theirs.
+**Webhooks.** A core module subscribes to the entry events `lifecycle.ts` emits, as the purge invalidator in `packages/core/src/cdn/purge.ts` does, and enqueues each delivery through the `queue` slot; a scheduled task sends it when the job queue hands it back. Webhooks are declared in code per entry type. Publishing an entry sends a POST, with its headers and payload, to each webhook its entry type declares for publish; unpublish, trash, delete and scheduled publish do the same for theirs.
 
 **Roles.** Procedures ask by capability (`requireCapability`, `context.auth.can`), never by role. The `role` that `user.list`, `user.invite`, `user.update` and the `auth.session` output carry is any default role (member, author, editor, admin) or a role the site declares in config ([auth and access](auth-and-access.md)).
 

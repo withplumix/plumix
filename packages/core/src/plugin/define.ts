@@ -2,7 +2,7 @@ import type { ShortcodeSpec } from "../blocks/index.js";
 import type {
   AnyEventDefinition,
   AnyFilterDefinition,
-} from "../hooks/define.js";
+} from "../events-and-filters/define.js";
 import type { AnyMailDefinition } from "../mail/contract/registry.js";
 import type { SchemaModule } from "../runtime/contract/slots.js";
 import type { AuthMethodDefinition } from "./auth-method.js";
@@ -55,7 +55,7 @@ export interface PluginDescriptor<
   readonly id: string;
   readonly version?: string;
   /**
-   * What this install keeps for its own hooks, passed as their second
+   * What this install keeps for its own lifecycle steps, passed as their second
    * argument. Never put on a context, so other plugins never see it.
    */
   readonly state?: PluginStateFactory<TState>;

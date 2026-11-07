@@ -1,4 +1,4 @@
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { HandlerRegistry, installPlugins } from "plumix/plugin";
 import { expect, test } from "vitest";
 
 import { seo } from "../index.js";
@@ -9,7 +9,7 @@ import * as adminEntry from "./index.js";
 // apart so the server suites don't pay the admin bundle's import.
 test("exports the component the plugin declares the preview with", async () => {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [seo()],
   });
 

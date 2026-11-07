@@ -4,7 +4,7 @@ import type { AppContext } from "../../context/app-context.js";
 import type { DispatcherHarness } from "../../test/dispatcher.js";
 import type { ResolvedNode } from "../contract/resolved-node.js";
 import type { ListingPageTarget } from "./page-data.js";
-import { render } from "../../hooks/render.js";
+import { render } from "../../events-and-filters/render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { date } from "../../plugin/fields/temporal.js";
 import { createTestContext } from "../../test/context.js";
@@ -83,7 +83,7 @@ async function harness(): Promise<DispatcherHarness> {
 function contextFor(h: DispatcherHarness): AppContext {
   return createTestContext({
     db: h.db,
-    hooks: h.app.hooks,
+    handlers: h.app.handlers,
     plugins: h.app.plugins,
   });
 }

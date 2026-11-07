@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PluginSetup } from "../plugin/define.js";
 import type { FrameworkRoutes } from "./contract/framework-routes.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../runtime/install-plugins.js";
@@ -42,9 +42,9 @@ async function buildRegistry(
   plugins: ReturnType<typeof definePlugin>[],
   frameworkRoutes?: FrameworkRoutes,
 ) {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry(frameworkRoutes);
-  await installPlugins({ hooks, plugins, registry });
+  await installPlugins({ handlers, plugins, registry });
   return registry;
 }
 

@@ -2,8 +2,8 @@ import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { PartialMatch } from "./declared.js";
 import type { EventsFake } from "./events-fake.js";
-import { defineEvent } from "../hooks/define.js";
-import { scopeDeclarations } from "../hooks/scope.js";
+import { defineEvent } from "../events-and-filters/define.js";
+import { scopeDeclarations } from "../events-and-filters/scope.js";
 import { fakeEvents } from "./events-fake.js";
 
 const order = {

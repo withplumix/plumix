@@ -16,8 +16,7 @@ import type { PlumixConfig } from "../config.js";
 import type { EditLeaseSurface } from "../db/schema/edit_leases.js";
 import type * as coreSchema from "../db/schema/index.js";
 import type { SettingsBag } from "../db/schema/settings.js";
-import type { AppEvents, AppFilters } from "../hooks/define.js";
-import type { HookExecutor } from "../hooks/registry.js";
+import type { AppEvents, AppFilters } from "../events-and-filters/define.js";
 import type { ResolvedLocale } from "../i18n/locale-registry.js";
 import type { JsonValue } from "../json.js";
 import type { MailSender } from "../mail/contract/registry.js";
@@ -207,7 +206,6 @@ export interface AppContextBase<
    * header itself. Advisory: a fact about the network path, not a principal.
    */
   readonly clientAddress?: string;
-  readonly hooks: HookExecutor;
   /** Handlers receive the context `emit` was called on. */
   readonly events: AppEvents;
   /** Handlers receive the context `apply` was called on. */

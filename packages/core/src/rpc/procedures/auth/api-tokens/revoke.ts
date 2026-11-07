@@ -1,5 +1,5 @@
 import { revokeApiToken } from "../../../../auth/api-tokens.js";
-import { auth } from "../../../../hooks/auth.js";
+import { auth } from "../../../../events-and-filters/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { apiTokensRevokeInputSchema } from "./schemas.js";

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { withUser } from "../auth/with-user.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";
 import { createAppContext } from "./app.js";
@@ -12,7 +12,7 @@ describe("withUser — locale re-resolution", () => {
       db: {} as never,
       env: {},
       request: new Request("https://cms.example/_plumix/admin/"),
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: createPluginRegistry(),
       config: testConfig({
         i18n: { defaultLocale: "en", locales: ["en", "fr"] },

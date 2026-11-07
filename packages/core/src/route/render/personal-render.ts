@@ -4,7 +4,7 @@ import type {
 } from "../../context/app-context.js";
 import type { RequestMemo } from "../../context/memo.js";
 import { getCapabilityResolver } from "../../auth/rbac.js";
-import { rebindDispatch } from "../../hooks/dispatch.js";
+import { rebindDispatch } from "../../events-and-filters/dispatch.js";
 import { resolveLocale } from "../../i18n/resolve-locale.js";
 
 /**

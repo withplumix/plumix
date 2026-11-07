@@ -3,7 +3,7 @@ import type { DispatcherHarness, testSite } from "plumix/test";
 import {
   defineFilter,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   render,
 } from "plumix/plugin";
@@ -1117,7 +1117,7 @@ describe("seo namespace", () => {
     });
 
     const install = installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [seo(), rival],
     });
 

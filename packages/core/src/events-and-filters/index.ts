@@ -1,6 +1,5 @@
 export * from "./define.js";
 export * from "./registry.js";
-export * from "./types.js";
 // `auth` is already the config builder's name in the core barrel.
 export { auth as authEvents } from "./auth.js";
 export { block } from "./block-render.js";

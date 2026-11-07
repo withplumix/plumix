@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { entries } from "../db/schema/entries.js";
-import { entry } from "../hooks/entry.js";
+import { entry } from "../events-and-filters/entry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { currentEtag } from "../test/entry-etag.js";

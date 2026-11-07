@@ -7,8 +7,8 @@ import { expect, openPlaygroundDb, test } from "plumix/test/playwright";
 import { auditLog } from "../src/db/schema.js";
 
 /**
- * Seeded directly because audit hooks fire only through the request pipeline;
- * drizzle's typed builder surfaces schema drift as a type error.
+ * Seeded directly because audit rows are written only through the request
+ * pipeline; drizzle's typed builder surfaces schema drift as a type error.
  */
 async function seedAuditRows(): Promise<void> {
   const db = await openPlaygroundDb({

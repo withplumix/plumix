@@ -8,7 +8,7 @@ import {
   buildManifest,
   createPluginRegistry,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   injectManifestIntoHtml,
   installPlugins,
 } from "@plumix/core";
@@ -46,7 +46,7 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
   });
 
   test("every plugin surface primitive is registrable and serialisable together", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
 
     // A synthetic plugin exercising every primitive the menus + media
     // spikes would use. Runs plugin `setup()` into a throwaway registry
@@ -138,7 +138,7 @@ describe("plugin-host acceptance — end-to-end primitive coverage", () => {
     });
 
     const { registry } = await installPlugins({
-      hooks,
+      handlers,
       plugins: [hello],
       registry: createPluginRegistry(),
     });

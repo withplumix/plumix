@@ -4,12 +4,12 @@ import type { AppContext } from "../context/app-context.js";
 import type { SyncAfterEvent } from "../context/runtime-adapter.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createPluginSetupContext } from "../plugin/setup-context.js";
-import { HookRegistry } from "./registry.js";
+import { HandlerRegistry } from "./registry.js";
 import { sync } from "./sync.js";
 
 const ctx = createPluginSetupContext({
   pluginId: "acme",
-  hooks: new HookRegistry(),
+  handlers: new HandlerRegistry(),
   registry: createPluginRegistry(),
   theme: { templates: [] },
 });

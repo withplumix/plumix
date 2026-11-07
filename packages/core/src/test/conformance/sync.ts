@@ -18,8 +18,8 @@ import type {
 import type { ContractCase } from "./case.js";
 import { CORE_MIGRATIONS_FOLDER } from "../../cli/migrations.js";
 import { CORE_SYNC_SCOPE_TABLES, SYNC_AUTH_TABLES } from "../../cli/sync.js";
-import { HookRegistry } from "../../hooks/registry.js";
-import { sync } from "../../hooks/sync.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
+import { sync } from "../../events-and-filters/sync.js";
 import { testConfig } from "../config.js";
 import { memoryDump } from "../sync/memory-dump.js";
 import { describeContract } from "./case.js";
@@ -50,9 +50,9 @@ export interface SyncContractOptions {
   /**
    * Fresh ends for one case: core's migrations applied, no rows bar the
    * `apiToken` user's (id above 100), no objects. Each `settle` runs the
-   * `sync.after` handlers on `hooks`.
+   * `sync.after` handlers on `handlers`.
    */
-  readonly open: (hooks: HookRegistry) => Promise<SyncContractEnds>;
+  readonly open: (handlers: HandlerRegistry) => Promise<SyncContractEnds>;
 }
 
 type Case = ContractCase<SyncContractOptions>;
@@ -294,7 +294,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "an export imported into an empty database reproduces every table in scope",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seedSite(ends.local);
 
       await transfer(ends, "local", [SCOPES.users, SCOPES.content]);
@@ -307,7 +307,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "no auth table is ever written to a dump",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seedSite(ends.local);
       await seed(ends.local, [
         session("s-alice", 1),
@@ -332,7 +332,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "a dry run writes nothing and reports what the real import then does",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seedSite(ends.local);
       await seed(ends.remote, [
         user(1, "alice@example.test", "admin"),
@@ -362,7 +362,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "an import whose dump is at other heads fails before any write",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seedSite(ends.local);
       await seed(ends.remote, [
         user(1, "alice@example.test", "admin"),
@@ -389,7 +389,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "an author is matched by email, and one the target lacks is added disabled with their role",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seed(ends.remote, [
         user(7, "alice@example.test"),
         user(8, "bob@example.test", "author"),
@@ -433,7 +433,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "an added author whose dump row names no role is added as a member",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seed(ends.remote, [
         user(8, "bob@example.test", "author"),
         entry(1, "by-bob", 8),
@@ -463,7 +463,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "an added author whose slug is taken on the target gets a numbered one",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seed(ends.remote, [
         user(8, "bob@example.test"),
         entry(1, "by-bob", 8),
@@ -488,7 +488,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "rows outside the sync that reference replaced rows are removed or cleared, and counted",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seedSite(ends.local);
       await seed(ends.remote, [
         user(4, "carol@example.test", "admin"),
@@ -522,7 +522,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "a users replace keeps the target's sessions and tokens whose user's email is in the dump",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await seedSite(ends.local);
       await seed(ends.remote, [
         user(5, "alice@example.test", "admin"),
@@ -545,7 +545,7 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "a media replace leaves the target holding exactly the source's objects",
     run: async (options) => {
-      const ends = await options.open(new HookRegistry());
+      const ends = await options.open(new HandlerRegistry());
       await ends.local.storage.put("a.txt", "local a", {
         contentType: "text/plain",
       });
@@ -565,15 +565,15 @@ export const syncContractCases: readonly Case[] = [
   {
     name: "settle reports a failed listener as a step and still resolves",
     run: async (options) => {
-      const hooks = new HookRegistry();
-      hooks.on(
+      const handlers = new HandlerRegistry();
+      handlers.on(
         sync.after,
         () => {
           throw new Error("listener failed");
         },
         { plugin: "conformance" },
       );
-      const ends = await options.open(hooks);
+      const ends = await options.open(handlers);
 
       const report = await withEnd(ends, "remote", (end) =>
         end.settle({ scopes: ["content"], direction: "push" }),

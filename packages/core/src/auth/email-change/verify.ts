@@ -43,7 +43,7 @@ export async function verifyEmailChange(
     throw EmailChangeError.tokenInvalid();
   }
 
-  // Look up the previous email for the hook payload. The atomic
+  // Look up the previous email for the event payload. The atomic
   // commit guard is on the UPDATE itself, not this read — see below.
   const target = await db.query.users.findFirst({
     where: eq(users.id, tokenRow.userId),

@@ -13,7 +13,7 @@ import type { DefaultRole } from "../users/contract/roles.js";
 import type { BarCatalogs } from "./i18n.js";
 import { createBlockRegistry } from "../blocks/index.js";
 import { PlumixProvider } from "../blocks/renderer/index.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
@@ -130,7 +130,7 @@ describe("registered admin bar nodes", () => {
     logger: Logger = silentLogger,
   ): Promise<string> {
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [definePlugin("shop", { setup: register })],
     });
     const ctx = createTestContext({

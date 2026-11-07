@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app-context.js";
-import { HookRegistry } from "../../hooks/registry.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { definePlugin } from "../../plugin/define.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { createTestContext } from "../../test/context.js";
@@ -35,7 +35,7 @@ const archives = definePlugin("archives", {
 
 async function archiveContext(): Promise<AppContext> {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [archives],
   });
   return createTestContext({ db: await createTestDb(), plugins: registry });

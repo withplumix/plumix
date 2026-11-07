@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { definePlugin } from "./define.js";
 import { buildManifest } from "./manifest.js";
@@ -8,7 +8,7 @@ import { buildManifest } from "./manifest.js";
 describe("registerDashboardWidget", () => {
   test("registers a widget and projects it into the manifest", async () => {
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [
         definePlugin("widget-plugin", {
           setup: (ctx) => {
@@ -32,7 +32,7 @@ describe("registerDashboardWidget", () => {
 
   test("widgets project in priority order", async () => {
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [
         definePlugin("widget-plugin", {
           setup: (ctx) => {
@@ -62,7 +62,7 @@ describe("registerDashboardWidget", () => {
   test("rejects a non-namespaced widget id", async () => {
     await expect(
       installPlugins({
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: [
           definePlugin("widget-plugin", {
             setup: (ctx) => {
@@ -81,7 +81,7 @@ describe("registerDashboardWidget", () => {
   test("rejects a widget whose namespace isn't the registering plugin", async () => {
     await expect(
       installPlugins({
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: [
           definePlugin("widget-plugin", {
             setup: (ctx) => {

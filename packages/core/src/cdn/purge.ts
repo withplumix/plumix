@@ -1,10 +1,10 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
-import type { HookRegistry } from "../hooks/registry.js";
-import { entry } from "../hooks/entry.js";
-import { settings } from "../hooks/settings.js";
-import { term } from "../hooks/term.js";
-import { userEvents } from "../hooks/user.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
+import { entry } from "../events-and-filters/entry.js";
+import { settings } from "../events-and-filters/settings.js";
+import { term } from "../events-and-filters/term.js";
+import { userEvents } from "../events-and-filters/user.js";
 import {
   entryPurgeTags,
   normalizeTag,
@@ -59,7 +59,7 @@ export function flushPurgeTags(ctx: AppContext): void {
  * Registered at every boot, CDN or not: the request memo reads the same tags.
  * Handlers stay synchronous for the memo's sake (see `RequestMemo.invalidate`).
  */
-export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
+export function registerCorePurgeInvalidator(handlers: HandlerRegistry): void {
   // Entry events that change what the public sees — published, edited,
   // meta-changed, or removed from view (trash/delete) / restored. Every
   // payload's `entry` carries `{ id, type }`.
@@ -71,12 +71,12 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
   ): void => {
     enqueuePurgeTags(ctx, entryPurgeTags(row.type, row.id));
   };
-  hooks.on(entry.published, onEntry);
-  hooks.on(entry.trashed, onEntry);
-  hooks.on(entry.restored, onEntry);
-  hooks.on(entry.deleted, onEntry);
-  hooks.on(entry.updated, onEntry);
-  hooks.on(entry.metaChanged, onEntry);
+  handlers.on(entry.published, onEntry);
+  handlers.on(entry.trashed, onEntry);
+  handlers.on(entry.restored, onEntry);
+  handlers.on(entry.deleted, onEntry);
+  handlers.on(entry.updated, onEntry);
+  handlers.on(entry.metaChanged, onEntry);
 
   // Only the pages that rendered the user. The slug lookup has no id to be
   // tagged by, so any user write drops it from the memo.
@@ -84,11 +84,11 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     enqueuePurgeTags(ctx, [userTag(user.id)]);
     ctx.memo.invalidate([userSlugsTag()]);
   };
-  hooks.on(userEvents.updated, ({ user }, ctx) => onUser(user, ctx));
-  hooks.on(userEvents.metaChanged, ({ user }, ctx) => onUser(user, ctx));
+  handlers.on(userEvents.updated, ({ user }, ctx) => onUser(user, ctx));
+  handlers.on(userEvents.metaChanged, ({ user }, ctx) => onUser(user, ctx));
   // The deleted user's entries now render the user they went to, whose pages
   // never heard an entry event for them.
-  hooks.on(userEvents.deleted, ({ user, reassignedTo }, ctx) => {
+  handlers.on(userEvents.deleted, ({ user, reassignedTo }, ctx) => {
     onUser(user, ctx);
     if (reassignedTo !== null) onUser({ id: reassignedTo }, ctx);
   });
@@ -104,8 +104,8 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     enqueuePurgeTags(ctx, [termTag(row.id), taxonomyListTag(row.taxonomy)]);
     ctx.memo.invalidate([termSlugsTag()]);
   };
-  hooks.on(term.created, onTerm);
-  hooks.on(term.deleted, onTerm);
+  handlers.on(term.created, onTerm);
+  handlers.on(term.deleted, onTerm);
   const onTermEdit = (
     { term: row }: { readonly term: { readonly id: number } },
     ctx: AppContext,
@@ -113,11 +113,11 @@ export function registerCorePurgeInvalidator(hooks: HookRegistry): void {
     enqueuePurgeTags(ctx, [termTag(row.id)]);
     ctx.memo.invalidate([termSlugsTag()]);
   };
-  hooks.on(term.updated, onTermEdit);
-  hooks.on(term.metaChanged, onTermEdit);
+  handlers.on(term.updated, onTermEdit);
+  handlers.on(term.metaChanged, onTermEdit);
 
   // A response that printed a settings group is stored under its tag.
-  hooks.on(settings.groupChanged, ({ group }, ctx) => {
+  handlers.on(settings.groupChanged, ({ group }, ctx) => {
     enqueuePurgeTags(ctx, [settingsTag(group)]);
   });
 }

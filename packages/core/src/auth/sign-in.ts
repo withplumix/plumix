@@ -1,10 +1,10 @@
 import type { AppContext } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
-import type { SignIn } from "../hooks/auth.js";
+import type { SignIn } from "../events-and-filters/auth.js";
 import type { SessionCookieOptions } from "./cookies.js";
 import type { AuthFlowApp } from "./flow-app.js";
 import { withBasePath } from "../base-path.js";
-import { auth } from "../hooks/auth.js";
+import { auth } from "../events-and-filters/auth.js";
 import { buildSessionCookie, isSecureRequest } from "./cookies.js";
 import { createSession, readClientMeta } from "./sessions.js";
 

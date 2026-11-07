@@ -4,7 +4,7 @@ import type {
   SyncSettleFailure,
   SyncSettleReport,
 } from "./runtime-adapter.js";
-import { sync } from "../hooks/sync.js";
+import { sync } from "../events-and-filters/sync.js";
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

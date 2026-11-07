@@ -6,7 +6,7 @@ import type { JsonValue } from "./json.js";
 import type { OtelConsumerOptions } from "./telemetry-otel.js";
 import type { TelemetrySpan } from "./telemetry-snapshot.js";
 import type { ThemeDescriptor } from "./theme.js";
-import { render } from "./hooks/render.js";
+import { render } from "./events-and-filters/render.js";
 import { definePlugin } from "./plugin/define.js";
 import { fallback } from "./route/render/template-builders.js";
 import { otelConsumer } from "./telemetry-otel.js";

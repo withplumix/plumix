@@ -3,8 +3,7 @@ import { os } from "@orpc/server";
 import type { DerivedCapability } from "../access/contract/rbac.js";
 import type { AppContext } from "../context/app-context.js";
 import type { MutableDevRuntime } from "../context/dev-runtime.js";
-import type { HookRegistry } from "../hooks/registry.js";
-import type { ActionName, FilterFn, FilterName } from "../hooks/types.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type {
   RegisteredTemplateDep,
   TemplateDepKeys,
@@ -31,8 +30,8 @@ import { coreMarks, isReservedBlockName } from "../blocks/index.js";
 import { pluginStore } from "../context/stores.js";
 import { isPrivateSettingsGroup } from "../db/settings-groups.js";
 import { registerDevItem } from "../dev/registrations.js";
-import { entry } from "../hooks/entry.js";
-import { term } from "../hooks/term.js";
+import { entry } from "../events-and-filters/entry.js";
+import { term } from "../events-and-filters/term.js";
 import { CORE_MCP_TOOL_NAMES } from "../mcp/registry.js";
 import { DEFAULT_REWRITE_RULE_PRIORITY } from "../route/compile.js";
 import { CORE_RPC_NAMESPACES } from "../rpc/namespaces.js";
@@ -58,7 +57,7 @@ import {
 
 interface CreatePluginContextArgs {
   readonly pluginId: string;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly registry: MutablePluginRegistry;
   readonly theme: ThemeDescriptor;
   /** `undefined` outside the dev gate, where dev registrations are dropped. */
@@ -83,7 +82,7 @@ export function createPluginAfterSetupContext(
 
 function createContextBase({
   pluginId,
-  hooks,
+  handlers,
   registry,
   theme,
   dev,
@@ -112,38 +111,14 @@ function createContextBase({
 
     events: {
       on: (event, handler, options) => {
-        hooks.on(event, handler, { ...subscriber, order: options?.order });
+        handlers.on(event, handler, { ...subscriber, order: options?.order });
       },
     },
 
     filters: {
       add: (filter, handler, options) => {
-        hooks.add(filter, handler, { ...subscriber, order: options?.order });
+        handlers.add(filter, handler, { ...subscriber, order: options?.order });
       },
-    },
-
-    addFilter: (name, fn, options) => {
-      hooks.addFilter(name, fn, { ...options, plugin: pluginId });
-    },
-
-    addAction: (name, fn, options) => {
-      hooks.addAction(name, fn, { ...options, plugin: pluginId });
-    },
-
-    registerFilter: (shortName, fn, options) => {
-      const prefixed = `${pluginId}:${shortName}` as FilterName;
-      hooks.addFilter(prefixed, fn as FilterFn<FilterName>, {
-        ...options,
-        plugin: pluginId,
-      });
-    },
-
-    registerAction: (shortName, fn, options) => {
-      const prefixed = `${pluginId}:${shortName}` as ActionName;
-      hooks.addAction(prefixed, fn, {
-        ...options,
-        plugin: pluginId,
-      });
     },
 
     registerEntryType: (name, options) => {

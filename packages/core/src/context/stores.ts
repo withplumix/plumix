@@ -9,13 +9,6 @@ import { ContextError } from "./errors.js";
 
 export const requestStore = new AsyncLocalStorage<AppContext>();
 
-export interface HookFrame {
-  readonly hook: string;
-  readonly plugin: string | null;
-}
-
-export const hookStore = new AsyncLocalStorage<HookFrame>();
-
 /** The plugin whose code is running, `null` inside core's. */
 export const pluginStore = new AsyncLocalStorage<string | null>();
 
