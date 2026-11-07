@@ -1,39 +1,56 @@
 import { describe, expect, test } from "vitest";
 
-import type { PluginRegistry } from "../plugin/registry.js";
-import type { createTestDb } from "../test/harness.js";
+import type { AppContext } from "../context/app-context.js";
 import {
   entryCapability,
   termCapability,
 } from "../access/contract/capability.js";
-import { createAppContext } from "../context/app.js";
-import { HandlerRegistry } from "../events-and-filters/registry.js";
-import { createPluginRegistry } from "../plugin/manifest.js";
-import { testConfig } from "../test/config.js";
-import { pooledEntryTypeRegistry } from "../test/pooled-entry-types.js";
+import { definePlugin } from "../plugin/define.js";
+import { testSite } from "../test/site.js";
 import { withUser } from "./with-user.js";
 
 // `auth.can()` is the single gate every capability check goes through, so
 // a refactor must not strip the tokenScopes intersection.
 
+const site = await testSite({ plugins: [] });
+
+/**
+ * `news` pools its permissions with `post`, so `entry:post:*` reaches news
+ * rows and `entry:news:*` is never minted.
+ */
+const pooled = await testSite({
+  plugins: [
+    definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts" });
+        ctx.registerEntryType("news", {
+          label: "News",
+          capabilityType: "post",
+        });
+      },
+    }),
+  ],
+});
+
+const tagged = await testSite({
+  plugins: [
+    definePlugin("site", {
+      setup: (ctx) => {
+        ctx.registerCapability("term:tag:assign", {
+          grantTo: ["author", "editor"],
+        });
+      },
+    }),
+  ],
+});
+
 function buildCtx(args: {
   role: "member" | "author" | "editor" | "admin";
   tokenScopes?: readonly string[] | null;
-  plugins?: PluginRegistry;
+  on?: { readonly context: AppContext };
 }) {
-  const db = {} as Awaited<ReturnType<typeof createTestDb>>;
-  const handlers = new HandlerRegistry();
-  const plugins = args.plugins ?? createPluginRegistry();
-  const baseCtx = createAppContext({
-    db,
-    env: {},
-    request: new Request("https://cms.example/"),
-    config: testConfig(),
-    handlers,
-    plugins,
-  });
   return withUser(
-    baseCtx,
+    (args.on ?? site).context,
     { id: 1, email: "u@cms.example", role: args.role, meta: {} },
     args.tokenScopes ?? null,
   );
@@ -74,49 +91,32 @@ describe("auth.can — tokenScopes narrowing", () => {
   });
 
   test("unauthenticated context can never grant a capability", () => {
-    const db = {} as Awaited<ReturnType<typeof createTestDb>>;
-    const handlers = new HandlerRegistry();
-    const plugins = createPluginRegistry();
-    const ctx = createAppContext({
-      db,
-      env: {},
-      request: new Request("https://cms.example/"),
-      config: testConfig(),
-      handlers,
-      plugins,
-    });
-    expect(ctx.auth.can("entry:post:read")).toBe(false);
+    expect(site.context.auth.can("entry:post:read")).toBe(false);
   });
 });
 
 describe("auth.can — capability references", () => {
-  test("resolves an entry reference to the namespace its type pools under", async () => {
+  test("resolves an entry reference to the namespace its type pools under", () => {
     const ctx = buildCtx({
       role: "editor",
-      plugins: await pooledEntryTypeRegistry(),
+      on: pooled,
     });
     expect(ctx.auth.can(entryCapability("news", "edit_any"))).toBe(true);
     expect(ctx.auth.can("entry:news:edit_any")).toBe(false);
   });
 
-  test("narrows a reference by the token scope its resolved string names", async () => {
+  test("narrows a reference by the token scope its resolved string names", () => {
     const ctx = buildCtx({
       role: "editor",
       tokenScopes: ["entry:post:read"],
-      plugins: await pooledEntryTypeRegistry(),
+      on: pooled,
     });
     expect(ctx.auth.can(entryCapability("news", "read"))).toBe(true);
     expect(ctx.auth.can(entryCapability("news", "edit_any"))).toBe(false);
   });
 
   test("resolves a term reference under its taxonomy", () => {
-    const plugins = createPluginRegistry();
-    plugins.capabilities.set("term:tag:assign", {
-      name: "term:tag:assign",
-      grantTo: ["author", "editor", "admin"],
-      registeredBy: null,
-    });
-    const ctx = buildCtx({ role: "author", plugins });
+    const ctx = buildCtx({ role: "author", on: tagged });
     expect(ctx.auth.can(termCapability("tag", "assign"))).toBe(true);
   });
 });

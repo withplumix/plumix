@@ -1,4 +1,4 @@
-import type { PlumixFetch } from "../context/app-context.js";
+import type { PlumixFetch } from "../runtime/contract/fetch.js";
 import { DEFAULT_TIMEOUT_MS, timeoutError } from "../context/traced-fetch.js";
 import { deepEqual } from "./match.js";
 
@@ -131,9 +131,22 @@ export function fakeFetch(): FetchFake {
           typeof timeout === "number" ? timeout : DEFAULT_TIMEOUT_MS,
         );
       }
-      return answer.clone();
+      return fresh(answer);
     },
   };
+}
+
+/**
+ * A response of its own, not a clone: cancelling a clone's body waits on the
+ * copy the route keeps, so a caller that stops reading partway would hang.
+ */
+async function fresh(answer: Response): Promise<Response> {
+  const body = answer.body === null ? null : await answer.clone().arrayBuffer();
+  return new Response(body, {
+    status: answer.status,
+    statusText: answer.statusText,
+    headers: answer.headers,
+  });
 }
 
 /** A URL with no `*` is matched as `Request` spells it, so `https://a.example` meets `https://a.example/`. */

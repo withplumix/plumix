@@ -1,40 +1,34 @@
 import { describe, expect, test } from "vitest";
 
-import type { DispatcherHarness } from "../../test/dispatcher.js";
-import type { DefaultRole } from "../../users/contract/roles.js";
-import {
-  createDispatcherHarness,
-  plumixRequest,
-} from "../../test/dispatcher.js";
-import { SESSION_COOKIE_NAME } from "../cookies.js";
-import { createSession } from "../sessions.js";
+import type { FetchOptions } from "../../test/request.js";
+import type { TestSite } from "../../test/site.js";
+import { testSite } from "../../test/site.js";
 import { createAuthClient } from "./auth-client.js";
 
-/** An auth client whose every request reaches core's real handlers. */
-function clientOf(h: DispatcherHarness, token: string | null) {
+const site = await testSite({ plugins: [] });
+
+/** An auth client whose every request reaches the site's real handlers. */
+function clientOf(signedIn: TestSite) {
   return createAuthClient({
     basePath: () => "",
-    fetch: (url, init) => {
-      const headers = new Headers(init.headers);
-      if (token !== null) {
-        headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
-      }
-      return h.dispatch(plumixRequest(url, { ...init, headers }));
+    fetch: async (url, init) => {
+      const page = await signedIn.visit(url, {
+        method: init.method as FetchOptions["method"],
+        headers: init.headers,
+        body: init.body ?? undefined,
+      });
+      return new Response(page.body === "" ? null : page.body, {
+        status: page.status,
+        headers: page.headers,
+      });
     },
     navigate: () => undefined,
   });
 }
 
-async function signedInAs(role: DefaultRole) {
-  const h = await createDispatcherHarness();
-  const user = await h.seedUser(role);
-  const { token } = await createSession(h.db, { userId: user.id });
-  return clientOf(h, token);
-}
-
 describe("the session's capabilities", () => {
   test("a member's session reports editing their own profile, not creating posts", async () => {
-    const { session } = await signedInAs("member");
+    const { session } = clientOf(site.actingAs("member"));
 
     await session.refresh();
 
@@ -44,7 +38,7 @@ describe("the session's capabilities", () => {
   });
 
   test("an editor's session reports editing any post", async () => {
-    const { session } = await signedInAs("editor");
+    const { session } = clientOf(site.actingAs("editor"));
 
     await session.refresh();
 
@@ -53,15 +47,14 @@ describe("the session's capabilities", () => {
 });
 
 describe("authClient.can", () => {
-  test("is false while the session is pending", async () => {
-    const { authClient } = await signedInAs("editor");
+  test("is false while the session is pending", () => {
+    const { authClient } = clientOf(site.actingAs("editor"));
 
     expect(authClient.can("entry:post:edit_any")).toBe(false);
   });
 
   test("is false when signed out", async () => {
-    const h = await createDispatcherHarness();
-    const { authClient, session } = clientOf(h, null);
+    const { authClient, session } = clientOf(site);
 
     await session.refresh();
 
@@ -69,7 +62,7 @@ describe("authClient.can", () => {
   });
 
   test("answers from the signed-in session's capabilities", async () => {
-    const { authClient, session } = await signedInAs("member");
+    const { authClient, session } = clientOf(site.actingAs("member"));
 
     await session.refresh();
 
@@ -78,7 +71,7 @@ describe("authClient.can", () => {
   });
 
   test("turns false after sign-out", async () => {
-    const { authClient, session } = await signedInAs("member");
+    const { authClient, session } = clientOf(site.actingAs("member"));
     await session.refresh();
 
     await authClient.signOut();

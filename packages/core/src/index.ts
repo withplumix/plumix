@@ -124,6 +124,7 @@ export type * from "./runtime/contract/bindings.js";
 export { createPlumixDispatcher } from "./runtime/dispatcher.js";
 export type { PlumixDispatcher } from "./runtime/dispatcher.js";
 export type { EnvInput } from "./runtime/contract/env-input.js";
+export type { PlumixFetch } from "./runtime/contract/fetch.js";
 export { resolveEnvInput } from "./runtime/contract/env-input.js";
 export { DRAIN_DEADLINE_MS } from "./runtime/drain.js";
 export {

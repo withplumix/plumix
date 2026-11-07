@@ -1,4 +1,5 @@
 import type { EnvInput } from "../../runtime/contract/env-input.js";
+import type { PlumixFetch } from "../../runtime/contract/fetch.js";
 
 export interface OAuthClientConfig {
   readonly clientId: string;
@@ -48,6 +49,7 @@ export interface OAuthProviderClient {
    */
   fetchVerifiedEmail?(
     accessToken: string,
+    fetch: PlumixFetch,
   ): Promise<{ email: string; verified: boolean } | null>;
 }
 

@@ -73,15 +73,15 @@ Entry and term capabilities derive from `POST_TYPE_CAPABILITY_ACTIONS` and `TERM
 
 ## Invariants
 
-- An authenticator never mints a session. Only `proveIdentity` does. [ADR 0041](../adr/0041-a-sign-in-method-is-a-registered-extension.md); `packages/core/src/auth/method-kernel.test.ts`.
+- An authenticator never mints a session. Only `proveIdentity` does. [ADR 0041](../adr/0041-a-sign-in-method-is-a-registered-extension.md); `packages/core/tests/feature/signing-in-with-a-plugins-auth-method.test.ts`.
 - A surface that creates a credential resolves the caller with `authenticateSession`, so an API-token caller reads as anonymous there. [ADR 0024](../adr/0024-a-credential-is-created-only-from-a-session.md); `auth/authenticator.test.ts` ("treats an api-token caller as anonymous").
 - `AuthResult.credential` is required, so a custom authenticator that omits it fails to compile. ADR 0024.
 - A token can only narrow its owner's capabilities, never widen them. `auth/auth-can-scopes.test.ts`.
-- An OAuth code works once, for ten minutes, for the client, redirect URI and PKCE verifier it was issued to, and the token it buys works only on MCP. `auth/oauth-server/routes.test.ts` ("a refused code exchange").
-- An OAuth refresh token works once, for 30 days, for the client it was issued to; presenting a rotated one again revokes every token of its grant. `auth/oauth-server/routes.test.ts` ("refreshing").
-- Revoking a connected app refuses its access and refresh tokens at once and sends its next authorization to consent; only its owner or a holder of `user:manage_tokens` can list or revoke it. `auth/oauth-server/routes.test.ts` ("revoking a connected app", "another person's connected apps").
-- An OAuth grant is approved only from a session, holds only the capabilities the person kept, and skips consent only for a request it covers. `auth/oauth-server/routes.test.ts` ("consent", "what a grant's token can do").
-- An audience-bound token works only on the surface its audience names: MCP accepts one bound to its own URL, and RPC and REST refuse every bound token. `mcp/dispatch.test.ts` ("audience-bound tokens"), `auth/authenticator.dispatcher.test.ts` ("API tokens on RPC"), `rest/dispatch.test.ts` ("a token bound to the MCP audience").
+- An OAuth code works once, for ten minutes, for the client, redirect URI and PKCE verifier it was issued to, and the token it buys works only on MCP. `packages/core/tests/feature/exchanging-an-authorization-code.test.ts` ("a refused code exchange").
+- An OAuth refresh token works once, for 30 days, for the client it was issued to; presenting a rotated one again revokes every token of its grant. `packages/core/tests/feature/refreshing-an-mcp-access-token.test.ts`.
+- Revoking a connected app refuses its access and refresh tokens at once and sends its next authorization to consent; only its owner or a holder of `user:manage_tokens` can list or revoke it. `packages/core/tests/feature/managing-connected-apps.test.ts` ("revoking a connected app", "another person's connected apps").
+- An OAuth grant is approved only from a session, holds only the capabilities the person kept, and skips consent only for a request it covers. `packages/core/tests/feature/consenting-to-an-mcp-client.test.ts` ("consent", "what a grant's token can do").
+- An audience-bound token works only on the surface its audience names: MCP accepts one bound to its own URL, and RPC and REST refuse every bound token. `mcp/dispatch.test.ts` ("audience-bound tokens"), `packages/core/tests/feature/authenticating-with-an-api-token.test.ts` ("an api token on rpc"), `rest/dispatch.test.ts` ("a token bound to the MCP audience").
 - The session's capability list and `hasCapability` read one role table and never disagree. `auth/role-capabilities.test.ts`.
 - A plugin capability goes to the default roles its `grantTo` names plus `admin`, and to `admin` alone without it. `auth/role-capabilities.test.ts`.
 - A config role resolves exactly its grants plus its `extends` target's, `admin` holds every registered capability, and a name nothing registered fails the build but is ignored at runtime. [ADR 0055](../adr/0055-a-role-is-a-set-of-capabilities-declared-in-code.md); `auth/role-capabilities.test.ts`, `packages/plumix/src/vite/emit-plumix-sources.test.ts`.

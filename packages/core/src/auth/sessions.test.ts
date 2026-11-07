@@ -6,14 +6,28 @@ import { sessions } from "../db/schema/sessions.js";
 import { users } from "../db/schema/users.js";
 import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
+import { testSite } from "../test/site.js";
 import {
   createSession,
   DEFAULT_SESSION_POLICY,
   invalidateSession,
   pruneExpiredSessions,
+  readClientMeta,
   validateSession,
 } from "./sessions.js";
 import { hashToken } from "./tokens.js";
+
+const site = await testSite({ plugins: [] });
+
+describe("readClientMeta", () => {
+  test("clips the address the runtime supplied to the column's cap", () => {
+    const overLong = `2001:db8:${"a".repeat(200)}`;
+
+    const meta = readClientMeta({ ...site.context, clientAddress: overLong });
+
+    expect(meta.ipAddress).toBe(overLong.slice(0, 64));
+  });
+});
 
 describe("pruneExpiredSessions", () => {
   test("removes only rows whose expiresAt has passed, returning the count", async () => {

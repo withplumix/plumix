@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { PlumixFetch } from "../../context/app-context.js";
+import type { PlumixFetch } from "../../runtime/contract/fetch.js";
 import { now } from "../../clock.js";
 
 export interface OAuthClient {
@@ -76,16 +76,13 @@ async function fetchDocument(
   fetch: PlumixFetch,
   clientId: string,
 ): Promise<string> {
-  const deadline = new AbortController();
-  const timer = setTimeout(() => {
-    deadline.abort();
-  }, FETCH_TIMEOUT_MS);
+  const deadline = now().getTime() + FETCH_TIMEOUT_MS;
   try {
     let url = clientId;
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
       const response = await fetch(url, {
         redirect: "manual",
-        signal: deadline.signal,
+        timeout: Math.max(0, deadline - now().getTime()),
       });
       const location = REDIRECT_STATUSES.has(response.status)
         ? response.headers.get("location")
@@ -102,11 +99,11 @@ async function fetchDocument(
     }
     throw new ClientMetadataError("too_many_redirects");
   } catch (error) {
-    if (deadline.signal.aborted) throw new ClientMetadataError("timeout");
     if (error instanceof ClientMetadataError) throw error;
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new ClientMetadataError("timeout");
+    }
     throw new ClientMetadataError("unreachable");
-  } finally {
-    clearTimeout(timer);
   }
 }
 

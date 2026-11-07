@@ -2,6 +2,7 @@ import * as v from "valibot";
 
 import type { Db } from "../../context/app-context.js";
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
+import type { PlumixFetch } from "../../runtime/contract/fetch.js";
 import type { OAuthProfile, OAuthProviderClient } from "../contract/oauth.js";
 import { resolveEnvInput } from "../../runtime/contract/env-input.js";
 import { OAuthError } from "./errors.js";
@@ -57,6 +58,7 @@ interface ExchangeAndFetchInput {
   readonly redirectUri: string;
   readonly codeVerifier: string;
   readonly env: PlumixEnv;
+  readonly fetch: PlumixFetch;
 }
 
 /**
@@ -77,11 +79,14 @@ export async function exchangeAndFetchProfile(
 ): Promise<OAuthProfile> {
   const { provider } = input;
   const tokens = await exchangeCode(input);
-  const profile = await fetchProfile(provider, tokens.access_token);
+  const profile = await fetchProfile(input, tokens.access_token);
 
   let { email, emailVerified } = profile;
   if (!email && provider.fetchVerifiedEmail) {
-    const fallback = await provider.fetchVerifiedEmail(tokens.access_token);
+    const fallback = await provider.fetchVerifiedEmail(
+      tokens.access_token,
+      input.fetch,
+    );
     if (fallback) {
       email = fallback.email;
       emailVerified = fallback.verified;
@@ -121,7 +126,7 @@ async function exchangeCode(
 
   let response: Response;
   try {
-    response = await fetch(provider.tokenUrl, {
+    response = await input.fetch(provider.tokenUrl, {
       method: "POST",
       headers: {
         Authorization: `Basic ${basic}`,
@@ -155,7 +160,7 @@ async function exchangeCode(
 }
 
 async function fetchProfile(
-  provider: OAuthProviderClient,
+  { provider, fetch }: ExchangeAndFetchInput,
   accessToken: string,
 ): Promise<ReturnType<OAuthProviderClient["parseProfile"]>> {
   let response: Response;

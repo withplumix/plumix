@@ -1,22 +1,32 @@
 import { describe, expect, test } from "vitest";
 
-import type { DispatcherHarness } from "../../test/dispatcher.js";
-import {
-  createDispatcherHarness,
-  plumixRequest,
-} from "../../test/dispatcher.js";
+import type { FetchOptions } from "../../test/request.js";
+import { testSite } from "../../test/site.js";
 import { SESSION_COOKIE_NAME } from "../cookies.js";
 import { createSession } from "../sessions.js";
 import { createAuthClient } from "./auth-client.js";
 
-/** An auth client whose every request reaches core's real handlers. */
-function clientOf(h: DispatcherHarness, token: string) {
+const site = await testSite({ plugins: [] });
+
+/**
+ * An auth client signed in on the session `token` names, whose every request
+ * reaches the site's real handlers.
+ */
+function clientOf(token: string) {
   return createAuthClient({
     basePath: () => "",
-    fetch: (url, init) => {
+    fetch: async (url, init) => {
       const headers = new Headers(init.headers);
       headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
-      return h.dispatch(plumixRequest(url, { ...init, headers }));
+      const page = await site.visit(url, {
+        method: init.method as FetchOptions["method"],
+        headers,
+        body: init.body ?? undefined,
+      });
+      return new Response(page.body === "" ? null : page.body, {
+        status: page.status,
+        headers: page.headers,
+      });
     },
     navigate: () => undefined,
   });
@@ -24,11 +34,10 @@ function clientOf(h: DispatcherHarness, token: string) {
 
 /** One user signed in on this device and on another. */
 async function twoSessions() {
-  const h = await createDispatcherHarness();
-  const user = await h.seedUser("member");
-  const here = await createSession(h.db, { userId: user.id });
-  const other = await createSession(h.db, { userId: user.id });
-  return { h, user, here, other, ...clientOf(h, here.token) };
+  const user = await site.factory.member.create();
+  const here = await createSession(site.context.db, { userId: user.id });
+  const other = await createSession(site.context.db, { userId: user.id });
+  return { user, here, other, ...clientOf(here.token) };
 }
 
 describe("authClient.sessions.list", () => {
@@ -43,14 +52,13 @@ describe("authClient.sessions.list", () => {
   });
 
   test("resolves each session with its address, agent and dates as Dates", async () => {
-    const h = await createDispatcherHarness();
-    const user = await h.seedUser("member");
-    const here = await createSession(h.db, {
+    const user = await site.factory.member.create();
+    const here = await createSession(site.context.db, {
       userId: user.id,
       ipAddress: "203.0.113.7",
       userAgent: "Firefox",
     });
-    const { authClient } = clientOf(h, here.token);
+    const { authClient } = clientOf(here.token);
 
     const result = await authClient.sessions.list();
 
@@ -94,8 +102,8 @@ describe("authClient.sessions.revoke", () => {
 
 describe("authClient.sessions.revokeOthers", () => {
   test("leaves only this session", async () => {
-    const { h, user, here, authClient } = await twoSessions();
-    await createSession(h.db, { userId: user.id });
+    const { user, here, authClient } = await twoSessions();
+    await createSession(site.context.db, { userId: user.id });
 
     const result = await authClient.sessions.revokeOthers();
 

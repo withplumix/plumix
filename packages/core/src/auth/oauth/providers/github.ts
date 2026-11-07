@@ -37,7 +37,7 @@ export const github: OAuthProviderFactory = (client): OAuthProviderClient => ({
       avatarUrl: p.avatar_url,
     };
   },
-  async fetchVerifiedEmail(accessToken) {
+  async fetchVerifiedEmail(accessToken, fetch) {
     const response = await fetch("https://api.github.com/user/emails", {
       headers: {
         Authorization: `Bearer ${accessToken}`,

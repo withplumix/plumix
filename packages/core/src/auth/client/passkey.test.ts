@@ -1,20 +1,18 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { FetchOptions } from "../../test/request.js";
 import { credentials as credentialsTable } from "../../db/schema/credentials.js";
 import { decodeBase64url, encodeBase64url } from "../../encoding.js";
-import {
-  createDispatcherHarness,
-  plumixRequest,
-} from "../../test/dispatcher.js";
 import {
   buildAttestation,
   generatePasskeyKeyPair,
   randomCredentialId,
 } from "../../test/fixtures/webauthn.js";
-import { SESSION_COOKIE_NAME } from "../cookies.js";
-import { createSession } from "../sessions.js";
+import { testSite } from "../../test/site.js";
 import { createAuthClient } from "./auth-client.js";
+
+const site = await testSite({ plugins: [] });
 
 interface SentRequest {
   readonly url: string;
@@ -280,21 +278,26 @@ function enrolsPasskey(): void {
   );
 }
 
-/** A signed-in auth client whose every request reaches core's real handlers. */
+/** A member's auth client whose every request reaches the site's real handlers. */
 async function signedInClient() {
-  const h = await createDispatcherHarness();
-  const user = await h.seedUser("member");
-  const { token } = await createSession(h.db, { userId: user.id });
+  const user = await site.factory.member.create();
+  const signedIn = site.actingAs(user);
   const { authClient } = createAuthClient({
     basePath: () => "",
-    fetch: (url, init) => {
-      const headers = new Headers(init.headers);
-      headers.append("cookie", `${SESSION_COOKIE_NAME}=${token}`);
-      return h.dispatch(plumixRequest(url, { ...init, headers }));
+    fetch: async (url, init) => {
+      const page = await signedIn.visit(url, {
+        method: init.method as FetchOptions["method"],
+        headers: init.headers,
+        body: init.body ?? undefined,
+      });
+      return new Response(page.body === "" ? null : page.body, {
+        status: page.status,
+        headers: page.headers,
+      });
     },
     navigate: () => undefined,
   });
-  return { h, user, authClient };
+  return { user, authClient };
 }
 
 describe("authClient.passkey.list", () => {
@@ -318,8 +321,8 @@ describe("authClient.passkey.list", () => {
 
 describe("authClient.passkey.rename", () => {
   test("renames one of the user's passkeys", async () => {
-    const { h, user, authClient } = await signedInClient();
-    const passkey = await h.factory.credential.create({
+    const { user, authClient } = await signedInClient();
+    const passkey = await site.factory.credential.create({
       userId: user.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
@@ -330,7 +333,7 @@ describe("authClient.passkey.rename", () => {
       data: { id: passkey.id, name: "Work laptop" },
       error: null,
     });
-    const stored = await h.db
+    const stored = await site.context.db
       .select()
       .from(credentialsTable)
       .where(eq(credentialsTable.userId, user.id));
@@ -340,12 +343,12 @@ describe("authClient.passkey.rename", () => {
 
 describe("authClient.passkey.remove", () => {
   test("removes a passkey while the user has another", async () => {
-    const { h, user, authClient } = await signedInClient();
-    const kept = await h.factory.credential.create({
+    const { user, authClient } = await signedInClient();
+    const kept = await site.factory.credential.create({
       userId: user.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
-    const removed = await h.factory.credential.create({
+    const removed = await site.factory.credential.create({
       userId: user.id,
       publicKey: Buffer.from([4, 5, 6]),
     });
@@ -353,7 +356,7 @@ describe("authClient.passkey.remove", () => {
     const result = await authClient.passkey.remove(removed.id);
 
     expect(result).toEqual({ data: { id: removed.id }, error: null });
-    const stored = await h.db
+    const stored = await site.context.db
       .select()
       .from(credentialsTable)
       .where(eq(credentialsTable.userId, user.id));
@@ -361,8 +364,8 @@ describe("authClient.passkey.remove", () => {
   });
 
   test("refuses to remove the user's only passkey with last_credential, keeping it", async () => {
-    const { h, user, authClient } = await signedInClient();
-    const only = await h.factory.credential.create({
+    const { user, authClient } = await signedInClient();
+    const only = await site.factory.credential.create({
       userId: user.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
@@ -371,7 +374,7 @@ describe("authClient.passkey.remove", () => {
 
     expect(result.error?.code).toBe("last_credential");
     expect(result.error?.message.id).toBe("authClient.error.lastCredential");
-    const stored = await h.db
+    const stored = await site.context.db
       .select()
       .from(credentialsTable)
       .where(eq(credentialsTable.userId, user.id));
@@ -381,9 +384,9 @@ describe("authClient.passkey.remove", () => {
 
 describe("another user's passkey", () => {
   test("resolves not_found to rename", async () => {
-    const { h, authClient } = await signedInClient();
-    const other = await h.seedUser("member");
-    const theirs = await h.factory.credential.create({
+    const { authClient } = await signedInClient();
+    const other = await site.factory.member.create();
+    const theirs = await site.factory.credential.create({
       userId: other.id,
       publicKey: Buffer.from([1, 2, 3]),
       name: "Theirs",
@@ -396,13 +399,13 @@ describe("another user's passkey", () => {
   });
 
   test("resolves not_found to remove", async () => {
-    const { h, authClient } = await signedInClient();
-    const other = await h.seedUser("member");
-    const theirs = await h.factory.credential.create({
+    const { authClient } = await signedInClient();
+    const other = await site.factory.member.create();
+    const theirs = await site.factory.credential.create({
       userId: other.id,
       publicKey: Buffer.from([1, 2, 3]),
     });
-    await h.factory.credential.create({
+    await site.factory.credential.create({
       userId: other.id,
       publicKey: Buffer.from([4, 5, 6]),
     });

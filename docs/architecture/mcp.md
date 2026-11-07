@@ -93,7 +93,7 @@ The in-editor agent is not served over MCP. It is an RPC procedure behind an `ll
 - A token whose capabilities don't cover a tool's `capability` gets 403 `insufficient_scope` before the tool runs. `dispatch.test.ts` ("authorization challenges").
 - MCP authenticates by API token only, never by session cookie. `dispatch.test.ts` ("a session-cookie request is rejected").
 - MCP accepts an audience-bound token only when its audience is the endpoint's URL. `dispatch.test.ts` ("audience-bound tokens").
-- A token minted through OAuth runs the tools its grant covers, procedures included. `auth/oauth-server/routes.test.ts` ("what a grant's token can do").
+- A token minted through OAuth runs the tools its grant covers, procedures included. `packages/core/tests/feature/consenting-to-an-mcp-client.test.ts` ("what a grant's token can do").
 - The endpoint is off unless configured, and the handler graph is not imported when it is off. `dispatchMcp` in `runtime/dispatcher.ts`; `dispatch.test.ts` ("dev auto-enables the endpoint with no config flag").
 - No tool drops tables or runs migrations. `dispatch.test.ts` ("no tool drops tables or migrates").
 - Telemetry and error tools are absent outside dev. `dispatch.test.ts` ("without the dev gate the tracing and error tools are not registered").
