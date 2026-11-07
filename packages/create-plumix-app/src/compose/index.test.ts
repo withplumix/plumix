@@ -135,6 +135,12 @@ describe("compose — tests", () => {
     expect(
       (JSON.parse(files["tsconfig.json"] ?? "{}") as { include: string[] })
         .include,
-    ).toEqual(expect.arrayContaining(["tests", "vitest.config.ts"]));
+    ).toEqual([
+      "plumix.config.ts",
+      "vitest.config.ts",
+      "theme",
+      "tests",
+      ".plumix",
+    ]);
   });
 });
