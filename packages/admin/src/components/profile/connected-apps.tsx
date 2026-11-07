@@ -133,86 +133,11 @@ export function ConnectedAppsSection({
         </p>
       </div>
 
-      {isLoading ? (
-        <p
-          className="text-muted-foreground text-sm"
-          data-testid="connected-apps-loading"
-        >
-          <Trans id="connectedApps.loading" message="Loading apps…" />
-        </p>
-      ) : apps.length === 0 ? (
-        <Empty data-testid="connected-apps-empty">
-          <EmptyHeader>
-            <EmptyTitle>
-              <Trans
-                id="connectedApps.empty.title"
-                message="No connected apps"
-              />
-            </EmptyTitle>
-            <EmptyDescription>
-              <Trans
-                id="connectedApps.empty.description"
-                message="An agent that connects through OAuth shows up here."
-              />
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <Table data-testid="connected-apps-table">
-          <TableHeader>
-            <TableRow>
-              <TableHead>
-                <Trans id="connectedApps.col.app" message="App" />
-              </TableHead>
-              <TableHead>
-                <Trans id="connectedApps.col.access" message="Access" />
-              </TableHead>
-              <TableHead>
-                <Trans id="connectedApps.col.lastUsed" message="Last used" />
-              </TableHead>
-              <TableHead className="w-px text-end">
-                <Trans id="connectedApps.col.actions" message="Actions" />
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {apps.map((app) => (
-              <TableRow
-                key={app.id}
-                data-testid={`connected-apps-row-${app.id}`}
-              >
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{app.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {app.host}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <CapabilityBadges capabilities={app.capabilities} />
-                </TableCell>
-                <TableCell
-                  variant="muted"
-                  data-testid={`connected-apps-last-used-${app.id}`}
-                >
-                  <LastUsed when={app.lastUsedAt} />
-                </TableCell>
-                <TableCell className="text-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setRevokeTarget(app)}
-                    data-testid={`connected-apps-revoke-${app.id}`}
-                  >
-                    <Trans id="connectedApps.revoke.button" message="Revoke" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <ConnectedAppsBody
+        apps={apps}
+        isLoading={isLoading}
+        onRevokeClick={setRevokeTarget}
+      />
 
       <AlertDialog
         open={revokeTarget !== null}
@@ -278,6 +203,97 @@ export function ConnectedAppsSection({
         </AlertDialogContent>
       </AlertDialog>
     </section>
+  );
+}
+
+function ConnectedAppsBody({
+  apps,
+  isLoading,
+  onRevokeClick,
+}: {
+  apps: readonly ConnectedApp[];
+  isLoading: boolean;
+  onRevokeClick: (app: ConnectedApp) => void;
+}): ReactNode {
+  if (isLoading) {
+    return (
+      <p
+        className="text-muted-foreground text-sm"
+        data-testid="connected-apps-loading"
+      >
+        <Trans id="connectedApps.loading" message="Loading apps…" />
+      </p>
+    );
+  }
+  if (apps.length === 0) {
+    return (
+      <Empty data-testid="connected-apps-empty">
+        <EmptyHeader>
+          <EmptyTitle>
+            <Trans id="connectedApps.empty.title" message="No connected apps" />
+          </EmptyTitle>
+          <EmptyDescription>
+            <Trans
+              id="connectedApps.empty.description"
+              message="An agent that connects through OAuth shows up here."
+            />
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+  return (
+    <Table data-testid="connected-apps-table">
+      <TableHeader>
+        <TableRow>
+          <TableHead>
+            <Trans id="connectedApps.col.app" message="App" />
+          </TableHead>
+          <TableHead>
+            <Trans id="connectedApps.col.access" message="Access" />
+          </TableHead>
+          <TableHead>
+            <Trans id="connectedApps.col.lastUsed" message="Last used" />
+          </TableHead>
+          <TableHead className="w-px text-end">
+            <Trans id="connectedApps.col.actions" message="Actions" />
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {apps.map((app) => (
+          <TableRow key={app.id} data-testid={`connected-apps-row-${app.id}`}>
+            <TableCell>
+              <div className="flex flex-col">
+                <span className="font-medium">{app.name}</span>
+                <span className="text-muted-foreground text-xs">
+                  {app.host}
+                </span>
+              </div>
+            </TableCell>
+            <TableCell>
+              <CapabilityBadges capabilities={app.capabilities} />
+            </TableCell>
+            <TableCell
+              variant="muted"
+              data-testid={`connected-apps-last-used-${app.id}`}
+            >
+              <LastUsed when={app.lastUsedAt} />
+            </TableCell>
+            <TableCell className="text-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRevokeClick(app)}
+                data-testid={`connected-apps-revoke-${app.id}`}
+              >
+                <Trans id="connectedApps.revoke.button" message="Revoke" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 

@@ -249,10 +249,7 @@ export async function spendRefreshToken(
   return false;
 }
 
-/**
- * Revokes the grant with its access and refresh tokens, so the client's next
- * authorization asks for consent. `false` when `userId` holds no grant `id`.
- */
+/** `false` when `userId` holds no grant `id`. */
 export async function revokeOAuthGrant(
   db: Db,
   grant: { readonly id: number; readonly userId: number },

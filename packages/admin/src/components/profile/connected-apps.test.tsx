@@ -49,6 +49,12 @@ describe("the connected apps section", () => {
     );
   });
 
+  test("says an app holding no capability has no access", () => {
+    const html = render({ apps: [{ ...EXAMPLE_AGENT, capabilities: [] }] });
+
+    expect(html).toContain('data-testid="connected-apps-capability-none"');
+  });
+
   test("says an app that never called the site was never used", () => {
     const html = render();
 

@@ -1121,7 +1121,9 @@ describe("revoking a connected app", () => {
     user: User,
   ): Promise<number> {
     const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, user);
-    return body[0]?.id ?? 0;
+    const [grant] = body;
+    if (grant === undefined) throw new Error("the user has no connected app");
+    return grant.id;
   }
 
   test("refuses its access token at once", async () => {
@@ -1197,7 +1199,7 @@ describe("revoking a connected app", () => {
     expect(body).toEqual([]);
   });
 
-  test("of another person is NOT_FOUND and leaves their token working", async () => {
+  test("another person's grant is NOT_FOUND and leaves their token working", async () => {
     const h = await mcpHarness();
     const owner = await seed(h);
     const token = await connect(h, owner);
@@ -1206,7 +1208,8 @@ describe("revoking a connected app", () => {
     const { status } = await grantsRpc(h, "revoke", { id }, await seed(h));
 
     const call = await callTool(h, token, "content_list", { type: "post" });
-    expect([status, call.status]).toEqual([404, 200]);
+    expect(status).toBe(404);
+    expect(call.status).toBe(200);
   });
 });
 
@@ -1280,7 +1283,8 @@ describe("another person's connected apps", () => {
     );
 
     const call = await callTool(h, token, "content_list", { type: "post" });
-    expect([status, call.status]).toEqual([403, 200]);
+    expect(status).toBe(403);
+    expect(call.status).toBe(200);
   });
 
   test("an admin's revoke answers with the revoked grant", async () => {
@@ -1315,6 +1319,7 @@ describe("another person's connected apps", () => {
     );
 
     const call = await callTool(h, token, "content_list", { type: "post" });
-    expect([status, call.status]).toEqual([404, 200]);
+    expect(status).toBe(404);
+    expect(call.status).toBe(200);
   });
 });
