@@ -6,7 +6,7 @@ import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { terms } from "../db/schema/terms.js";
-import { entry } from "../hooks/entry.js";
+import { entry } from "../events-and-filters/entry.js";
 import { definePlugin } from "../plugin/define.js";
 import { getAutosaveEdits } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";

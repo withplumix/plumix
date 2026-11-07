@@ -74,7 +74,7 @@ local admins and their passkeys (`keepLocalAdmins`), because a remote passkey is
 origin. URLs naming the source origin are rewritten to the target's unless `--no-rewrite-urls` is
 given. A replaced term's concurrency token moves past the target's (`pastTargetTermTokens`, ADR
 0048). A sync or import writes as the system: it moves concurrency tokens without checking them, and
-it fires no entry actions; the target's `sync.after` handlers and the purge stand in for them.
+it emits no entry events; the target's `sync.after` handlers and the purge stand in for them.
 An author added on the target without a role becomes a `member`.
 
 `plumix export` opens one end the way a sync does and writes every sync scope to the directory it is

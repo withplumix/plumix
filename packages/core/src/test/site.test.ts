@@ -10,7 +10,7 @@ import { now } from "../clock.js";
 import { libsql } from "../db/libsql.js";
 import { settings } from "../db/schema/settings.js";
 import { users } from "../db/schema/users.js";
-import { defineEvent, defineFilter } from "../hooks/define.js";
+import { defineEvent, defineFilter } from "../events-and-filters/define.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
 import { base } from "../rpc/base.js";

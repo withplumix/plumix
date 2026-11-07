@@ -15,7 +15,7 @@ The `plugins` array in `plumix.config.ts` is how you add an entry type, a route 
 
 A published plugin and the local plugin your site keeps for its own model are the same object. Both come from `definePlugin`, both carry an id and a `setup` function, and the site calls each one's `setup` once at boot with the same registration context. [Content Modelling](/content-modelling/overview/) covers writing one. This page covers installing one you did not write.
 
-The registration context a plugin receives is the same one your own plugin receives, and it is wide. Entry types and taxonomies, meta boxes on entries, terms and users, blocks, marks, shortcodes and patterns, field types, settings groups and pages, RPC routers, REST resources, raw routes, rewrite rules, redirects, archive types, MCP tools, scheduled tasks, capabilities, admin pages, dashboard widgets, login links, lookup adapters, image roles, template deps, filters and actions all arrive through the same `ctx`. A package that registers one shortcode installs exactly like a package that registers six entry types.
+The registration context a plugin receives is the same one your own plugin receives, and it is wide. Entry types and taxonomies, meta boxes on entries, terms and users, blocks, marks, shortcodes and patterns, field types, settings groups and pages, RPC routers, REST resources, raw routes, rewrite rules, redirects, archive types, MCP tools, scheduled tasks, capabilities, admin pages, dashboard widgets, login links, lookup adapters, image roles, template deps, event and filter handlers all arrive through the same `ctx`. A package that registers one shortcode installs exactly like a package that registers six entry types.
 
 Installing one changes two things in your repository and can change two more at run time. The package lands in `package.json` and the descriptor lands in the `plugins` array. Beyond that, a plugin that owns database tables needs a migration generated and applied before its first request, and a plugin that registers an entry type mints that type's capabilities, so roles gain permissions nobody wrote by hand.
 
@@ -205,13 +205,13 @@ A descriptor's optional `afterSetup` runs once every plugin's `setup` has, with 
 
 One step runs earlier than that and does not care about order. A descriptor's optional `provides` function runs for every plugin in the array before any plugin's `setup` runs, so a helper published with `extendPluginContext` is on every plugin's setup context whatever the order.
 
-`provides` has a second call, `extendAppContext`, which puts a helper on the per-request context instead of the setup context. That is the one `@plumix/plugin-audit-log` uses for `audit`, so `ctx.audit` is there for any plugin's routes, hooks and RPC procedures at request time, and no plugin's `setup` can reach it.
+`provides` has a second call, `extendAppContext`, which puts a helper on the per-request context instead of the setup context. That is the one `@plumix/plugin-audit-log` uses for `audit`, so `ctx.audit` is there for any plugin's routes, event and filter handlers and RPC procedures at request time, and no plugin's `setup` can reach it.
 
 Public URLs do not depend on array order either. The router compiles taxonomy rules ahead of entry-type rules and sorts every rule by a priority number, so a plugin whose entry type sits at the URL root cannot shadow another plugin's routes by being listed first. [Routing](/routing/overview/) covers how a URL reaches the rule that serves it.
 
-## Keeping state across hooks
+## Keeping state across lifecycle steps
 
-A plugin that builds something in `provides` and reads it again in `setup` or `afterSetup` declares it with `state`. Core calls `state` once per install, before any plugin's `provides`, and passes what it returns as the second argument to all three hooks. Here other plugins name badges during their `setup`, and the badges plugin turns each into a capability once they all have:
+A plugin that builds something in `provides` and reads it again in `setup` or `afterSetup` declares it with `state`. Core calls `state` once per install, before any plugin's `provides`, and passes what it returns as the second argument to all three steps. Here other plugins name badges during their `setup`, and the badges plugin turns each into a capability once they all have:
 
 ```ts
 // A `declare module` block needs the module itself in scope.
@@ -240,7 +240,7 @@ export const badges = definePlugin("acme-badges", {
 });
 ```
 
-State goes in `state`, never in the plugin factory's closure. A descriptor can be installed more than once (a build installs it alongside the running app), and each install needs its own. The state is private to the plugin's own hooks; share anything through `extendPluginContext` or `extendAppContext`.
+State goes in `state`, never in the plugin factory's closure. A descriptor can be installed more than once (a build installs it alongside the running app), and each install needs its own. The state is private to the plugin's own lifecycle steps; share anything through `extendPluginContext` or `extendAppContext`.
 
 ## Loading heavy code lazily
 
@@ -273,7 +273,7 @@ The factory can do more than import, and what it resolves to is what is kept: `l
 
 ## Adding an image role
 
-Some of what a plugin registers is a name other code then asks for, and an [image role](/fields/field-types/#image-roles) is the clearest small example. Core ships `featured` and `ogImage`; a listing thumbnail distinct from the share image is a role you add. A theme has no setup hook, so a site declares its own as a one-file plugin like this.
+Some of what a plugin registers is a name other code then asks for, and an [image role](/fields/field-types/#image-roles) is the clearest small example. Core ships `featured` and `ogImage`; a listing thumbnail distinct from the share image is a role you add. A theme has no setup step, so a site declares its own as a one-file plugin like this.
 
 Two steps, and both are needed: `registerImageRole` makes the name exist at run time, and a `declare module` augmentation makes it exist to the compiler. Augment through the root `plumix` specifier — that is the one every registry merges on.
 

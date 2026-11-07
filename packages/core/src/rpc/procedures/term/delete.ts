@@ -1,7 +1,7 @@
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { eq } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
-import { term } from "../../../hooks/term.js";
+import { term } from "../../../events-and-filters/term.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { termRpc } from "../../filters.js";

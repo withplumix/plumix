@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { RegisteredScheduledTask } from "../plugin/registry.js";
 import { registerCorePurgeInvalidator } from "../cdn/purge.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { resolveReferences } from "../meta/core.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createTestContext } from "../test/context.js";
@@ -25,8 +25,8 @@ describe("scheduled publish purges the CDN", () => {
       publishedAt: new Date(Date.now() - 1000),
     });
 
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
+    const handlers = new HandlerRegistry();
+    registerCorePurgeInvalidator(handlers);
     const registry = createPluginRegistry();
     registerCoreScheduledTasks(registry);
     const app = { scheduledTasks: registry.scheduledTasks };
@@ -34,7 +34,7 @@ describe("scheduled publish purges the CDN", () => {
     const purgeTags = vi.fn(() => Promise.resolve());
     const ctx = createTestContext({
       db,
-      hooks,
+      handlers,
       plugins: registry,
       cdn: { decorate: (response) => response, purgeTags },
       defer: (p) => {
@@ -58,8 +58,8 @@ describe("scheduled publish purges the CDN", () => {
       publishedAt: new Date(Date.now() - 1000),
     });
 
-    const hooks = new HookRegistry();
-    registerCorePurgeInvalidator(hooks);
+    const handlers = new HandlerRegistry();
+    registerCorePurgeInvalidator(handlers);
     const registry = createPluginRegistry();
     registerCoreScheduledTasks(registry);
     const app = { scheduledTasks: registry.scheduledTasks };
@@ -67,7 +67,7 @@ describe("scheduled publish purges the CDN", () => {
     const defer = vi.fn((p: Promise<unknown>) => {
       void p;
     });
-    const ctx = createTestContext({ db, hooks, plugins: registry, defer });
+    const ctx = createTestContext({ db, handlers, plugins: registry, defer });
 
     await runScheduledTasks(app, ctx, "*/5 * * * *");
 

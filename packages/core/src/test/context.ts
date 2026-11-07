@@ -7,7 +7,7 @@ import type {
 import type { CreateAppContextArgs } from "../context/app.js";
 import type { TestConfigInput } from "./config.js";
 import { createAppContext } from "../context/app.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "./config.js";
 
@@ -37,7 +37,7 @@ export const silentLogger: Logger = {
 
 /**
  * A real `AppContext` for calling a service directly, with production memo,
- * capabilities, hooks and `defer`. Pass `createDeferQueue().defer` to assert on
+ * capabilities, handlers and `defer`. Pass `createDeferQueue().defer` to assert on
  * deferred work.
  */
 export function createTestContext(
@@ -52,7 +52,7 @@ export function createTestContext(
     // `createAppContext`, which has no fallback for these four.
     env: overrides.env ?? {},
     request: overrides.request ?? new Request("https://cms.example/"),
-    hooks: overrides.hooks ?? new HookRegistry(),
+    handlers: overrides.handlers ?? new HandlerRegistry(),
     plugins: overrides.plugins ?? createPluginRegistry(),
     logger: overrides.logger ?? silentLogger,
     // Asserted, not checked — see `TestContextDb`.

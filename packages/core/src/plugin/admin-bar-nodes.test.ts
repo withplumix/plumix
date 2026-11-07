@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { AdminBarNodeOptions } from "./admin-bar-node.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { definePlugin } from "./define.js";
 
@@ -11,7 +11,7 @@ describe("registerAdminBarNode", () => {
 
     await expect(
       installPlugins({
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: [
           definePlugin("shop", {
             setup: (ctx) => {

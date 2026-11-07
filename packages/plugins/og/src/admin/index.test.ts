@@ -1,4 +1,4 @@
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { HandlerRegistry, installPlugins } from "plumix/plugin";
 import { expect, test } from "vitest";
 
 import { og } from "../index.js";
@@ -10,7 +10,7 @@ import * as adminEntry from "./index.js";
 // apart so server suites skip the admin bundle import.
 test("exports the component the plugin declares the preview with", async () => {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [
       og({
         preview: ["post"],

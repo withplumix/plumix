@@ -9,7 +9,7 @@ import {
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { publicEntryRows } from "../entries/visibility.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { createTestContext } from "../test/context.js";
@@ -37,7 +37,7 @@ const pagesWithAccess = definePlugin("pages-with-access", {
 async function editorContext() {
   const db = await createTestDb();
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [pagesWithAccess],
   });
   const factory = factoriesFor(db);

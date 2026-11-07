@@ -17,7 +17,7 @@ import type { FieldPipelineMode } from "./field-pipeline.js";
 import { resolveCapability } from "../access/contract/capability.js";
 import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { entry } from "../hooks/entry.js";
+import { entry } from "../events-and-filters/entry.js";
 import { findEntryMetaField, listEntryMetaFields } from "../plugin/manifest.js";
 import {
   decodeMetaBag as decodeMetaBagCore,

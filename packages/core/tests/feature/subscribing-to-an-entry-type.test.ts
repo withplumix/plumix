@@ -1,7 +1,7 @@
 import { ORPCError } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
-import { entry } from "../../src/hooks/entry.js";
+import { entry } from "../../src/events-and-filters/entry.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
 

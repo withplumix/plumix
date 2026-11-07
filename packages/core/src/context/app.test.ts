@@ -24,7 +24,7 @@ describe("createAppContext mailer resolution", () => {
       db: harness.db,
       env: harness.env,
       request: new Request("https://cms.example/"),
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
       config: testConfig({
         // The config slot now accepts an `(env) => Mailer` resolver; the
@@ -52,7 +52,7 @@ describe("createAppContext mailer resolution", () => {
       db: harness.db,
       env: harness.env,
       request: new Request("https://cms.example/"),
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
       config: testConfig({ mailer }),
     });
@@ -71,7 +71,7 @@ describe("createAppContext origin resolution", () => {
     env: harness.env,
     request,
     config: harness.app.config,
-    hooks: harness.app.hooks,
+    handlers: harness.app.handlers,
     plugins: harness.app.plugins,
   });
 
@@ -118,7 +118,7 @@ describe("createAppContext platform I/O tracing", () => {
       db: harness.db,
       env: harness.env,
       request: new Request("https://cms.example/"),
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
       assets: { fetch: () => Promise.resolve(new Response("a")) },
       storage: {
@@ -210,7 +210,7 @@ describe("createAppContext ctx.fetch timeout", () => {
       db: harness.db,
       env: harness.env,
       request: new Request("https://cms.example/"),
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
       // A consumer without `sample` activates the real collector.
       config: testConfig({ telemetry: { consumers: [{ id: "in-test" }] } }),
@@ -443,7 +443,7 @@ describe("createAppContext ctx.signal", () => {
       db: harness.db,
       env: harness.env,
       request: new Request("https://cms.example/"),
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
       config: testConfig(),
     });

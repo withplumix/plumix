@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { CdnFake } from "../test/cdn-fake.js";
-import { HookRegistry } from "../hooks/registry.js";
-import { settings } from "../hooks/settings.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
+import { settings } from "../events-and-filters/settings.js";
 import { definePlugin } from "../plugin/define.js";
 import { group, number, text } from "../plugin/fields/index.js";
 import { entry, fallback } from "../route/render/template-builders.js";
@@ -181,7 +181,7 @@ describe("ctx.settings.write", () => {
 
 describe("ctx.settings.write, called from a plugin's own code", () => {
   async function harness() {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("blog", {
@@ -200,11 +200,11 @@ describe("ctx.settings.write, called from a plugin's own code", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const h = await createRpcHarness({
       authAs: "admin",
       plugins: registry,
-      hooks,
+      handlers,
     });
     const save = async (group: string, values: Record<string, unknown>) => {
       const { etag } = await h.client.settings.get({ group });

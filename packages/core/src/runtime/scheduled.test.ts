@@ -206,7 +206,7 @@ describe("runScheduledTasks", () => {
         "https://cms.example/_plumix/internal/scheduled?cron=0+3+*+*+*",
         { method: "POST" },
       ),
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
       defer,
       logger: { debug: silent, info: silent, warn: silent, error: silent },

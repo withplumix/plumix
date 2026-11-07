@@ -9,7 +9,7 @@ import type { PluginRegistry } from "../plugin/manifest.js";
 import { resolveCapability } from "../access/contract/capability.js";
 import { rebindToPrincipal } from "../context/principal-bound.js";
 import { rebindSettings } from "../context/settings-namespace.js";
-import { rebindDispatch } from "../hooks/dispatch.js";
+import { rebindDispatch } from "../events-and-filters/dispatch.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 import { getCapabilityResolver } from "./rbac.js";
 

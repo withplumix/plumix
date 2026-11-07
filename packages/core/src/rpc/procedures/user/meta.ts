@@ -11,7 +11,7 @@ import type {
 import type { PluginRegistry } from "../../../plugin/manifest.js";
 import type { CapabilityErrors } from "../../../rpc-errors.js";
 import { users } from "../../../db/schema/users.js";
-import { userEvents } from "../../../hooks/user.js";
+import { userEvents } from "../../../events-and-filters/user.js";
 import {
   decodeMetaBag as decodeMetaBagCore,
   isEmptyMetaPatch,

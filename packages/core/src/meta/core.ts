@@ -1474,7 +1474,7 @@ export async function loadMeta(
 // --- internals below ---------------------------------------------------
 
 /**
- * Non-RPC callers such as hook listeners bypass the RPC schema that rejects
+ * Non-RPC callers such as event handlers bypass the RPC schema that rejects
  * `"` and `\`.
  */
 function requireMetaJsonPath(key: string): string {

@@ -50,7 +50,11 @@ const site = definePlugin("site", {
 });
 
 function readerOf({ app, db }: Pick<DispatcherHarness, "app" | "db">) {
-  return createTestContext({ db, hooks: app.hooks, plugins: app.plugins });
+  return createTestContext({
+    db,
+    handlers: app.handlers,
+    plugins: app.plugins,
+  });
 }
 
 let h: DispatcherHarness;
@@ -101,7 +105,7 @@ describe("archiveAtPath", () => {
     async (path) => {
       const ctx = createTestContext({
         db: h.db,
-        hooks: h.app.hooks,
+        handlers: h.app.handlers,
         plugins: h.app.plugins,
       });
       const author = await h.factory.author.create({ slug: "jane" });

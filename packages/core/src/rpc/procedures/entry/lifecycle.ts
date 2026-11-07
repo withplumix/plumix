@@ -16,7 +16,7 @@ import {
   loadAuthoredEntry,
 } from "../../../entries/authored.js";
 import { assertCanDeleteEntry } from "../../../entries/editability.js";
-import { entry } from "../../../hooks/entry.js";
+import { entry } from "../../../events-and-filters/entry.js";
 import {
   pruneOldRevisions,
   snapshotAsRevision,

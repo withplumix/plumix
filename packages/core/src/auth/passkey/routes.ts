@@ -11,7 +11,7 @@ import { withBasePath } from "../../base-path.js";
 import { eq, isUniqueConstraintError } from "../../db/index.js";
 import { credentials } from "../../db/schema/credentials.js";
 import { users } from "../../db/schema/users.js";
-import { auth as authEvents } from "../../hooks/auth.js";
+import { auth as authEvents } from "../../events-and-filters/auth.js";
 import { startingMeta } from "../../plugin/fields/starting-meta.js";
 import { listUserMetaFields } from "../../plugin/manifest.js";
 import { jsonResponse } from "../../runtime/contract/http.js";

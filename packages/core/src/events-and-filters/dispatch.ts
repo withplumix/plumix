@@ -1,28 +1,28 @@
 import type { AppContext } from "../context/app-context.js";
 import type { AppEvents, AppFilters } from "./define.js";
-import type { HookRegistry } from "./registry.js";
+import type { HandlerRegistry } from "./registry.js";
 
 interface Dispatch {
   readonly events: AppEvents;
   readonly filters: AppFilters;
 }
 
-const bound = new WeakMap<AppEvents, HookRegistry>();
+const bound = new WeakMap<AppEvents, HandlerRegistry>();
 
 /** `ctx.events` and `ctx.filters`, handing their handlers the context `ctx`. */
 export function bindDispatch(
-  hooks: HookRegistry,
+  handlers: HandlerRegistry,
   ctx: () => AppContext,
 ): Dispatch {
   const events: AppEvents = {
-    emit: (event, payload) => hooks.emit(event, payload, ctx()),
+    emit: (event, payload) => handlers.emit(event, payload, ctx()),
   };
-  bound.set(events, hooks);
+  bound.set(events, handlers);
   return {
     events,
     filters: {
       apply: (filter, value, ...input) =>
-        hooks.apply(filter, value, input[0], ctx()),
+        handlers.apply(filter, value, input[0], ctx()),
     },
   };
 }
@@ -35,11 +35,11 @@ export function rebindDispatch<TSchema extends Record<string, unknown>>(
   from: AppContext<TSchema>,
   ctx: () => AppContext<TSchema>,
 ): Dispatch {
-  const hooks = bound.get(from.events);
-  if (hooks === undefined) {
+  const handlers = bound.get(from.events);
+  if (handlers === undefined) {
     return { events: from.events, filters: from.filters };
   }
-  return bindDispatch(hooks, () => coreSchemaView(ctx()));
+  return bindDispatch(handlers, () => coreSchemaView(ctx()));
 }
 
 function coreSchemaView<TSchema extends Record<string, unknown>>(

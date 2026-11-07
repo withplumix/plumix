@@ -59,7 +59,7 @@ export const FOLDERS: Readonly<Record<string, Placement>> = {
   "view-transition": client("foundation"),
 
   "plugin/": client("contracts"),
-  "hooks/": client("contracts"),
+  "events-and-filters/": client("contracts"),
   // `stores.ts` holds the `node:async_hooks` ambient stores.
   "context/": server("contracts"),
   "config*": client("contracts"),
@@ -117,7 +117,7 @@ export const TOP_FILES: readonly string[] = [
   "context/app.ts",
   "plugin/setup-context.ts",
   "db/public.ts",
-  "hooks/public-hooks.ts",
+  "events-and-filters/subjects.ts",
 ];
 
 export interface CycleUnit {
@@ -137,7 +137,7 @@ export const CYCLE_UNITS: Readonly<Record<string, CycleUnit>> = {
     members: [
       "config.ts",
       "context",
-      "hooks",
+      "events-and-filters",
       "plugin",
       "template-deps.ts",
       "template.ts",

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { EventDefinition } from "../hooks/define.js";
+import type { EventDefinition } from "../events-and-filters/define.js";
 import type {
   MetaBoxField,
   MutablePluginRegistry,
@@ -10,7 +10,7 @@ import type { DefaultRole } from "../users/contract/roles.js";
 import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
-import { term as termEvents } from "../hooks/term.js";
+import { term as termEvents } from "../events-and-filters/term.js";
 import { number, text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredTermTaxonomy } from "../plugin/registry.js";

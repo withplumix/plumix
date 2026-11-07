@@ -170,7 +170,7 @@ neither: it reviews the unit tier.
 Ask in order, and stop at the first yes:
 
 1. **Can it be observed by calling code in one process, on source?** It's a unit test. This covers
-   almost everything: business rules, RPC procedures, plugin hooks and filters, routing, rendering
+   almost everything: business rules, RPC procedures, plugin events and filters, routing, rendering
    to a string, schema and query behaviour against the in-memory database, CLI argument handling,
    a Vite plugin's config. When in doubt, it's a unit test. When the behaviour is what a site does
    through one of its entry points (a request, an RPC call, a scheduled firing), it's the feature
@@ -228,8 +228,8 @@ folder (see Unit below).
 
 ### Unit
 
-A unit test checks one behaviour of the code's public API (an exported function, a procedure, a
-plugin hook, a route, a plugin descriptor), the way a caller uses it. It sits beside the source it
+A unit test checks one behaviour of the code's public API (an exported function, a procedure, an
+event or filter handler, a route, a plugin descriptor), the way a caller uses it. It sits beside the source it
 tests. A test of a package as a whole, its configuration or its exports, goes in that package's
 `test/` folder, with any fixture files under `test/fixtures/`. It runs in one process with Vitest,
 on the package's own runtime wherever Vitest runs on it: Node, and Bun for the Bun adapter

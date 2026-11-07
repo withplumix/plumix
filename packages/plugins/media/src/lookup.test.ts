@@ -1,4 +1,4 @@
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { HandlerRegistry, installPlugins } from "plumix/plugin";
 import { createRpcHarness } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
@@ -44,7 +44,7 @@ async function seedMedia(
 
 async function harnessWithMediaPlugin() {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [media()],
   });
   return createRpcHarness({ authAs: "admin", plugins: registry });

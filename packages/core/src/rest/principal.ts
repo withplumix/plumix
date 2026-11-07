@@ -2,7 +2,7 @@ import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
 import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
 import { makeAuthCan } from "../auth/with-user.js";
 import { rebindSettings } from "../context/settings-namespace.js";
-import { rebindDispatch } from "../hooks/dispatch.js";
+import { rebindDispatch } from "../events-and-filters/dispatch.js";
 
 /**
  * Anonymous requests hold the `member` role's capabilities, so the entry

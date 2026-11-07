@@ -2,7 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import { createAppContext } from "../context/app.js";
 import { getContext, requestStore } from "../context/stores.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { defineEvent } from "../events-and-filters/define.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { testConfig } from "../test/config.js";
 import { createTestContext } from "../test/context.js";
@@ -45,7 +46,7 @@ describe("provides phase", () => {
     });
 
     await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [menus, cart],
     });
     expect(recorded).toEqual([{ type: "cart-link", label: "Cart" }]);
@@ -70,7 +71,7 @@ describe("provides phase", () => {
     });
 
     await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [cart, menus],
     });
     expect(recorded).toEqual(["cart-link"]);
@@ -95,7 +96,7 @@ describe("provides phase", () => {
     });
 
     await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [media, consumer],
     });
     expect(captured?.("logo.png")).toBe("https://cdn.example/logo.png");
@@ -116,7 +117,7 @@ describe("provides phase", () => {
     });
 
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [a, b] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [a, b] }),
     ).rejects.toThrow(
       /Plugin "b" extended.*"registerMenuItemType".*"a" already registered/s,
     );
@@ -124,7 +125,7 @@ describe("provides phase", () => {
 
   // `plugins` is a member of the after-setup context only. `evil` declares no
   // `afterSetup`, so the key has to be rejected whether or not one is built.
-  test.each(["addFilter", "plugins"])(
+  test.each(["events", "plugins"])(
     "extending with a key that shadows a built-in (%s) throws",
     async (key) => {
       // Cast bypasses the typed key constraint to simulate a plugin
@@ -142,7 +143,7 @@ describe("provides phase", () => {
       });
 
       await expect(
-        installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+        installPlugins({ handlers: new HandlerRegistry(), plugins: [evil] }),
       ).rejects.toThrow(
         new RegExp(`"${key}" collides with a built-in PluginSetupContext`),
       );
@@ -160,7 +161,7 @@ describe("provides phase", () => {
     });
 
     const result = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [audit],
     });
 
@@ -183,7 +184,7 @@ describe("provides phase", () => {
     });
 
     const result = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [audit],
     });
 
@@ -195,7 +196,7 @@ describe("provides phase", () => {
       env: {},
       request: new Request("https://x.example/"),
       config: testConfig(),
-      hooks: result.hooks,
+      handlers: result.handlers,
       plugins: result.registry,
       appContextExtensions: result.appContextExtensions,
     });
@@ -217,7 +218,7 @@ describe("provides phase", () => {
         env: {},
         request: new Request("https://x.example/"),
         config: testConfig(),
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: { entryTypes: new Map() } as never,
         appContextExtensions: malformed,
       }),
@@ -239,7 +240,7 @@ describe("provides phase", () => {
     });
 
     const result = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [audit, metrics],
     });
 
@@ -251,7 +252,7 @@ describe("provides phase", () => {
       env: {},
       request: new Request("https://x.example/"),
       config: testConfig(),
-      hooks: result.hooks,
+      handlers: result.handlers,
       plugins: result.registry,
       appContextExtensions: result.appContextExtensions,
     });
@@ -260,10 +261,9 @@ describe("provides phase", () => {
     expect(typeof ctx.metrics.inc).toBe("function");
   });
 
-  test("hook listener reads extensions via requestStore.getStore() at fire-time", async () => {
-    // A listener for an action that declares no AppContext pulls ctx from
-    // the requestStore.
+  test("an event handler reads extensions via getContext() when the event fires", async () => {
     const captured: string[] = [];
+    const pinged = defineEvent<undefined>("consumer:pinged");
 
     const auditProvider = definePlugin("audit", {
       provides: (ctx) => {
@@ -278,31 +278,25 @@ describe("provides phase", () => {
 
     const consumer = definePlugin("consumer", {
       setup: (ctx) => {
-        ctx.registerAction("ping", () => {
+        ctx.events.on(pinged, () => {
           getContext().audit.log("from-listener");
         });
       },
     });
 
     const result = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [auditProvider, consumer],
     });
 
     const ctx = createTestContext({
       db: await createTestDb(),
-      hooks: result.hooks,
+      handlers: result.handlers,
       plugins: result.registry,
       appContextExtensions: result.appContextExtensions,
     });
 
-    // The hook is registered as a plugin-prefixed dynamic action — its
-    // name isn't in the ActionRegistry, so loosen the call type.
-    const doAction = (name: string): Promise<void> =>
-      (result.hooks.doAction as (name: string) => Promise<void>)(name);
-    await requestStore.run(ctx, async () => {
-      await doAction("consumer:ping");
-    });
+    await requestStore.run(ctx, () => ctx.events.emit(pinged, undefined));
 
     expect(captured).toEqual(["from-listener"]);
   });
@@ -325,9 +319,33 @@ describe("provides phase", () => {
     });
 
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [evil] }),
     ).rejects.toThrow(/"db".*collides with a built-in AppContext member/s);
   });
+
+  // A plugin replacing either would hand every handler its own dispatcher.
+  test.each(["events", "filters"])(
+    "extending with '%s' throws at registration",
+    async (key) => {
+      const evil = definePlugin("evil", {
+        provides: (ctx) => {
+          (
+            ctx.extendAppContext as unknown as (
+              key: string,
+              value: unknown,
+            ) => void
+          )(key, {});
+        },
+        setup: () => undefined,
+      });
+
+      await expect(
+        installPlugins({ handlers: new HandlerRegistry(), plugins: [evil] }),
+      ).rejects.toThrow(
+        new RegExp(`"${key}".*collides with a built-in AppContext member`, "s"),
+      );
+    },
+  );
 
   test("extending with 'apiToken' throws at registration", async () => {
     // A plugin replacing the token a request authenticated with would
@@ -345,7 +363,7 @@ describe("provides phase", () => {
     });
 
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [evil] }),
     ).rejects.toThrow(
       /"apiToken".*collides with a built-in AppContext member/s,
     );
@@ -367,7 +385,7 @@ describe("provides phase", () => {
     });
 
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [evil] }),
     ).rejects.toThrow(
       /"telemetryConsumers".*collides with a built-in AppContext member/s,
     );
@@ -387,7 +405,7 @@ describe("provides phase", () => {
     });
 
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [evil] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [evil] }),
     ).rejects.toThrow(/reserved name "__proto__"/);
   });
 
@@ -406,7 +424,7 @@ describe("provides phase", () => {
     });
 
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [a, b] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [a, b] }),
     ).rejects.toThrow(/Plugin "b" extended.*"audit".*"a" already registered/s);
   });
 
@@ -418,7 +436,7 @@ describe("provides phase", () => {
     });
 
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [plain],
     });
     expect(registry.capabilities.get("plain:cap")?.grantTo).toEqual(["admin"]);
@@ -448,7 +466,7 @@ describe("provides phase", () => {
     });
 
     await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [menus, cart],
     });
     expect(order).toEqual([
@@ -469,7 +487,7 @@ describe("provides phase", () => {
     });
 
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [dupe] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [dupe] }),
     ).rejects.toThrow(
       /Plugin "dupe" extended.*"registerMenuItemType".*"dupe" already registered/s,
     );
@@ -490,7 +508,7 @@ describe("provides phase", () => {
     });
 
     await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [selfConsumer],
     });
     expect(recorded).toEqual(["self-link"]);

@@ -1,6 +1,6 @@
 import type { AppContext, Logger } from "plumix/plugin";
 import type { Mock } from "vitest";
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { HandlerRegistry, installPlugins } from "plumix/plugin";
 import { createTestContext } from "plumix/test";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
@@ -218,7 +218,7 @@ describe("runRetentionPurge", () => {
 describe("auditLog() factory registers the retention scheduled task", () => {
   test("default retention registers one task with the default cron", async () => {
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [auditLog()],
     });
     expect(registry.scheduledTasks).toHaveLength(1);
@@ -230,7 +230,7 @@ describe("auditLog() factory registers the retention scheduled task", () => {
 
   test("custom purgeAt plumbs through to the registered task's cron", async () => {
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [
         auditLog({ retention: { maxAgeDays: 30, purgeAt: "0 0 * * SUN" } }),
       ],
@@ -240,7 +240,7 @@ describe("auditLog() factory registers the retention scheduled task", () => {
 
   test("retention: false skips registration entirely", async () => {
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [auditLog({ retention: false })],
     });
     expect(registry.scheduledTasks).toHaveLength(0);
@@ -250,7 +250,7 @@ describe("auditLog() factory registers the retention scheduled task", () => {
     const storageStub = fakeStorage({ withPurge: true });
     storageStub.purgeReturn.deleted = 7;
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [
         auditLog({
           storage: storageStub.storage,
@@ -282,7 +282,7 @@ describe("auditLog() factory registers the retention scheduled task", () => {
     const storageStub = fakeStorage({ withPurge: true });
     storageStub.purgeReturn.deleted = 1;
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [auditLog({ storage: storageStub.storage })],
     });
     const task = registry.scheduledTasks[0];

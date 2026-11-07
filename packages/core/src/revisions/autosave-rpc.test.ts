@@ -8,7 +8,7 @@ import { etagOf } from "../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { entry } from "../hooks/entry.js";
+import { entry } from "../events-and-filters/entry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/render/template-builders.js";
@@ -404,10 +404,10 @@ describe("entry.update saveAs", () => {
     const h = await publishedPostFixture();
     const autosaveFires: number[] = [];
     const updatedFires: number[] = [];
-    h.hooks.on(entry.for("post").autosaveSaved, ({ autosave }) => {
+    h.handlers.on(entry.for("post").autosaveSaved, ({ autosave }) => {
       autosaveFires.push(autosave.id);
     });
-    h.hooks.on(entry.for("post").updated, ({ entry: row }) => {
+    h.handlers.on(entry.for("post").updated, ({ entry: row }) => {
       updatedFires.push(row.id);
     });
     await h.client.entry.update({
@@ -800,7 +800,7 @@ describe("entry.publish", () => {
     });
     const ifMatch = await currentEtag(h.db, h.entryId);
     // A plugin's own write, landing after the publish read live.
-    h.hooks.add(entry.beforeSave, async (row) => {
+    h.handlers.add(entry.beforeSave, async (row) => {
       await h.db
         .update(entries)
         .set({ title: "theirs" })
@@ -912,7 +912,7 @@ describe("entry.discardDraft", () => {
   test("emits entry.autosaveDiscarded for its type when a row was actually deleted", async () => {
     const h = await publishedPostFixture();
     const discards: number[] = [];
-    h.hooks.on(entry.for("post").autosaveDiscarded, ({ authorId }) => {
+    h.handlers.on(entry.for("post").autosaveDiscarded, ({ authorId }) => {
       discards.push(authorId);
     });
     await h.client.entry.update({

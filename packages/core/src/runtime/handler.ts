@@ -64,7 +64,7 @@ export function createRuntimeHandler(
 ): PlumixHandler {
   const { assets, disposeTimeoutMs, clientAddress, prepare, wrap } =
     app.config.runtime.handler;
-  prepare?.(app.hooks);
+  prepare?.(app.handlers);
   const handler = createPlumixHandler(app, {
     assets,
     disposeTimeoutMs,
@@ -396,7 +396,7 @@ export function requestContextArgs({
     request,
     config: app.config,
     clientAddress,
-    hooks: app.hooks,
+    handlers: app.handlers,
     plugins: app.plugins,
     blocks: app.blocks,
     allowedBlocks: app.allowedBlocks,

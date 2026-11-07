@@ -10,8 +10,8 @@ import { defineBlock } from "../../blocks/index.js";
 import { BlockRenderer } from "../../blocks/renderer/index.js";
 import { getContext } from "../../context/stores.js";
 import { entries as entriesTable } from "../../db/schema/entries.js";
-import { block } from "../../hooks/block-render.js";
-import { render } from "../../hooks/render.js";
+import { block } from "../../events-and-filters/block-render.js";
+import { render } from "../../events-and-filters/render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { defineTemplate } from "../../template.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";
@@ -385,7 +385,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
       publishedAt: new Date(),
     });
 
-    h.app.hooks.add(
+    h.app.handlers.add(
       render.single,
       (data) => ({
         ...data,
@@ -1277,7 +1277,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
     const author = await h.seedUser("admin");
     await h.factory.entry.create({
       type: "post",
-      slug: "hooks-ok",
+      slug: "handlers-ok",
       title: "Hooks Ok",
       content: null,
       status: "published",
@@ -1285,7 +1285,7 @@ describe("resolvePublicRoute — single entry through theme", () => {
       publishedAt: new Date(),
     });
     const response = await h.dispatch(
-      new Request("https://cms.example/post/hooks-ok"),
+      new Request("https://cms.example/post/handlers-ok"),
     );
     expect(response.status).toBe(200);
     const body = await response.text();
@@ -3096,7 +3096,7 @@ describe("resolvePublicRoute — archive through theme", () => {
       publishedAt: new Date(),
     });
 
-    h.app.hooks.add(
+    h.app.handlers.add(
       render.archive,
       (data) => ({ ...data, contentType: "filtered" }),
       { plugin: "test" },
@@ -3476,7 +3476,7 @@ describe("resolvePublicRoute — taxonomy through theme", () => {
       name: "Original",
     });
 
-    h.app.hooks.add(
+    h.app.handlers.add(
       render.term,
       (data) => ({
         ...data,
@@ -4354,7 +4354,7 @@ describe("resolvePublicRoute — search through theme", () => {
     const h = await createDispatcherHarness({
       config: { plugins: [blogPlugin], theme: theme },
     });
-    h.app.hooks.add(
+    h.app.handlers.add(
       render.search,
       (data) => ({ ...data, query: `filtered:${data.query}` }),
       { plugin: "test" },

@@ -8,7 +8,7 @@ import type {
 import { etagOf } from "../db/concurrency.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { entry } from "../hooks/entry.js";
+import { entry } from "../events-and-filters/entry.js";
 import {
   createPluginRegistry,
   findEntryMetaField,

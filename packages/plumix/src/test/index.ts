@@ -58,7 +58,7 @@ export { fakeMail, renderMail } from "@plumix/core/test";
 // An in-memory cdn to hand the dispatcher harness as `cdn`.
 export { fakeCdn } from "@plumix/core/test";
 
-// Hook spies, matchers and WebAuthn fixtures.
+// Event and filter spies, matchers and WebAuthn fixtures.
 export {
   buildAssertion,
   buildAttestation,
@@ -67,7 +67,6 @@ export {
   generatePasskeyKeyPair,
   partialMatch,
   randomCredentialId,
-  spyAction,
   spyEvent,
   spyFilter,
 } from "@plumix/core/test";

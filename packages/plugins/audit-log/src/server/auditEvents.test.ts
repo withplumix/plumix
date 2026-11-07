@@ -6,7 +6,14 @@ import type {
   SetupEvents,
 } from "plumix/plugin";
 import type { Entry, Term, User } from "plumix/schema";
-import { auth, entry, HookRegistry, settings, term, user } from "plumix/plugin";
+import {
+  auth,
+  entry,
+  HandlerRegistry,
+  settings,
+  term,
+  user,
+} from "plumix/plugin";
 import {
   createDispatcherHarness,
   createTestContext,
@@ -134,7 +141,7 @@ function fakeService(): FakeServiceState {
 }
 
 interface HarnessHandles {
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly state: FakeServiceState;
   readonly emit: <TPayload>(
     event: EventDefinition<TPayload>,
@@ -143,7 +150,7 @@ interface HarnessHandles {
 }
 
 function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const state = fakeService();
 
   // Minimal PluginSetupContext stand-in: only `events.on` is needed by
@@ -152,7 +159,7 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
   const ctx = {
     events: {
       on: (event, handler, options) => {
-        hooks.on(event, handler, options);
+        handlers.on(event, handler, options);
       },
     } satisfies SetupEvents,
   } as unknown as PluginSetupContext;
@@ -160,9 +167,9 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
 
   const fakeCtx = makeFakeAppCtx(user);
   return {
-    hooks,
+    handlers,
     state,
-    emit: (event, payload) => hooks.emit(event, payload, fakeCtx),
+    emit: (event, payload) => handlers.emit(event, payload, fakeCtx),
   };
 }
 

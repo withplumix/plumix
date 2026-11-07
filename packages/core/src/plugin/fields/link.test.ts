@@ -147,12 +147,13 @@ describe("link server validation and round-trip", () => {
 
 describe("link registers and round-trips the manifest", () => {
   test("entry meta box ships the link wire shape without callbacks", async () => {
-    const { HookRegistry } = await import("../../hooks/registry.js");
+    const { HandlerRegistry } =
+      await import("../../events-and-filters/registry.js");
     const { definePlugin } = await import("../define.js");
     const { buildManifest } = await import("../manifest.js");
     const { installPlugins } = await import("../../runtime/install-plugins.js");
 
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Post" });
@@ -164,7 +165,7 @@ describe("link registers and round-trips the manifest", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
 
     const wireField = manifest.entryMetaBoxes[0]?.fields[0];

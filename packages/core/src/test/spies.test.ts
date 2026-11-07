@@ -1,16 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { defineEvent, defineFilter } from "../hooks/define.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { defineEvent, defineFilter } from "../events-and-filters/define.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { createTestContext } from "./context.js";
 import { createTestDb } from "./harness.js";
 import { bindFilterSpy, spyEvent, spyFilter } from "./spies.js";
-
-declare module "../hooks/types.js" {
-  interface FilterRegistry {
-    "test:spied": (value: string) => string;
-  }
-}
 
 const saved = defineEvent<{ readonly id: number }>("acme:saved");
 const title = defineFilter<string, { readonly locale: string }>("acme:title", {
@@ -19,9 +13,9 @@ const title = defineFilter<string, { readonly locale: string }>("acme:title", {
 
 describe("spyEvent", () => {
   test("records each payload the event was emitted with", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyEvent(hooks, saved);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const handlers = new HandlerRegistry();
+    const spy = spyEvent(handlers, saved);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
 
     await ctx.events.emit(saved, { id: 1 });
     await ctx.events.emit(saved, { id: 2 });
@@ -30,9 +24,9 @@ describe("spyEvent", () => {
   });
 
   test("reads the most recent payload as lastPayload", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyEvent(hooks, saved);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const handlers = new HandlerRegistry();
+    const spy = spyEvent(handlers, saved);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
     await ctx.events.emit(saved, { id: 1 });
 
     await ctx.events.emit(saved, { id: 2 });
@@ -41,9 +35,9 @@ describe("spyEvent", () => {
   });
 
   test("passes an assertion an emitted payload matches", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyEvent(hooks, saved);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const handlers = new HandlerRegistry();
+    const spy = spyEvent(handlers, saved);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
     await ctx.events.emit(saved, { id: 1 });
     await ctx.events.emit(saved, { id: 2 });
 
@@ -51,9 +45,9 @@ describe("spyEvent", () => {
   });
 
   test("fails an assertion no emitted payload matches", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyEvent(hooks, saved);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const handlers = new HandlerRegistry();
+    const spy = spyEvent(handlers, saved);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
     await ctx.events.emit(saved, { id: 1 });
 
     expect(() => spy.assertCalledWith(({ id }) => id === 2)).toThrow(
@@ -64,9 +58,9 @@ describe("spyEvent", () => {
 
 describe("spyFilter on a declared filter", () => {
   test("records the value and the input, and passes the value through", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyFilter(hooks, title);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const handlers = new HandlerRegistry();
+    const spy = spyFilter(handlers, title);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
 
     const result = ctx.filters.apply(title, "Home", { locale: "en" });
 
@@ -77,9 +71,9 @@ describe("spyFilter on a declared filter", () => {
   });
 
   test("passes an assertion a call matches", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyFilter(hooks, title);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const handlers = new HandlerRegistry();
+    const spy = spyFilter(handlers, title);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
     ctx.filters.apply(title, "Home", { locale: "en" });
     ctx.filters.apply(title, "About", { locale: "uk" });
 
@@ -89,9 +83,9 @@ describe("spyFilter on a declared filter", () => {
   });
 
   test("fails an assertion no call matches, naming the filter", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyFilter(hooks, title);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const handlers = new HandlerRegistry();
+    const spy = spyFilter(handlers, title);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
     ctx.filters.apply(title, "Home", { locale: "en" });
 
     expect(() =>
@@ -100,10 +94,10 @@ describe("spyFilter on a declared filter", () => {
   });
 
   test("returns what an override returns", async () => {
-    const hooks = new HookRegistry();
-    const spy = spyFilter(hooks, title);
+    const handlers = new HandlerRegistry();
+    const spy = spyFilter(handlers, title);
     spy.override((value, input) => `${value} (${input.locale})`);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
 
     const result = ctx.filters.apply(title, "Home", { locale: "uk" });
 
@@ -112,21 +106,13 @@ describe("spyFilter on a declared filter", () => {
 });
 
 describe("bindFilterSpy", () => {
-  test("spies a declared filter on the hooks it is bound to", async () => {
-    const hooks = new HookRegistry();
-    const spy = bindFilterSpy(hooks)(title);
-    const ctx = createTestContext({ db: await createTestDb(), hooks });
+  test("spies a declared filter on the handlers it is bound to", async () => {
+    const handlers = new HandlerRegistry();
+    const spy = bindFilterSpy(handlers)(title);
+    const ctx = createTestContext({ db: await createTestDb(), handlers });
 
     ctx.filters.apply(title, "Home", { locale: "uk" });
 
     expect(spy.calls).toEqual([{ input: "Home", rest: [{ locale: "uk" }] }]);
-  });
-
-  test("spies a filter name on the hooks it is bound to", () => {
-    const hooks = new HookRegistry();
-    const spy = bindFilterSpy(hooks)("test:spied");
-
-    expect(spy.calls).toEqual([]);
-    expect(() => spy.assertCalled()).toThrow("spyFilter(test:spied)");
   });
 });

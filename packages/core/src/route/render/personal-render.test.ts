@@ -7,8 +7,8 @@ import type {
 } from "../../context/app-context.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { DefaultRole } from "../../users/contract/roles.js";
-import { block } from "../../hooks/block-render.js";
-import { HookRegistry } from "../../hooks/registry.js";
+import { block } from "../../events-and-filters/block-render.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { definePlugin } from "../../plugin/define.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { createTestContext } from "../../test/context.js";
@@ -36,7 +36,7 @@ async function adminAccessFrom(
   grantTo: readonly DefaultRole[],
 ): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [
       definePlugin("admin-access", {
         setup: (ctx) => {
@@ -98,9 +98,9 @@ describe("trackPrincipalReads", () => {
   });
 
   test("a handler a render fires gets the tracked context, so its read of the principal marks the render personal", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     await installPlugins({
-      hooks,
+      handlers,
       plugins: [
         definePlugin("reads-user", {
           setup: (ctx) => {
@@ -115,7 +115,7 @@ describe("trackPrincipalReads", () => {
         }),
       ],
     });
-    const ctx = createTestContext({ db: {} as Db, user: member, hooks });
+    const ctx = createTestContext({ db: {} as Db, user: member, handlers });
     const tracked = trackPrincipalReads(ctx);
     expect(renderIsPersonal(ctx)).toBe(false);
 

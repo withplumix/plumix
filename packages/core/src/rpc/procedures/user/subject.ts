@@ -5,8 +5,8 @@ import type {
   UserListInput,
   UserUpdateInput,
 } from "./schemas.js";
-import { defineFilter } from "../../../hooks/define.js";
-import { userEvents } from "../../../hooks/user.js";
+import { defineFilter } from "../../../events-and-filters/define.js";
+import { userEvents } from "../../../events-and-filters/user.js";
 
 /**
  * `user.list` adds each row's latest session start, so the admin's users

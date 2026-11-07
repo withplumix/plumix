@@ -14,7 +14,7 @@ import { entrySearchCondition } from "../db/search-conditions.js";
 import { canEditEntry } from "../entries/editability.js";
 import { findAuthorBySlug, findTermBySlug } from "../entries/slug-lookups.js";
 import { publicEntryRows } from "../entries/visibility.js";
-import { render } from "../hooks/render.js";
+import { render } from "../events-and-filters/render.js";
 import { getAutosave, overlayAutosave } from "../revisions/repository.js";
 import {
   notFound,

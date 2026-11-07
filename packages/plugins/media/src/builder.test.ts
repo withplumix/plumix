@@ -3,7 +3,7 @@ import { FieldConfigError } from "plumix/fields";
 import {
   buildManifest,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "plumix/plugin";
 import { describe, expect, expectTypeOf, test } from "vitest";
@@ -119,7 +119,7 @@ describe("media() builder", () => {
   });
 
   test("manifest round-trip preserves the referenceTarget on the wire shape", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const userPlugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("branding", {
@@ -129,7 +129,7 @@ describe("media() builder", () => {
       },
     });
     const { registry } = await installPlugins({
-      hooks,
+      handlers,
       plugins: [mediaPlugin(), userPlugin],
     });
     const manifest = buildManifest(registry);
@@ -251,7 +251,7 @@ describe("media() builder", () => {
   });
 
   test("manifest round-trip preserves multi referenceTarget + max on the wire shape", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const userPlugin = definePlugin("test", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("branding", {
@@ -267,7 +267,7 @@ describe("media() builder", () => {
       },
     });
     const { registry } = await installPlugins({
-      hooks,
+      handlers,
       plugins: [mediaPlugin(), userPlugin],
     });
     const manifest = buildManifest(registry);

@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SiteRoles } from "../access/contract/roles.js";
 import { capabilitiesForRole, unknownRoleGrants } from "../auth/rbac.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
@@ -54,7 +54,7 @@ const CONTRIBUTOR_CORE_GRANTS = [
 
 async function install(roles?: SiteRoles) {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [site],
     registry: createPluginRegistry(undefined, roles),
   });
@@ -81,11 +81,11 @@ describe("the contributor role plumix migrate prints", () => {
 
   test("grants core's posts when no entry type pools into them", async () => {
     const { registry: bare } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [],
     });
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [],
       registry: createPluginRegistry(
         undefined,
@@ -112,14 +112,14 @@ describe("the contributor role plumix migrate prints", () => {
     });
     const resolved = async (roles: SiteRoles) => {
       const { registry } = await installPlugins({
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: [blog],
         registry: createPluginRegistry(undefined, roles),
       });
       return capabilitiesForRole("contributor", registry);
     };
     const { registry: bare } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [blog],
     });
 

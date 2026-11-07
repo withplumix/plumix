@@ -4,7 +4,7 @@ import { etagOf } from "../../src/db/concurrency.js";
 import { readEditLease } from "../../src/db/edit-lease.js";
 import { eq } from "../../src/db/index.js";
 import { terms } from "../../src/db/schema/terms.js";
-import { term } from "../../src/hooks/term.js";
+import { term } from "../../src/events-and-filters/term.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { text } from "../../src/plugin/fields/index.js";
 import { testSite } from "../../src/test/site.js";

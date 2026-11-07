@@ -4,7 +4,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
 import { eq } from "../db/index.js";
 import { credentials } from "../db/schema/credentials.js";
-import { auth } from "../hooks/auth.js";
+import { auth } from "../events-and-filters/auth.js";
 import { definePlugin } from "../plugin/define.js";
 import { createDispatcherHarness, plumixRequest } from "../test/dispatcher.js";
 import {

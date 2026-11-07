@@ -3,21 +3,21 @@ import type { MutableDevRuntime } from "../context/dev-runtime.js";
 import type {
   AnyEventDefinition,
   AnyFilterDefinition,
-} from "../hooks/define.js";
-import type { HookRegistry } from "../hooks/registry.js";
+} from "../events-and-filters/define.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type {
   MutablePluginRegistry,
   PluginRegistry,
 } from "../plugin/manifest.js";
 import type { ContextExtensionEntry } from "../plugin/provides-context.js";
 import type { ThemeDescriptor } from "../theme.js";
-import { auth } from "../hooks/auth.js";
-import { block } from "../hooks/block-render.js";
-import { entryDeclarations } from "../hooks/entry.js";
-import { render } from "../hooks/render.js";
-import { settingsDeclarations } from "../hooks/settings.js";
-import { sync } from "../hooks/sync.js";
-import { termDeclarations } from "../hooks/term.js";
+import { auth } from "../events-and-filters/auth.js";
+import { block } from "../events-and-filters/block-render.js";
+import { entryDeclarations } from "../events-and-filters/entry.js";
+import { render } from "../events-and-filters/render.js";
+import { settingsDeclarations } from "../events-and-filters/settings.js";
+import { sync } from "../events-and-filters/sync.js";
+import { termDeclarations } from "../events-and-filters/term.js";
 import { assertValidPluginId } from "../plugin/define.js";
 import {
   DuplicateRegistrationError,
@@ -36,20 +36,20 @@ import {
 import { user } from "../rpc/procedures/user/subject.js";
 
 export interface PluginInstallResult {
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly registry: PluginRegistry;
   /**
    * Plugin-contributed AppContext helpers from
    * `provides(ctx).extendAppContext(...)`. Runtime adapters merge these
    * onto each per-request `AppContext` so any handler — RPC, route,
-   * scheduled, or hook listener via `requestStore.getStore()` — reads
+   * scheduled, or event handler via `requestStore.getStore()` — reads
    * them as `ctx.<key>`.
    */
   readonly appContextExtensions: ReadonlyMap<string, ContextExtensionEntry>;
 }
 
 interface InstallPluginsArgs {
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly plugins: readonly AnyPluginDescriptor[];
   readonly registry?: MutablePluginRegistry;
   /**
@@ -62,7 +62,7 @@ interface InstallPluginsArgs {
 }
 
 export async function installPlugins({
-  hooks,
+  handlers,
   plugins,
   registry = createPluginRegistry(),
   theme = { templates: [] },
@@ -109,7 +109,7 @@ export async function installPlugins({
   for (const [index, descriptor] of plugins.entries()) {
     const ctx = createPluginSetupContext({
       pluginId: descriptor.id,
-      hooks,
+      handlers,
       registry,
       theme,
       dev,
@@ -125,7 +125,7 @@ export async function installPlugins({
     if (!descriptor.afterSetup) continue;
     const ctx = createPluginAfterSetupContext({
       pluginId: descriptor.id,
-      hooks,
+      handlers,
       registry,
       theme,
       dev,
@@ -134,9 +134,9 @@ export async function installPlugins({
     await descriptor.afterSetup(ctx, states[index]);
   }
 
-  assertKnownScopes(hooks, registry);
+  assertKnownScopes(handlers, registry);
 
-  return { hooks, registry, appContextExtensions };
+  return { handlers, registry, appContextExtensions };
 }
 
 type Declaration = AnyEventDefinition | AnyFilterDefinition;
@@ -158,7 +158,7 @@ const CORE_DECLARATIONS: readonly Declaration[] = [
  * registers; a typo would otherwise drop its handler without a word.
  */
 function assertKnownScopes(
-  hooks: HookRegistry,
+  handlers: HandlerRegistry,
   registry: PluginRegistry,
 ): void {
   const subjects = [
@@ -182,7 +182,7 @@ function assertKnownScopes(
       registered: registry.settingsGroups,
     },
   ];
-  for (const { id, scope, plugin } of hooks.scopedSubscriptions()) {
+  for (const { id, scope, plugin } of handlers.scopedSubscriptions()) {
     const subject = subjects.find(({ ids }) => ids.has(id));
     if (subject === undefined || subject.registered.has(scope)) continue;
     throw PluginDefinitionError.handlerScopedToUnknownName({

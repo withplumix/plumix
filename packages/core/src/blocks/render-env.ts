@@ -44,8 +44,8 @@ export const RENDER_ENV_POLICY = {
   imageRemotePatterns:
     "only consulted alongside `imageResolver`, which cannot cross",
   renderFilters:
-    "server-only: closes over the request-scoped hook executor, and the " +
-    "canvas has no hook runtime",
+    "server-only: closes over the request-scoped filters, and the " +
+    "canvas has no handlers to run",
   catalog:
     "the host pushes its merged catalog over `host:config` after mount, " +
     "with the locale it belongs to (ADR 0016)",

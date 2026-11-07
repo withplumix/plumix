@@ -7,7 +7,7 @@ import { settings } from "../../../db/schema/settings.js";
 import { terms } from "../../../db/schema/terms.js";
 import { users } from "../../../db/schema/users.js";
 import { authoredEntryRows } from "../../../entries/authored.js";
-import { settings as settingsEvents } from "../../../hooks/settings.js";
+import { settings as settingsEvents } from "../../../events-and-filters/settings.js";
 import {
   metaScope,
   metaScopeCache,

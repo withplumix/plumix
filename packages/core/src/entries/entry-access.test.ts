@@ -13,7 +13,7 @@ import {
   grant,
   redirectToLogin,
 } from "../access/policy.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { createTestContext } from "../test/context.js";
@@ -30,7 +30,7 @@ async function ctx(args: {
   entryTypes?: Readonly<Record<string, EntryTypeAccess | undefined>>;
 }): Promise<AppContext> {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [
       definePlugin("entry-access-test", {
         setup: (setup) => {

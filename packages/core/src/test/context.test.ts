@@ -2,15 +2,12 @@ import { fileURLToPath } from "node:url";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, test } from "vitest";
 
-import { HookRegistry } from "../hooks/registry.js";
+import { defineFilter } from "../events-and-filters/define.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { createTestContext } from "./context.js";
 import { applyTestSchema, createTestDb } from "./harness.js";
 
-declare module "../hooks/types.js" {
-  interface FilterRegistry {
-    "test:context": (value: string) => string;
-  }
-}
+const label = defineFilter<string>("test:context", { sync: true });
 
 describe("createTestContext", () => {
   test("fills the collaborators a service function reads through", async () => {
@@ -22,9 +19,7 @@ describe("createTestContext", () => {
     expect(ctx.db).toBe(db);
     expect(ctx.user).toBeNull();
     expect(ctx.auth.can("entry:read")).toBe(false);
-    expect(await ctx.hooks.applyFilter("test:context", "unchanged")).toBe(
-      "unchanged",
-    );
+    expect(ctx.filters.apply(label, "unchanged")).toBe("unchanged");
     // The real read-through memo, not a pass-through stand-in.
     expect(await ctx.memo("k", load)).toBe(1);
     expect(await ctx.memo("k", load)).toBe(1);
@@ -48,18 +43,18 @@ describe("createTestContext", () => {
   });
 
   test("overrides win over the defaults", async () => {
-    const hooks = new HookRegistry();
-    hooks.addFilter("test:context", (value) => value.toUpperCase());
+    const handlers = new HandlerRegistry();
+    handlers.add(label, (value) => value.toUpperCase());
 
     const ctx = createTestContext({
       db: await createTestDb(),
-      hooks,
+      handlers,
       request: new Request("https://example.test/hello"),
       config: { basePath: "/cms" },
     });
 
     expect(ctx.config.basePath).toBe("/cms");
     expect(ctx.request.url).toBe("https://example.test/hello");
-    expect(await ctx.hooks.applyFilter("test:context", "hi")).toBe("HI");
+    expect(ctx.filters.apply(label, "hi")).toBe("HI");
   });
 });

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { DispatcherHarness } from "../../test/dispatcher.js";
-import { render } from "../../hooks/render.js";
+import { render } from "../../events-and-filters/render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { fallback } from "../../route/render/template-builders.js";
 import { createDispatcherHarness, DEV_ORIGIN } from "../../test/dispatcher.js";

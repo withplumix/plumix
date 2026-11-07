@@ -4,7 +4,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { HookRegistry } from "../../hooks/registry.js";
+import { HandlerRegistry } from "../../events-and-filters/registry.js";
 import { installPlugins } from "../../runtime/install-plugins.js";
 import { definePlugin } from "../define.js";
 import { buildManifest } from "../manifest.js";
@@ -96,13 +96,13 @@ describe("toMetaBoxFieldEntry()", () => {
       repeater("rows").fields([text("q").span(6), number("weight")]),
       group("address").fields([text("city"), text("zip")]),
     ];
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("forms", {
       setup: (ctx) => {
         ctx.registerUserMetaBox("profile", { label: "Profile", fields });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const [box] = buildManifest(registry).userMetaBoxes;
     expect(box?.fields).toEqual(

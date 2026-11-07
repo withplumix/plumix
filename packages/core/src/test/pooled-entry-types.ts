@@ -1,6 +1,6 @@
 import type { AnyPluginDescriptor } from "../config.js";
 import type { PluginRegistry } from "../plugin/registry.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 
@@ -23,7 +23,7 @@ export async function pooledEntryTypeRegistry(
   ...plugins: readonly AnyPluginDescriptor[]
 ): Promise<PluginRegistry> {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [pooledEntryTypesPlugin, ...plugins],
   });
   return registry;

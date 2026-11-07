@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { declaredPageTags } from "./cdn/contract/page-tags.js";
 import { and, eq } from "./db/index.js";
 import { settings } from "./db/schema/settings.js";
-import { settings as settingsEvents } from "./hooks/settings.js";
+import { settings as settingsEvents } from "./events-and-filters/settings.js";
 import { settingsLoader } from "./template-deps-core.js";
 import { createTracedContext } from "./test/traced-context.js";
 

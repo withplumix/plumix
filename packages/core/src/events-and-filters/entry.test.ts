@@ -7,12 +7,12 @@ import type { MetaChanges } from "../meta/contract/bags.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createPluginSetupContext } from "../plugin/setup-context.js";
 import { entry } from "./entry.js";
-import { HookRegistry } from "./registry.js";
+import { HandlerRegistry } from "./registry.js";
 import { term } from "./term.js";
 
 const ctx = createPluginSetupContext({
   pluginId: "acme",
-  hooks: new HookRegistry(),
+  handlers: new HandlerRegistry(),
   registry: createPluginRegistry(),
   theme: { templates: [] },
 });

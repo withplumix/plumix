@@ -20,7 +20,7 @@ import type {
   SyncEnd,
 } from "@plumix/core";
 import type { MemorySyncEnd, MemorySyncEnds } from "@plumix/core/test";
-import { HookRegistry, sync } from "@plumix/core";
+import { HandlerRegistry, sync } from "@plumix/core";
 import { entries } from "@plumix/core/schema";
 import { createDispatcherHarness, memorySyncEnds } from "@plumix/core/test";
 
@@ -483,9 +483,9 @@ describe("plumix sync", () => {
   });
 
   test("a push that fails after its snapshot prints how to restore it again", async () => {
-    const hooks = new HookRegistry();
-    hooks.on(sync.after, () => Promise.reject(new Error("boom")));
-    const ends = await seededEnds({ hooks });
+    const handlers = new HandlerRegistry();
+    handlers.on(sync.after, () => Promise.reject(new Error("boom")));
+    const ends = await seededEnds({ handlers });
 
     await expect(
       syncCommand.run(syncCtx(["push", "--url", REMOTE, "--yes"], ends.sync)),
@@ -499,12 +499,12 @@ describe("plumix sync", () => {
   });
 
   test("fires sync.after once, with the scopes and the direction", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const events: unknown[] = [];
-    hooks.on(sync.after, (event) => {
+    handlers.on(sync.after, (event) => {
       events.push(event);
     });
-    const ends = await seededEnds({ hooks });
+    const ends = await seededEnds({ handlers });
 
     await syncCommand.run(
       syncCtx(
@@ -528,8 +528,8 @@ describe("plumix sync", () => {
   });
 
   test("a push whose settle fails reports every failed step after the import committed", async () => {
-    const hooks = new HookRegistry();
-    hooks.on(
+    const handlers = new HandlerRegistry();
+    handlers.on(
       sync.after,
       () => {
         throw new Error("index unreachable");
@@ -540,7 +540,7 @@ describe("plumix sync", () => {
       decorate: (response) => response,
       purgeAll: () => Promise.reject(new Error("zone refused")),
     };
-    const ends = await seededEnds({ hooks, remoteCdn: cdn });
+    const ends = await seededEnds({ handlers, remoteCdn: cdn });
 
     await expect(
       syncCommand.run(syncCtx(["push", "--url", REMOTE, "--yes"], ends.sync)),
@@ -606,9 +606,9 @@ describe("plumix sync", () => {
   });
 
   test("keeps its dump after a sync that fails, and prints where", async () => {
-    const hooks = new HookRegistry();
-    hooks.on(sync.after, () => Promise.reject(new Error("boom")));
-    const ends = await seededEnds({ hooks });
+    const handlers = new HandlerRegistry();
+    handlers.on(sync.after, () => Promise.reject(new Error("boom")));
+    const ends = await seededEnds({ handlers });
 
     await expect(
       syncCommand.run(syncCtx(["push", "--url", REMOTE, "--yes"], ends.sync)),
@@ -724,13 +724,13 @@ describe("plumix sync, after an interrupted pull", () => {
   });
 
   test("a pull whose export completed before it failed imports the kept dump without exporting again", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     let settled = 0;
-    hooks.on(sync.after, () => {
+    handlers.on(sync.after, () => {
       settled += 1;
       if (settled === 1) throw new Error("boom");
     });
-    const ends = await memorySyncEnds({ hooks });
+    const ends = await memorySyncEnds({ handlers });
     await seed(ends.remote, [AUTHOR]);
     await seed(ends.local, [AUTHOR]);
     await expect(

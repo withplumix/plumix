@@ -13,8 +13,8 @@ export {
   entry as entrySubject,
   settings as settingsSubject,
   term as termSubject,
-} from "./hooks/public-hooks.js";
-export type { SettingsGroupHandle } from "./hooks/public-hooks.js";
+} from "./events-and-filters/subjects.js";
+export type { SettingsGroupHandle } from "./events-and-filters/subjects.js";
 
 export * from "./access/index.js";
 export * from "./admin/index.js";
@@ -43,7 +43,7 @@ export { withUser } from "./auth/with-user.js";
 // runtime adapters, not direct writes.
 export { traceDbBatch, traceDbQuery, traceDbQuerySync } from "./db/trace.js";
 export type { TracedQuery } from "./db/trace.js";
-export * from "./hooks/index.js";
+export * from "./events-and-filters/index.js";
 export { user } from "./rpc/procedures/user/subject.js";
 export * from "./i18n/index.js";
 // Server- and build-side only: the browser `./i18n` subpath stays without the

@@ -4,7 +4,7 @@ import type { AppContext } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { installPlugins } from "../runtime/install-plugins.js";
@@ -24,9 +24,9 @@ import {
 async function buildRegistry(
   plugins: ReturnType<typeof definePlugin>[],
 ): Promise<PluginRegistry> {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
-  await installPlugins({ hooks, plugins, registry });
+  await installPlugins({ handlers, plugins, registry });
   return registry;
 }
 

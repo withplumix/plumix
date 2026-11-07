@@ -5,8 +5,7 @@ import type {
   Logger,
 } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
-import type { EventDefinition } from "../hooks/define.js";
-import type { ActionArgs, ActionName } from "../hooks/types.js";
+import type { EventDefinition } from "../events-and-filters/define.js";
 import type { AssetManifest } from "../route/render/asset-manifest.js";
 import type { PluginCatalogs } from "../route/render/block-catalog.js";
 import type { PlumixApp } from "../runtime/app.js";
@@ -22,7 +21,7 @@ import type { TestConfigInput } from "./config.js";
 import type { Factories, SeededRole } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
 import type { HarnessFetchOptions } from "./request.js";
-import type { ActionSpy, BoundFilterSpy, EventSpy } from "./spies.js";
+import type { BoundFilterSpy, EventSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createPreviewToken } from "../auth/preview-token.js";
 import { createSession } from "../auth/sessions.js";
@@ -38,7 +37,7 @@ import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { fakeMail } from "./mail-fake.js";
 import { appendCookie, buildRequest, TestResponse } from "./request.js";
-import { bindFilterSpy, spyAction, spyEvent } from "./spies.js";
+import { bindFilterSpy, spyEvent } from "./spies.js";
 
 export interface CreateDispatcherHarnessOptions {
   /** A supplied db arrives with its schema already applied; the default gets core's. */
@@ -155,14 +154,7 @@ export interface DispatcherHarness {
   /** Pre-bound factories, the same `factoriesFor(db)` as createRpcHarness. */
   readonly factory: Factories;
   /**
-   * Record every invocation of the named action. Call assertions on the
-   * returned spy (`.assertCalledOnce()`, `.assertCalledWith(...)`).
-   */
-  readonly spyAction: <TName extends ActionName>(
-    name: TName,
-  ) => ActionSpy<ActionArgs<TName>>;
-  /**
-   * Record every invocation of the named filter. Pass-through by default;
+   * Record every invocation of the filter. Pass-through by default;
    * call `.override(fn)` on the returned spy to transform values.
    */
   readonly spyFilter: BoundFilterSpy;
@@ -277,9 +269,8 @@ export async function createDispatcherHarness(
       userFactory.transient({ db }).create({ role }),
     mintPreviewToken: (args) => createPreviewToken(db, args),
     factory: factoriesFor(db),
-    spyAction: (name) => spyAction(app.hooks, name),
-    spyFilter: bindFilterSpy(app.hooks),
-    spyEvent: (event) => spyEvent(app.hooks, event),
+    spyFilter: bindFilterSpy(app.handlers),
+    spyEvent: (event) => spyEvent(app.handlers, event),
     drainDeferred,
     mail,
   };

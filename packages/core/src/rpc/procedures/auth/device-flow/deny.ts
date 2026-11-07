@@ -2,7 +2,7 @@ import {
   denyDeviceCode,
   lookupDeviceCodeByUserCode,
 } from "../../../../auth/device-flow.js";
-import { auth } from "../../../../hooks/auth.js";
+import { auth } from "../../../../events-and-filters/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
 import { assertLookupOk } from "./lookup-helpers.js";

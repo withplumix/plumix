@@ -21,7 +21,7 @@ import { entries } from "../../db/schema/entries.js";
 import { terms } from "../../db/schema/terms.js";
 import { users } from "../../db/schema/users.js";
 import { rememberAuthor, rememberTerm } from "../../entries/slug-lookups.js";
-import { render } from "../../hooks/render.js";
+import { render } from "../../events-and-filters/render.js";
 import { labelSourceText } from "../../i18n/label.js";
 import { resolveTermMeta } from "../../meta/term.js";
 import { archiveEntries } from "../archive-entries.js";

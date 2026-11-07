@@ -43,7 +43,7 @@ export async function getMenuForLocation(
 }
 
 /**
- * Each location's hook pass sees its own `location`, even when two locations
+ * Each location's filter pass sees its own `location`, even when two locations
  * bind the same menu.
  */
 export async function getMenusForLocations(

@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
 import type { Db, Logger } from "./app-context.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { testConfig } from "../test/config.js";
 import { createAppContext } from "./app.js";
@@ -20,7 +20,7 @@ describe("AppContext.defer", () => {
       env: {},
       request: new Request("https://x.example/"),
       config: testConfig(),
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: createPluginRegistry(),
       defer: (promise) => {
         calls.push(promise);
@@ -52,7 +52,7 @@ describe("AppContext.defer", () => {
       env: {},
       request: new Request("https://x.example/"),
       config: testConfig(),
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: createPluginRegistry(),
       logger: captureLogger,
       // Mimic the cloudflare-adapter shape: a thin handler that just
@@ -89,7 +89,7 @@ describe("AppContext.defer", () => {
       env: {},
       request: new Request("https://x.example/"),
       config: testConfig(),
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: createPluginRegistry(),
       logger: buggyLogger,
     });
@@ -121,7 +121,7 @@ describe("AppContext.defer", () => {
         env: {},
         request: new Request("https://x.example/"),
         config: testConfig(),
-        hooks: new HookRegistry(),
+        handlers: new HandlerRegistry(),
         plugins: createPluginRegistry(),
       });
 

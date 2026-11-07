@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { HookRegistry, PlumixApp, PlumixConfig } from "plumix";
+import type { HandlerRegistry, PlumixApp, PlumixConfig } from "plumix";
 import type {
   DumpReader,
   SyncEnd,
@@ -121,11 +121,13 @@ function contractSite(
 /** The remote site served on 127.0.0.1, with an operator's API token. */
 async function serve(
   config: PlumixConfig,
-  hooks: HookRegistry,
+  handlers: HandlerRegistry,
 ): Promise<{ url: string; apiToken: string }> {
   const app = await buildApp(config);
-  for (const { handler, plugin } of hooks.getEventHandlers(syncEvents.after)) {
-    app.hooks.on(syncEvents.after, handler, { plugin });
+  for (const { handler, plugin } of handlers.getEventHandlers(
+    syncEvents.after,
+  )) {
+    app.handlers.on(syncEvents.after, handler, { plugin });
   }
   const handler = createRuntimeHandler(app);
   const server = createServer(
@@ -157,12 +159,12 @@ async function serve(
   }
 }
 
-async function nodeEnds(hooks: HookRegistry): Promise<SyncContractEnds> {
+async function nodeEnds(handlers: HandlerRegistry): Promise<SyncContractEnds> {
   const local = siteConfig("local");
   const remote = siteConfig("remote");
   await migrated(local);
   await migrated(remote);
-  const { url, apiToken } = await serve(remote, hooks);
+  const { url, apiToken } = await serve(remote, handlers);
   return {
     // The case's options name no site; the local end is this one.
     sync: {
@@ -204,7 +206,7 @@ describe("node sync — the deployed site's snapshot", () => {
   test("copies the database file beside it, and names the copy and the restore command", async () => {
     const remote = siteConfig("remote");
     await migrated(remote);
-    const { url, apiToken } = await serve(remote, base.hooks);
+    const { url, apiToken } = await serve(remote, base.handlers);
     const end = await sync.open(options("remote", url, apiToken));
 
     const snapshot = await end.snapshot();
@@ -221,7 +223,7 @@ describe("node sync — the deployed site's snapshot", () => {
   test("two snapshots in one second are two copies", async () => {
     const remote = siteConfig("remote");
     await migrated(remote);
-    const { url, apiToken } = await serve(remote, base.hooks);
+    const { url, apiToken } = await serve(remote, base.handlers);
     const end = await sync.open(options("remote", url, apiToken));
 
     const first = await end.snapshot();
@@ -233,7 +235,7 @@ describe("node sync — the deployed site's snapshot", () => {
   test("an import cut short leaves the site as its snapshot holds it", async () => {
     const remote = siteConfig("remote");
     await migrated(remote);
-    const { url, apiToken } = await serve(remote, base.hooks);
+    const { url, apiToken } = await serve(remote, base.handlers);
     const site = contractSite("remote");
     await site.execute(
       "INSERT INTO entries (id, type, title, slug, author_id, status) VALUES (1, 'post', 'Kept', 'kept', 1000, 'published')",
@@ -365,7 +367,7 @@ describe("node sync — a plugin scope", () => {
       "INSERT INTO notes (id, body, data, author_id) VALUES (7, 'from local', ?, 1)",
       [new Uint8Array([0, 1, 254, 255])],
     );
-    const { url, apiToken } = await serve(remote, base.hooks);
+    const { url, apiToken } = await serve(remote, base.handlers);
     const localEnd = await sync.open(options("local", url, apiToken, local));
     const remoteEnd = await sync.open(options("remote", url, apiToken, local));
 

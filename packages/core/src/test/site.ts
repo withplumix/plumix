@@ -8,7 +8,7 @@ import type { AnyPluginDescriptor, PlumixConfig } from "../config.js";
 import type { AppContext, Db, Logger } from "../context/app-context.js";
 import type { Entry } from "../db/schema/entries.js";
 import type { User } from "../db/schema/users.js";
-import type { HookRegistry } from "../hooks/registry.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
 import type { PluginRpcClient } from "../plugin/registry.js";
 import type { AppRouterClient } from "../rpc/router.js";
@@ -222,7 +222,7 @@ export async function testSite<
   const env = options?.env ?? {};
   const app = await buildApp(withFakes(config, () => fakes));
   const dispatcher = createPlumixDispatcher(app);
-  const hooks = recordingHooks(app.hooks, () => fakes);
+  const handlers = recordingHandlers(app.handlers, () => fakes);
 
   const contextFor = (request: Request): AppContext =>
     createAppContext({
@@ -236,7 +236,7 @@ export async function testSite<
         assets: undefined,
         slots: bindSlots(app, env),
       }),
-      hooks,
+      handlers,
       clock: time.clock,
       fetch: (input, init) => fakes.fetch.send(input, init),
       logger,
@@ -478,22 +478,23 @@ function freshFakes(storage: ObjectStorage | undefined): Fakes {
 }
 
 /**
- * The app's hooks, recording each emit and apply into the current fakes before its
- * handlers run. Every context the site builds dispatches through it.
+ * The app's handler registry, recording each emit and apply into the current
+ * fakes before its handlers run. Every context the site builds dispatches
+ * through it.
  */
-function recordingHooks(
-  hooks: HookRegistry,
+function recordingHandlers(
+  handlers: HandlerRegistry,
   current: () => Fakes,
-): HookRegistry {
-  const emit: HookRegistry["emit"] = (event, payload, ctx) => {
+): HandlerRegistry {
+  const emit: HandlerRegistry["emit"] = (event, payload, ctx) => {
     current().events.record(event, payload);
-    return hooks.emit(event, payload, ctx);
+    return handlers.emit(event, payload, ctx);
   };
-  const apply: HookRegistry["apply"] = (filter, value, input, ctx) => {
+  const apply: HandlerRegistry["apply"] = (filter, value, input, ctx) => {
     current().filters.record(filter, input);
-    return hooks.apply(filter, value, input, ctx);
+    return handlers.apply(filter, value, input, ctx);
   };
-  return new Proxy(hooks, {
+  return new Proxy(handlers, {
     get: (target, key) => {
       if (key === "emit") return emit;
       if (key === "apply") return apply;

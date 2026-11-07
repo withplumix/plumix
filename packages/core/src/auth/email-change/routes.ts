@@ -2,7 +2,7 @@ import type { AppContext } from "../../context/app-context.js";
 import type { AuthFlowApp } from "../flow-app.js";
 import type { EmailChangeErrorCode } from "./errors.js";
 import { withBasePath } from "../../base-path.js";
-import { auth } from "../../hooks/auth.js";
+import { auth } from "../../events-and-filters/auth.js";
 import { loginErrorRedirect, redirectTo } from "../../runtime/contract/http.js";
 import { resolveLoginPath } from "../config.js";
 import { EmailChangeError } from "./errors.js";

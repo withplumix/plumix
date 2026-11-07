@@ -10,7 +10,7 @@ A plugin's tests come in two tiers. Unit tests are `*.test.ts` files beside your
 
 ## Unit tests in Node
 
-A unit test calls your code the way the site calls it: a procedure with its input, a route through the dispatcher, a hook with its arguments. A procedure's input can be a `File`, and `fakeImage` builds one:
+A unit test calls your code the way the site calls it: a procedure with its input, a route through the dispatcher, an event or filter handler with its arguments. A procedure's input can be a `File`, and `fakeImage` builds one:
 
 ```ts
 // src/photos.test.ts

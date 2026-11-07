@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { settings } from "../../src/hooks/public-hooks.js";
+import { settings } from "../../src/events-and-filters/subjects.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { text } from "../../src/plugin/fields/index.js";
 import { testSite } from "../../src/test/site.js";

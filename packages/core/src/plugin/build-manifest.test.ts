@@ -18,7 +18,7 @@ import {
   redirectToLogin,
 } from "../access/policy.js";
 import { coreBlocks, defineBlock } from "../blocks/index.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { registerCoreSettings } from "../settings-core.js";
@@ -248,13 +248,13 @@ describe("buildManifest", () => {
   });
 
   test("lists Settings under Management only when a settings page is registered", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("site", {
       setup: (ctx) => {
         ctx.registerSettingsPage("general", { label: "General", groups: [] });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const management = manifest.adminNav.find((g) => g.id === "management");
     expect(management?.items.map((i) => i.to)).toEqual(["/users", "/settings"]);
@@ -272,14 +272,14 @@ describe("buildManifest", () => {
   });
 
   test("plugin field types project by name, sorted", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("media", {
       setup: (ctx) => {
         ctx.registerFieldType({ type: "mediaList", component: "ListPicker" });
         ctx.registerFieldType({ type: "focalPoint", component: "FocalPoint" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     expect(manifest.fieldTypes.map((f) => f.type)).toEqual([
       "focalPoint",
@@ -288,7 +288,7 @@ describe("buildManifest", () => {
   });
 
   test("entry-type keywords flow onto its admin-nav item", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", {
@@ -298,7 +298,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const content = manifest.adminNav.find((g) => g.id === "content");
     const post = content?.items.find((i) => i.to === "/entries/posts");
@@ -309,7 +309,7 @@ describe("buildManifest", () => {
   });
 
   test("admin-page nav keywords flow onto its admin-nav item", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("media", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -324,7 +324,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const library = manifest.adminNav.find((g) => g.id === "library");
     const media = library?.items.find((i) => i.to === "/pages/media");
@@ -335,7 +335,7 @@ describe("buildManifest", () => {
   });
 
   test("taxonomy keywords flow onto its admin-nav item", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerTermTaxonomy("category", {
@@ -345,7 +345,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const taxonomies = manifest.adminNav.find(
       (g) => g.id === "term-taxonomies",
@@ -357,7 +357,7 @@ describe("buildManifest", () => {
   });
 
   test("projects registered settings groups, fields use the shared MetaBoxField shape", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const corePlugin = definePlugin("core", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("identity", {
@@ -382,7 +382,7 @@ describe("buildManifest", () => {
       },
     });
     const { registry } = await installPlugins({
-      hooks,
+      handlers,
       plugins: [corePlugin],
     });
     const manifest = buildManifest(registry);
@@ -416,7 +416,7 @@ describe("buildManifest", () => {
   });
 
   test("settings page composes registered groups by name, sorted by priority", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const corePlugin = definePlugin("core", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("identity", {
@@ -449,7 +449,10 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [corePlugin] });
+    const { registry } = await installPlugins({
+      handlers,
+      plugins: [corePlugin],
+    });
     const manifest = buildManifest(registry);
     expect(manifest.settingsPages).toEqual([
       {
@@ -463,7 +466,7 @@ describe("buildManifest", () => {
   });
 
   test("buildManifest throws when a page references an unregistered group", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("orphan", {
       setup: (ctx) => {
         ctx.registerSettingsPage("general", {
@@ -472,14 +475,14 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
       /Settings page "general" references group "nonexistent"/,
     );
   });
 
   test("rejects duplicate settings group registration", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const pluginA = definePlugin("a", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("general", { label: "General", fields: [] });
@@ -494,12 +497,12 @@ describe("buildManifest", () => {
       },
     });
     await expect(
-      installPlugins({ hooks, plugins: [pluginA, pluginB] }),
+      installPlugins({ handlers, plugins: [pluginA, pluginB] }),
     ).rejects.toThrow(/settings group "general"/);
   });
 
   test("rejects duplicate settings page registration", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const pluginA = definePlugin("a", {
       setup: (ctx) => {
         ctx.registerSettingsPage("general", { label: "General", groups: [] });
@@ -514,12 +517,12 @@ describe("buildManifest", () => {
       },
     });
     await expect(
-      installPlugins({ hooks, plugins: [pluginA, pluginB] }),
+      installPlugins({ handlers, plugins: [pluginA, pluginB] }),
     ).rejects.toThrow(/settings page "general"/);
   });
 
   test("rejects a settings page that lists the same group twice", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("dupe", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("identity", {
@@ -532,20 +535,20 @@ describe("buildManifest", () => {
         });
       },
     });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /lists a group more than once/,
-    );
+    await expect(
+      installPlugins({ handlers, plugins: [plugin] }),
+    ).rejects.toThrow(/lists a group more than once/);
   });
 
   test("rejects invalid group / page names (must be snake_case ASCII)", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const badGroup = definePlugin("a", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("Foo-Bar", { label: "x", fields: [] });
       },
     });
     await expect(
-      installPlugins({ hooks, plugins: [badGroup] }),
+      installPlugins({ handlers, plugins: [badGroup] }),
     ).rejects.toThrow(/Invalid settings group name "Foo-Bar"/);
 
     const badPage = definePlugin("c", {
@@ -554,12 +557,12 @@ describe("buildManifest", () => {
       },
     });
     await expect(
-      installPlugins({ hooks: new HookRegistry(), plugins: [badPage] }),
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [badPage] }),
     ).rejects.toThrow(/Invalid settings page name "Bad-Page"/);
   });
 
   test("rejects a settings group field with an invalid key (shared meta regex)", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const badField = definePlugin("b", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("good", {
@@ -571,12 +574,12 @@ describe("buildManifest", () => {
       },
     });
     await expect(
-      installPlugins({ hooks, plugins: [badField] }),
+      installPlugins({ handlers, plugins: [badField] }),
     ).rejects.toThrow(/invalid key "bad key!"/);
   });
 
   test("rejects a group that exceeds the 200-field cap", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const tooMany = definePlugin("big", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("big", {
@@ -590,13 +593,15 @@ describe("buildManifest", () => {
         });
       },
     });
-    await expect(installPlugins({ hooks, plugins: [tooMany] })).rejects.toThrow(
+    await expect(
+      installPlugins({ handlers, plugins: [tooMany] }),
+    ).rejects.toThrow(
       /declares 201 fields; the admin caps a single box at 200/,
     );
   });
 
   test("rejects a field key that collides within a group", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("dupe", {
       setup: (ctx) => {
         ctx.registerSettingsGroup("general", {
@@ -618,13 +623,13 @@ describe("buildManifest", () => {
         });
       },
     });
-    await expect(installPlugins({ hooks, plugins: [plugin] })).rejects.toThrow(
-      /declares field "site_title" more than once/,
-    );
+    await expect(
+      installPlugins({ handlers, plugins: [plugin] }),
+    ).rejects.toThrow(/declares field "site_title" more than once/);
   });
 
   test("projects registered post types, dropping server-only fields", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const blog = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", {
@@ -636,7 +641,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+    const { registry } = await installPlugins({ handlers, plugins: [blog] });
 
     const manifest = buildManifest(registry);
 
@@ -661,14 +666,14 @@ describe("buildManifest", () => {
   });
 
   test("surfaces per-type named templates from options; omits the field otherwise", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const blog = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
         ctx.registerEntryType("page", { label: "Pages" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+    const { registry } = await installPlugins({ handlers, plugins: [blog] });
 
     const manifest = buildManifest(registry, {
       namedTemplates: { page: [{ id: "landing", label: "Landing Page" }] },
@@ -684,7 +689,7 @@ describe("buildManifest", () => {
   });
 
   test("projects selectable access policies to key + label, dropping the resolver", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const membersOnly = definePolicy({
       segments: ["members"],
       resolve: (ctx) => (ctx.user ? grant("members") : redirectToLogin()),
@@ -703,7 +708,7 @@ describe("buildManifest", () => {
         ctx.registerEntryType("page", { label: "Pages" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+    const { registry } = await installPlugins({ handlers, plugins: [blog] });
 
     const manifest = buildManifest(registry);
     const post = manifest.entryTypes.find((e) => e.name === "post");
@@ -721,7 +726,7 @@ describe("buildManifest", () => {
   });
 
   test("uses labels.plural (slugified) for adminSlug when provided", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("shop", {
       setup: (ctx) => {
         ctx.registerEntryType("product", {
@@ -730,25 +735,25 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(buildManifest(registry).entryTypes[0]?.adminSlug).toBe(
       "product-catalog",
     );
   });
 
   test("falls back to `${name}s` when labels.plural is not set", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("shop", {
       setup: (ctx) => {
         ctx.registerEntryType("product", { label: "Product" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(buildManifest(registry).entryTypes[0]?.adminSlug).toBe("products");
   });
 
   test("throws DuplicateAdminSlugError when two types resolve to the same slug", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("clash", {
       setup: (ctx) => {
         ctx.registerEntryType("product", {
@@ -758,12 +763,12 @@ describe("buildManifest", () => {
         ctx.registerEntryType("item", { label: "Items" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(DuplicateAdminSlugError);
   });
 
   test("orders post types by priority, unspecified last", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("mixed", {
       setup: (ctx) => {
         ctx.registerEntryType("late", { label: "Late", priority: 50 });
@@ -771,27 +776,27 @@ describe("buildManifest", () => {
         ctx.registerEntryType("early", { label: "Early", priority: 5 });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const names = buildManifest(registry).entryTypes.map((pt) => pt.name);
     expect(names).toEqual(["early", "late", "unpositioned"]);
   });
 
   test("entry types with the same priority break ties by name alphabetical", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("mixed", {
       setup: (ctx) => {
         ctx.registerEntryType("zebra", { label: "Zebra", priority: 0 });
         ctx.registerEntryType("alpha", { label: "Alpha", priority: 0 });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const names = buildManifest(registry).entryTypes.map((pt) => pt.name);
     expect(names).toEqual(["alpha", "zebra"]);
   });
 
   test("settings pages with the same priority break ties by name alphabetical", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("mixed", {
       setup: (ctx) => {
         ctx.registerSettingsPage("zebra", {
@@ -806,13 +811,13 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const names = buildManifest(registry).settingsPages.map((p) => p.name);
     expect(names).toEqual(["alpha", "zebra"]);
   });
 
   test("projects registered entry meta boxes, dropping server-only fields", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("seo", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
@@ -841,7 +846,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry);
     expect(manifest.entryMetaBoxes).toHaveLength(1);
@@ -901,7 +906,7 @@ describe("buildManifest", () => {
       id: "plugin.seo.meta.title.option.lt60",
       message: "Under 60 chars",
     };
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("seo", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
@@ -920,7 +925,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const [box] = manifest.entryMetaBoxes;
     expect(box?.label).toEqual(boxLabel);
@@ -929,7 +934,7 @@ describe("buildManifest", () => {
   });
 
   test("projects registered term meta boxes, keyed by taxonomy", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("branding", {
       setup: (ctx) => {
         ctx.registerTermTaxonomy("category", { label: "Categories" });
@@ -948,7 +953,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry);
     expect(manifest.termMetaBoxes).toHaveLength(1);
@@ -960,7 +965,7 @@ describe("buildManifest", () => {
   });
 
   test("rejects two entry boxes declaring the same field key on the same entry type", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("dupe", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
@@ -980,14 +985,14 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
       /Meta field "title" is declared by entry meta boxes "box-a" and "box-b" on the same scope "post"/,
     );
   });
 
   test("rejects two term boxes declaring the same field key on the same taxonomy", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("dupe-term", {
       setup: (ctx) => {
         ctx.registerTermTaxonomy("category", { label: "Categories" });
@@ -1007,14 +1012,14 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
       /Meta field "icon" is declared by term meta boxes "t-a" and "t-b" on the same scope "category"/,
     );
   });
 
   test("keeps image roles off the wire, nested fields included", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("roles", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
@@ -1055,7 +1060,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const wire = JSON.stringify(buildManifest(registry));
 
@@ -1065,7 +1070,7 @@ describe("buildManifest", () => {
   });
 
   test("accepts a single featured field on an entry type", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("one-featured", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
@@ -1085,12 +1090,12 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).not.toThrow();
   });
 
   test("rejects a term meta box scoped to an unregistered taxonomy", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("unknown-scope", {
       setup: (ctx) => {
         // No `registerTermTaxonomy("catagory")` — the typo below is dead code.
@@ -1103,14 +1108,14 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
       /term meta box "branding" references termTaxonomy "catagory" which hasn't been registered/,
     );
   });
 
   test("rejects an entry meta box scoped to an unregistered entry type", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("unknown-scope", {
       setup: (ctx) => {
         ctx.registerEntryMetaBox("seo", {
@@ -1122,14 +1127,14 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
       /entry meta box "seo" references entry type "pots" which hasn't been registered/,
     );
   });
 
   test("rejects two user meta boxes declaring the same field key", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("dupe-user", {
       setup: (ctx) => {
         ctx.registerUserMetaBox("u-a", {
@@ -1146,14 +1151,14 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     expect(() => buildManifest(registry)).toThrow(
       /Meta field "bio" is declared by user meta boxes "u-a" and "u-b" on the same scope "user"/,
     );
   });
 
   test("projects a registered user meta box into the manifest", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("profile", {
       setup: (ctx) => {
         ctx.registerUserMetaBox("profile", {
@@ -1165,7 +1170,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry);
     expect(manifest.userMetaBoxes).toHaveLength(1);
@@ -1177,13 +1182,13 @@ describe("buildManifest", () => {
   });
 
   test("empty meta-box registry yields empty entry + term + user meta box arrays", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry);
     expect(manifest.entryMetaBoxes).toEqual([]);
@@ -1200,7 +1205,7 @@ describe("buildManifest", () => {
       id: "plugin.blog.category.description",
       message: "Top-level organisation for blog entries.",
     };
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const blog = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", {
@@ -1213,7 +1218,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+    const { registry } = await installPlugins({ handlers, plugins: [blog] });
 
     const manifest = buildManifest(registry);
     expect(manifest.entryTypes[0]?.description).toEqual(entryDescription);
@@ -1223,7 +1228,7 @@ describe("buildManifest", () => {
   });
 
   test("projects registered termTaxonomies, dropping server-only fields", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const blog = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerTermTaxonomy("category", {
@@ -1241,7 +1246,7 @@ describe("buildManifest", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [blog] });
+    const { registry } = await installPlugins({ handlers, plugins: [blog] });
 
     const manifest = buildManifest(registry);
     expect(manifest.termTaxonomies).toEqual([
@@ -1272,19 +1277,19 @@ describe("buildManifest", () => {
   });
 
   test("empty taxonomy registry yields an empty taxonomies array", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     expect(buildManifest(registry).termTaxonomies).toEqual([]);
   });
 
   test("projects registered plugin blocks into manifest.blocks", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerBlock(
@@ -1298,7 +1303,7 @@ describe("buildManifest", () => {
         );
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry);
     expect(manifest.blocks).toHaveLength(1);
@@ -1328,7 +1333,7 @@ describe("buildManifest", () => {
   });
 
   test("carries the allowed blocks resolved from the theme's list", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("forms", {
       setup: (ctx) => {
         ctx.registerBlock(
@@ -1340,7 +1345,7 @@ describe("buildManifest", () => {
         );
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry, {
       blocks: [
@@ -1377,7 +1382,7 @@ describe("buildManifest", () => {
   });
 
   test("dedups a plugin/theme block name clash, the theme winning", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerBlock(
@@ -1389,7 +1394,7 @@ describe("buildManifest", () => {
         );
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry, {
       blocks: [
@@ -1406,7 +1411,7 @@ describe("buildManifest", () => {
   });
 
   test("block entries carry inserter metadata (description, keywords, inserter)", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerBlock(
@@ -1421,7 +1426,7 @@ describe("buildManifest", () => {
         );
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     expect(buildManifest(registry).blocks[0]).toMatchObject({
       description: "Highlight an aside passage.",
@@ -1431,7 +1436,7 @@ describe("buildManifest", () => {
   });
 
   test("block entries carry variations for inserter items", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerBlock(
@@ -1458,7 +1463,7 @@ describe("buildManifest", () => {
         );
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     expect(buildManifest(registry).blocks[0]).toMatchObject({
       variations: [
@@ -1480,7 +1485,7 @@ describe("buildManifest", () => {
   });
 
   test("blocks and marks are sorted alphabetically by name", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const zoomMark: MarkSpec = { name: "acme/zoom", title: "Zoom" };
     const accentMark: MarkSpec = { name: "acme/accent", title: "Accent" };
     const plugin = definePlugin("acme", {
@@ -1503,7 +1508,7 @@ describe("buildManifest", () => {
         ctx.registerMark(accentMark);
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry);
     expect(manifest.blocks.map((b) => b.name)).toEqual([
@@ -1517,7 +1522,7 @@ describe("buildManifest", () => {
   });
 
   test("projects registered plugin marks into manifest.marks", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const warnMark: MarkSpec = {
       name: "acme/highlight-warning",
       title: "Warning highlight",
@@ -1529,7 +1534,7 @@ describe("buildManifest", () => {
         ctx.registerMark(warnMark);
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     const manifest = buildManifest(registry);
     expect(manifest.marks).toHaveLength(1);
@@ -1542,7 +1547,7 @@ describe("buildManifest", () => {
   });
 
   test("mark entries carry bubbleMenuLabel + description", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const warnMark: MarkSpec = {
       name: "acme/highlight-warning",
       title: "Warning highlight",
@@ -1554,7 +1559,7 @@ describe("buildManifest", () => {
         ctx.registerMark(warnMark);
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     expect(buildManifest(registry).marks[0]).toMatchObject({
       description: "Inline highlight emphasising a hazard.",
@@ -1563,7 +1568,7 @@ describe("buildManifest", () => {
   });
 
   test("plugin mark entries carry adminSchema ref", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const mark: MarkSpec = {
       name: "acme/highlight-warning",
       title: "Warning highlight",
@@ -1574,7 +1579,7 @@ describe("buildManifest", () => {
         ctx.registerMark(mark);
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
 
     expect(buildManifest(registry).marks[0]).toMatchObject({
       adminSchema: "warningHighlightSchema",
@@ -1639,7 +1644,7 @@ describe("deriveAdminSlug", () => {
 
 describe("buildManifest adminNav projection", () => {
   test("page with inline group metadata creates the custom group on the fly", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("menus", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -1655,7 +1660,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const appearance = manifest.adminNav.find((g) => g.id === "appearance");
     expect(appearance).toBeDefined();
@@ -1674,7 +1679,7 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("page with bare-string custom group humanizes the id and uses default priority", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("menus", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -1685,14 +1690,14 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const appearance = manifest.adminNav.find((g) => g.id === "appearance");
     expect(appearance?.label).toBe("Appearance");
   });
 
   test("page targeting a core-reserved nav group lands in that group", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("media", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -1703,7 +1708,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const management = manifest.adminNav.find((g) => g.id === "management");
     expect(management?.items.map((i) => i.to)).toContain(
@@ -1712,7 +1717,7 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("items sort by order ascending, then label as tiebreak", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("menus", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -1729,14 +1734,14 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const appearance = manifest.adminNav.find((g) => g.id === "appearance");
     expect(appearance?.items.map((i) => i.label)).toEqual(["A", "Z"]);
   });
 
   test("groups sort by priority ascending, ties broken by id", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("multi", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -1759,7 +1764,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const customGroups = manifest.adminNav
       .filter((g) => ["alpha", "bravo", "zulu"].includes(g.id))
@@ -1768,13 +1773,13 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("entry-type sidebar items emit /entries/<adminSlug>", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const content = buildManifest(registry).adminNav.find(
       (g) => g.id === "content",
     );
@@ -1782,13 +1787,13 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("taxonomy sidebar items emit /terms/<name>", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerTermTaxonomy("category", { label: "Categories" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const tax = buildManifest(registry).adminNav.find(
       (g) => g.id === "term-taxonomies",
     );
@@ -1820,7 +1825,7 @@ describe("buildManifest adminNav projection", () => {
         message: "Move post to trash?",
       },
     };
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         // Inline literal so TypeScript's excess-property check also pins the
@@ -1858,7 +1863,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const entry = buildManifest(registry).entryTypes.find(
       (e) => e.name === "post",
     );
@@ -1885,7 +1890,7 @@ describe("buildManifest adminNav projection", () => {
       allItems: { id: "blog.cat.allItems", message: "All categories" },
       noMatch: { id: "blog.cat.noMatch", message: "No categories match" },
     };
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerTermTaxonomy("category", {
@@ -1923,7 +1928,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const taxonomy = buildManifest(registry).termTaxonomies.find(
       (t) => t.name === "category",
     );
@@ -1931,7 +1936,7 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("plugin menuIcon plumbs through to the sidebar item's coreIcon", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", {
@@ -1945,7 +1950,7 @@ describe("buildManifest adminNav projection", () => {
         ctx.registerTermTaxonomy("tag", { label: "Tags" });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const post = manifest.adminNav
       .find((g) => g.id === "content")
@@ -1961,7 +1966,7 @@ describe("buildManifest adminNav projection", () => {
   });
 
   test("unknown menuIcon falls back to the generic content icon", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", {
@@ -1973,7 +1978,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const item = buildManifest(registry).adminNav.find(
       (g) => g.id === "content",
     )?.items[0];
@@ -1987,7 +1992,7 @@ describe("buildManifest adminNav projection", () => {
       id: "plugin.x.menus.nav",
       message: "Menus",
     };
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("x", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -1998,7 +2003,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const appearance = manifest.adminNav.find((g) => g.id === "appearance");
     expect(appearance?.items[0]?.label).toEqual(navLabel);
@@ -2008,7 +2013,7 @@ describe("buildManifest adminNav projection", () => {
     // Descriptors, not English source, so the sidebar's `useLabel` resolves
     // them at the visiting user's locale.
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [],
     });
     const manifest = buildManifest(registry);
@@ -2025,7 +2030,7 @@ describe("buildManifest adminNav projection", () => {
       id: "plugin.x.appearance",
       message: "Appearance",
     };
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("x", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -2039,7 +2044,7 @@ describe("buildManifest adminNav projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const appearance = buildManifest(registry).adminNav.find(
       (g) => g.id === "appearance",
     );
@@ -2050,7 +2055,7 @@ describe("buildManifest adminNav projection", () => {
 
 describe("buildManifest visibility projection", () => {
   test("emits resolved visibility for a hidden (menu-like) entry type", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const menus = definePlugin("menus", {
       setup: (ctx) => {
         ctx.registerEntryType("nav_menu_item", {
@@ -2059,7 +2064,7 @@ describe("buildManifest visibility projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [menus] });
+    const { registry } = await installPlugins({ handlers, plugins: [menus] });
     const entry = buildManifest(registry).entryTypes[0];
     expect(entry?.isPublic).toBe(false);
     expect(entry?.showUI).toBe(false);
@@ -2067,7 +2072,7 @@ describe("buildManifest visibility projection", () => {
   });
 
   test("emits resolved visibility for a sidebar-hidden but UI-present entry type", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("media", {
       setup: (ctx) => {
         ctx.registerEntryType("attachment", {
@@ -2076,7 +2081,7 @@ describe("buildManifest visibility projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const entry = buildManifest(registry).entryTypes[0];
     expect(entry?.isPublic).toBe(true);
     expect(entry?.showUI).toBe(true);
@@ -2084,7 +2089,7 @@ describe("buildManifest visibility projection", () => {
   });
 
   test("taxonomies get the same resolved-visibility projection", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const menus = definePlugin("menus", {
       setup: (ctx) => {
         ctx.registerEntryType("nav_menu_item", {
@@ -2098,14 +2103,14 @@ describe("buildManifest visibility projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [menus] });
+    const { registry } = await installPlugins({ handlers, plugins: [menus] });
     const tax = buildManifest(registry).termTaxonomies[0];
     expect(tax?.isPublic).toBe(false);
     expect(tax?.showInSidebar).toBe(false);
   });
 
   test("projects registered patterns into manifest.patterns sorted by name", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerPattern({
@@ -2123,7 +2128,7 @@ describe("buildManifest visibility projection", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
 
     expect(manifest.patterns).toHaveLength(2);
@@ -2140,7 +2145,7 @@ describe("buildManifest visibility projection", () => {
   });
 
   test("numbers a pattern's blank ids through the slots its blocks declare", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerBlock(
@@ -2165,7 +2170,7 @@ describe("buildManifest visibility projection", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const [group, team] = buildManifest(registry).patterns[0]?.content ?? [];
 
     expect(group).toMatchObject({
@@ -2180,7 +2185,7 @@ describe("buildManifest visibility projection", () => {
   });
 
   test("projects the starter-modal fields — target, entryTypes, priority — through the manifest", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerPattern({
@@ -2194,7 +2199,7 @@ describe("buildManifest visibility projection", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     const entry = manifest.patterns.find((p) => p.name === "acme/page-blank");
 
@@ -2204,7 +2209,7 @@ describe("buildManifest visibility projection", () => {
   });
 
   test("projects the preview override through the manifest when set, omits it otherwise", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerPattern({
@@ -2226,7 +2231,7 @@ describe("buildManifest visibility projection", () => {
       },
     });
 
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
 
     expect(
@@ -2303,7 +2308,7 @@ describe("buildManifest capability references", () => {
       },
     });
     const { registry } = await installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [early, late],
     });
 
@@ -2316,7 +2321,7 @@ describe("buildManifest capability references", () => {
 
 describe("buildManifest adminPages projection", () => {
   test("lists every admin page, with or without nav, while adminNav keeps only nav pages", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("audit", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -2334,7 +2339,7 @@ describe("buildManifest adminPages projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     expect(manifest.adminPages).toEqual([
       {
@@ -2358,7 +2363,7 @@ describe("buildManifest adminPages projection", () => {
   });
 
   test("ships a capability reference as its spelled string, with or without nav", async () => {
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = definePlugin("audit", {
       setup: (ctx) => {
         ctx.registerAdminPage({
@@ -2376,7 +2381,7 @@ describe("buildManifest adminPages projection", () => {
         });
       },
     });
-    const { registry } = await installPlugins({ hooks, plugins: [plugin] });
+    const { registry } = await installPlugins({ handlers, plugins: [plugin] });
     const manifest = buildManifest(registry);
     expect(manifest.adminPages.map((page) => page.capability)).toEqual([
       "term:topic:edit",

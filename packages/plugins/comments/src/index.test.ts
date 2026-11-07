@@ -3,7 +3,7 @@ import {
   createPluginRegistry,
   defineEvent,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "plumix/plugin";
 import { createTestContext } from "plumix/test";
@@ -30,7 +30,7 @@ async function loadCurrentThread(
 ): Promise<Readonly<Record<string, ResolvedThreadPage | null | undefined>>> {
   const registry = createPluginRegistry();
   await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [comments(config)],
     registry,
   });
@@ -131,7 +131,7 @@ describe("comment namespace", () => {
     });
 
     const install = installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [comments(), rival],
     });
 
@@ -148,18 +148,18 @@ describe("moderator notification", () => {
     const held = await commentFactory
       .transient({ db })
       .create({ entryId: entry.id, status: "pending" });
-    const hooks = new HookRegistry();
+    const handlers = new HandlerRegistry();
     const plugin = comments({ notifyEmail: "mod@example.test" });
-    await installPlugins({ hooks, plugins: [plugin] });
+    await installPlugins({ handlers, plugins: [plugin] });
     const send = vi.fn(() => Promise.resolve());
     // The config declares the plugin's mails, as a site's does.
     const ctx = createTestContext({
       db,
-      hooks,
+      handlers,
       config: { mailer: { send }, plugins: [plugin] },
     });
 
-    await hooks.emit(comment.created, { comment: held }, ctx);
+    await handlers.emit(comment.created, { comment: held }, ctx);
 
     expect(send).toHaveBeenCalledOnce();
   });

@@ -5,7 +5,7 @@ import {
   buildManifest,
   definePlugin,
   entry,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   tagCdnEntry,
 } from "plumix/plugin";
@@ -26,15 +26,18 @@ import { media as mediaField } from "./builder.js";
 import { DEFAULT_ACCEPTED_TYPES, media } from "./index.js";
 
 async function install() {
-  return installPlugins({ hooks: new HookRegistry(), plugins: [media()] });
+  return installPlugins({
+    handlers: new HandlerRegistry(),
+    plugins: [media()],
+  });
 }
 
 describe("@plumix/plugin-media — variant purge", () => {
   test.each(["trashed", "deleted"] as const)(
     "a %s media entry forgets its rendered variants",
     async (event) => {
-      const hooks = new HookRegistry();
-      await installPlugins({ hooks, plugins: [media()] });
+      const handlers = new HandlerRegistry();
+      await installPlugins({ handlers, plugins: [media()] });
       const db = await createTestDb();
       const author = await userFactory.transient({ db }).create({});
       const upload = await entryFactory.transient({ db }).create({
@@ -45,12 +48,12 @@ describe("@plumix/plugin-media — variant purge", () => {
       const purge = vi.fn(() => Promise.resolve());
       const ctx = createTestContext({
         db,
-        hooks,
+        handlers,
         storage: memoryStorage().connect({}),
         imageDelivery: { kind: "test", url: (source) => source, purge },
       });
 
-      await hooks.emit(entry.for("media")[event], { entry: upload }, ctx);
+      await handlers.emit(entry.for("media")[event], { entry: upload }, ctx);
 
       expect(purge).toHaveBeenCalledOnce();
     },

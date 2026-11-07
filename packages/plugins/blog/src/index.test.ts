@@ -1,4 +1,4 @@
-import { HookRegistry, installPlugins } from "plumix/plugin";
+import { HandlerRegistry, installPlugins } from "plumix/plugin";
 import { describe, expect, test } from "vitest";
 
 import type { BlogOptions } from "./index.js";
@@ -6,7 +6,7 @@ import { blog } from "./index.js";
 
 async function install(options: BlogOptions = {}) {
   return installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [blog(options)],
   });
 }

@@ -44,7 +44,7 @@ function refusingSecondPut(
   };
 }
 
-describeSyncContract({ open: (hooks) => memorySyncEnds({ hooks }) });
+describeSyncContract({ open: (handlers) => memorySyncEnds({ handlers }) });
 
 describe("memorySync", () => {
   test("a site given no context refuses to settle", async () => {

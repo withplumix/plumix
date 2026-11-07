@@ -106,7 +106,7 @@ async function blogSite(): Promise<Site> {
     client: db.$client,
     ctx: createTestContext({
       db,
-      hooks: harness.app.hooks,
+      handlers: harness.app.handlers,
       plugins: harness.app.plugins,
     }),
   };
@@ -348,7 +348,7 @@ describe("plumix import, writing", () => {
   test("runs the site's sync.after handlers, with content as the scope", async () => {
     const site = await blogSite();
     const events: unknown[] = [];
-    site.harness.app.hooks.on(sync.after, (event) => {
+    site.harness.app.handlers.on(sync.after, (event) => {
       events.push(event);
     });
     writeRecords("content.jsonl", [TOPIC, POST]);

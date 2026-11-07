@@ -1,7 +1,7 @@
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
-import { term } from "../../../hooks/term.js";
+import { term } from "../../../events-and-filters/term.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import {
   announceTermMetaChange,

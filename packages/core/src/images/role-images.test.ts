@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { MetaBoxField } from "../plugin/manifest.js";
 import type { PluginSetupContext } from "../plugin/setup-context-types.js";
 import type { PhotoReference } from "../test/photo-lookup.js";
-import { HookRegistry } from "../hooks/registry.js";
+import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import {
@@ -51,7 +51,7 @@ const sitePlugin = (ctx: PluginSetupContext): void => {
 
 async function registryFrom(setup: (ctx: PluginSetupContext) => void) {
   const { registry } = await installPlugins({
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: [definePlugin("site", { setup })],
   });
   return registry;

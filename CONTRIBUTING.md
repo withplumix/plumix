@@ -152,7 +152,7 @@ Core and each plugin that declares tables ships its own migration history in `mi
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/), checked by commitlint:
 
 ```
-feat(core): add hook priority ordering
+feat(core): add early and late handler order
 fix(admin): prevent double-submit on post save
 ```
 

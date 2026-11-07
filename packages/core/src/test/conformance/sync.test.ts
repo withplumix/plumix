@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { RuntimeSync, SyncEnd } from "../../context/runtime-adapter.js";
-import type { HookRegistry } from "../../hooks/registry.js";
+import type { HandlerRegistry } from "../../events-and-filters/registry.js";
 import type { SyncContractEnds } from "./sync.js";
 import { memorySyncEnds } from "../sync/memory-ends.js";
 import { failingCases } from "./case.js";
@@ -10,9 +10,9 @@ import { syncContractCases } from "./sync.js";
 /** The reference ends, each opened end passed through `alter`. */
 function brokenBy(
   alter: (end: SyncEnd) => SyncEnd,
-): (hooks: HookRegistry) => Promise<SyncContractEnds> {
-  return async (hooks) => {
-    const ends = await memorySyncEnds({ hooks });
+): (handlers: HandlerRegistry) => Promise<SyncContractEnds> {
+  return async (handlers) => {
+    const ends = await memorySyncEnds({ handlers });
     const sync: RuntimeSync = {
       open: async (options) => alter(await ends.sync.open(options)),
     };

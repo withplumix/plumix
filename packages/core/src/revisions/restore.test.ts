@@ -5,7 +5,7 @@ import { deriveEntryTypeCapabilities } from "../access/contract/rbac.js";
 import { etagOf } from "../db/concurrency.js";
 import { acquireEditLease, readEditLease } from "../db/edit-lease.js";
 import { entries } from "../db/schema/entries.js";
-import { entry } from "../hooks/entry.js";
+import { entry } from "../events-and-filters/entry.js";
 import { text } from "../plugin/fields/index.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { toRegisteredEntryType } from "../plugin/registry.js";
@@ -291,7 +291,7 @@ describe("entry.revisions.restore", () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
     const ifMatch = await currentEtag(h.db, entryId);
     // A plugin's own write, landing after the restore read live.
-    h.hooks.add(entry.beforeSave, async (row) => {
+    h.handlers.add(entry.beforeSave, async (row) => {
       await h.db
         .update(entries)
         .set({ title: "theirs" })

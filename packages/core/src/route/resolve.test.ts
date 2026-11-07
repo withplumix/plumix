@@ -12,7 +12,7 @@ import { createPreviewToken } from "../auth/preview-token.js";
 import { defineBlock } from "../blocks/index.js";
 import { eq, ne } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
-import { render } from "../hooks/render.js";
+import { render } from "../events-and-filters/render.js";
 import { definePlugin } from "../plugin/define.js";
 import { upsertAutosave } from "../revisions/repository.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";

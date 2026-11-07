@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { eq } from "../../src/db/index.js";
 import { authTokens } from "../../src/db/schema/auth_tokens.js";
 import { users } from "../../src/db/schema/users.js";
-import { auth } from "../../src/hooks/auth.js";
+import { auth } from "../../src/events-and-filters/auth.js";
 import { fakeMail } from "../../src/test/mail-fake.js";
 import { testSite } from "../../src/test/site.js";
 

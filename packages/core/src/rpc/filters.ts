@@ -1,7 +1,7 @@
 import type { Entry } from "../db/schema/entries.js";
 import type { SettingsGroupCopy } from "../db/schema/settings.js";
 import type { Term } from "../db/schema/terms.js";
-import type { AnyFilterDefinition } from "../hooks/define.js";
+import type { AnyFilterDefinition } from "../events-and-filters/define.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
 import type {
   EntryCreateInput,
@@ -17,8 +17,8 @@ import type {
   TermListInput,
   TermUpdateInput,
 } from "./procedures/term/schemas.js";
-import { defineFilter } from "../hooks/define.js";
-import { scopeDeclarations } from "../hooks/scope.js";
+import { defineFilter } from "../events-and-filters/define.js";
+import { scopeDeclarations } from "../events-and-filters/scope.js";
 
 /**
  * `_preview` lets editor clients tell autosave-overlaid responses from

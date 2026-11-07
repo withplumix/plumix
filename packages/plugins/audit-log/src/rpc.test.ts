@@ -2,7 +2,7 @@ import type { DefaultRole, RequestAuthenticator } from "plumix/auth";
 import type { AppContext } from "plumix/plugin";
 import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
-import { createPluginRegistry, HookRegistry } from "plumix/plugin";
+import { createPluginRegistry, HandlerRegistry } from "plumix/plugin";
 import { createTestContext } from "plumix/test";
 import { describe, expect, test } from "vitest";
 
@@ -77,7 +77,7 @@ function buildContext(role: DefaultRole): AppContext {
     db: {} as never,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
-    hooks: new HookRegistry(),
+    handlers: new HandlerRegistry(),
     plugins: registry,
     user: { id: user.id, email: user.email, role: user.role, meta: {} },
     authenticator: stubAuthenticator(user),

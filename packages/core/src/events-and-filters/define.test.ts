@@ -6,7 +6,7 @@ import { createPluginSetupContext } from "../plugin/setup-context.js";
 import { createTestContext } from "../test/context.js";
 import { createTestDb } from "../test/harness.js";
 import { defineEvent, defineFilter } from "./define.js";
-import { HookRegistry } from "./registry.js";
+import { HandlerRegistry } from "./registry.js";
 
 const saved = defineEvent<{ readonly id: number }>("acme:saved");
 const title = defineFilter<string, { readonly locale: string }>("acme:title", {
@@ -18,7 +18,7 @@ const label = defineFilter<string, { readonly locale: string }>("acme:label", {
 
 const ctx = createPluginSetupContext({
   pluginId: "acme",
-  hooks: new HookRegistry(),
+  handlers: new HandlerRegistry(),
   registry: createPluginRegistry(),
   theme: { templates: [] },
 });

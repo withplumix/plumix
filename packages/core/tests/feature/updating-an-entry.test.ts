@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { etagOf } from "../../src/db/concurrency.js";
 import { eq } from "../../src/db/index.js";
 import { users } from "../../src/db/schema/users.js";
-import { entry } from "../../src/hooks/entry.js";
+import { entry } from "../../src/events-and-filters/entry.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
 

@@ -5,11 +5,11 @@ import type { User } from "../db/schema/users.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { createPluginSetupContext } from "../plugin/setup-context.js";
 import { auth } from "./auth.js";
-import { HookRegistry } from "./registry.js";
+import { HandlerRegistry } from "./registry.js";
 
 const ctx = createPluginSetupContext({
   pluginId: "acme",
-  hooks: new HookRegistry(),
+  handlers: new HandlerRegistry(),
   registry: createPluginRegistry(),
   theme: { templates: [] },
 });

@@ -7,16 +7,15 @@ import type { BlockRegistry, MarkSpec } from "../blocks/index.js";
 import type { PlumixConfig } from "../config.js";
 import type { AppContext, Db } from "../context/app-context.js";
 import type { User } from "../db/schema/users.js";
-import type { EventDefinition } from "../hooks/define.js";
-import type { HookRegistry } from "../hooks/registry.js";
-import type { ActionArgs, ActionName } from "../hooks/types.js";
+import type { EventDefinition } from "../events-and-filters/define.js";
+import type { HandlerRegistry } from "../events-and-filters/registry.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { AuthMethodsSummary } from "../runtime/app.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories, SeededRole } from "./factories.js";
 import type { MailFake } from "./mail-fake.js";
-import type { ActionSpy, BoundFilterSpy, EventSpy } from "./spies.js";
+import type { BoundFilterSpy, EventSpy } from "./spies.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { coreAuthMethods } from "../auth/core-methods.js";
 import { declareAuthMethods } from "../auth/declared-methods.js";
@@ -27,7 +26,7 @@ import { resolveAllowedBlocks } from "../blocks/allowed-blocks.js";
 import { coreBlocks, coreMarks, createBlockRegistry } from "../blocks/index.js";
 import { resolveStylePolicy } from "../blocks/styles/style-policy.js";
 import { createAppContext } from "../context/app.js";
-import { HookRegistry as HookRegistryImpl } from "../hooks/registry.js";
+import { HandlerRegistry as HandlerRegistryImpl } from "../events-and-filters/registry.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
 import { appRouter } from "../rpc/router.js";
 import { resolveAuthMethods } from "../runtime/app.js";
@@ -36,12 +35,12 @@ import { silentLogger } from "./context.js";
 import { factoriesFor, userFactory } from "./factories.js";
 import { createTestDb } from "./harness.js";
 import { fakeMail } from "./mail-fake.js";
-import { bindFilterSpy, spyAction, spyEvent } from "./spies.js";
+import { bindFilterSpy, spyEvent } from "./spies.js";
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
 export interface BaseRpcHarnessOptions {
-  readonly hooks?: HookRegistry;
+  readonly handlers?: HandlerRegistry;
   /**
    * Plugin registry seed. Anything contributed via `ctx.registerBlock` /
    * `ctx.registerMark` lands in the validator's merged registries —
@@ -80,7 +79,7 @@ export interface AuthenticatedHarnessOptions extends BaseRpcHarnessOptions {
 
 export interface RpcHarnessBase<TUser extends User | null> {
   readonly db: TestDb;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
   readonly plugins: PluginRegistry;
   readonly env: PlumixEnv;
   readonly context: AppContext;
@@ -92,9 +91,6 @@ export interface RpcHarnessBase<TUser extends User | null> {
    * is the transport too; `mailer: undefined` leaves the site with none.
    */
   readonly mail: MailFake;
-  readonly spyAction: <TName extends ActionName>(
-    name: TName,
-  ) => ActionSpy<ActionArgs<TName>>;
   readonly spyFilter: BoundFilterSpy;
   /** Record every payload the event is emitted with. */
   readonly spyEvent: <TPayload>(
@@ -102,7 +98,7 @@ export interface RpcHarnessBase<TUser extends User | null> {
   ) => EventSpy<TPayload>;
   /**
    * A harness bound to the given user or a fresh one of the role, sharing db,
-   * hooks, plugins and env so state survives the swap.
+   * handlers, plugins and env so state survives the swap.
    */
   readonly actingAs: (
     userOrRole: User | SeededRole,
@@ -126,7 +122,7 @@ export function authedCtx(
 function buildContext(
   db: Db,
   env: PlumixEnv,
-  hooks: HookRegistry,
+  handlers: HandlerRegistry,
   plugins: PluginRegistry,
   blocks: BlockRegistry,
   marks: readonly MarkSpec[],
@@ -140,7 +136,7 @@ function buildContext(
     db,
     env,
     request,
-    hooks,
+    handlers,
     plugins,
     blocks,
     allowedBlocks: new Set(
@@ -177,7 +173,7 @@ async function authenticatedRequest(
 function assemble<TUser extends User | null>(
   db: TestDb,
   env: PlumixEnv,
-  hooks: HookRegistry,
+  handlers: HandlerRegistry,
   plugins: PluginRegistry,
   blocks: BlockRegistry,
   marks: readonly MarkSpec[],
@@ -191,7 +187,7 @@ function assemble<TUser extends User | null>(
   const context = buildContext(
     db,
     env,
-    hooks,
+    handlers,
     plugins,
     blocks,
     marks,
@@ -206,16 +202,15 @@ function assemble<TUser extends User | null>(
   const harness: RpcHarnessBase<TUser> = {
     db,
     env,
-    hooks,
+    handlers,
     plugins,
     context,
     client,
     user,
     factory: factoriesFor(db),
     mail,
-    spyAction: (name) => spyAction(hooks, name),
-    spyFilter: bindFilterSpy(hooks),
-    spyEvent: (event) => spyEvent(hooks, event),
+    spyFilter: bindFilterSpy(handlers),
+    spyEvent: (event) => spyEvent(handlers, event),
     actingAs: async (userOrRole) => {
       const targetUser: User =
         typeof userOrRole === "string"
@@ -225,7 +220,7 @@ function assemble<TUser extends User | null>(
       return assemble(
         db,
         env,
-        hooks,
+        handlers,
         plugins,
         blocks,
         marks,
@@ -264,7 +259,7 @@ export async function createRpcHarness(
   options: BaseRpcHarnessOptions & { authAs?: SeededRole } = {},
 ): Promise<RpcHarness> {
   const db = await createTestDb();
-  const hooks = options.hooks ?? new HookRegistryImpl();
+  const handlers = options.handlers ?? new HandlerRegistryImpl();
   const plugins = options.plugins ?? createPluginRegistry();
   const env = options.env ?? {};
   const mail = fakeMail();
@@ -289,7 +284,7 @@ export async function createRpcHarness(
     return assemble(
       db,
       env,
-      hooks,
+      handlers,
       plugins,
       blocks,
       marks,
@@ -306,7 +301,7 @@ export async function createRpcHarness(
   return assemble<User | null>(
     db,
     env,
-    hooks,
+    handlers,
     plugins,
     blocks,
     marks,

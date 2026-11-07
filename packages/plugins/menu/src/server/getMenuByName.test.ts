@@ -4,7 +4,7 @@ import { eq } from "plumix/db";
 import {
   createPluginRegistry,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   registerCoreLookupAdapters,
 } from "plumix/plugin";
@@ -25,19 +25,19 @@ import { getMenuByName, getMenusByName } from "./getMenuByName.js";
 
 interface TestBundle {
   readonly registry: PluginRegistry;
-  readonly hooks: HookRegistry;
+  readonly handlers: HandlerRegistry;
 }
 
 async function buildRegistry(
   plugins: readonly AnyPluginDescriptor[],
 ): Promise<TestBundle> {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
   // Mirror runtime/app.ts: core adapters seed the registry before plugins
   // install so the menu resolver can dispatch to `entry`/`term` adapters.
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins, registry });
-  return { registry, hooks };
+  await installPlugins({ handlers, plugins, registry });
+  return { registry, handlers };
 }
 
 function ctxFor(
@@ -47,7 +47,7 @@ function ctxFor(
   return createTestContext({
     db,
     plugins: bundle.registry,
-    hooks: bundle.hooks,
+    handlers: bundle.handlers,
     request: new Request("https://test.example/"),
     config: { basePath: "" },
   });
@@ -466,7 +466,7 @@ describe("getMenuByName", () => {
       const local = createTestContext({
         db,
         plugins: ctx.plugins,
-        hooks: bundle.hooks,
+        handlers: bundle.handlers,
         request: new Request(url),
         config: { basePath: "" },
       });

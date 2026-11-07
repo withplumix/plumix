@@ -2,7 +2,7 @@ import type { PluginRegistry } from "plumix/plugin";
 import {
   createPluginRegistry,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
   registerCoreLookupAdapters,
 } from "plumix/plugin";
@@ -13,10 +13,10 @@ import { getEligibleMenuKinds } from "./eligibility.js";
 async function buildRegistry(
   plugins: ReturnType<typeof definePlugin>[],
 ): Promise<PluginRegistry> {
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
-  await installPlugins({ hooks, plugins, registry });
+  await installPlugins({ handlers, plugins, registry });
   return registry;
 }
 

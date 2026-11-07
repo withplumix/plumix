@@ -3,7 +3,7 @@ import { describe, expect, expectTypeOf, test, vi } from "vitest";
 import type { CdnStore, ConnectedCdn } from "../runtime/contract/slots.js";
 import type { ViewData } from "./contract/resolved-entry.js";
 import { authenticatedPolicy } from "../access/policy.js";
-import { render } from "../hooks/render.js";
+import { render } from "../events-and-filters/render.js";
 import { definePlugin } from "../plugin/define.js";
 import { defineTemplate } from "../template.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";

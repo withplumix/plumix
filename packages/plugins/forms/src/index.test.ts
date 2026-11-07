@@ -5,7 +5,7 @@ import { email, text } from "plumix/fields";
 import {
   defineEvent,
   definePlugin,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "plumix/plugin";
 import { createDispatcherHarness } from "plumix/test";
@@ -317,7 +317,7 @@ describe("form namespace", () => {
     });
 
     const install = installPlugins({
-      hooks: new HookRegistry(),
+      handlers: new HandlerRegistry(),
       plugins: [forms(), rival],
     });
 

@@ -3,7 +3,7 @@ import type { User } from "plumix/schema";
 import { createRouterClient } from "@orpc/server";
 import {
   createPluginRegistry,
-  HookRegistry,
+  HandlerRegistry,
   installPlugins,
 } from "plumix/plugin";
 import { createTestContext, editorUser, factoriesFor } from "plumix/test";
@@ -45,9 +45,9 @@ function stubAuthenticator(user: User): RequestAuthenticator {
 
 async function buildHarness(role: DefaultRole = "editor") {
   const db = await createCommentsTestDb();
-  const hooks = new HookRegistry();
+  const handlers = new HandlerRegistry();
   const registry = createPluginRegistry();
-  await installPlugins({ hooks, plugins: [comments()], registry });
+  await installPlugins({ handlers, plugins: [comments()], registry });
 
   const user =
     role === "editor"
@@ -58,7 +58,7 @@ async function buildHarness(role: DefaultRole = "editor") {
     db,
     env: {},
     request: new Request("https://cms.example/_plumix/rpc", { method: "POST" }),
-    hooks,
+    handlers,
     plugins: registry,
     user: { id: user.id, email: user.email, role: user.role, meta: {} },
     authenticator: stubAuthenticator(user),
@@ -71,7 +71,7 @@ async function buildHarness(role: DefaultRole = "editor") {
     { comments: router },
     { context: ctx },
   ) as unknown as Client;
-  return { db, hooks, user, client };
+  return { db, handlers, user, client };
 }
 
 describe("comments moderation RPC", () => {
@@ -104,7 +104,7 @@ describe("comments moderation RPC", () => {
       .transient({ db: h.db })
       .create({ entryId: entry.id, status: "pending" });
     const approved: string[] = [];
-    h.hooks.on(comment.approved, ({ comment: row }) => {
+    h.handlers.on(comment.approved, ({ comment: row }) => {
       approved.push(`${String(row.id)}:${row.status}`);
     });
 
@@ -121,10 +121,10 @@ describe("comments moderation RPC", () => {
     const a = await seed.create({ entryId: entry.id, status: "pending" });
     const b = await seed.create({ entryId: entry.id, status: "pending" });
     const heard: string[] = [];
-    h.hooks.on(comment.spam, ({ comment: row }) => {
+    h.handlers.on(comment.spam, ({ comment: row }) => {
       heard.push(`spam ${String(row.id)}:${row.status}`);
     });
-    h.hooks.on(comment.trashed, ({ comment: row }) => {
+    h.handlers.on(comment.trashed, ({ comment: row }) => {
       heard.push(`trashed ${String(row.id)}:${row.status}`);
     });
 
@@ -190,7 +190,7 @@ describe("comments moderation RPC", () => {
     const a = await seed.create({ entryId: entry.id, status: "pending" });
     const b = await seed.create({ entryId: entry.id, status: "pending" });
     let fired = 0;
-    h.hooks.on(comment.approved, () => {
+    h.handlers.on(comment.approved, () => {
       fired += 1;
     });
 

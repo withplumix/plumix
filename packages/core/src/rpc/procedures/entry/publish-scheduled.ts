@@ -24,7 +24,7 @@ export function scheduledDateInvalid(
 }
 
 /**
- * Fires the same lifecycle hooks as an editor publish but skips
+ * Emits the same events as an editor publish but skips
  * `entry.beforeSave` and revision capture: a cron run has no actor, and the
  * content was snapshotted when scheduled.
  */
