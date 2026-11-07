@@ -295,7 +295,10 @@ export const runShipLoop = async (
 
       if (outcome.status === "blocked") {
         if (leftAsItWasBecauseTheCheckoutBroke(ticket)) return;
-        if (await settledByTheDecider(ticket, outcome.reason)) {
+        if (
+          !outcome.alreadyDecided &&
+          (await settledByTheDecider(ticket, outcome.reason))
+        ) {
           ports.releaseClaim(ticket);
           ports.retake(ticket);
           ports.say(

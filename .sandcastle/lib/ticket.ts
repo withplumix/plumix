@@ -14,6 +14,7 @@ import {
   taggedBlock,
 } from "./agent.js";
 import { checkBrief } from "./brief-check.js";
+import { decideOnTheBranch } from "./decide.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import { GATES, GATES_AFTER_A_RESOLVED_REBASE, runGates } from "./gates.js";
 import {
@@ -68,7 +69,7 @@ const EMIT_THE_GUIDANCE =
   "End with the <guidance> block the prompt describes: what the implementer should do next.";
 
 const MAX_GATE_FIX_ROUNDS = 4;
-const MAX_REVIEW_FIX_ROUNDS = 3;
+export const MAX_REVIEW_FIX_ROUNDS = 2;
 const ITERATIONS_ALLOWED_WHEN_RESUMING_A_SESSION = 1;
 
 const findingSchema = z.object({
@@ -105,6 +106,7 @@ export type ShipOutcome =
       readonly reason: string;
       readonly pullRequestUrl?: string;
       readonly briefFails?: boolean;
+      readonly alreadyDecided?: boolean;
     };
 
 export const readFindingsTag = (stdout: string): Findings => {
@@ -198,26 +200,36 @@ const asGapList = (gaps: readonly ReviewItem[]): string =>
 
 type AfterReview =
   | { readonly next: "gates" }
-  | { readonly next: "fix"; readonly gaps: readonly ReviewItem[] }
-  | { readonly next: "park"; readonly reason: string };
+  | {
+      readonly next: "fix";
+      readonly gaps: readonly ReviewItem[];
+      readonly lastRound: boolean;
+    }
+  | {
+      readonly next: "decide";
+      readonly gaps: readonly ReviewItem[];
+      readonly lastRound: boolean;
+      readonly reason: string;
+    };
 
+/**
+ * A fix is a fraction of what implementing costs, and each review starts fresh
+ * and finds new gaps, so the last round's gaps are fixed, never parked: a park
+ * throws the branch away and the retake pays to implement it all again.
+ */
 export const afterReview = (review: Review, pass: number): AfterReview => {
   const { specGaps } = review;
   if (specGaps.length === 0) return { next: "gates" };
+  const lastRound = pass >= MAX_REVIEW_FIX_ROUNDS;
   const closable = specGaps.filter(({ needsADecision }) => !needsADecision);
-  if (closable.length === 0) {
+  if (closable.length === 0 || (lastRound && closable.length < specGaps.length))
     return {
-      next: "park",
+      next: "decide",
+      gaps: specGaps,
+      lastRound,
       reason: `${specGaps.length} spec gap(s) need a person's decision:\n\n${asGapList(specGaps)}`,
     };
-  }
-  if (pass > MAX_REVIEW_FIX_ROUNDS) {
-    return {
-      next: "park",
-      reason: `${specGaps.length} spec gap(s) still open after ${MAX_REVIEW_FIX_ROUNDS} review rounds:\n\n${asGapList(specGaps)}`,
-    };
-  }
-  return { next: "fix", gaps: closable };
+  return { next: "fix", gaps: closable, lastRound };
 };
 
 const asFixBrief = (
@@ -225,6 +237,13 @@ const asFixBrief = (
   { title, body }: PullRequestCopy,
 ): string =>
   `${asGapList(specGaps)}\n\nThe PR description the harness will publish reads:\n\n<pr>\ntitle: ${title}\nbody:\n${body}\n</pr>\n\nWhen a gap is in that description, or your fix makes it wrong, end with the whole corrected <pr> block in the same shape. The harness publishes the last one you emit.`;
+
+const asDecidedBrief = (
+  decision: string,
+  specGaps: readonly ReviewItem[],
+  pullRequestCopy: PullRequestCopy,
+): string =>
+  `The brief was amended, so read the ticket again. What was decided:\n\n${decision}\n\n${asFixBrief(specGaps, pullRequestCopy)}`;
 
 const asGateFailureBrief = ({ command, output }: GateFailure): string =>
   `The harness ran \`${command}\` and it failed. Fix it.\n\n\`\`\`\n${output}\n\`\`\``;
@@ -333,6 +352,88 @@ export const fixerFor = (
       };
     },
   };
+};
+
+export interface ReviewLoop {
+  readonly review: (
+    pass: number,
+    pullRequestBody: string,
+  ) => Promise<Review | null>;
+  readonly fixer: Fixer;
+  readonly decide: (reason: string) => Promise<string | null>;
+}
+
+type Reviewed =
+  | { readonly status: "closed"; readonly pullRequestCopy: PullRequestCopy }
+  | {
+      readonly status: "blocked";
+      readonly reason: string;
+      readonly alreadyDecided?: boolean;
+    };
+
+export const reviewUntilClosed = async (
+  { review, fixer, decide }: ReviewLoop,
+  firstCopy: PullRequestCopy,
+): Promise<Reviewed> => {
+  let pullRequestCopy = firstCopy;
+  let alreadyDecided = false;
+
+  const blocked = (reason: string): Reviewed => ({
+    status: "blocked",
+    reason,
+    ...(alreadyDecided && { alreadyDecided }),
+  });
+  const decideOnce = async (reason: string): Promise<string | null> => {
+    if (alreadyDecided) return null;
+    alreadyDecided = true;
+    return decide(reason);
+  };
+
+  for (let pass = 1; ; pass += 1) {
+    say(`--- review (pass ${pass}) ---`);
+    const read = await review(pass, pullRequestCopy.body);
+    if (!read) {
+      return blocked(
+        `review pass ${pass} ended without a readable <review> block, so the branch is unreviewed`,
+      );
+    }
+    const next = afterReview(read, pass);
+    if (next.next === "gates") return { status: "closed", pullRequestCopy };
+
+    const applyTheDecision = (decision: string) =>
+      fixer.apply(
+        `fix#decided${pass}`,
+        asDecidedBrief(decision, next.gaps, pullRequestCopy),
+      );
+
+    say(
+      `--- fix ${next.gaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
+    );
+    let fixed: FixResult;
+    if (next.next === "decide") {
+      const decision = await decideOnce(next.reason);
+      if (decision === null) return blocked(next.reason);
+      fixed = await applyTheDecision(decision);
+    } else {
+      fixed = await fixer.apply(
+        `fix#review${pass}`,
+        asFixBrief(next.gaps, pullRequestCopy),
+      );
+      if (fixed.declined) {
+        const reason = `${next.gaps.length} spec gap(s) stand and the fixer changed nothing:\n\n${fixed.declined.reason}\n\n${asGapList(next.gaps)}`;
+        const decision = await decideOnce(reason);
+        if (decision === null) return blocked(reason);
+        fixed = await applyTheDecision(decision);
+      }
+    }
+    if (fixed.declined) {
+      return blocked(
+        `${next.gaps.length} spec gap(s) stand after the decision:\n\n${fixed.declined.reason}\n\n${asGapList(next.gaps)}`,
+      );
+    }
+    pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
+    if (next.lastRound) return { status: "closed", pullRequestCopy };
+  }
 };
 
 interface WaivedGate {
@@ -509,7 +610,7 @@ export const shipTicket = async (
       guidance = `\n# The lead's guidance\n\nYour first attempt ended with no commits. The lead read it and the code:\n\n${lead}\n`;
     }
 
-    let pullRequestCopy =
+    const firstCopy =
       (await readOrAskAgain(
         runAgentPhase,
         "implement",
@@ -527,43 +628,24 @@ export const shipTicket = async (
 
     say("--- mutation survey ---");
     const mutation = await surveyMutants(sandbox);
-    for (let pass = 1; ; pass += 1) {
-      say(`--- review (pass ${pass}) ---`);
-      const review = await reviewBranch(
-        runAgentPhase,
-        journal,
-        ticket,
-        pass,
-        pullRequestCopy.body,
-        mutation,
-      );
-      if (!review) {
-        return {
-          status: "blocked",
-          reason: `review pass ${pass} ended without a readable <review> block, so the branch is unreviewed`,
-        };
-      }
-      const next = afterReview(review, pass);
-      if (next.next === "gates") break;
-      if (next.next === "park")
-        return { status: "blocked", reason: next.reason };
-
-      say(
-        `--- fix ${next.gaps.length} spec gap(s) (${pass}/${MAX_REVIEW_FIX_ROUNDS}) ---`,
-      );
-      const fixed = await fixer.apply(
-        `fix#review${pass}`,
-        asFixBrief(next.gaps, pullRequestCopy),
-      );
-      pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
-      const { declined } = fixed;
-      if (declined) {
-        return {
-          status: "blocked",
-          reason: `${next.gaps.length} spec gap(s) stand and the fixer changed nothing:\n\n${declined.reason}\n\n${asGapList(next.gaps)}`,
-        };
-      }
-    }
+    const reviewed = await reviewUntilClosed(
+      {
+        review: (pass, pullRequestBody) =>
+          reviewBranch(
+            runAgentPhase,
+            journal,
+            ticket,
+            pass,
+            pullRequestBody,
+            mutation,
+          ),
+        fixer,
+        decide: (reason) => decideOnTheBranch(runAgentPhase, ticket, reason),
+      },
+      firstCopy,
+    );
+    if (reviewed.status === "blocked") return reviewed;
+    const { pullRequestCopy } = reviewed;
 
     const gates = await gatesUntilGreen(
       sandbox,

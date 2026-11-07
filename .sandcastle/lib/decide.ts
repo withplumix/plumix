@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { z } from "zod";
 
-import type { Thinker } from "./agent.js";
+import type { RunAgentPhase, Thinker } from "./agent.js";
 import type { Ticket } from "./github.js";
 import type { Journal } from "./telemetry.js";
 import {
@@ -61,6 +61,45 @@ export const amendedBrief = (
 const EMIT_THE_DECISION =
   "End with the <decision> block the prompt describes: decidable, why, edits and comment, as JSON.";
 
+/** What was decided, once the brief is amended; null leaves it to a person. */
+export const decideOnTheBranch = async (
+  runAgentPhase: RunAgentPhase,
+  ticket: Ticket,
+  reason: string,
+): Promise<string | null> => {
+  say(`\n--- decide #${ticket.number} ---`);
+  const decided = await runAgentPhase("decide", DECIDER, {
+    promptFile: join(PROMPT_DIR, "decide.md"),
+    promptArgs: { TICKET: String(ticket.number), REASON: reason },
+    maxIterations: 1,
+    idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
+  });
+  const decision = await readOrAskAgain(
+    runAgentPhase,
+    "decide",
+    DECIDER,
+    decided,
+    readDecisionTag,
+    EMIT_THE_DECISION,
+  );
+  if (!decision?.decidable) {
+    say(
+      `  #${ticket.number} needs a person: ${decision?.why || "the decider gave no readable decision"}`,
+    );
+    return null;
+  }
+  const amended = amendedBrief(issueBody(ticket.number), decision.edits);
+  if (!amended) {
+    say(
+      `  #${ticket.number} needs a person: the decider's edits do not match the brief`,
+    );
+    return null;
+  }
+  amendIssue(ticket.number, amended, decision.comment);
+  say(`  #${ticket.number} decided: ${decision.why}`);
+  return decision.why;
+};
+
 /** True when the brief was amended and the ticket can be taken again. */
 export const decideWhatTheDocsSettle = async (
   ticket: Ticket,
@@ -69,41 +108,15 @@ export const decideWhatTheDocsSettle = async (
 ): Promise<boolean> => {
   const branch = `chore/decide-${ticket.number}`;
   journal.setTicket(ticket, branch);
-  say(`\n--- decide #${ticket.number} ---`);
   resetBranchToMain(branch);
   const sandbox = await createUnbuiltSandbox(branch);
-  const runAgentPhase = agentPhaseRunner(sandbox, journal);
   try {
-    const decided = await runAgentPhase("decide", DECIDER, {
-      promptFile: join(PROMPT_DIR, "decide.md"),
-      promptArgs: { TICKET: String(ticket.number), REASON: reason },
-      maxIterations: 1,
-      idleTimeoutSeconds: HALF_AN_HOUR_IN_SECONDS,
-    });
-    const decision = await readOrAskAgain(
-      runAgentPhase,
-      "decide",
-      DECIDER,
-      decided,
-      readDecisionTag,
-      EMIT_THE_DECISION,
+    const decided = await decideOnTheBranch(
+      agentPhaseRunner(sandbox, journal),
+      ticket,
+      reason,
     );
-    if (!decision?.decidable) {
-      say(
-        `  #${ticket.number} needs a person: ${decision?.why || "the decider gave no readable decision"}`,
-      );
-      return false;
-    }
-    const amended = amendedBrief(issueBody(ticket.number), decision.edits);
-    if (!amended) {
-      say(
-        `  #${ticket.number} needs a person: the decider's edits do not match the brief`,
-      );
-      return false;
-    }
-    amendIssue(ticket.number, amended, decision.comment);
-    say(`  #${ticket.number} decided: ${decision.why}`);
-    return true;
+    return decided !== null;
   } finally {
     await closePlumixSandbox(sandbox);
   }
