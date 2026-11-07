@@ -44,7 +44,7 @@ Vite plugin and helpers (`plumix/vite`, public):
 | `emitPlumixSources`                | Writes the `.plumix/` entry files before Vite starts.                        |
 | `buildAppClientFirst`              | Builder order: client first, so the server bakes the client's Vite manifest. |
 | `serverEnvironment`                | Server environment options for a runtime's bundle.                           |
-| `defineTestConfig`                 | Vitest config that mirrors the repo's test tiers.                            |
+| `defineTestConfig`                 | Vitest config: `unit` (`src/`) and `feature` (`tests/feature/`) projects.    |
 
 Generated files and virtual modules:
 

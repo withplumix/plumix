@@ -6,8 +6,9 @@ import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
 import { NODE_TIER } from "@plumix/vitest-config/tiers";
 
 /**
- * `plumix/vite`'s `defineTestConfig` keeps its own copy of `./tiers.ts`, since
- * this package sits below `plumix`; a test in `plumix` holds them equal.
+ * `plumix/vite`'s `defineTestConfig` keeps its own copy of `./tiers.ts`'s
+ * exclude, since this package sits below `plumix`; a test in `plumix` holds
+ * them equal.
  */
 export const baseConfig = defineConfig({
   plugins: [plumixSourceResolver()],

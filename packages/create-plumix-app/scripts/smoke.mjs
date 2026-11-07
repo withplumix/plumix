@@ -1,5 +1,5 @@
-// Scaffolds representative projects and proves they typecheck, build and
-// serve: each built server is started, requested and stopped with SIGTERM
+// Scaffolds representative projects and proves they typecheck, pass their own
+// tests, build and serve: each built server is started, requested and stopped with SIGTERM
 // before the next combo.
 // Each runtime's all-plugins project then runs `plumix dev` and drives the
 // editor in Chromium.
@@ -590,6 +590,7 @@ async function smoke(combo, tarballs) {
     if (combo.typescript7) assertTypeScript7(app);
 
     run(pm, ["run", "typecheck"], app);
+    run(pm, ["run", "test"], app);
     run(pm, ["run", "build"], app);
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
     assertDoctorClean(app);
@@ -608,7 +609,7 @@ try {
   const combos = planSmokeCombos(await loadRegistry(REPO));
   for (const combo of combos) await smoke(combo, tarballs);
   console.log(
-    `\nSmoke check passed: ${combos.length} generated projects typecheck, build, serve and stop.`,
+    `\nSmoke check passed: ${combos.length} generated projects typecheck, pass their tests, build, serve and stop.`,
   );
 } finally {
   rmSync(packs, { recursive: true, force: true });

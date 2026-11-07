@@ -44,7 +44,7 @@ hand-kept port registry and seeded everything in `globalSetup`.
   the current site, so moving one test site's clock leaves every other site and
   real time alone.
 - **Vitest.** Unit and feature tests run on Vitest, in the `unit` and `feature`
-  projects `defineTestConfig()` will define.
+  projects `defineTestConfig()` defines.
 - **E2E is served in process on Node.** The Playwright fixture boots the test
   site inside each worker, on its own in-memory database and port 0, whatever
   runtime the site deploys to. A spec uses the same `site`, factories and fakes

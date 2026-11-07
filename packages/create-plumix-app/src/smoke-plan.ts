@@ -7,7 +7,7 @@ import { ScaffoldError } from "./errors.js";
 
 /**
  * One generated project the scaffold smoke (`scripts/smoke.mjs`) installs,
- * typechecks, builds and boots.
+ * typechecks, tests, builds and boots.
  */
 export interface SmokeCombo {
   readonly name: string;

@@ -9,19 +9,23 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-A scaffolded Plumix project is eight files, and two of them are yours to write. The rest configure the tooling. Everything the site does arrives through the `plumix` package and whichever plugins you installed.
+A scaffolded Plumix project is ten files, and three of them are yours to write. The rest configure the tooling. Everything the site does arrives through the `plumix` package and whichever plugins you installed.
 
 ## Overview
 
-Here is a project created with the blog and media plugins and GitHub sign-in, which is what adds the ninth file:
+Here is a project created with the blog and media plugins and GitHub sign-in, which is what adds the eleventh file:
 
 ```
 my-site/
 ├── plumix.config.ts     the site: runtime, database, auth, plugins, theme
 ├── theme/
 │   └── index.tsx        the public site: templates, tokens, document manifest
+├── tests/
+│   └── feature/
+│       └── home.test.ts the site's first feature test
+├── vitest.config.ts     the unit and feature test projects
 ├── wrangler.jsonc       Cloudflare bindings, assets, cron triggers
-├── package.json         dependencies and the four scripts
+├── package.json         dependencies and the five scripts
 ├── tsconfig.json        compiler options, and what is in the program
 ├── .env                 local secrets, written only when a slot needs one
 ├── .env.example         the committed template for .env
@@ -45,6 +49,14 @@ The public site. `defineTheme` takes the template list, the design tokens, the b
 
 A site that registers no theme at all still renders. The framework falls back to a built-in welcome theme, so a config without a `theme` slot serves a self-contained welcome page instead of an error.
 
+**`tests/feature/home.test.ts`**
+
+The site's first feature test. It boots the site from `plumix.config.ts` with `testSite()` from `plumix/test`, on an in-memory database with a fake for every service, visits `/`, and asserts the page answered through the `fallback` template with the greeting on it. Add a test here for each thing your site does, one file per capability.
+
+**`vitest.config.ts`**
+
+One call, `defineTestConfig()` from `plumix/vite`. It defines two Vitest projects: `unit` runs `*.test.ts(x)` under `src/`, and `feature` runs those under `tests/feature/`. `pnpm test` runs both, and `pnpm test --project feature` runs one.
+
 **`wrangler.jsonc`**
 
 Cloudflare's own config, not Plumix's. It declares the D1 binding, points `main` at the generated `.plumix/worker.ts`, serves `.plumix/public` through the assets binding, and sets two cron triggers.
@@ -55,13 +67,13 @@ The generated `database_id` is the placeholder `local-development-only`, which i
 
 **`package.json`**
 
-Four scripts. `dev` and `build` wrap the CLI as `plumix dev` and `plumix build`. `typecheck` is `tsc --noEmit`, and `clean` is `git clean -xdf .plumix .wrangler dist node_modules`, so neither of those two goes through Plumix at all. The dependencies are `plumix`, the runtime adapter, `react`, and whichever plugin packages you ticked.
+Five scripts. `dev` and `build` wrap the CLI as `plumix dev` and `plumix build`. `test` is `vitest run`, `typecheck` is `tsc --noEmit`, and `clean` is `git clean -xdf .plumix .wrangler dist node_modules`, so none of those three goes through Plumix at all. The dependencies are `plumix`, the runtime adapter, `react`, and whichever plugin packages you ticked.
 
 The project installs TypeScript 6. TypeScript 7 works too, since nothing in the project uses the compiler API that 7.0 dropped: `typecheck` is plain `tsc`, and Plumix parses your sources with Vite's own parser. Run `pnpm add -D typescript@7` to type-check with the native compiler. Tools that embed TypeScript themselves, such as typescript-eslint, still need TypeScript 6 until they support 7.
 
 **`tsconfig.json`**
 
-Strict, `moduleResolution: "bundler"`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, and `types` set to Node, the Workers types and React. Its `include` is three entries: `plumix.config.ts`, `theme`, and `.plumix`. That last one is why a type error in generated code reaches your editor.
+Strict, `moduleResolution: "bundler"`, `verbatimModuleSyntax`, `noUncheckedIndexedAccess`, and `types` set to Node, the Workers types and React. Its `include` is five entries: `plumix.config.ts`, `vitest.config.ts`, `theme`, `tests`, and `.plumix`. That last one is why a type error in generated code reaches your editor.
 
 **`.env`**
 

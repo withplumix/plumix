@@ -832,8 +832,8 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "a plugin's whole vitest config: the one Node config its unit " +
-          "tests run in (ADR 0042)",
+          "a site's or plugin's whole vitest config: the unit and feature " +
+          "projects its tests run in (ADR 0070)",
         names: ["defineTestConfig"],
       },
     ],
