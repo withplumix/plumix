@@ -10,6 +10,7 @@ import { now } from "../clock.js";
 import { libsql } from "../db/libsql.js";
 import { settings } from "../db/schema/settings.js";
 import { users } from "../db/schema/users.js";
+import { defineEvent, defineFilter } from "../hooks/define.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
 import { base } from "../rpc/base.js";
@@ -747,5 +748,52 @@ describe("a site whose database is not D1", () => {
     await expect(
       onLibsql.context.db.transaction((tx) => tx.select().from(users)),
     ).resolves.toEqual([]);
+  });
+});
+
+const order = {
+  placed: defineEvent<{ readonly id: number }>("shop:placed"),
+  total: defineFilter<number, { readonly currency: string }>("shop:total", {
+    sync: true,
+  }),
+};
+const handled: number[] = [];
+const shop = definePlugin("shop", {
+  events: [order.placed],
+  filters: [order.total],
+  setup: (ctx) => {
+    ctx.events.on(order.placed, ({ id }) => {
+      handled.push(id);
+    });
+    ctx.filters.add(order.total, (total) => total + 1);
+  },
+});
+const shopping = await testSite({ plugins: [shop] });
+
+describe("the site's events", () => {
+  test("record what a call emitted, while its handlers still run", async () => {
+    await shopping.context.events.emit(order.placed, { id: 7 });
+
+    shopping.events.assertEmitted(order.placed, { id: 7 });
+    expect(handled).toEqual([7]);
+  });
+
+  test("start each test with nothing emitted", () => {
+    shopping.events.assertNotEmitted(order.placed);
+  });
+});
+
+describe("the site's filters", () => {
+  test("record what a call applied, with the result its handlers give", () => {
+    const total = shopping.context.filters.apply(order.total, 10, {
+      currency: "EUR",
+    });
+
+    shopping.filters.assertApplied(order.total, { currency: "EUR" });
+    expect(total).toBe(11);
+  });
+
+  test("start each test with nothing applied", () => {
+    shopping.filters.assertNotApplied(order.total);
   });
 });

@@ -19,7 +19,7 @@ declares (`site.fetch.route(method, url, answer)`, a failure or a timeout includ
 test on any other request, so no test stubs the global `fetch`, `site.logger`, which records every
 line the site logged (`assertLogged(level, message)`, `assertNothingLogged(level)`), so no test
 builds a capturing logger, and `site.telemetry`, which records each request's telemetry snapshot
-in place of the config's consumers (`site.telemetry.span(name).attributes`), and `site.storage`,
+in place of the config's consumers (`site.telemetry.span(name).attributes`), `site.events` and `site.filters`, which record every event emitted and filter applied (`assertEmitted(event, payload?)`, `assertNotEmitted(event)`, `emitted(event)`, `assertApplied(filter, input?)`, `assertNotApplied(filter)`), taking the declared value, so no test spies on one, and `site.storage`,
 the in-memory bucket a config that declares `storage` gets (`assertStored(key)`, `assertMissing(key)`),
 built with a config `memoryStorage`'s seed and URL base, which the site serves at its URLs and
 answers a browser's presigned PUT at (`site.visit(uploadUrl, { method, headers, body })`); a config that declares `kv` or `imageDelivery` gets an in-memory kv and an image
