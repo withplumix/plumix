@@ -89,7 +89,7 @@ Key files:
 - `packages/core/src/runtime/image-rules.ts`: width snapping, format negotiation, remote-source checks
 - `packages/core/src/images/role-images.ts`, `packages/core/src/plugin/image-roles.ts`
 - `packages/core/src/blocks/renderer/image-attrs.ts`, `image.tsx`: `buildImageAttrs`, `<Image>`
-- `packages/core/src/runtime/memory-storage.ts`: in-memory adapter for tests
+- `packages/core/src/runtime/memory-storage.ts`: in-memory adapter for tests, which answers its own presigned PUT and serves what it holds through its bucket's `fetch(request)`; the test site binds one as `site.storage`
 - `packages/plugins/media/src/rpc.ts`, `upload-route.ts`, `serve-route.ts`, `read-service.ts`, `magic-bytes.ts`, `image-dimensions.ts`, `lookup.ts`
 - `packages/runtimes/cloudflare/src/r2.ts`, `images.ts`; `packages/runtimes/node/src/disk-storage.ts`, `images.ts`, `image-cache.ts`, `http/images.ts`; `packages/runtimes/bun/src/disk-storage.ts`, `bun-s3.ts`, `images.ts`, `image-cache.ts`, `http/images.ts`
 

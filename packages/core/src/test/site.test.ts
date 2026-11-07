@@ -13,6 +13,7 @@ import { users } from "../db/schema/users.js";
 import { sendMailTest } from "../mail/mail-test.js";
 import { definePlugin } from "../plugin/define.js";
 import { base } from "../rpc/base.js";
+import { memoryStorage } from "../runtime/memory-storage.js";
 import { testSite } from "./site.js";
 
 const posts = definePlugin("posts", {
@@ -135,6 +136,99 @@ describe("the site's cdn", () => {
     const post = await site.factory.published.create();
 
     (await site.visit(post)).assertHeader("cache-tag");
+  });
+});
+
+/** A bucket the site must never reach: the test site holds its own. */
+const unreachableStorage = {
+  kind: "disk",
+  connect: () => {
+    throw new Error("the config's own storage was connected");
+  },
+};
+const storing = await testSite({
+  config: {
+    storage: unreachableStorage,
+    kv: {
+      kind: "redis",
+      connect: () => {
+        throw new Error("the config's own kv was connected");
+      },
+    },
+    imageDelivery: {
+      kind: "images",
+      url: () => {
+        throw new Error("the config's own image delivery was asked");
+      },
+    },
+  },
+});
+
+describe("the site's storage", () => {
+  test("holds in memory what the site stored, whatever the config names", async () => {
+    await storing.context.storage?.put("a.txt", "held");
+
+    await storing.storage.assertStored("a.txt");
+  });
+
+  test("starts the next test empty", async () => {
+    await storing.storage.assertMissing("a.txt");
+  });
+
+  test("is served at its URL through image delivery, as the stored original", async () => {
+    await storing.storage.put("photo.png", "original", {
+      contentType: "image/png",
+    });
+    const source = await storing.storage.url("photo.png");
+    const delivered = storing.context.imageDelivery?.url(source, {
+      width: 640,
+    });
+
+    expect(delivered).toBe(source);
+    const page = await storing.visit(source);
+
+    page
+      .assertOk()
+      .assertHeader("content-type", "image/png")
+      .assertSee("original");
+  });
+});
+
+const seeded = await testSite({
+  config: {
+    storage: memoryStorage({
+      publicUrlBase: "/files/",
+      seed: { "a.png": new Uint8Array([1]) },
+    }),
+  },
+});
+
+describe("the site's storage, from the config's memoryStorage", () => {
+  test("holds its seed and serves it at its URL base", async () => {
+    await seeded.storage.assertStored("a.png");
+    (await seeded.visit("/files/a.png")).assertOk();
+  });
+
+  test("starts the next test from the seed again", async () => {
+    await seeded.storage.delete("a.png");
+    await seeded.storage.put("b.png", "b");
+  });
+
+  test("so what the last test changed is gone", async () => {
+    await seeded.storage.assertStored("a.png");
+    await seeded.storage.assertMissing("b.png");
+  });
+});
+
+describe("the site's kv", () => {
+  test("holds in memory what the site put, whatever the config names", async () => {
+    await storing.context.kv?.put("greeting", "hello");
+
+    expect(await storing.context.kv?.get("greeting")).toBe("hello");
+  });
+
+  test("starts the next test empty", async () => {
+    expect(await storing.context.kv?.get("greeting")).toBeNull();
   });
 });
 

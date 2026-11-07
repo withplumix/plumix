@@ -27,9 +27,22 @@ export interface MemoryStorageConfig {
   readonly seed?: Readonly<Record<string, Uint8Array>>;
 }
 
+/**
+ * A bucket that is also its own HTTP endpoint: it answers the presigned PUT a
+ * browser sends, and a GET of the stored object, at its public URL base.
+ */
+export interface ConnectedMemoryStorage extends ConnectedObjectStorage {
+  /** Always under the public URL base. */
+  url(key: string, opts?: UrlOptions): Promise<string>;
+  /** Answers 404 for a path outside the URL base or a key not stored. */
+  fetch(request: Request): Promise<Response>;
+}
+
 /** Binds against nothing, so the env is optional, as with `memoryKv()`. */
 export interface MemoryObjectStorage extends ObjectStorage {
-  connect(env?: PlumixEnv): ConnectedObjectStorage;
+  /** What it was built with. */
+  readonly options: MemoryStorageConfig;
+  connect(env?: PlumixEnv): ConnectedMemoryStorage;
 }
 
 export function memoryStorage(
@@ -49,7 +62,7 @@ export function memoryStorage(
     }
   }
 
-  const connected: ConnectedObjectStorage = {
+  const connected: ConnectedMemoryStorage = {
     async put(key, body, opts) {
       const bytes = await bodyToBytes(body);
       store.set(key, {
@@ -140,12 +153,36 @@ export function memoryStorage(
         expiresAt: Math.floor(currentTime().getTime() / 1000) + expiresIn,
       };
     },
+    async fetch(request) {
+      const key = keyOf(request.url, publicUrlBase);
+      if (key === null) return new Response(null, { status: 404 });
+      if (request.method === "PUT") {
+        await connected.put(key, await request.arrayBuffer(), {
+          contentType: request.headers.get("content-type") ?? undefined,
+        });
+        return new Response(null, { status: 200 });
+      }
+      const got = await connected.get(key);
+      if (!got) return new Response(null, { status: 404 });
+      const headers = new Headers();
+      if (got.contentType) headers.set("content-type", got.contentType);
+      return new Response(got.body, { headers });
+    },
   };
 
   return {
     kind: "memory",
+    options: config,
     connect: () => connected,
   };
+}
+
+/** The key a URL under `publicUrlBase` addresses, or `null` outside it. */
+function keyOf(url: string, publicUrlBase: string): string | null {
+  const { pathname } = new URL(url);
+  const base = new URL(publicUrlBase, url).pathname;
+  if (!pathname.startsWith(base) || pathname === base) return null;
+  return decodeURIComponent(pathname.slice(base.length));
 }
 
 function streamFromBytes(bytes: Uint8Array): ReadableStream<Uint8Array> {

@@ -13,14 +13,17 @@ import type { PluginDescriptor, PluginRpcRouters } from "../plugin/define.js";
 import type { PluginRpcClient } from "../plugin/registry.js";
 import type { AppRouterClient } from "../rpc/router.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
+import type { ConnectedKv, ObjectStorage } from "../runtime/contract/slots.js";
 import type { CdnFake } from "./cdn-fake.js";
 import type { TestConfigInput } from "./config.js";
 import type { Factories, SeededRole } from "./factories.js";
 import type { FetchFake } from "./fetch-fake.js";
 import type { LoggerFake } from "./logger-fake.js";
 import type { MailFake } from "./mail-fake.js";
+import type { FetchOptions } from "./request.js";
 import type { TestRunReport, TestSchedule } from "./schedule.js";
 import type { Travel } from "./site-clock.js";
+import type { StorageFake } from "./storage-fake.js";
 import type { TelemetryFake } from "./telemetry-fake.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { createSession } from "../auth/sessions.js";
@@ -31,6 +34,7 @@ import { buildEntryPermalink } from "../route/permalink.js";
 import { buildApp } from "../runtime/app.js";
 import { createPlumixDispatcher } from "../runtime/dispatcher.js";
 import { bindSlots, requestContextArgs } from "../runtime/handler.js";
+import { memoryKv } from "../runtime/memory-kv.js";
 import { fakeCdn } from "./cdn-fake.js";
 import { testConfig } from "./config.js";
 import { createDeferQueue } from "./defer.js";
@@ -44,6 +48,7 @@ import { findTask, runTasks, scheduleOf } from "./schedule.js";
 import { siteClock } from "./site-clock.js";
 import { createSiteDatabase } from "./site-database.js";
 import { migrationFolders } from "./site-migrations.js";
+import { fakeStorage } from "./storage-fake.js";
 import { fakeTelemetry } from "./telemetry-fake.js";
 
 /**
@@ -86,6 +91,11 @@ export interface TestSite<
   readonly logger: LoggerFake;
   /** The telemetry snapshot of every request and firing, in place of the config's consumers. */
   readonly telemetry: TelemetryFake;
+  /**
+   * The bucket a config that declares `storage` gets, in memory. It answers a
+   * browser's presigned PUT, and the site serves what it holds at its URLs.
+   */
+  readonly storage: StorageFake;
   readonly env: PlumixEnv;
   /**
    * A fresh context for calling a service directly, as the user `actingAs`
@@ -94,9 +104,13 @@ export interface TestSite<
   readonly context: AppContext;
   /**
    * Request a path, or an entry at its permalink, as a visitor or the user
-   * `actingAs` names. Deferred work settles before it resolves.
+   * `actingAs` names; a GET unless `options` names a method. Deferred work
+   * settles first.
    */
-  readonly visit: (target: string | Entry) => Promise<TestPage>;
+  readonly visit: (
+    target: string | Entry,
+    options?: Pick<FetchOptions, "method" | "headers" | "body">,
+  ) => Promise<TestPage>;
   /**
    * Calls a procedure over the wire, through the site's own dispatcher.
    * Deferred work settles before it resolves.
@@ -167,12 +181,12 @@ export async function testSite<
   );
   const { defer, drainDeferred } = createDeferQueue();
   const time = siteClock();
-  let fakes = freshFakes();
+  let fakes = freshFakes(config.storage);
   let signedIn = new WeakMap<NonNullable<Principal>, SignIn>();
   beforeEach(async () => {
     await drainDeferred();
     await reset();
-    fakes = freshFakes();
+    fakes = freshFakes(config.storage);
     time.reset();
     signedIn = new WeakMap();
   });
@@ -220,9 +234,17 @@ export async function testSite<
 
   // Deferred work settles before it resolves, so the snapshot is delivered.
   async function dispatch(ctx: AppContext): Promise<Response> {
+    if (config.storage !== undefined && (await isStoragePath(ctx.request))) {
+      return fakes.storage.fetch(ctx.request);
+    }
     const response = await requestStore.run(ctx, () => dispatcher(ctx));
     await drainDeferred();
     return response;
+  }
+
+  async function isStoragePath(request: Request): Promise<boolean> {
+    const base = new URL(await fakes.storage.url(""), request.url);
+    return new URL(request.url).pathname.startsWith(base.pathname);
   }
 
   const factory = {
@@ -299,6 +321,9 @@ export async function testSite<
       get telemetry() {
         return fakes.telemetry;
       },
+      get storage() {
+        return fakes.storage;
+      },
       env,
       get context() {
         const ctx = contextFor(new Request("https://cms.example/"));
@@ -306,10 +331,12 @@ export async function testSite<
         const { id, email, role, meta } = userOf(principal);
         return withUser(ctx, { id, email, role, meta });
       },
-      visit: async (target) => {
+      visit: async (target, options) => {
         const path =
           typeof target === "string" ? target : await permalinkOf(target);
-        const ctx = contextFor(await signIn(await buildRequest(db, path)));
+        const ctx = contextFor(
+          await signIn(await buildRequest(db, path, options)),
+        );
         const response = await dispatch(ctx);
         return new TestPage({
           status: response.status,
@@ -408,21 +435,25 @@ interface Fakes {
   readonly fetch: FetchFake;
   readonly logger: LoggerFake;
   readonly telemetry: TelemetryFake;
+  readonly storage: StorageFake;
+  readonly kv: ConnectedKv;
 }
 
-function freshFakes(): Fakes {
+function freshFakes(storage: ObjectStorage | undefined): Fakes {
   return {
     mail: fakeMail(),
     cdn: fakeCdn(),
     fetch: fakeFetch(),
     logger: fakeLogger(),
     telemetry: fakeTelemetry(),
+    storage: fakeStorage(storage),
+    kv: memoryKv().connect(),
   };
 }
 
 /**
- * Storage, kv and image delivery have no fake yet, so they stay unbound. The
- * config's own telemetry consumers are replaced, so none exports from a test.
+ * The config's own telemetry consumers are replaced, so none exports from a
+ * test.
  */
 function withFakes(config: PlumixConfig, current: () => Fakes): PlumixConfig {
   return {
@@ -440,8 +471,15 @@ function withFakes(config: PlumixConfig, current: () => Fakes): PlumixConfig {
         },
       ],
     },
-    storage: undefined,
-    kv: undefined,
-    imageDelivery: undefined,
+    storage: config.storage && {
+      kind: "test",
+      connect: () => current().storage,
+    },
+    kv: config.kv && { kind: "test", connect: () => current().kv },
+    imageDelivery: config.imageDelivery && {
+      kind: "test",
+      acceptsRelativeSources: true,
+      url: (sourceUrl) => sourceUrl,
+    },
   };
 }
