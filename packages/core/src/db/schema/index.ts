@@ -6,6 +6,7 @@ export * from "./edit_leases.js";
 export * from "./oauth_accounts.js";
 export * from "./oauth_authorization_codes.js";
 export * from "./oauth_grants.js";
+export * from "./oauth_refresh_tokens.js";
 export * from "./settings.js";
 export * from "./entry_term.js";
 export * from "./entries.js";

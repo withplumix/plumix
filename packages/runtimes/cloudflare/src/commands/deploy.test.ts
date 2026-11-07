@@ -111,7 +111,7 @@ describe("plumix deploy", () => {
     expect(events).toEqual([
       "build CLOUDFLARE_ENV=",
       "proxy remoteBindings=true",
-      "core applied 6",
+      "core applied 7",
       "wrangler deploy --minify",
     ]);
   });

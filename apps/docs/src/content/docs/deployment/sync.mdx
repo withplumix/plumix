@@ -85,7 +85,7 @@ Each scope is whole tables. No scope splits a table with a filter, because a spl
 
 Tables load parents first: `users`, `credentials`, `terms`, `entries`, `entry_term`, `settings`, then each plugin's tables in config order. Tables a trigger maintains, like `entry_changes`, are in no scope; their triggers refill them as the rows land.
 
-Auth state never travels. `sessions`, `api_tokens`, `auth_tokens`, `device_codes`, `oauth_accounts`, `oauth_grants` and `oauth_authorization_codes` are in no scope and never in a dump.
+Auth state never travels. `sessions`, `api_tokens`, `auth_tokens`, `device_codes`, `oauth_accounts`, `oauth_grants`, `oauth_authorization_codes` and `oauth_refresh_tokens` are in no scope and never in a dump.
 
 ## References
 
