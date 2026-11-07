@@ -542,10 +542,13 @@ function withFakes(config: PlumixConfig, current: () => Fakes): PlumixConfig {
       connect: () => current().storage,
     },
     kv: config.kv && { kind: "test", connect: () => current().kv },
+    // Names the width an image asked for, which the stored original still
+    // answers, so a page shows what its `<Image>` requested.
     imageDelivery: config.imageDelivery && {
       kind: "test",
       acceptsRelativeSources: true,
-      url: (sourceUrl) => sourceUrl,
+      url: (sourceUrl, opts) =>
+        opts?.width === undefined ? sourceUrl : `${sourceUrl}?w=${opts.width}`,
     },
   };
 }
