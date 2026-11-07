@@ -24,6 +24,7 @@ import type { PluginRegistry } from "../plugin/manifest.js";
 import type { ResolvedEntity } from "../route/contract/resolved-entity.js";
 import type { ResolvedRoute } from "../route/contract/resolved-route.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
+import type { PlumixFetch } from "../runtime/contract/fetch.js";
 import type {
   AssetsBinding,
   ConnectedCdn,
@@ -98,15 +99,6 @@ export interface AuthNamespace {
  * through `ctx.logger` on every runtime.
  */
 export type DeferFn = (promise: Promise<unknown>) => void;
-
-/**
- * `fetch` bounded by default: a call rejects with a `TimeoutError` after 10s.
- * `timeout` tightens that per call, or `false` lifts it for a long download.
- */
-export type PlumixFetch = (
-  input: RequestInfo | URL,
-  init?: RequestInit & { readonly timeout?: number | false },
-) => Promise<Response>;
 
 /** A settings group as a write left it. */
 export interface SettingsGroupCopy {

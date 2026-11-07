@@ -15,6 +15,7 @@ import type { SentMail } from "../mail/sender.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import type { PlumixEnv } from "../runtime/contract/bindings.js";
 import type { EnvInput } from "../runtime/contract/env-input.js";
+import type { PlumixFetch } from "../runtime/contract/fetch.js";
 import type {
   AssetsBinding,
   ConnectedCdn,
@@ -30,7 +31,6 @@ import type {
   DeferFn,
   Logger,
   LogMeta,
-  PlumixFetch,
 } from "./app-context.js";
 import type {
   RequestTelemetryCollector,

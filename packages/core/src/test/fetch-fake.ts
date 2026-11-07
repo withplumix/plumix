@@ -1,4 +1,4 @@
-import type { PlumixFetch } from "../context/app-context.js";
+import type { PlumixFetch } from "../runtime/contract/fetch.js";
 import { DEFAULT_TIMEOUT_MS, timeoutError } from "../context/traced-fetch.js";
 import { deepEqual } from "./match.js";
 

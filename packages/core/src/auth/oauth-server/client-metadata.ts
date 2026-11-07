@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { PlumixFetch } from "../../context/app-context.js";
+import type { PlumixFetch } from "../../runtime/contract/fetch.js";
 import { now } from "../../clock.js";
 
 export interface OAuthClient {

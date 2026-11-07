@@ -1,5 +1,5 @@
-import type { PlumixFetch } from "../../context/app-context.js";
 import type { EnvInput } from "../../runtime/contract/env-input.js";
+import type { PlumixFetch } from "../../runtime/contract/fetch.js";
 
 export interface OAuthClientConfig {
   readonly clientId: string;
