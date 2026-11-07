@@ -1,27 +1,27 @@
 import { createORPCErrorConstructorMap } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
+import type { User } from "../../../db/schema/users.js";
 import { withUser } from "../../../auth/with-user.js";
 import { upsertAutosave } from "../../../revisions/repository.js";
 import { RPC_ERRORS } from "../../../rpc-errors.js";
-import { createRpcHarness } from "../../../test/rpc.js";
+import { testSite } from "../../../test/site.js";
 import { previewableEntry } from "./previewable.js";
 
 const errors = createORPCErrorConstructorMap(RPC_ERRORS);
 
+const site = await testSite({});
+
 /** The gate as a plugin's `.use(authenticated)` handler reaches it. */
-async function harnessAs(role: "editor" | "author" | "member") {
-  const h = await createRpcHarness({ authAs: role });
-  return { h, ctx: withUser(h.context, h.user) };
-}
+const contextOf = (user: User) => withUser(site.context, user);
 
 describe("previewableEntry", () => {
   test("hands an editor the live row for a type it asked for", async () => {
-    const { h, ctx } = await harnessAs("editor");
-    const entry = await h.factory.published.create({ authorId: h.user.id });
+    const editor = await site.factory.editor.create();
+    const entry = await site.factory.published.create({ authorId: editor.id });
 
     const row = await previewableEntry(
-      ctx,
+      contextOf(editor),
       { entryId: entry.id, entryTypes: ["post"] },
       errors,
     );
@@ -30,12 +30,12 @@ describe("previewableEntry", () => {
   });
 
   test("answers NOT_FOUND for a type outside the caller's allowlist", async () => {
-    const { h, ctx } = await harnessAs("editor");
-    const entry = await h.factory.published.create({ authorId: h.user.id });
+    const editor = await site.factory.editor.create();
+    const entry = await site.factory.published.create({ authorId: editor.id });
 
     await expect(
       previewableEntry(
-        ctx,
+        contextOf(editor),
         { entryId: entry.id, entryTypes: ["page"] },
         errors,
       ),
@@ -46,21 +46,24 @@ describe("previewableEntry", () => {
   });
 
   test("answers NOT_FOUND for an entry that is not there", async () => {
-    const { ctx } = await harnessAs("editor");
+    const editor = await site.factory.editor.create();
 
     await expect(
-      previewableEntry(ctx, { entryId: 999_999, entryTypes: ["post"] }, errors),
+      previewableEntry(
+        contextOf(editor),
+        { entryId: 999_999, entryTypes: ["post"] },
+        errors,
+      ),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   test("refuses a caller who may not edit the entry", async () => {
-    const { h, ctx } = await harnessAs("member");
-    const author = await h.factory.author.create();
-    const entry = await h.factory.published.create({ authorId: author.id });
+    const member = await site.factory.member.create();
+    const entry = await site.factory.published.create();
 
     await expect(
       previewableEntry(
-        ctx,
+        contextOf(member),
         { entryId: entry.id, entryTypes: ["post"] },
         errors,
       ),
@@ -70,39 +73,42 @@ describe("previewableEntry", () => {
     });
   });
 
-  test("refuses edit_own on someone else's entry, and allows it on your own", async () => {
-    const { h, ctx } = await harnessAs("author");
-    const other = await h.factory.author.create();
-    const theirs = await h.factory.draft.create({ authorId: other.id });
-    const mine = await h.factory.draft.create({ authorId: h.user.id });
+  test("refuses edit_own on someone else's entry", async () => {
+    const author = await site.factory.author.create();
+    const theirs = await site.factory.draft.create();
 
     await expect(
       previewableEntry(
-        ctx,
+        contextOf(author),
         { entryId: theirs.id, entryTypes: ["post"] },
         errors,
       ),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
 
-    expect(
-      await previewableEntry(
-        ctx,
-        { entryId: mine.id, entryTypes: ["post"] },
-        errors,
-      ),
-    ).toMatchObject({ id: mine.id });
+  test("allows edit_own on the caller's own entry", async () => {
+    const author = await site.factory.author.create();
+    const mine = await site.factory.draft.create({ authorId: author.id });
+
+    const row = await previewableEntry(
+      contextOf(author),
+      { entryId: mine.id, entryTypes: ["post"] },
+      errors,
+    );
+
+    expect(row).toMatchObject({ id: mine.id });
   });
 
   test("overlays the caller's autosave onto content, excerpt and meta, leaving title live", async () => {
-    const { h, ctx } = await harnessAs("editor");
-    const entry = await h.factory.published.create({
-      authorId: h.user.id,
+    const editor = await site.factory.editor.create();
+    const entry = await site.factory.published.create({
+      authorId: editor.id,
       title: "Live title",
       excerpt: "Live excerpt",
     });
-    await upsertAutosave(h.context.db, {
+    await upsertAutosave(site.context.db, {
       entry,
-      authorId: h.user.id,
+      authorId: editor.id,
       patch: {
         title: "Drafted title",
         content: null,
@@ -113,7 +119,7 @@ describe("previewableEntry", () => {
     });
 
     const row = await previewableEntry(
-      ctx,
+      contextOf(editor),
       { entryId: entry.id, entryTypes: ["post"] },
       errors,
     );
@@ -129,13 +135,13 @@ describe("previewableEntry", () => {
   // previewing someone else's entry must see the live row, never that author's
   // unsaved draft.
   test("ignores the entry author's autosave when someone else previews", async () => {
-    const { h, ctx } = await harnessAs("editor");
-    const other = await h.factory.author.create();
-    const entry = await h.factory.published.create({
+    const editor = await site.factory.editor.create();
+    const other = await site.factory.author.create();
+    const entry = await site.factory.published.create({
       authorId: other.id,
       excerpt: "Live excerpt",
     });
-    await upsertAutosave(h.context.db, {
+    await upsertAutosave(site.context.db, {
       entry,
       authorId: other.id,
       patch: {
@@ -148,7 +154,7 @@ describe("previewableEntry", () => {
     });
 
     const row = await previewableEntry(
-      ctx,
+      contextOf(editor),
       { entryId: entry.id, entryTypes: ["post"] },
       errors,
     );

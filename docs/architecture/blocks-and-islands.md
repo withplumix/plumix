@@ -72,10 +72,10 @@ Core blocks (`packages/core/src/blocks/core-blocks.ts`): `core/rich-text`, `sepa
 ## Invariants
 
 - A host passes a catalog, never a resolved string; with no catalog `t` returns the English `message`. [ADR 0016](../adr/0016-a-render-context-resolves-descriptors.md); `packages/core/src/blocks/i18n-label.test.ts`.
-- A block declares its deps like a template, and deps load once per page. [ADR 0040](../adr/0040-a-block-declares-its-deps-like-a-template.md); `packages/core/src/route/block-deps.dispatch.test.tsx`, `packages/core/src/rpc/procedures/entry/resolve-block-deps.test.ts`.
+- A block declares its deps like a template, and deps load once per page. [ADR 0040](../adr/0040-a-block-declares-its-deps-like-a-template.md); `packages/core/src/route/block-deps.dispatch.test.tsx`, `packages/core/tests/feature/resolving-block-dependencies.test.ts`.
 - A loader outcome ends the request only on the page's own content and never in the editor. [ADR 0032](../adr/0032-a-page-step-ends-the-request-by-throwing-an-outcome.md); `packages/core/src/route/page-outcome.dispatch.test.tsx`.
 - Plugins and themes cannot register a `core/` block. `packages/core/src/runtime/app-block-aggregate.test.ts`.
-- No write stores a node of an unregistered block that the content it starts from didn't already hold. `packages/core/src/blocks/validate-content.test.ts`, `packages/core/src/rpc/procedures/entry/update.test.ts`.
+- No write stores a node of an unregistered block that the content it starts from didn't already hold. `packages/core/src/blocks/validate-content.test.ts`, `packages/core/tests/feature/saving-an-entry-with-blocks-no-plugin-registers.test.ts`.
 - `__proto__`, `constructor` and `prototype` are never island exports. `packages/plumix/src/vite/island-transform.test.ts`, `packages/core/src/blocks/island-mode.test.ts`.
 - Dev-only island error reporting is gated inline on `process.env.PLUMIX_DEV`, so it tree-shakes. `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`.
 - `blocks/` is a client-safe `foundation` folder and imports nothing above it. [ADR 0010](../adr/0010-core-is-one-package-of-enforced-layers.md); `packages/core/src/layers.test.ts`.
