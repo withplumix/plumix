@@ -1136,6 +1136,17 @@ describe("revoking a connected app", () => {
     expect(call.status).toBe(401);
   });
 
+  test("answers with the revoked grant", async () => {
+    const h = await mcpHarness();
+    const user = await seed(h);
+    await connect(h, user);
+    const id = await connectedGrant(h, user);
+
+    const revoked = await grantsRpc(h, "revoke", { id }, user);
+
+    expect(revoked).toEqual({ status: 200, body: { id } });
+  });
+
   test("refuses its refresh token", async () => {
     const h = await mcpHarness();
     const user = await seed(h);
@@ -1270,5 +1281,40 @@ describe("another person's connected apps", () => {
 
     const call = await callTool(h, token, "content_list", { type: "post" });
     expect([status, call.status]).toEqual([403, 200]);
+  });
+
+  test("an admin's revoke answers with the revoked grant", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    await connect(h, owner);
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, owner);
+    const id = body[0]?.id;
+
+    const revoked = await grantsRpc(
+      h,
+      "adminRevoke",
+      { userId: owner.id, id },
+      await seed(h, "admin"),
+    );
+
+    expect(revoked).toEqual({ status: 200, body: { id } });
+  });
+
+  test("an admin's revoke naming another owner is NOT_FOUND", async () => {
+    const h = await mcpHarness();
+    const owner = await seed(h);
+    const token = await connect(h, owner);
+    const { body } = await grantsRpc<ListedGrant[]>(h, "list", {}, owner);
+    const bystander = await seed(h);
+
+    const { status } = await grantsRpc(
+      h,
+      "adminRevoke",
+      { userId: bystander.id, id: body[0]?.id },
+      await seed(h, "admin"),
+    );
+
+    const call = await callTool(h, token, "content_list", { type: "post" });
+    expect([status, call.status]).toEqual([404, 200]);
   });
 });
