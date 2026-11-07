@@ -173,7 +173,7 @@ describe("provides phase", () => {
   test("createAppContext merges install-result app extensions onto ctx", async () => {
     // Surface contract: a plugin's extendAppContext entry shows up at
     // `ctx.<key>` after installPlugins → createAppContext. This is what
-    // RPC handlers, route handlers, and (cycle 4) hook listeners read.
+    // RPC handlers, route handlers, and event handlers read.
     const audit = definePlugin("audit", {
       provides: (ctx) => {
         ctx.extendAppContext("audit", {

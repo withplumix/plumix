@@ -41,7 +41,7 @@ export interface RequestEmailChangeInput {
 
 export interface RequestEmailChangeResult {
   /**
-   * The user row read at request time, used by the caller for the hook payload.
+   * The user row read at request time, used by the caller for the event payload.
    */
   readonly user: User;
   /** Server-side only; the token surfaces to the user via email. */

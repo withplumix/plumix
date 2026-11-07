@@ -922,7 +922,7 @@ describe("entry.discardDraft", () => {
     });
     await h.client.entry.discardDraft({ id: h.entryId });
     expect(discards).toHaveLength(1);
-    // Second call — nothing to discard, no hook fire.
+    // Second call — nothing to discard, no event fires.
     await h.client.entry.discardDraft({ id: h.entryId });
     expect(discards).toHaveLength(1);
   });

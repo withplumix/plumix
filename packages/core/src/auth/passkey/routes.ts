@@ -349,7 +349,7 @@ export async function handleSignout(
 ): Promise<Response> {
   const token = readSessionCookie(ctx.request);
   if (token) {
-    // Resolve the user before invalidating so the hook payload carries
+    // Resolve the user before invalidating so the event payload carries
     // the row that was just signed out (for audit attribution).
     const validated = await validateSession(ctx.db, token, app.sessionPolicy);
     await invalidateSession(ctx.db, token);

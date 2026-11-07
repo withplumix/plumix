@@ -1621,7 +1621,7 @@ describe("dispatcher — form-post routes (#2018)", () => {
         auth: "public",
         formPost: true,
         handler: async (request, appCtx) => {
-          // `getContext()` is what a hook listener fired by this handler reads,
+          // `getContext()` is what an event handler fired by this handler reads,
           // and it has to agree with the context the handler was handed.
           const ambient = getContext();
           return Response.json({
@@ -3109,11 +3109,11 @@ describe("dispatcher — telemetry consumers", () => {
     await h.drainDeferred();
 
     const [snapshot] = snapshots;
-    const hook = flattenSpans(snapshot?.spans ?? []).find(
+    const filterSpan = flattenSpans(snapshot?.spans ?? []).find(
       (span) => span.name === "filter: render:document",
     );
-    expect(hook).toBeDefined();
-    expect(hook?.attributes).toEqual({
+    expect(filterSpan).toBeDefined();
+    expect(filterSpan?.attributes).toEqual({
       "filter.id": "render:document",
       "filter.plugin": "test-decorator",
     });
