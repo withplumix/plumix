@@ -61,15 +61,8 @@ describe("the default authenticator", () => {
 
   test("resolves a session cookie to its user", async () => {
     const editor = await site.factory.editor.create();
-    const token = generateToken();
-    await site.factory.session.create({
-      id: await hashToken(token),
-      userId: editor.id,
-    });
 
-    const page = await readSession(site, {
-      cookie: `${SESSION_COOKIE_NAME}=${token}`,
-    });
+    const page = await readSession(site.actingAs(editor), {});
 
     page.assertJson({ json: { user: { id: editor.id } } });
   });

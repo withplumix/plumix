@@ -321,6 +321,27 @@ describe("a client's metadata document over time", () => {
     expect(resolver.timeouts).toEqual([5_000]);
   });
 
+  test("a redirect hop gets what is left of the one 5 second budget", async () => {
+    answer(
+      CLIENT_ID,
+      Response.redirect("https://cdn.claude.ai/mcp-client.json", 301),
+    );
+    serve("https://cdn.claude.ai/mcp-client.json", DOCUMENT);
+    const timeouts: (number | false | undefined)[] = [];
+    const resolver = createClientMetadataResolver({
+      fetch: (input, init) => {
+        timeouts.push(init?.timeout);
+        site.freezeTime("2026-11-07T10:00:02.000Z");
+        return site.fetch.send(input, init);
+      },
+    });
+    site.freezeTime("2026-11-07T10:00:00.000Z");
+
+    await requestStore.run(site.context, () => resolver.resolve(CLIENT_ID));
+
+    expect(timeouts).toEqual([5_000, 3_000]);
+  });
+
   test("a document that takes over 5 seconds is refused", async () => {
     answer(CLIENT_ID, "timeout");
 

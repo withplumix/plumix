@@ -76,7 +76,6 @@ async function fetchDocument(
   fetch: PlumixFetch,
   clientId: string,
 ): Promise<string> {
-  // One deadline for every hop, enforced by `ctx.fetch`'s own timeout.
   const deadline = now().getTime() + FETCH_TIMEOUT_MS;
   try {
     let url = clientId;

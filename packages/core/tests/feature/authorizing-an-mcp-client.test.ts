@@ -15,6 +15,8 @@ import {
   serveClientDocument,
 } from "../support/mcp-client.js";
 
+type Params = Record<string, string>;
+
 const site = await testSite({
   plugins: [blog],
   config: { mcp: { enabled: true } },
@@ -96,16 +98,23 @@ describe("authorizing a client", () => {
 
 describe("a refused authorization request", () => {
   test.each([
-    ["the plain PKCE method", ["code_challenge_method", "plain"]],
-    ["no PKCE challenge", ["code_challenge", null]],
-    ["no PKCE method", ["code_challenge_method", null]],
-  ] as const)(
+    [
+      "the plain PKCE method",
+      (params: Params) => ({
+        ...params,
+        code_challenge_method: "plain",
+      }),
+    ],
+    ["no PKCE challenge", ({ code_challenge: _, ...params }: Params) => params],
+    [
+      "no PKCE method",
+      ({ code_challenge_method: _, ...params }: Params) => params,
+    ],
+  ])(
     "with %s is sent back to the client as invalid_request",
-    async (_, [key, value]) => {
+    async (_, refuse) => {
       const user = await site.factory.editor.create();
-      const params = authorizationParams(await pkce());
-      if (value === null) delete params[key];
-      else params[key] = value;
+      const params = refuse(authorizationParams(await pkce()));
 
       const location = locationOf(await authorize(site, params, user));
 
