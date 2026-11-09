@@ -93,7 +93,7 @@ catalog:
   jsonc-parser: ^3.3.1
   prettier: ^3.9.10
   publint: ^0.3.25
-  radix-ui: ^1.6.7
+  radix-ui: ^1.8.1
   react-hook-form: ^7.90.0
   sharp: ^0.35.5
   sonner: ^2.0.8
