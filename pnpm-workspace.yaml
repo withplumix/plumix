@@ -177,8 +177,8 @@ catalogs:
     "@tiptap/pm": ^3.32.0
     "@tiptap/react": ^3.32.0
   vite:
-    "@vitejs/plugin-react": ^6.1.2
-    vite: ^8.3.4
+    "@vitejs/plugin-react": ^6.2.1
+    vite: ^8.3.5
   vitest:
     "@vitest/coverage-v8": ^5.0.5
     vitest: ^5.0.5
