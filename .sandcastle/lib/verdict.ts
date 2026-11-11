@@ -8,6 +8,7 @@ export type MergeOutcome =
   | { readonly status: "merged" }
   | {
       readonly status: "failed";
+      readonly headSha?: string;
       readonly reason: string;
       readonly failingChecks: readonly FailingCheck[];
       readonly conflicted?: boolean;
@@ -27,6 +28,7 @@ export interface ReviewThread {
 }
 
 export interface PullRequestSnapshot {
+  readonly headSha: string;
   readonly state: string;
   readonly mergeStateStatus: string;
   readonly statusCheckRollup: readonly {
@@ -108,16 +110,18 @@ export const judgeQueuedPullRequest = (
     return { status: "missing-required-checks", checks: neverRan };
   }
 
-  const byPeople = pullRequest.unresolvedReviewThreads.filter(
-    ({ byABot }) => !byABot,
-  );
-  if (byPeople.length > 0 || pullRequest.changesRequestedBy.length > 0) {
+  if (pullRequest.unresolvedReviewThreads.length > 0) {
+    return {
+      status: "failed",
+      failingChecks: [],
+      reason: `unresolved review threads from ${[...new Set(pullRequest.unresolvedReviewThreads.map(({ author }) => author))].join(", ")}`,
+      reviewThreads: pullRequest.unresolvedReviewThreads,
+    };
+  }
+  if (pullRequest.changesRequestedBy.length > 0) {
     const who = [
       ...pullRequest.changesRequestedBy.map(
         (login) => `${login} requested changes`,
-      ),
-      ...byPeople.map(
-        ({ author, url }) => `${author} left an open thread: ${url}`,
       ),
     ];
     return {
@@ -134,15 +138,6 @@ export const judgeQueuedPullRequest = (
       reason: `code scanning blocks the merge: ${pullRequest.openCodeScanningAlerts.join("; ")}`,
       failingChecks: [],
       codeScanningAlerts: pullRequest.openCodeScanningAlerts,
-    };
-  }
-
-  if (pullRequest.unresolvedReviewThreads.length > 0) {
-    return {
-      status: "failed",
-      reason: `unresolved review threads from ${[...new Set(pullRequest.unresolvedReviewThreads.map(({ author }) => author))].join(", ")}`,
-      failingChecks: [],
-      reviewThreads: pullRequest.unresolvedReviewThreads,
     };
   }
 

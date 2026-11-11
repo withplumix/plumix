@@ -135,6 +135,31 @@ export const createUnbuiltSandbox = (
     }),
   );
 
+export function createPreparedSandbox(
+  branch: string,
+): Promise<sandcastle.Sandbox> {
+  return whileNoOtherLaneTouchesTheWorktreeRegistry(() =>
+    sandcastle.createSandbox({
+      cwd: REPO_ROOT,
+      branch,
+      sandbox: plumixContainer(),
+      hooks: {
+        sandbox: {
+          onSandboxReady: [
+            {
+              command:
+                asOneCommandBecauseHooksAtTheSameHookPointRunConcurrently(
+                  SETUP_STEPS.slice(0, -1),
+                ),
+              timeoutMs: FORTY_FIVE_MINUTES_IN_MS,
+            },
+          ],
+        },
+      },
+    }),
+  );
+}
+
 export const plumixRunOptions = {
   cwd: REPO_ROOT,
   sandbox: plumixContainer(),

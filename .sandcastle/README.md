@@ -67,9 +67,9 @@ recovery and dispatch to those issues.
   for a PR on that branch, including merged or closed PRs. It does not create a
   second PR for the issue.
 - Repair and rebase attempt counts survive restarts and repeated PR observations.
-- Interrupted implementations without a PR are held out of dispatch and their
-  branches are reported for manual recovery. Automatic implementation-session
-  resumption is not part of this increment.
+- Interrupted implementations without a PR resume their branch without resetting
+  it. The owner resumes its last recorded Claude session when the transcript still
+  exists; otherwise a fresh session inspects the preserved commits and work.
 - Repairs preserve leftover worktrees and unpublished local commits and report
   that they need manual recovery instead of resetting them to the remote branch.
 - An incomplete final JSONL line is ignored and its file is reported. Earlier
@@ -81,5 +81,18 @@ later invocation can reclaim a lock whose process no longer exists; a live
 owner prevents startup. Run from a dedicated automation checkout so branch work
 does not collide with interactive development.
 
-This increment provides lifecycle history and PR recovery. It does not add a
-daemon, a dashboard, new model routing, or new console verbosity modes.
+## PR supervision
+
+The coordinator inspects PRs every two minutes without holding a sandbox. Each
+observation records the head, verdict, reason, and next inspection time. Restarting
+honours that time and preserves missing-check and merge-queue-drop counters.
+Waiting for checks or a reviewer has no arbitrary 45-minute failure deadline.
+Human decisions remain pending; code feedback from human and bot review threads
+goes to the implementer. Thread and comment pagination preserves the discussion.
+
+The coordinator requests at most one check rerun per issue and head across runs.
+Repair and rebase budgets also survive restarts. A final independent review must
+approve the exact commit being published, including changes made by gate fixes or
+rebases. Repair replies name that commit before resolving addressed threads.
+Merge requests check the PR's current state and match its current head; repository
+rules still govern approval and merging.

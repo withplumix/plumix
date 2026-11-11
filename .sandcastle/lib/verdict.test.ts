@@ -6,6 +6,7 @@ import { judgeQueuedPullRequest } from "./verdict.js";
 const snapshot = (
   over: Partial<PullRequestSnapshot> = {},
 ): PullRequestSnapshot => ({
+  headSha: "abc",
   state: "OPEN",
   mergeStateStatus: "BLOCKED",
   statusCheckRollup: [],
@@ -26,6 +27,27 @@ const run = (name: string, conclusion: string, status = "COMPLETED") => ({
 });
 
 describe("judgeQueuedPullRequest", () => {
+  test("code feedback from a person is handed to the PR owner for verification", () => {
+    const thread = {
+      id: "human-1",
+      author: "owner",
+      byABot: false,
+      location: "a.ts:1",
+      body: "this drops the locale",
+      url: "thread/1",
+    };
+
+    const verdict = judgeQueuedPullRequest(
+      snapshot({ isInMergeQueue: false, unresolvedReviewThreads: [thread] }),
+    );
+
+    expect(verdict).toMatchObject({
+      status: "failed",
+      reviewThreads: [thread],
+    });
+    expect(verdict).not.toMatchObject({ needsAPerson: true });
+  });
+
   test("a PR closed during downtime needs a person rather than a repair", () => {
     expect(judgeQueuedPullRequest(snapshot({ state: "CLOSED" }))).toEqual({
       status: "failed",
@@ -193,18 +215,6 @@ describe("judgeQueuedPullRequest", () => {
     location: "packages/core/src/a.ts:12",
     body: "this drops the locale",
     url: "https://github.com/o/r/pull/1#discussion_r1",
-  });
-
-  test("a person's unresolved thread parks the ticket for a person, never for the fixer", () => {
-    const verdict = judgeQueuedPullRequest(
-      snapshot({
-        ...held,
-        unresolvedReviewThreads: [thread("nasyrov", false)],
-      }),
-    );
-
-    expect(verdict).toMatchObject({ status: "failed", needsAPerson: true });
-    expect(verdict.status === "failed" && verdict.reason).toContain("nasyrov");
   });
 
   test("changes requested by a person park the ticket for a person", () => {

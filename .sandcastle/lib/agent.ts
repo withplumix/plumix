@@ -130,6 +130,8 @@ export const agentPhaseRunner =
         notionalCostUsd: notionalCostOf(usage, model),
         logFile,
         sessionFiles,
+        sessionId: result.iterations.at(-1)?.sessionId,
+        sessionFile: result.iterations.at(-1)?.sessionFilePath,
       });
       return result;
     } catch (error) {

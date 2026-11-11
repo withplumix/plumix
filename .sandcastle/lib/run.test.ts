@@ -72,6 +72,36 @@ const ports = (over: Partial<ShipPorts> = {}) => {
 const allLanes = { lanes: 2, withinBudget: () => true };
 
 describe("runShipLoop", () => {
+  test("restarting does not rerun the same failed head a second time", async () => {
+    const root = historyRoot();
+    const previous = new ShipHistory(root);
+    const queued = {
+      ticket: ticket(1),
+      pullRequest: { number: 101, url: "pr/1" },
+    };
+    previous.record({ type: "pr.tracked", ...queued });
+    previous.record({
+      type: "checks.rerun-requested",
+      issue: 1,
+      headSha: "abc",
+    });
+    let reruns = 0;
+    const { ports: p } = ports({
+      history: new ShipHistory(root),
+      nextTicket: () => undefined,
+      inFlightFromEarlierRuns: () => [queued],
+      confirm: async () => ({ ...ciRed, headSha: "abc" }),
+      rerunFailedChecks: async () => {
+        reruns += 1;
+        return true;
+      },
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(reruns).toBe(0);
+  });
+
   test("a parked PR is not retried when another run reads its history", async () => {
     const history = new ShipHistory(historyRoot());
     const { ports: p } = ports({

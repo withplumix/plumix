@@ -13,7 +13,29 @@ export interface PendingDelivery {
   readonly rebases: number;
 }
 
+export interface PrObservation {
+  readonly issue: number;
+  readonly pullRequest: number;
+  readonly headSha: string;
+  readonly verdict: string;
+  readonly reason: string;
+  readonly nextCheckAt: number;
+  readonly missingChecks: number;
+  readonly queueDrops: number;
+}
+
 export type ShipEvent =
+  | {
+      readonly type: "head.reviewed";
+      readonly issue: number;
+      readonly headSha: string;
+    }
+  | {
+      readonly type: "checks.rerun-requested";
+      readonly issue: number;
+      readonly headSha: string;
+    }
+  | ({ readonly type: "pr.observed" } & PrObservation)
   | { readonly type: "ship.started" | "ship.finished" }
   | {
       readonly type: "phase.finished";
@@ -44,6 +66,27 @@ export type ShipEvent =
 const issueNumber = z.number().int().positive();
 const ticketSchema = z.object({ number: issueNumber, title: z.string() });
 const shipEventSchema: z.ZodType<ShipEvent> = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("head.reviewed"),
+    issue: issueNumber,
+    headSha: z.string(),
+  }),
+  z.object({
+    type: z.literal("checks.rerun-requested"),
+    issue: issueNumber,
+    headSha: z.string(),
+  }),
+  z.object({
+    type: z.literal("pr.observed"),
+    issue: issueNumber,
+    pullRequest: issueNumber,
+    headSha: z.string(),
+    verdict: z.string(),
+    reason: z.string(),
+    nextCheckAt: z.number(),
+    missingChecks: z.number().int().nonnegative(),
+    queueDrops: z.number().int().nonnegative(),
+  }),
   z.object({ type: z.enum(["ship.started", "ship.finished"]) }),
   z.object({
     type: z.literal("delivery.started"),
@@ -84,6 +127,10 @@ export class ShipHistory {
   readonly path: string;
   readonly incompleteFiles: string[] = [];
   readonly #deliveries = new Map<number, PendingDelivery>();
+  readonly #observations = new Map<number, PrObservation>();
+  readonly #reruns = new Set<string>();
+  readonly #reviewedHeads = new Map<number, string>();
+  readonly #ownerSessions = new Map<number, { id: string; path: string }>();
 
   constructor(root: string) {
     const runs = join(root, "runs");
@@ -133,7 +180,49 @@ export class ShipHistory {
     return [...this.#deliveries.values()];
   }
 
+  observation(pullRequest: number): PrObservation | undefined {
+    return this.#observations.get(pullRequest);
+  }
+
+  rerunRequested(issue: number, headSha: string): boolean {
+    return this.#reruns.has(`${issue}:${headSha}`);
+  }
+
+  reviewedHead(issue: number): string | undefined {
+    return this.#reviewedHeads.get(issue);
+  }
+
+  ownerSession(
+    issue: number,
+  ): { readonly id: string; readonly path: string } | undefined {
+    return this.#ownerSessions.get(issue);
+  }
+
   #apply(event: ShipEvent): void {
+    if (event.type === "head.reviewed") {
+      this.#reviewedHeads.set(event.issue, event.headSha);
+      return;
+    }
+    if (
+      event.type === "phase.finished" &&
+      event.phase.kind === "agent" &&
+      /^(implement|fix#|resolve-conflicts|repair:ci)/.test(event.phase.phase)
+    ) {
+      if (event.phase.sessionId && event.phase.sessionFile) {
+        this.#ownerSessions.set(event.issue, {
+          id: event.phase.sessionId,
+          path: event.phase.sessionFile,
+        });
+      }
+    }
+    if (event.type === "checks.rerun-requested") {
+      this.#reruns.add(`${event.issue}:${event.headSha}`);
+      return;
+    }
+    if (event.type === "pr.observed") {
+      this.#observations.set(event.pullRequest, event);
+      return;
+    }
     if (
       event.type === "ship.started" ||
       event.type === "ship.finished" ||
@@ -141,6 +230,8 @@ export class ShipHistory {
     )
       return;
     if (event.type === "delivery.started") {
+      this.#reviewedHeads.delete(event.ticket.number);
+      this.#ownerSessions.delete(event.ticket.number);
       this.#deliveries.set(event.ticket.number, {
         ticket: event.ticket,
         branch: event.branch,

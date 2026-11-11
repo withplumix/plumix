@@ -139,6 +139,19 @@ export const runShipLoop = async (
     pullRequest: QueuedPullRequest,
   ): Promise<MergeOutcome> => {
     const outcome = await ports.confirm(pullRequest);
+    const issue = ports.history
+      .pending()
+      .find((delivery) => delivery.pullRequest?.number === pullRequest.number)
+      ?.ticket.number;
+    if (outcome.status === "failed" && outcome.headSha && issue !== undefined) {
+      if (ports.history.rerunRequested(issue, outcome.headSha)) return outcome;
+      if (failedOnItsOwnChecks(outcome))
+        ports.history.record({
+          type: "checks.rerun-requested",
+          issue,
+          headSha: outcome.headSha,
+        });
+    }
     if (
       outcome.status !== "failed" ||
       !failedOnItsOwnChecks(outcome) ||

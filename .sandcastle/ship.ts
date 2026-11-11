@@ -9,9 +9,11 @@ import {
   commentOnPullRequest,
   firstUnblockedUnassignedTicket,
   hasMerged,
+  inspectPullRequest,
   isTicketClosed,
   listReadyTickets,
   loopPullRequestsInFlight,
+  mergeGroupFailures,
   parentsWithEveryChildClosed,
   parkTicket,
   pullRequestForBranch,
@@ -22,7 +24,6 @@ import {
   syncRepoToMain,
   textsThatClaimAdrNumbers,
   ticketByNumber,
-  waitForMerge,
   whyTheCheckoutIsBroken,
 } from "./lib/github.js";
 import { staleClaims } from "./lib/in-flight.js";
@@ -45,13 +46,12 @@ import {
 import { pinLaneCount, pinSandboxImage } from "./lib/sandbox.js";
 import { ShipHistory } from "./lib/ship-history.js";
 import { acquireShipLock } from "./lib/ship-lock.js";
+import { supervisePullRequest } from "./lib/supervision.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
 const DEFAULT_BUDGET_HOURS = 8;
 const DEFAULT_LANES = 3;
-const MERGE_POLL_INTERVAL_MS = 120_000;
-const MERGE_GIVE_UP_AFTER_MS = 2_700_000;
 const MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS = 75 * 60_000;
 
 interface ShipOptions {
@@ -123,15 +123,14 @@ const recovered = recoverDeliveries(
 );
 for (const { ticket, branch } of recovered.interrupted) {
   claimed.add(ticket.number);
-  say(
-    `#${ticket.number} has interrupted work on ${branch}; preserved for manual recovery`,
-  );
+  say(`#${ticket.number} will resume interrupted work on ${branch}`);
 }
 for (const queued of recovered.inFlight) {
   claimed.add(queued.ticket.number);
   history.record({ type: "pr.tracked", ...queued });
 }
 const namedTickets = onlyTickets.filter((number) => !claimed.has(number));
+const interruptedTickets = recovered.interrupted.map(({ ticket }) => ticket);
 
 function journalFor(ticket: Ticket): Journal {
   const journal = new Journal(import.meta.dirname, (phase) => {
@@ -164,6 +163,8 @@ const report = await runShipLoop(
   {
     history,
     nextTicket: () => {
+      const interrupted = interruptedTickets.shift();
+      if (interrupted) return interrupted;
       const named = namedTickets.shift();
       const candidate =
         named !== undefined
@@ -215,7 +216,13 @@ const report = await runShipLoop(
     releaseClaim: ({ number }) => releaseClaim(number),
     repair: (ticket, pullRequest, refusal) => {
       const journal = journalFor(ticket);
-      return repairPullRequest(ticket, pullRequest, refusal, journal).then(
+      return repairPullRequest(
+        ticket,
+        pullRequest,
+        refusal,
+        journal,
+        history,
+      ).then(
         (outcome) => {
           if (outcome.status === "repaired") journal.finish("shipped");
           else journal.finish("failed", outcome.reason);
@@ -263,12 +270,25 @@ const report = await runShipLoop(
         say(`  #${number} requeue: ${String(error).split("\n")[0]}`);
       }
     },
-    confirm: (pullRequest) =>
-      waitForMerge(pullRequest.number, {
-        pollEveryMs: MERGE_POLL_INTERVAL_MS,
-        giveUpAfterMs: MERGE_GIVE_UP_AFTER_MS,
-        onPoll: (status) => say(`  #${pullRequest.number} ${status}`),
-      }),
+    confirm: (pullRequest) => {
+      const delivery = history
+        .pending()
+        .find((item) => item.pullRequest?.number === pullRequest.number);
+      if (!delivery)
+        throw new Error(`No delivery for PR #${pullRequest.number}`);
+      return supervisePullRequest(
+        { ticket: delivery.ticket, pullRequest },
+        history,
+        {
+          inspect: () => inspectPullRequest(pullRequest.number),
+          now: Date.now,
+          pause: (ms) => sleep(ms),
+          requeue: () => queueForMerge(pullRequest.number),
+          queueFailures: () => mergeGroupFailures(pullRequest.number),
+          say,
+        },
+      );
+    },
     ticketClosed: ({ number }) => isTicketClosed(number),
     brokenCheckout: () => whyTheCheckoutIsBroken(),
     aBlockerIsMoving: () =>

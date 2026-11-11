@@ -65,6 +65,8 @@ export interface PhaseRecord {
   readonly exitCode?: number;
   readonly logFile?: string;
   readonly sessionFiles?: readonly string[];
+  readonly sessionId?: string;
+  readonly sessionFile?: string;
 }
 
 const NO_USAGE: Usage = {
