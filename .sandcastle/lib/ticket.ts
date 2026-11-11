@@ -29,10 +29,10 @@ import {
   resetBranchToMain,
   syncRepoToMain,
 } from "./github.js";
-import { say } from "./log.js";
+import { detail as say } from "./log.js";
 import { surveyMutants } from "./mutation.js";
 import { MERGE_BASE } from "./repo.js";
-import { reviewHead } from "./review-proof.js";
+import { reviewableHead, reviewHead } from "./review-proof.js";
 import {
   AN_HOUR_IN_SECONDS,
   closePlumixSandbox,
@@ -673,8 +673,7 @@ export const shipTicket = async (
       {
         review: (pass, pullRequestBody) =>
           reviewHead(ticket.number, history, {
-            head: async () =>
-              (await sandbox.exec("git rev-parse HEAD")).stdout.trim(),
+            head: () => reviewableHead(sandbox),
             review: () =>
               reviewBranch(
                 runAgentPhase,
@@ -733,8 +732,7 @@ export const shipTicket = async (
       );
     }
     const finalReview = await reviewHead(ticket.number, history, {
-      head: async () =>
-        (await sandbox.exec("git rev-parse HEAD")).stdout.trim(),
+      head: () => reviewableHead(sandbox),
       review: async () =>
         reviewBranch(
           runAgentPhase,

@@ -1,10 +1,31 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
-import { pushBranch, whyTheCheckoutIsBroken } from "./github.js";
+import {
+  inspectPullRequest,
+  pushBranch,
+  whyTheCheckoutIsBroken,
+} from "./github.js";
+
+test("a merged PR is recovered even when its deleted head cannot be inspected", () => {
+  const bin = mkdtempSync(join(tmpdir(), "ship-gh-"));
+  const before = process.env.PATH;
+  writeFileSync(
+    join(bin, "gh"),
+    `#!/usr/bin/env node\nif (process.argv[2] !== "pr" || process.argv[3] !== "view") process.exit(42);\nconsole.log(JSON.stringify({state:"MERGED",headRefOid:"abc",mergeStateStatus:"UNKNOWN",statusCheckRollup:[],autoMergeRequest:null}));\n`,
+  );
+  chmodSync(join(bin, "gh"), 0o755);
+  process.env.PATH = `${bin}:${before}`;
+  try {
+    expect(inspectPullRequest(101).state).toBe("MERGED");
+  } finally {
+    process.env.PATH = before;
+    rmSync(bin, { recursive: true });
+  }
+});
 
 const git = (cwd: string, ...args: string[]): string =>
   execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
@@ -21,13 +42,20 @@ const cloneOf = (remote: string): string => {
   return clone;
 };
 
+const seedOf = (remote: string): string => {
+  const seed = mkdtempSync(join(tmpdir(), "push-seed-"));
+  git(seed, "init", "-q", "-b", "main");
+  git(seed, "remote", "add", "origin", remote);
+  commit(seed, "readme");
+  git(seed, "push", "-q", "origin", "HEAD:main");
+  return seed;
+};
+
 describe("pushBranch", () => {
   test("pushes a ticket branch whose earlier remote branch was deleted after its pull request merged", async () => {
     const remote = mkdtempSync(join(tmpdir(), "push-remote-"));
     git(remote, "init", "-q", "--bare", "-b", "main");
-    const seed = cloneOf(remote);
-    commit(seed, "readme");
-    git(seed, "push", "-q", "origin", "HEAD:main");
+    const seed = seedOf(remote);
 
     const worktree = cloneOf(remote);
     git(worktree, "switch", "-qc", "feat/ticket");
@@ -47,9 +75,7 @@ describe("pushBranch", () => {
   test("still refuses to overwrite a remote branch someone else moved", async () => {
     const remote = mkdtempSync(join(tmpdir(), "push-remote-"));
     git(remote, "init", "-q", "--bare", "-b", "main");
-    const seed = cloneOf(remote);
-    commit(seed, "readme");
-    git(seed, "push", "-q", "origin", "HEAD:main");
+    const seed = seedOf(remote);
 
     const worktree = cloneOf(remote);
     git(worktree, "switch", "-qc", "feat/ticket");

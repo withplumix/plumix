@@ -39,6 +39,17 @@ const snapshot = (
 });
 
 describe("inspectDelivery", () => {
+  test("no checks at all is a missing-check observation", () => {
+    const journal = history();
+    const missing = snapshot({ statusCheckRollup: [] });
+    inspectDelivery(queued, missing, journal, 0);
+    inspectDelivery(queued, missing, journal, 120_000);
+    const action = inspectDelivery(queued, missing, journal, 240_000);
+    expect(action).toMatchObject({
+      type: "wait",
+      reason: expect.stringContaining("Test never ran"),
+    });
+  });
   test("a dropped merge group is repaired from its evidence rather than endlessly requeued", async () => {
     const journal = history();
     let now = 0;

@@ -27,6 +27,28 @@ const run = (name: string, conclusion: string, status = "COMPLETED") => ({
 });
 
 describe("judgeQueuedPullRequest", () => {
+  test("one repair receives both failed checks and review feedback", () => {
+    const thread = {
+      id: "1",
+      author: "owner",
+      byABot: false,
+      location: "a.ts:1",
+      body: "fix locale",
+      url: "thread/1",
+    };
+    const verdict = judgeQueuedPullRequest(
+      snapshot({
+        statusCheckRollup: [run("Test", "FAILURE")],
+        unresolvedReviewThreads: [thread],
+        openCodeScanningAlerts: ["unsafe query"],
+      }),
+    );
+    expect(verdict).toMatchObject({
+      status: "failed",
+      reviewThreads: [thread],
+      codeScanningAlerts: ["unsafe query"],
+    });
+  });
   test("code feedback from a person is handed to the PR owner for verification", () => {
     const thread = {
       id: "human-1",
@@ -73,7 +95,7 @@ describe("judgeQueuedPullRequest", () => {
     });
   });
 
-  test("a pull request whose checks have not been created yet is waited on", () => {
+  test("new PRs without checks produce a missing-check observation for the supervisor's grace period", () => {
     const verdict = judgeQueuedPullRequest(
       snapshot({
         isInMergeQueue: false,
@@ -83,7 +105,7 @@ describe("judgeQueuedPullRequest", () => {
       }),
     );
 
-    expect(verdict.status).toBe("waiting");
+    expect(verdict.status).toBe("missing-required-checks");
   });
 
   test("a required check that ran and was skipped is not missing", () => {

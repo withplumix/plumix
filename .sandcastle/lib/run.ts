@@ -1,6 +1,7 @@
 import type { MergeOutcome, QueuedPullRequest, Ticket } from "./github.js";
 import type { ShipHistory } from "./ship-history.js";
 import type { ShipOutcome } from "./ticket.js";
+import { ShipStopped } from "./control.js";
 import { drainAcrossLanes } from "./lanes.js";
 import { looksLikeTheRunBeingOver } from "./outage.js";
 import { slotsFor } from "./slots.js";
@@ -132,27 +133,33 @@ export const runShipLoop = async (
     ports.say(`\n${stoppedBecause}\nLeaving the rest of the queue untouched.`);
   };
 
-  const confirmRerunningOnce = async (
+  const requestRerunOnce = async (
     pullRequest: QueuedPullRequest,
-  ): Promise<MergeOutcome> => {
-    const outcome = await ports.confirm(pullRequest);
+    outcome: MergeOutcome,
+  ): Promise<boolean> => {
     const issue = ports.history
       .pending()
       .find((delivery) => delivery.pullRequest?.number === pullRequest.number)
       ?.ticket.number;
     if (outcome.status === "failed" && outcome.headSha && issue !== undefined) {
-      if (ports.history.rerunRequested(issue, outcome.headSha)) return outcome;
-      if (failedOnItsOwnChecks(outcome))
-        ports.history.record({
-          type: "checks.rerun-requested",
-          issue,
-          headSha: outcome.headSha,
-        });
+      if (ports.history.rerunRequested(issue, outcome.headSha)) return false;
+      ports.history.record({
+        type: "checks.rerun-requested",
+        issue,
+        headSha: outcome.headSha,
+      });
     }
+    return ports.rerunFailedChecks(pullRequest, outcome);
+  };
+
+  const confirmRerunningOnce = async (
+    pullRequest: QueuedPullRequest,
+  ): Promise<MergeOutcome> => {
+    const outcome = await ports.confirm(pullRequest);
     if (
       outcome.status !== "failed" ||
       !failedOnItsOwnChecks(outcome) ||
-      !(await ports.rerunFailedChecks(pullRequest, outcome))
+      !(await requestRerunOnce(pullRequest, outcome))
     )
       return outcome;
     ports.say(
@@ -206,7 +213,7 @@ export const runShipLoop = async (
       }
       if (repaired.status !== "repaired") {
         const refusedFor = outcome;
-        if (!(await ports.rerunFailedChecks(pullRequest, refusedFor))) {
+        if (!(await requestRerunOnce(pullRequest, refusedFor))) {
           return {
             status: "failed",
             reason: repaired.reason,
@@ -318,7 +325,8 @@ export const runShipLoop = async (
         ports.say(
           `  #${ticket.number} left as it was — the harness threw: ${reason}`,
         );
-        if (looksLikeTheRunBeingOver(reason)) outage ??= reason;
+        if (error instanceof ShipStopped) stoppedBecause = error.message;
+        else if (looksLikeTheRunBeingOver(reason)) outage ??= reason;
         else noteFailure(reason);
         return;
       }
@@ -362,6 +370,10 @@ export const runShipLoop = async (
     const settledConfirmation = await outcome;
 
     if (settledConfirmation.status === "rejected") {
+      if (settledConfirmation.reason instanceof ShipStopped) {
+        stoppedBecause = settledConfirmation.reason.message;
+        continue;
+      }
       const thrown = asReason(settledConfirmation.reason);
       if (looksLikeTheRunBeingOver(thrown)) {
         outage ??= thrown;

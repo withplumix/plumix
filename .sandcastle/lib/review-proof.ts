@@ -1,5 +1,13 @@
+import type { Executor } from "./gates.js";
 import type { ShipHistory } from "./ship-history.js";
 import type { Review } from "./ticket.js";
+
+export async function reviewableHead(sandbox: Executor): Promise<string> {
+  const status = await sandbox.exec("git status --porcelain");
+  if (status.exitCode !== 0 || status.stdout.trim()) return "";
+  const head = await sandbox.exec("git rev-parse HEAD");
+  return head.exitCode === 0 ? head.stdout.trim() : "";
+}
 
 export async function reviewHead(
   issue: number,
@@ -10,6 +18,7 @@ export async function reviewHead(
   },
 ): Promise<Review | null> {
   const headSha = await ports.head();
+  if (!headSha) return null;
   if (history.reviewedHead(issue) === headSha)
     return { summary: `Already reviewed ${headSha}`, specGaps: [], notes: [] };
   const review = await ports.review();

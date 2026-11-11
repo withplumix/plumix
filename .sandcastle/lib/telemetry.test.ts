@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PhaseRecord } from "./telemetry.js";
 import {
+  collectSessionUsage,
   Journal,
   notionalCostOf,
   usageFromSessionTranscripts,
@@ -27,6 +28,12 @@ const transcriptContaining = (...lines: string[]) => {
   writeFileSync(path, lines.join("\n"));
   return path;
 };
+
+test("missing transcripts leave usage explicitly incomplete", () => {
+  const usage = collectSessionUsage(["/missing/session.jsonl"], new Map());
+  expect(usage.complete).toBe(false);
+  expect(usage.cursors).toEqual([]);
+});
 
 describe("usageFromSessionTranscripts", () => {
   test("sums every assistant message, not only the last one", () => {

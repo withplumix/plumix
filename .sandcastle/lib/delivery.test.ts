@@ -12,6 +12,22 @@ afterEach(() =>
 );
 
 describe("prepareDelivery", () => {
+  test("a new attempt cannot be mistaken for an earlier PR on a reused branch", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ship-delivery-"));
+    roots.push(root);
+    const history = new ShipHistory(root);
+    const ticket = { number: 1, title: "fix saving" };
+    const environment = {
+      assign: () => {},
+      reset: () => {},
+      open: async () => "sandbox",
+      sessionExists: () => false,
+    };
+    const first = await prepareDelivery(ticket, history, environment);
+    history.record({ type: "delivery.merged", issue: 1 });
+    const second = await prepareDelivery(ticket, history, environment);
+    expect(first.branch).not.toBe(second.branch);
+  });
   test("a captured owner session is resumed when its transcript still exists", async () => {
     const root = mkdtempSync(join(tmpdir(), "ship-delivery-"));
     roots.push(root);

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import type { Ticket } from "./github.js";
 import type { ShipHistory } from "./ship-history.js";
 
@@ -31,7 +33,7 @@ export async function prepareDelivery<T>(
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
-      .slice(0, 48)}-${ticket.number}`;
+      .slice(0, 48)}-${randomUUID().slice(0, 8)}-${ticket.number}`;
   const resumed = previous !== undefined;
   if (!resumed) {
     history.record({ type: "delivery.started", ticket, branch });

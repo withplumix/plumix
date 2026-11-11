@@ -92,6 +92,12 @@ export const judgeQueuedPullRequest = (
       status: "failed",
       reason: `failing checks: ${failingChecks.map(({ name }) => name).join(", ")}`,
       failingChecks,
+      ...(pullRequest.unresolvedReviewThreads.length > 0 && {
+        reviewThreads: pullRequest.unresolvedReviewThreads,
+      }),
+      ...(pullRequest.openCodeScanningAlerts.length > 0 && {
+        codeScanningAlerts: pullRequest.openCodeScanningAlerts,
+      }),
     };
   }
 
@@ -102,20 +108,15 @@ export const judgeQueuedPullRequest = (
 
   if (pullRequest.isInMergeQueue) return { status: "waiting" };
 
-  const ran = new Set(pullRequest.statusCheckRollup.map(({ name }) => name));
-  const neverRan = pullRequest.requiredChecks.filter(
-    (check) => !ran.has(check),
-  );
-  if (pullRequest.statusCheckRollup.length > 0 && neverRan.length > 0) {
-    return { status: "missing-required-checks", checks: neverRan };
-  }
-
   if (pullRequest.unresolvedReviewThreads.length > 0) {
     return {
       status: "failed",
       failingChecks: [],
       reason: `unresolved review threads from ${[...new Set(pullRequest.unresolvedReviewThreads.map(({ author }) => author))].join(", ")}`,
       reviewThreads: pullRequest.unresolvedReviewThreads,
+      ...(pullRequest.openCodeScanningAlerts.length > 0 && {
+        codeScanningAlerts: pullRequest.openCodeScanningAlerts,
+      }),
     };
   }
   if (pullRequest.changesRequestedBy.length > 0) {
@@ -140,6 +141,13 @@ export const judgeQueuedPullRequest = (
       codeScanningAlerts: pullRequest.openCodeScanningAlerts,
     };
   }
+
+  const ran = new Set(pullRequest.statusCheckRollup.map(({ name }) => name));
+  const neverRan = pullRequest.requiredChecks.filter(
+    (check) => !ran.has(check),
+  );
+  if (neverRan.length > 0)
+    return { status: "missing-required-checks", checks: neverRan };
 
   if (!pullRequest.isInMergeQueue && !pullRequest.autoMergeEnabled) {
     return { status: "left-the-queue" };

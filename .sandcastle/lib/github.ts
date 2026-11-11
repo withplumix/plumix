@@ -65,6 +65,7 @@ const git = (args: readonly string[], cwd = REPO_ROOT): string =>
   execFileSync("git", [...args], {
     cwd,
     encoding: "utf8",
+    stdio: "pipe",
     maxBuffer: 32 * 1024 * 1024,
   });
 
@@ -465,6 +466,19 @@ export const inspectPullRequest = (
     "--json",
     "state,headRefOid,mergeStateStatus,statusCheckRollup,autoMergeRequest,headRefName",
   ]);
+  if (viewed.state === "MERGED" || viewed.state === "CLOSED")
+    return {
+      headSha: viewed.headRefOid,
+      state: viewed.state,
+      mergeStateStatus: viewed.mergeStateStatus,
+      statusCheckRollup: viewed.statusCheckRollup,
+      isInMergeQueue: false,
+      autoMergeEnabled: false,
+      openCodeScanningAlerts: [],
+      requiredChecks: [],
+      unresolvedReviewThreads: [],
+      changesRequestedBy: [],
+    };
   const [owner, name] = REPO_SLUG.split("/");
   const readHeld = (cursor?: string): HeldBy =>
     ghJson<HeldBy>([

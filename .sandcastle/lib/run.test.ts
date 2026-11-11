@@ -72,6 +72,33 @@ const ports = (over: Partial<ShipPorts> = {}) => {
 const allLanes = { lanes: 2, withinBudget: () => true };
 
 describe("runShipLoop", () => {
+  test("a declined repair cannot bypass the persisted rerun budget", async () => {
+    const history = new ShipHistory(historyRoot());
+    const queued = {
+      ticket: ticket(1),
+      pullRequest: { number: 101, url: "pr/1" },
+    };
+    history.record({ type: "pr.tracked", ...queued });
+    history.record({
+      type: "checks.rerun-requested",
+      issue: 1,
+      headSha: "abc",
+    });
+    let reruns = 0;
+    const { ports: p } = ports({
+      history,
+      nextTicket: () => undefined,
+      inFlightFromEarlierRuns: () => [queued],
+      confirm: async () => ({ ...ciRed, headSha: "abc" }),
+      repair: async () => ({ status: "declined", reason: "no change" }),
+      rerunFailedChecks: async () => {
+        reruns++;
+        return true;
+      },
+    });
+    await runShipLoop(p, allLanes);
+    expect(reruns).toBe(0);
+  });
   test("restarting does not rerun the same failed head a second time", async () => {
     const root = historyRoot();
     const previous = new ShipHistory(root);

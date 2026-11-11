@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -29,7 +29,7 @@ import { surveyMutants } from "./mutation.js";
 import { blockFor, retryWhatGitHubDroppedNow } from "./outage.js";
 import { prepareRepairBranch } from "./repair-branch.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
-import { reviewHead } from "./review-proof.js";
+import { reviewableHead, reviewHead } from "./review-proof.js";
 import { untilTheRunCompletes } from "./run-completion.js";
 import {
   closePlumixSandbox,
@@ -332,7 +332,11 @@ export const repairPullRequest = async (
       logs.push({ name, log: failedLogTail(ids.jobId) });
     }
 
-    const fixer = fixerFor(runAgentPhase, undefined);
+    const owner = history.ownerSession(ticket.number);
+    const fixer = fixerFor(
+      runAgentPhase,
+      owner && existsSync(owner.path) ? owner.id : undefined,
+    );
     const brief = asCiEvidenceBrief(ticket, pullRequest, {
       logs,
       codeScanningAlerts: refusal.codeScanningAlerts ?? [],
@@ -401,8 +405,7 @@ export const repairPullRequest = async (
       gh(["pr", "view", String(pullRequest.number), "--json", "body"]),
     ) as { body: string };
     const review = await reviewHead(ticket.number, history, {
-      head: async () =>
-        (await sandbox.exec("git rev-parse HEAD")).stdout.trim(),
+      head: () => reviewableHead(sandbox),
       review: async () =>
         reviewBranch(
           runAgentPhase,

@@ -16,8 +16,10 @@ names. Build the sandbox image from the repository root:
 pnpm --dir .sandcastle ship
 ```
 
-`ship` defaults to two lanes and eight hours for dispatching new issues. Existing
-PR confirmations finish after dispatch stops. Select issues or change those limits:
+`ship` defaults to two lanes and an eight-hour run. New issues stop dispatching
+with 75 minutes left; PR supervision continues until the deadline. Active agent
+calls finish their current phase, then unfinished work stays resumable. Select
+issues or change those limits:
 
 ```bash
 pnpm --dir .sandcastle ship 3450 3451 --lanes=2 --hours=4
@@ -31,7 +33,7 @@ against the same issues.
 
 ## Journals
 
-Every invocation creates `runs/ship-<timestamp>/events.jsonl`. The timestamp is
+Every delivery invocation creates `runs/ship-<timestamp>/events.jsonl`. The timestamp is
 milliseconds since the Unix epoch, increasing between runs even when the clock
 moves backward. Each line is one JSON event with an ISO `at` timestamp. The journal
 is automatic and independent of redirected console output:
@@ -113,3 +115,68 @@ A Claude account cooldown is journalled and shared by all lanes. Running calls
 finish or report their limit; subsequent calls wait until the latest recorded
 reset. Restarting preserves that wait. An unrecognised limit or authentication
 failure stops work instead of guessing a reset time.
+
+## Operating the factory
+
+These commands read local files and do not need Docker, GitHub access, or Claude:
+
+```bash
+pnpm --dir .sandcastle ship --status
+pnpm --dir .sandcastle ship --report
+pnpm --dir .sandcastle ship --explain=3450
+pnpm --dir .sandcastle ship --help
+```
+
+Status shows unfinished deliveries, their last observed reason, used repair and
+rebase counts and next check. It is a local snapshot; the next delivery run reconciles
+GitHub. Explain prints the issue's chronological events and evidence paths.
+Read commands never create a run or acquire the coordinator lock.
+
+Request a running coordinator in this checkout to drain:
+
+```bash
+pnpm --dir .sandcastle ship --drain
+```
+
+Drain stops new dispatch and wakes pending GitHub or account waits. Active agent
+calls reach their next checkpoint. It keeps unfinished deliveries instead of
+parking them. Ctrl-C and SIGTERM request the same graceful stop. A drain request
+belongs to its coordinator token, so it cannot stop a later run. The process must
+remain alive until the checkpoint completes; force-quitting can leave Docker
+containers or worktrees that require inspection before restarting.
+
+Console output shows outcomes and waiting reasons. Add `--verbose` for phase
+details. Structured journals and agent/gate logs are retained in either mode:
+
+```bash
+caffeinate -i pnpm --dir .sandcastle ship --verbose > ship.log 2>&1
+```
+
+`caffeinate` keeps the Mac awake during the command. Docker Desktop must remain
+running. Use a dedicated checkout, leave `runs/` in place, and start with one issue
+before increasing concurrency. This command spends the configured Claude
+account's allowance and can queue real merges under GitHub's rules.
+
+## Measurements
+
+The report aggregates completed phase events across runs, including failed
+attempts: merge and park counts, merges without a repair, repairs and rebases,
+agent errors, gate failures, review passes, active phase time, recorded cooldown
+waits, and known API-equivalent cost by phase and model. Explain retains the
+underlying log paths and review evidence. A configuration event records the git
+revision, prompt hash, Node version, image name and lane count for comparisons.
+
+Usage cursors survive restarts, including resumed owner sessions and subagent
+transcripts. Missing transcripts and interrupted agent calls are explicitly
+unmeasured. Known dollar totals exclude unmeasured calls and use the rate table
+in `lib/telemetry.ts`. They are estimates for comparing work, not actual Claude
+subscription charges or a prediction of how many issues the plan will cover.
+Parallel phase durations sum work, so they are not elapsed run time.
+
+Compare a small batch of similarly sized issues at one lane and two lanes. Look
+at first-pass merges, repair counts, gate failures and agent time alongside
+usage. Keep model and prompt hashes with the comparison. No live workload was
+used to claim a speedup during implementation.
+
+CI runs this package's own tests and typecheck separately from workspace checks.
+The workspace mutation runner does not select this private harness.

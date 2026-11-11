@@ -7,6 +7,24 @@ import { reviewHead } from "./review-proof.js";
 import { ShipHistory } from "./ship-history.js";
 
 describe("reviewHead", () => {
+  test("an unreviewable working tree cannot receive approval", async () => {
+    const root = mkdtempSync(join(tmpdir(), "ship-review-proof-"));
+    const history = new ShipHistory(root);
+    try {
+      const reviewed = await reviewHead(1, history, {
+        head: async () => "",
+        review: async () => ({
+          summary: "looks good",
+          specGaps: [],
+          notes: [],
+        }),
+      });
+      expect(reviewed).toBeNull();
+      expect(history.reviewedHead(1)).toBeUndefined();
+    } finally {
+      rmSync(root, { recursive: true });
+    }
+  });
   test("a changed commit requires a fresh review and cannot inherit approval", async () => {
     const root = mkdtempSync(join(tmpdir(), "ship-review-proof-"));
     const history = new ShipHistory(root);
