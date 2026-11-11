@@ -107,10 +107,12 @@ describe("whyTheCheckoutIsBroken", () => {
     const checkout = mkdtempSync(join(tmpdir(), "checkout-"));
     writeFileSync(join(checkout, ".git"), "gitdir: /gone/.git/worktrees/x\n");
 
-    expect(whyTheCheckoutIsBroken(checkout)).toMatch(
-      new RegExp(
-        `^the checkout the run ships from, ${checkout}, .*not a git repository`,
-      ),
+    // Git versions describe a dangling gitfile differently; the diagnostic must
+    // identify our checkout and retain Git's failure, whichever wording it uses.
+    const reason = whyTheCheckoutIsBroken(checkout);
+    expect(reason).toContain(
+      `the checkout the run ships from, ${checkout}, is broken:`,
     );
+    expect(reason).toContain("fatal:");
   });
 });
