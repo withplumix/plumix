@@ -51,6 +51,8 @@ const FETCH_TIMEOUT_MS = 5_000;
 
 const DECODER = new TextDecoder();
 
+const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1"]);
+
 async function readCappedText(response: Response): Promise<string> {
   const chunks: Uint8Array[] = [];
   let size = 0;
@@ -107,11 +109,23 @@ async function fetchDocument(
   }
 }
 
+/** OAuth 2.1 §2.3.1: https, or http to a loopback host (RFC 8252 §7.3). */
+const redirectUriSchema = v.pipe(
+  v.string(),
+  v.check((uri) => {
+    const url = URL.parse(uri);
+    return (
+      url?.protocol === "https:" ||
+      (url?.protocol === "http:" && LOOPBACK_HOSTNAMES.has(url.hostname))
+    );
+  }),
+);
+
 const documentSchema = v.object({
   client_id: v.string(),
   client_name: v.optional(v.string()),
   logo_uri: v.optional(v.string()),
-  redirect_uris: v.pipe(v.array(v.string()), v.minLength(1)),
+  redirect_uris: v.pipe(v.array(redirectUriSchema), v.minLength(1)),
 });
 
 function parseDocument(text: string): v.InferOutput<typeof documentSchema> {
@@ -167,8 +181,6 @@ export function createClientMetadataResolver(deps: {
     },
   };
 }
-
-const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1"]);
 
 /** RFC 8252 §7.3: a loopback client picks its port at run time, on either host name. */
 function loopbackForm(uri: string): string | undefined {

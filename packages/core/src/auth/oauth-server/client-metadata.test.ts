@@ -260,6 +260,27 @@ describe("resolving an OAuth client from its metadata document", () => {
       new ClientMetadataError("invalid_document"),
     );
   });
+
+  test.each([
+    "javascript:void(0)//",
+    "data:text/html,callback",
+    "http://claude.ai/callback",
+    "claude.ai/callback",
+  ])(
+    "a document redirecting to %s is refused as an invalid document",
+    async (uri) => {
+      serve(CLIENT_ID, {
+        client_id: CLIENT_ID,
+        redirect_uris: ["https://claude.ai/api/mcp/auth_callback", uri],
+      });
+
+      const resolving = resolver().resolve(CLIENT_ID);
+
+      await expect(resolving).rejects.toEqual(
+        new ClientMetadataError("invalid_document"),
+      );
+    },
+  );
 });
 
 /**
