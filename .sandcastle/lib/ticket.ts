@@ -15,6 +15,7 @@ import {
   startClock,
   taggedBlock,
 } from "./agent.js";
+import { analyseBeforeSetup } from "./analysis.js";
 import { checkBrief } from "./brief-check.js";
 import { decideOnTheBranch } from "./decide.js";
 import { prepareDelivery } from "./delivery.js";
@@ -35,8 +36,8 @@ import { reviewHead } from "./review-proof.js";
 import {
   AN_HOUR_IN_SECONDS,
   closePlumixSandbox,
-  createPlumixSandbox,
-  createPreparedSandbox,
+  createUnbuiltSandbox,
+  SETUP_STEPS,
 } from "./sandbox.js";
 
 /**
@@ -552,8 +553,7 @@ export const shipTicket = async (
   const prepared = await prepareDelivery(ticket, history, {
     assign: ({ number }) => assignToSelf(number),
     reset: resetBranchToMain,
-    open: (branch, resumed) =>
-      resumed ? createPreparedSandbox(branch) : createPlumixSandbox(branch),
+    open: (branch) => createUnbuiltSandbox(branch),
     sessionExists: existsSync,
   });
   const { branch, sandbox } = prepared;
@@ -566,13 +566,45 @@ export const shipTicket = async (
 
   try {
     say("\n--- check brief ---");
-    const brief = await checkBrief(runAgentPhase, ticket);
+    const brief = await analyseBeforeSetup({
+      analyse: async () => {
+        const result = await checkBrief(runAgentPhase, ticket);
+        if (result.next === "implement" && result.brief)
+          history.record({
+            type: "analysis.completed",
+            issue: ticket.number,
+            brief: result.brief,
+          });
+        return result;
+      },
+      setup: async () => {
+        const started = startClock();
+        const command = SETUP_STEPS.join(" && ");
+        const setup = await sandbox.exec(command);
+        journal.record(
+          {
+            phase: "setup",
+            kind: "gate",
+            command,
+            startedAt: started.startedAt,
+            durationMs: started.elapsedMs(),
+            outcome: setup.exitCode === 0 ? "ok" : "fail",
+            exitCode: setup.exitCode,
+          },
+          setup.stdout + setup.stderr,
+        );
+        if (setup.exitCode !== 0)
+          throw new Error(`Setup failed: ${setup.stdout}${setup.stderr}`);
+      },
+    });
     if (brief.next === "park")
       return { status: "blocked", reason: brief.reason, briefFails: true };
 
-    let guidance = prepared.resumed
-      ? "This delivery was interrupted. Inspect its existing commits, uncommitted changes and tests before continuing. Preserve that work; do not reset the branch or reimplement completed changes. Complete the remaining criteria and emit the PR description."
-      : "";
+    let guidance =
+      (brief.brief ? `Analyst handoff:\n${brief.brief}\n\n` : "") +
+      (prepared.resumed
+        ? "This delivery was interrupted. Inspect its existing commits, uncommitted changes and tests before continuing. Preserve that work; do not reset the branch or reimplement completed changes. Complete the remaining criteria and emit the PR description."
+        : "");
     let implemented: Awaited<ReturnType<RunAgentPhase>>;
     for (let unblocked = false; ; unblocked = true) {
       say(

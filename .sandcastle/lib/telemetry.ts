@@ -7,6 +7,8 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
+import type { AccountGate } from "./account.js";
+
 interface ModelRatesPerMillionTokens {
   readonly input: number;
   readonly output: number;
@@ -266,7 +268,11 @@ export class Journal {
   #ticket?: { number: number; title: string };
   #branch?: string;
 
-  constructor(root: string, onRecord?: (phase: PhaseRecord) => void) {
+  constructor(
+    root: string,
+    onRecord?: (phase: PhaseRecord) => void,
+    readonly account?: AccountGate,
+  ) {
     this.#onRecord = onRecord;
     this.dir = join(root, "runs", this.runId);
     this.#logDir = join(this.dir, "logs");

@@ -32,6 +32,24 @@ describe("readBriefCheckTag", () => {
 });
 
 describe("checkBrief", () => {
+  test("analysis hands evidence, criteria and a plan to the implementer", async () => {
+    const brief = {
+      ok: true,
+      falsePremises: [],
+      acceptance: ["reject an expired link"],
+      plan: ["add a red endpoint test"],
+      evidence: ["packages/core/src/auth.ts:10"],
+      questions: [],
+    };
+    const next = await checkBrief(
+      async () => ranWith(briefCheckBlock(brief)),
+      TICKET,
+    );
+    expect(next).toEqual({
+      next: "implement",
+      brief: JSON.stringify(brief, null, 2),
+    });
+  });
   test("a brief resting on a false premise is parked before implementation, naming each one", async () => {
     const mailer = {
       claim: "log the transport used",
@@ -58,25 +76,33 @@ describe("checkBrief", () => {
     });
   });
 
-  test("a brief whose premises hold goes on to implementation", async () => {
+  test("analysis without a plan and evidence stops before implementation", async () => {
     const next = await checkBrief(
       async () => ranWith(briefCheckBlock({ ok: true, falsePremises: [] })),
       TICKET,
     );
 
-    expect(next).toEqual({ next: "implement" });
+    expect(next).toEqual({
+      next: "park",
+      reason:
+        "Analysis must provide acceptance criteria, a plan and repository evidence",
+    });
   });
 
-  test("a check that says not ok but names no false premise has nothing to park on", async () => {
+  test("an empty analysis is not ready", async () => {
     const next = await checkBrief(
       async () => ranWith(briefCheckBlock({ ok: false, falsePremises: [] })),
       TICKET,
     );
 
-    expect(next).toEqual({ next: "implement" });
+    expect(next).toEqual({
+      next: "park",
+      reason:
+        "Analysis must provide acceptance criteria, a plan and repository evidence",
+    });
   });
 
-  test("a check the harness still cannot read after asking again lets implementation go ahead, and says so", async () => {
+  test("unreadable analysis stops before implementation", async () => {
     const phases: string[] = [];
     const said: string[] = [];
 
@@ -89,14 +115,18 @@ describe("checkBrief", () => {
       (line) => said.push(line),
     );
 
-    expect(next).toEqual({ next: "implement" });
+    expect(next).toEqual({
+      next: "park",
+      reason:
+        "Analysis ended without a readable brief; implementation was not started",
+    });
     expect(phases).toEqual([
       "check-brief",
       "check-brief:ask-again1",
       "check-brief:ask-again2",
     ]);
     expect(said).toEqual([
-      "  check-brief ended without a readable <brief-check> block; implementing the brief as written",
+      "  Analysis ended without a readable brief; implementation was not started",
     ]);
   });
 

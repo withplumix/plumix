@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
 import type { Ticket } from "./lib/github.js";
+import { accountGate } from "./lib/account.js";
 import { adrNumbersIn, nextFreeAdr } from "./lib/adr.js";
 import { decideWhatTheDocsSettle } from "./lib/decide.js";
 import {
@@ -51,7 +52,7 @@ import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
 const DEFAULT_BUDGET_HOURS = 8;
-const DEFAULT_LANES = 3;
+const DEFAULT_LANES = 2;
 const MINIMUM_TIME_TO_START_ANOTHER_TICKET_MS = 75 * 60_000;
 
 interface ShipOptions {
@@ -86,6 +87,10 @@ const { onlyTickets, lanes, budgetMs } = readOptions(process.argv.slice(2));
 const releaseShipLock = acquireShipLock(import.meta.dirname);
 process.once("exit", releaseShipLock);
 const history = new ShipHistory(import.meta.dirname);
+const account = accountGate(history, {
+  now: Date.now,
+  pause: (ms) => sleep(ms),
+});
 say(`Ship journal: ${history.path}`);
 for (const path of history.incompleteFiles) {
   say(`Incomplete final journal record ignored: ${path}`);
@@ -133,14 +138,18 @@ const namedTickets = onlyTickets.filter((number) => !claimed.has(number));
 const interruptedTickets = recovered.interrupted.map(({ ticket }) => ticket);
 
 function journalFor(ticket: Ticket): Journal {
-  const journal = new Journal(import.meta.dirname, (phase) => {
-    history.record({
-      type: "phase.finished",
-      issue: ticket.number,
-      journalRunId: journal.runId,
-      phase,
-    });
-  });
+  const journal = new Journal(
+    import.meta.dirname,
+    (phase) => {
+      history.record({
+        type: "phase.finished",
+        issue: ticket.number,
+        journalRunId: journal.runId,
+        phase,
+      });
+    },
+    account,
+  );
   return journal;
 }
 

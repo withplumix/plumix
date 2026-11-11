@@ -9,10 +9,17 @@ the latest one wins.
 
 # Task
 
-An agent is about to implement this brief unattended. Before it spends an hour
-on it, check that what the brief takes for granted is true of the repo at
-`{{BASE}}`. You do not design, plan or implement it. Edit no file and make no
-commit.
+Prepare the implementation handoff against `{{BASE}}`. This sandbox has git and
+GitHub access but dependencies have not been installed. Read the ticket, parent,
+VISION.md, relevant ADRs, package notes and coding standards. Leave files and
+commits unchanged.
+
+Trace every affected consumer to its current entry point. Report file and line
+evidence for those paths and each concrete premise below. Check issue dependencies
+against GitHub; an unmerged dependency is a question that blocks implementation.
+Produce observable acceptance criteria and an ordered TDD plan that names the
+appropriate test tiers and checks. Record protected paths or unresolved decisions
+as questions. Keep the plan within this issue's scope.
 
 Check each concrete premise:
 
@@ -39,10 +46,12 @@ anyone noticed:
 
 # Done
 
-End with this block, as JSON. `ok` is true when `falsePremises` is empty.
+End with this block, as JSON. `ok` is true when the evidence supports the plan,
+`falsePremises` is empty, and `questions` is empty. Every ready handoff needs
+nonempty acceptance, plan and evidence arrays.
 
 <brief-check>
-{ "ok": false, "falsePremises": [{ "claim": "what the brief takes for granted", "evidence": "path/to/file.ts:42", "why": "what is actually there, and why acting on the brief as written fails" }] }
+{ "ok": true, "falsePremises": [], "acceptance": ["observable behaviour"], "plan": ["first failing test and implementation step"], "evidence": ["path/to/file.ts:42 and what it establishes"], "questions": [] }
 </brief-check>
 
 <promise>COMPLETE</promise>

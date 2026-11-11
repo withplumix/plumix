@@ -55,7 +55,6 @@ export type RepairOutcome =
 
 export const REPAIRS_A_PULL_REQUEST_GETS = 2;
 export const REBASES_A_PULL_REQUEST_GETS = 5;
-const SANDBOXES_HELD_FOR_REPAIRS = 1;
 
 const failedOnItsOwnChecks = (refusal: MergeOutcome): boolean =>
   refusal.status === "failed" &&
@@ -91,9 +90,7 @@ export const runShipLoop = async (
   const parked: { ticket: Ticket; reason: string }[] = [];
   let outage: string | undefined;
   let failuresInARow = 0;
-  const sandboxes = slotsFor(lanes, {
-    heldForFirst: SANDBOXES_HELD_FOR_REPAIRS,
-  });
+  const sandboxes = slotsFor(lanes);
   let stoppedBecause: string | undefined;
   const decidedOnce = new Set<number>();
 

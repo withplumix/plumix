@@ -26,6 +26,16 @@ export interface PrObservation {
 
 export type ShipEvent =
   | {
+      readonly type: "analysis.completed";
+      readonly issue: number;
+      readonly brief: string;
+    }
+  | {
+      readonly type: "account.cooldown";
+      readonly until: number;
+      readonly reason: string;
+    }
+  | {
       readonly type: "head.reviewed";
       readonly issue: number;
       readonly headSha: string;
@@ -66,6 +76,16 @@ export type ShipEvent =
 const issueNumber = z.number().int().positive();
 const ticketSchema = z.object({ number: issueNumber, title: z.string() });
 const shipEventSchema: z.ZodType<ShipEvent> = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("analysis.completed"),
+    issue: issueNumber,
+    brief: z.string(),
+  }),
+  z.object({
+    type: z.literal("account.cooldown"),
+    until: z.number(),
+    reason: z.string(),
+  }),
   z.object({
     type: z.literal("head.reviewed"),
     issue: issueNumber,
@@ -124,6 +144,7 @@ const shipEventSchema: z.ZodType<ShipEvent> = z.discriminatedUnion("type", [
 ]);
 
 export class ShipHistory {
+  cooldownUntil = 0;
   readonly path: string;
   readonly incompleteFiles: string[] = [];
   readonly #deliveries = new Map<number, PendingDelivery>();
@@ -199,6 +220,14 @@ export class ShipHistory {
   }
 
   #apply(event: ShipEvent): void {
+    if (event.type === "analysis.completed") {
+      this.#reviewedHeads.delete(event.issue);
+      return;
+    }
+    if (event.type === "account.cooldown") {
+      this.cooldownUntil = Math.max(this.cooldownUntil, event.until);
+      return;
+    }
     if (event.type === "head.reviewed") {
       this.#reviewedHeads.set(event.issue, event.headSha);
       return;

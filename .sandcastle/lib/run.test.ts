@@ -991,7 +991,7 @@ describe("runShipLoop", () => {
     expect(report.outage).toContain("session limit");
   });
 
-  test("ships and repairs never exceed the lanes plus the one sandbox held for repairs", async () => {
+  test("ships and repairs share the configured total capacity", async () => {
     let busy = 0;
     let busiest = 0;
     const occupy = async () => {
@@ -1021,10 +1021,10 @@ describe("runShipLoop", () => {
 
     await runShipLoop(p, allLanes);
 
-    expect(busiest).toBeLessThanOrEqual(3);
+    expect(busiest).toBeLessThanOrEqual(2);
   });
 
-  test("a repair starts while every lane is busy shipping a ticket, instead of waiting for one to finish", async () => {
+  test("a repair waits for occupied capacity without adding a third sandbox", async () => {
     const pause = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms));
     const events: string[] = [];
@@ -1055,7 +1055,7 @@ describe("runShipLoop", () => {
 
     await runShipLoop(p, { lanes: 1, withinBudget: () => true });
 
-    expect(events).toEqual(["repair 101", "ship 2 done"]);
+    expect(events).toEqual(["ship 2 done", "repair 101"]);
   });
 
   test("a pull request an earlier run left in flight is confirmed, and repaired, by this run", async () => {

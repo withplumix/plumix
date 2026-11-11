@@ -84,8 +84,9 @@ export const agentPhaseRunner =
 
     try {
       const result = await waitOutALimit(
-        () =>
-          retryALostGitConfigLock(
+        async () => {
+          waitedMs += (await journal.account?.wait()) ?? 0;
+          return retryALostGitConfigLock(
             () =>
               sandbox.run({
                 ...options,
@@ -94,11 +95,16 @@ export const agentPhaseRunner =
                 logging: { type: "file", path: logFile },
               }),
             sleep,
-          ),
+          );
+        },
         {
           now: () => new Date(),
           pause: sleep,
           onWait: (lifts, waitMs) => {
+            journal.account?.defer(
+              Date.now() + waitMs,
+              "Claude account unavailable",
+            );
             waitedMs += waitMs;
             say(
               `    ${phase} hit the session limit; waiting until ${lifts.toISOString()} to run it again`,

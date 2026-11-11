@@ -16,7 +16,7 @@ names. Build the sandbox image from the repository root:
 pnpm --dir .sandcastle ship
 ```
 
-`ship` defaults to three lanes and eight hours for dispatching new issues. Existing
+`ship` defaults to two lanes and eight hours for dispatching new issues. Existing
 PR confirmations finish after dispatch stops. Select issues or change those limits:
 
 ```bash
@@ -96,3 +96,20 @@ approve the exact commit being published, including changes made by gate fixes o
 rebases. Repair replies name that commit before resolving addressed threads.
 Merge requests check the PR's current state and match its current head; repository
 rules still govern approval and merging.
+
+## Analysis and local capacity
+
+An analyst reads the repository and GitHub issue before dependency installation
+or builds. The handoff records acceptance criteria, repository evidence, and an
+ordered implementation plan. Missing output, false premises, or unresolved
+questions stop implementation. The implementer receives the recorded handoff.
+
+Implementation, setup, repairs, and decision sessions share the configured total
+capacity. Repairs take priority over waiting new work; occupied work finishes its
+checkpoint first. The default is two, with per-container Turbo and test workers
+bounded for that lane count. Waiting for GitHub holds no execution slot.
+
+A Claude account cooldown is journalled and shared by all lanes. Running calls
+finish or report their limit; subsequent calls wait until the latest recorded
+reset. Restarting preserves that wait. An unrecognised limit or authentication
+failure stops work instead of guessing a reset time.
