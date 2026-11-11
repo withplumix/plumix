@@ -43,7 +43,7 @@ export const stillInTheLoopsHands = (
 
 export const staleClaims = (
   claimed: readonly number[],
-  inFlight: readonly Queued[],
+  inFlight: readonly Pick<Queued, "ticket">[],
 ): readonly number[] =>
   claimed.filter(
     (ticketNumber) =>

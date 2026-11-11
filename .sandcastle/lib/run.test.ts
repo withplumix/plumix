@@ -1,4 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, test } from "vitest";
 
 import type { MergeOutcome, Ticket } from "./github.js";
 import type { ShipPorts } from "./run.js";
@@ -8,8 +11,19 @@ import {
   REPAIRS_A_PULL_REQUEST_GETS,
   runShipLoop,
 } from "./run.js";
+import { ShipHistory } from "./ship-history.js";
 
 const ticket = (number: number): Ticket => ({ number, title: `t${number}` });
+
+const historyRoots: string[] = [];
+function historyRoot(): string {
+  const root = mkdtempSync(join(tmpdir(), "ship-loop-"));
+  historyRoots.push(root);
+  return root;
+}
+afterEach(() => {
+  historyRoots.splice(0).forEach((root) => rmSync(root, { recursive: true }));
+});
 
 const merged: MergeOutcome = { status: "merged" };
 const ciRed: MergeOutcome = {
@@ -23,6 +37,7 @@ const ports = (over: Partial<ShipPorts> = {}) => {
   const parked: { number: number; reason: string; briefFails?: boolean }[] = [];
   const released: number[] = [];
   const base: ShipPorts = {
+    history: new ShipHistory(historyRoot()),
     nextTicket: () => waiting.shift(),
     ship: async (t) => ({
       status: "queued",
@@ -57,6 +72,73 @@ const ports = (over: Partial<ShipPorts> = {}) => {
 const allLanes = { lanes: 2, withinBudget: () => true };
 
 describe("runShipLoop", () => {
+  test("a parked PR is not retried when another run reads its history", async () => {
+    const history = new ShipHistory(historyRoot());
+    const { ports: p } = ports({
+      history,
+      nextTicket: drainingFrom([ticket(1)]),
+      confirm: async () => ({ ...ciRed, needsAPerson: true }),
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(history.pending()).toEqual([]);
+  });
+
+  test("a PR merged during downtime is completed without implementing its issue again", async () => {
+    const root = historyRoot();
+    const previous = new ShipHistory(root);
+    const queued = {
+      ticket: ticket(1),
+      pullRequest: { number: 101, url: "pr/1" },
+    };
+    previous.record({ type: "pr.tracked", ...queued });
+    const history = new ShipHistory(root);
+    const { ports: p } = ports({
+      history,
+      nextTicket: () => undefined,
+      inFlightFromEarlierRuns: () => [queued],
+      ship: async () => {
+        throw new Error("must not implement again");
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(report.merged).toEqual([queued]);
+    expect(new ShipHistory(root).pending()).toEqual([]);
+  });
+
+  test("a recovered pull request spends only its remaining repair budget", async () => {
+    const root = historyRoot();
+    const previous = new ShipHistory(root);
+    const queued = {
+      ticket: ticket(1),
+      pullRequest: { number: 101, url: "pr/1" },
+    };
+    previous.record({ type: "pr.tracked", ...queued });
+    previous.record({ type: "repair.started", issue: 1 });
+    let repairs = 0;
+    const { ports: p } = ports({
+      history: new ShipHistory(root),
+      nextTicket: () => undefined,
+      inFlightFromEarlierRuns: () => [queued],
+      confirm: async () => ciRed,
+      rerunFailedChecks: async () => false,
+      repair: async () => {
+        repairs += 1;
+        return { status: "repaired" };
+      },
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(repairs).toBe(1);
+    expect(report.parked).toEqual([
+      { ticket: ticket(1), reason: "failing checks: Test" },
+    ]);
+  });
+
   test("a ticket whose pull request merges is reported as merged", async () => {
     const { ports: p } = ports();
 

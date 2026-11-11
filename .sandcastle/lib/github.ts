@@ -980,3 +980,23 @@ export const loopPullRequestsInFlight = (): readonly Queued[] => {
     })),
   );
 };
+
+export function pullRequestForBranch(
+  branch: string,
+): QueuedPullRequest | undefined {
+  const pullRequests = ghJson<QueuedPullRequest[]>([
+    "pr",
+    "list",
+    "-R",
+    REPO_SLUG,
+    "--head",
+    branch,
+    "--state",
+    "all",
+    "--limit",
+    "1",
+    "--json",
+    "number,url",
+  ]);
+  return pullRequests[0];
+}

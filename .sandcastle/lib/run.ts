@@ -1,10 +1,12 @@
 import type { MergeOutcome, QueuedPullRequest, Ticket } from "./github.js";
+import type { ShipHistory } from "./ship-history.js";
 import type { ShipOutcome } from "./ticket.js";
 import { drainAcrossLanes } from "./lanes.js";
 import { looksLikeTheRunBeingOver } from "./outage.js";
 import { slotsFor } from "./slots.js";
 
 export interface ShipPorts {
+  readonly history: ShipHistory;
   readonly nextTicket: () => Ticket | undefined;
   readonly ship: (ticket: Ticket) => Promise<ShipOutcome>;
   readonly park: (
@@ -95,6 +97,20 @@ export const runShipLoop = async (
   let stoppedBecause: string | undefined;
   const decidedOnce = new Set<number>();
 
+  const park: ShipPorts["park"] = (
+    ticket,
+    reason,
+    pullRequestUrl,
+    briefFails,
+  ) => {
+    ports.park(ticket, reason, pullRequestUrl, briefFails);
+    ports.history.record({
+      type: "delivery.parked",
+      issue: ticket.number,
+      reason,
+    });
+  };
+
   const settledByTheDecider = async (
     ticket: Ticket,
     reason: string,
@@ -141,36 +157,39 @@ export const runShipLoop = async (
     pullRequest,
   }: Queued): Promise<MergeOutcome> => {
     let outcome = await confirmRerunningOnce(pullRequest);
-    let repairs = 0;
-    let rebases = 0;
     while (outcome.status !== "merged" && !outcome.needsAPerson) {
+      const { repairs = 0, rebases = 0 } =
+        ports.history
+          .pending()
+          .find((delivery) => delivery.ticket.number === ticket.number) ?? {};
       if (outcome.conflicted) {
         if (rebases === REBASES_A_PULL_REQUEST_GETS) break;
-        rebases += 1;
         ports.say(
-          `  #${pullRequest.number} refused (${outcome.reason}), rebasing (${rebases}/${REBASES_A_PULL_REQUEST_GETS})`,
+          `  #${pullRequest.number} refused (${outcome.reason}), rebasing (${rebases + 1}/${REBASES_A_PULL_REQUEST_GETS})`,
         );
         ports.noteOnPullRequest(
           pullRequest,
-          `The ship loop is rebasing this branch (${rebases}/${REBASES_A_PULL_REQUEST_GETS}): ${outcome.reason}`,
+          `The ship loop is rebasing this branch (${rebases + 1}/${REBASES_A_PULL_REQUEST_GETS}): ${outcome.reason}`,
         );
       } else {
         if (repairs === REPAIRS_A_PULL_REQUEST_GETS) break;
-        repairs += 1;
         ports.say(
-          `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs}/${REPAIRS_A_PULL_REQUEST_GETS})`,
+          `  #${pullRequest.number} refused (${outcome.reason}), repairing (${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
         );
         ports.noteOnPullRequest(
           pullRequest,
-          `The ship loop is repairing this pull request: ${outcome.reason} (repair ${repairs}/${REPAIRS_A_PULL_REQUEST_GETS})`,
+          `The ship loop is repairing this pull request: ${outcome.reason} (repair ${repairs + 1}/${REPAIRS_A_PULL_REQUEST_GETS})`,
         );
       }
       const refusal = outcome;
-      const repaired = await sandboxes.runFirst(async () =>
-        ports.hasMerged(pullRequest)
-          ? undefined
-          : ports.repair(ticket, pullRequest, refusal),
-      );
+      const repaired = await sandboxes.runFirst(async () => {
+        if (ports.hasMerged(pullRequest)) return undefined;
+        ports.history.record({
+          type: refusal.conflicted ? "rebase.started" : "repair.started",
+          issue: ticket.number,
+        });
+        return ports.repair(ticket, pullRequest, refusal);
+      });
       if (repaired === undefined) return { status: "merged" };
       if (repaired.status === "declined" && !failedOnItsOwnChecks(refusal)) {
         return { status: "failed", reason: repaired.reason, failingChecks: [] };
@@ -248,6 +267,7 @@ export const runShipLoop = async (
   };
 
   const startConfirming = (queued: Queued): void => {
+    ports.history.record({ type: "pr.tracked", ...queued });
     const confirmation = confirmRepairingWhatIsRefused(queued).then(
       (value): PromiseSettledResult<MergeOutcome> => ({
         status: "fulfilled",
@@ -306,7 +326,7 @@ export const runShipLoop = async (
           );
           return;
         }
-        ports.park(
+        park(
           ticket,
           outcome.reason,
           outcome.pullRequestUrl,
@@ -343,7 +363,7 @@ export const runShipLoop = async (
       }
       if (leftAsItWasBecauseTheCheckoutBroke(ticket, pullRequest.url)) continue;
       const reason = `the run could not confirm ${pullRequest.url}: ${thrown}`;
-      ports.park(ticket, reason, pullRequest.url);
+      park(ticket, reason, pullRequest.url);
       parked.push({ ticket, reason });
       continue;
     }
@@ -351,7 +371,7 @@ export const runShipLoop = async (
     const confirmed = settledConfirmation.value;
     if (confirmed.status !== "merged") {
       if (leftAsItWasBecauseTheCheckoutBroke(ticket, pullRequest.url)) continue;
-      ports.park(ticket, confirmed.reason, pullRequest.url);
+      park(ticket, confirmed.reason, pullRequest.url);
       parked.push({ ticket, reason: confirmed.reason });
       continue;
     }
@@ -362,6 +382,7 @@ export const runShipLoop = async (
       );
     }
     merged.push({ ticket, pullRequest });
+    ports.history.record({ type: "delivery.merged", issue: ticket.number });
   }
 
   return { merged, parked, outage, stoppedBecause };

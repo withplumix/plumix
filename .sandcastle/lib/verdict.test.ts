@@ -26,6 +26,15 @@ const run = (name: string, conclusion: string, status = "COMPLETED") => ({
 });
 
 describe("judgeQueuedPullRequest", () => {
+  test("a PR closed during downtime needs a person rather than a repair", () => {
+    expect(judgeQueuedPullRequest(snapshot({ state: "CLOSED" }))).toEqual({
+      status: "failed",
+      reason: "pull request was closed without merging",
+      failingChecks: [],
+      needsAPerson: true,
+    });
+  });
+
   test("a check main requires that never ran on the pull request is named, because no repair makes it run", () => {
     const verdict = judgeQueuedPullRequest(
       snapshot({

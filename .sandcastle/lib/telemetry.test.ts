@@ -192,6 +192,20 @@ describe("Journal.record with a gate run's output", () => {
     outcome: "fail",
   } as const;
 
+  test("forwards a completed phase to the ship journal with its evidence path", () => {
+    const phases: PhaseRecord[] = [];
+    const journal = new Journal(
+      mkdtempSync(join(tmpdir(), "journal-")),
+      (phase) => void phases.push(phase),
+    );
+
+    journal.record(gateRun, "test failed");
+
+    expect(phases).toEqual([
+      { ...gateRun, logFile: journal.logPath(gateRun.phase) },
+    ]);
+  });
+
   test("keeps every failed run's output in the phase log the record names", () => {
     const journal = new Journal(mkdtempSync(join(tmpdir(), "journal-")));
 

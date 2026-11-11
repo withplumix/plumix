@@ -63,6 +63,7 @@ export const judgeQueuedPullRequest = (
       status: "failed",
       reason: "pull request was closed without merging",
       failingChecks: [],
+      needsAPerson: true,
     };
   }
   if (pullRequest.mergeStateStatus === "DIRTY") {

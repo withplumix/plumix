@@ -260,10 +260,12 @@ export class Journal {
   readonly #logDir: string;
   readonly #startedAtMs = Date.now();
   readonly #phases: PhaseRecord[] = [];
+  readonly #onRecord?: (phase: PhaseRecord) => void;
   #ticket?: { number: number; title: string };
   #branch?: string;
 
-  constructor(root: string) {
+  constructor(root: string, onRecord?: (phase: PhaseRecord) => void) {
+    this.#onRecord = onRecord;
     this.dir = join(root, "runs", this.runId);
     this.#logDir = join(this.dir, "logs");
     mkdirSync(this.#logDir, { recursive: true });
@@ -293,6 +295,7 @@ export class Journal {
       phase = { ...phase, logFile };
     }
     this.#phases.push(phase);
+    this.#onRecord?.(phase);
     this.#persist("running");
 
     const cost =

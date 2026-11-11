@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { RunAgentPhase, Thinker } from "./agent.js";
 import type { Executor, Gate, GateFailure } from "./gates.js";
 import type { QueuedPullRequest, Ticket } from "./github.js";
+import type { ShipHistory } from "./ship-history.js";
 import type { Journal } from "./telemetry.js";
 import {
   agentPhaseRunner,
@@ -542,12 +543,14 @@ export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
   nextAdr: string,
+  history: ShipHistory,
 ): Promise<ShipOutcome> => {
   const branch = `feat/${ticket.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 48)}-${ticket.number}`;
+  history.record({ type: "delivery.started", ticket, branch });
   journal.setTicket(ticket, branch);
   say(
     `\n=== #${ticket.number} ${ticket.title}\n=== branch ${branch}\n=== run ${journal.runId}\n`,
@@ -692,6 +695,8 @@ export const shipTicket = async (
       pullRequestCopy.title,
       pullRequestCopy.body,
     );
+
+    history.record({ type: "pr.tracked", ticket, pullRequest });
 
     queueForMerge(pullRequest.number);
     return { status: "queued", pullRequest };

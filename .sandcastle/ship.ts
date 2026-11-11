@@ -1,5 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
 
+import type { Ticket } from "./lib/github.js";
 import { adrNumbersIn, nextFreeAdr } from "./lib/adr.js";
 import { decideWhatTheDocsSettle } from "./lib/decide.js";
 import {
@@ -13,6 +14,7 @@ import {
   loopPullRequestsInFlight,
   parentsWithEveryChildClosed,
   parkTicket,
+  pullRequestForBranch,
   queueForMerge,
   releaseClaim,
   rerunFailedJobs,
@@ -26,6 +28,7 @@ import {
 import { staleClaims } from "./lib/in-flight.js";
 import { say } from "./lib/log.js";
 import { sandboxImageOrRefuse } from "./lib/preflight.js";
+import { recoverDeliveries } from "./lib/recovery.js";
 import {
   aRerunCannotTurnItGreen,
   aRerunCouldTurnThemGreen,
@@ -40,6 +43,8 @@ import {
   runShipLoop,
 } from "./lib/run.js";
 import { pinLaneCount, pinSandboxImage } from "./lib/sandbox.js";
+import { ShipHistory } from "./lib/ship-history.js";
+import { acquireShipLock } from "./lib/ship-lock.js";
 import { Journal } from "./lib/telemetry.js";
 import { shipTicket } from "./lib/ticket.js";
 
@@ -78,7 +83,13 @@ const asDuration = (ms: number): string => {
 };
 
 const { onlyTickets, lanes, budgetMs } = readOptions(process.argv.slice(2));
-const namedTickets = [...onlyTickets];
+const releaseShipLock = acquireShipLock(import.meta.dirname);
+process.once("exit", releaseShipLock);
+const history = new ShipHistory(import.meta.dirname);
+say(`Ship journal: ${history.path}`);
+for (const path of history.incompleteFiles) {
+  say(`Incomplete final journal record ignored: ${path}`);
+}
 const endOfBudget = Date.now() + budgetMs;
 const claimed = new Set<number>();
 const adrsHeldThisRun = new Set<number>();
@@ -103,14 +114,45 @@ pinLaneCount(laneCount);
 
 syncRepoToMain();
 
+const selected = (number: number) =>
+  !onlyTickets.length || onlyTickets.includes(number);
+const recovered = recoverDeliveries(
+  history.pending().filter(({ ticket }) => selected(ticket.number)),
+  loopPullRequestsInFlight().filter(({ ticket }) => selected(ticket.number)),
+  pullRequestForBranch,
+);
+for (const { ticket, branch } of recovered.interrupted) {
+  claimed.add(ticket.number);
+  say(
+    `#${ticket.number} has interrupted work on ${branch}; preserved for manual recovery`,
+  );
+}
+for (const queued of recovered.inFlight) {
+  claimed.add(queued.ticket.number);
+  history.record({ type: "pr.tracked", ...queued });
+}
+const namedTickets = onlyTickets.filter((number) => !claimed.has(number));
+
+function journalFor(ticket: Ticket): Journal {
+  const journal = new Journal(import.meta.dirname, (phase) => {
+    history.record({
+      type: "phase.finished",
+      issue: ticket.number,
+      journalRunId: journal.runId,
+      phase,
+    });
+  });
+  return journal;
+}
+
 if (!onlyTickets.length) {
   const claimedEarlier = listReadyTickets()
     .filter(({ assignees }) => assignees.length > 0)
     .map(({ number }) => number);
-  for (const ticketNumber of staleClaims(
-    claimedEarlier,
-    loopPullRequestsInFlight(),
-  )) {
+  for (const ticketNumber of staleClaims(claimedEarlier, [
+    ...recovered.inFlight,
+    ...recovered.interrupted.map(({ ticket }) => ({ ticket })),
+  ])) {
     releaseClaim(ticketNumber);
     say(
       `#${ticketNumber} was claimed by a run that stopped mid-ticket; released`,
@@ -120,6 +162,7 @@ if (!onlyTickets.length) {
 
 const report = await runShipLoop(
   {
+    history,
     nextTicket: () => {
       const named = namedTickets.shift();
       const candidate =
@@ -133,12 +176,12 @@ const report = await runShipLoop(
       return candidate;
     },
     ship: (ticket) => {
-      const journal = new Journal(import.meta.dirname);
+      const journal = journalFor(ticket);
       const nextAdr = nextFreeAdr(
         textsThatClaimAdrNumbers().flatMap(adrNumbersIn),
         adrsHeldThisRun,
       );
-      return shipTicket(ticket, journal, nextAdr).then(
+      return shipTicket(ticket, journal, nextAdr, history).then(
         (outcome) => {
           if (outcome.status === "queued") journal.finish("shipped");
           else journal.finish("failed", outcome.reason);
@@ -151,7 +194,7 @@ const report = await runShipLoop(
       );
     },
     decide: (ticket, reason) => {
-      const journal = new Journal(import.meta.dirname);
+      const journal = journalFor(ticket);
       return decideWhatTheDocsSettle(ticket, reason, journal).then(
         (settled) => {
           journal.finish(settled ? "shipped" : "failed", reason);
@@ -171,7 +214,7 @@ const report = await runShipLoop(
       parkTicket(number, reason, pullRequestUrl, briefFails),
     releaseClaim: ({ number }) => releaseClaim(number),
     repair: (ticket, pullRequest, refusal) => {
-      const journal = new Journal(import.meta.dirname);
+      const journal = journalFor(ticket);
       return repairPullRequest(ticket, pullRequest, refusal, journal).then(
         (outcome) => {
           if (outcome.status === "repaired") journal.finish("shipped");
@@ -212,11 +255,7 @@ const report = await runShipLoop(
         say(`  #${number} note: ${String(error).split("\n")[0]}`);
       }
     },
-    inFlightFromEarlierRuns: () => {
-      const inFlight = onlyTickets.length ? [] : loopPullRequestsInFlight();
-      for (const { ticket } of inFlight) claimed.add(ticket.number);
-      return inFlight;
-    },
+    inFlightFromEarlierRuns: () => recovered.inFlight,
     requeue: ({ number }) => {
       try {
         queueForMerge(number);
@@ -267,3 +306,4 @@ for (const { ticket, pullRequest } of report.merged)
   say(`  \u2713 #${ticket.number} ${pullRequest.url}`);
 for (const { ticket, reason } of report.parked)
   say(`  \u2691 #${ticket.number} — ${reason}`);
+history.record({ type: "ship.finished" });

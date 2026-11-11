@@ -18,7 +18,6 @@ import {
 } from "./gates.js";
 import {
   branchOfPullRequest,
-  clearLeftoverWorktree,
   pushBranch,
   resolveReviewThreads,
   runStatus,
@@ -26,6 +25,7 @@ import {
 } from "./github.js";
 import { say } from "./log.js";
 import { blockFor, retryWhatGitHubDroppedNow } from "./outage.js";
+import { prepareRepairBranch } from "./repair-branch.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
 import { untilTheRunCompletes } from "./run-completion.js";
 import {
@@ -267,8 +267,7 @@ export const repairPullRequest = async (
   const branch = branchOfPullRequest(pullRequest.number);
   journal.setTicket(ticket, branch);
   git(["fetch", "-q", "origin", "main", branch]);
-  clearLeftoverWorktree(branch);
-  git(["branch", "-f", branch, `origin/${branch}`]);
+  prepareRepairBranch(branch, REPO_ROOT, git);
 
   const sandbox = await (
     refusal.conflicted ? createUnbuiltSandbox : createPlumixSandbox
