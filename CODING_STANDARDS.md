@@ -143,9 +143,36 @@ migration under a new name, because installs that ran the old one won't run it a
 - Build SQL with drizzle's query builder or its `sql` template, which binds values. Pass `sql.raw`
   only text the code wrote itself, never input.
 - Render user content as text. Markup from input reaches `dangerouslySetInnerHTML` only through
-  `sanitizeHtml` with the site's allowlist. Check a URL from input before it becomes an `href`.
-- Every procedure and route that reads or writes protected data checks a capability with
-  `ctx.auth.can()` or `requireCapability`.
+  `sanitizeHtml` with the site's allowlist. A URL from input becomes an `href`, a redirect or a
+  navigation only after its scheme is checked against `http:` and `https:`. Parsing it is not
+  checking it.
+
+### Access
+
+[`SECURITY.md`](./SECURITY.md#threat-model) says whom Plumix trusts. Every rule here keeps a caller
+inside what their role and their token allow.
+
+- Every procedure, route, adapter and endpoint that reads or writes protected data checks, with
+  `ctx.auth.can()` or `requireCapability`, the capability that guards that data. A broader
+  capability the caller happens to hold does not stand in for it.
+- A token's scopes narrow every check it reaches, on every surface, not only RPC.
+- When two surfaces serve the same data (RPC, REST, MCP, sync, lookups, a public route), they run
+  the same check. A comment saying one matches the other is not a check.
+- A generic write (`update`, `duplicate`, an import) cannot reach a state or copy a value that a
+  dedicated, guarded procedure owns. Copying a row copies a named list of fields, never the row.
+- A token or link that grants access checks again, each time it is used, that the access still
+  holds.
+- A plugin's post type or taxonomy declares its capabilities. The defaults give authors write and
+  members read, which few plugin types want.
+- A derived store, such as a search index, a cached snapshot or a stored label, holds only what its
+  readers may read from the source.
+- A dev-only endpoint checks the request's `Origin` and honours Vite's `server.fs.deny`. Any page
+  the developer has open can send it a request.
+- An agent in CI that reads text anyone can write gets no secret in its environment, and its tools
+  reach only the checkout.
+- A fix for an access bug ships a regression test over every route, procedure, adapter or type of
+  its kind, read from what is registered, not only over the one that broke. The next one added is
+  then covered without anyone writing a test for it.
 
 ## Tests
 
