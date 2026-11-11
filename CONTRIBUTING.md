@@ -173,6 +173,11 @@ The agent skills from [mattpocock/skills](https://github.com/mattpocock/skills) 
 
 Once a week the [architecture review](.github/workflows/architecture-review.yml) files one report labelled `source:architecture-review`. Nothing acts on it until a maintainer does; the report ends with how to take it forward or decline it.
 
+The [local ship loop](.sandcastle/README.md) runs coding agents and supervises their
+pull requests. Its append-only ship journals recover unfinished PRs and repair
+budgets across restarts. Its dependencies, tests, and typecheck run separately
+from the workspace.
+
 ## Dependencies and third-party code
 
 ### Adding a dependency

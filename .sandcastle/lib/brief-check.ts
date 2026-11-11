@@ -26,6 +26,10 @@ const briefCheckSchema = z.object({
       }),
     )
     .default([]),
+  acceptance: z.array(z.string()).optional(),
+  plan: z.array(z.string()).optional(),
+  evidence: z.array(z.string()).optional(),
+  questions: z.array(z.string()).optional(),
 });
 
 type BriefCheck = z.infer<typeof briefCheckSchema>;
@@ -38,10 +42,10 @@ export const readBriefCheckTag = (stdout: string): BriefCheck | null => {
 };
 
 const EMIT_THE_BRIEF_CHECK =
-  "End with the <brief-check> block the prompt describes: ok and falsePremises, as JSON.";
+  "End with <brief-check> JSON: ok, falsePremises, acceptance, plan, evidence, questions. A ready handoff has nonempty acceptance, plan and evidence arrays.";
 
 type AfterBriefCheck =
-  | { readonly next: "implement" }
+  | { readonly next: "implement"; readonly brief?: string }
   | { readonly next: "park"; readonly reason: string };
 
 const asPremiseList = (premises: BriefCheck["falsePremises"]): string =>
@@ -72,13 +76,28 @@ export const checkBrief = async (
     EMIT_THE_BRIEF_CHECK,
   );
   if (!check) {
-    tell(
-      "  check-brief ended without a readable <brief-check> block; implementing the brief as written",
-    );
-    return { next: "implement" };
+    const reason =
+      "Analysis ended without a readable brief; implementation was not started";
+    tell(`  ${reason}`);
+    return { next: "park", reason };
   }
   const premises = check.falsePremises;
-  if (check.ok || premises.length === 0) return { next: "implement" };
+  if (check.questions?.length)
+    return {
+      next: "park",
+      reason: `Analysis needs a decision:\n${check.questions.join("\n")}`,
+    };
+  if (premises.length === 0)
+    return check.ok &&
+      check.acceptance?.length &&
+      check.plan?.length &&
+      check.evidence?.length
+      ? { next: "implement", brief: JSON.stringify(check, null, 2) }
+      : {
+          next: "park",
+          reason:
+            "Analysis must provide acceptance criteria, a plan and repository evidence",
+        };
   return {
     next: "park",
     reason: `${premises.length} premise(s) in the brief are false, so it needs a person before it is implemented:\n\n${asPremiseList(premises)}`,

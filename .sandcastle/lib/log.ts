@@ -1,7 +1,10 @@
-import { writeSync } from "node:fs";
-
-const STDOUT = 1;
-
+let verbose = false;
+export const configureLogging = (enabled: boolean): void => {
+  verbose = enabled;
+};
 export const say = (line: string): void => {
-  writeSync(STDOUT, `${line}\n`);
+  console.log(line);
+};
+export const detail = (line: string): void => {
+  if (verbose) console.log(line);
 };

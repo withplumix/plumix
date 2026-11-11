@@ -1,11 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { Executor, Gate } from "./gates.js";
 import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { RepairOutcome } from "./run.js";
+import type { ShipHistory } from "./ship-history.js";
 import type { Journal } from "./telemetry.js";
 import type { FailingCheck, MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner } from "./agent.js";
@@ -18,15 +19,17 @@ import {
 } from "./gates.js";
 import {
   branchOfPullRequest,
-  clearLeftoverWorktree,
   pushBranch,
   resolveReviewThreads,
   runStatus,
   syncRepoToMain,
 } from "./github.js";
 import { say } from "./log.js";
+import { surveyMutants } from "./mutation.js";
 import { blockFor, retryWhatGitHubDroppedNow } from "./outage.js";
+import { prepareRepairBranch } from "./repair-branch.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
+import { reviewableHead, reviewHead } from "./review-proof.js";
 import { untilTheRunCompletes } from "./run-completion.js";
 import {
   closePlumixSandbox,
@@ -38,6 +41,7 @@ import {
   gatesUntilGreen,
   IMPLEMENTER,
   readDeclinedTag,
+  reviewBranch,
 } from "./ticket.js";
 
 export const SCREENSHOT_DIFF_STEP =
@@ -261,14 +265,14 @@ export const repairPullRequest = async (
   pullRequest: QueuedPullRequest,
   refusal: MergeOutcome,
   journal: Journal,
+  history: ShipHistory,
 ): Promise<RepairOutcome> => {
   if (refusal.status === "merged") return { status: "repaired" };
 
   const branch = branchOfPullRequest(pullRequest.number);
   journal.setTicket(ticket, branch);
   git(["fetch", "-q", "origin", "main", branch]);
-  clearLeftoverWorktree(branch);
-  git(["branch", "-f", branch, `origin/${branch}`]);
+  prepareRepairBranch(branch, REPO_ROOT, git);
 
   const sandbox = await (
     refusal.conflicted ? createUnbuiltSandbox : createPlumixSandbox
@@ -328,7 +332,11 @@ export const repairPullRequest = async (
       logs.push({ name, log: failedLogTail(ids.jobId) });
     }
 
-    const fixer = fixerFor(runAgentPhase, undefined);
+    const owner = history.ownerSession(ticket.number);
+    const fixer = fixerFor(
+      runAgentPhase,
+      owner && existsSync(owner.path) ? owner.id : undefined,
+    );
     const brief = asCiEvidenceBrief(ticket, pullRequest, {
       logs,
       codeScanningAlerts: refusal.codeScanningAlerts ?? [],
@@ -393,8 +401,32 @@ export const repairPullRequest = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
+    const copy = JSON.parse(
+      gh(["pr", "view", String(pullRequest.number), "--json", "body"]),
+    ) as { body: string };
+    const review = await reviewHead(ticket.number, history, {
+      head: () => reviewableHead(sandbox),
+      review: async () =>
+        reviewBranch(
+          runAgentPhase,
+          journal,
+          ticket,
+          "repair-publish",
+          copy.body,
+          await surveyMutants(sandbox),
+        ),
+    });
+    if (!review || review.specGaps.length > 0)
+      return declined(
+        review
+          ? `Final repair review: ${JSON.stringify(review.specGaps)}`
+          : "Final repair has no readable independent review",
+      );
     await pushBranch(branch, sandbox.worktreePath);
-    resolveReviewThreads((refusal.reviewThreads ?? []).map(({ id }) => id));
+    resolveReviewThreads(
+      (refusal.reviewThreads ?? []).map(({ id }) => id),
+      (await sandbox.exec("git rev-parse HEAD")).stdout.trim(),
+    );
     return { status: "repaired" };
   } finally {
     const { preservedWorktreePath } = await closePlumixSandbox(sandbox);

@@ -1,6 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
 
 import type { BlockedTicket } from "./moving-blockers.js";
+import type {
+  GitHubPage,
+  GitHubThread,
+  ReviewComment,
+} from "./review-threads.js";
 import type { Queued } from "./run.js";
 import type {
   FailingCheck,
@@ -24,7 +29,7 @@ import {
   TRIAGE_LABEL,
   WONTFIX_LABEL,
 } from "./repo.js";
-import { judgeQueuedPullRequest } from "./verdict.js";
+import { readReviewThreads } from "./review-threads.js";
 import { leftoverSandboxWorktree } from "./worktrees.js";
 
 export interface Ticket {
@@ -60,6 +65,7 @@ const git = (args: readonly string[], cwd = REPO_ROOT): string =>
   execFileSync("git", [...args], {
     cwd,
     encoding: "utf8",
+    stdio: "pipe",
     maxBuffer: 32 * 1024 * 1024,
   });
 
@@ -406,6 +412,20 @@ export const openPullRequest = (
 };
 
 export const queueForMerge = (pullRequest: number): void => {
+  const current = ghJson<{
+    state: string;
+    headRefOid: string;
+    autoMergeRequest: unknown;
+  }>([
+    "pr",
+    "view",
+    String(pullRequest),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "state,headRefOid,autoMergeRequest",
+  ]);
+  if (current.state !== "OPEN" || current.autoMergeRequest) return;
   gh([
     "pr",
     "merge",
@@ -414,6 +434,8 @@ export const queueForMerge = (pullRequest: number): void => {
     REPO_SLUG,
     "--squash",
     "--auto",
+    "--match-head-commit",
+    current.headRefOid,
   ]);
 };
 
@@ -425,13 +447,16 @@ const checksMainRequires = (): readonly string[] =>
     '[.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context]',
   ]);
 
-const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
+export const inspectPullRequest = (
+  pullRequest: number,
+): PullRequestSnapshot => {
   const viewed = ghJson<{
     state: string;
     mergeStateStatus: string;
     statusCheckRollup: PullRequestSnapshot["statusCheckRollup"];
     autoMergeRequest: unknown;
     headRefName: string;
+    headRefOid: string;
   }>([
     "pr",
     "view",
@@ -439,24 +464,41 @@ const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
     "-R",
     REPO_SLUG,
     "--json",
-    "state,mergeStateStatus,statusCheckRollup,autoMergeRequest,headRefName",
+    "state,headRefOid,mergeStateStatus,statusCheckRollup,autoMergeRequest,headRefName",
   ]);
+  if (viewed.state === "MERGED" || viewed.state === "CLOSED")
+    return {
+      headSha: viewed.headRefOid,
+      state: viewed.state,
+      mergeStateStatus: viewed.mergeStateStatus,
+      statusCheckRollup: viewed.statusCheckRollup,
+      isInMergeQueue: false,
+      autoMergeEnabled: false,
+      openCodeScanningAlerts: [],
+      requiredChecks: [],
+      unresolvedReviewThreads: [],
+      changesRequestedBy: [],
+    };
   const [owner, name] = REPO_SLUG.split("/");
-  const held = ghJson<HeldBy>([
-    "api",
-    "graphql",
-    "-f",
-    `query=${HELD_BY_QUERY}`,
-    "-F",
-    `owner=${owner}`,
-    "-F",
-    `name=${name}`,
-    "-F",
-    `number=${pullRequest}`,
-    "--jq",
-    ".data.repository.pullRequest",
-  ]);
+  const readHeld = (cursor?: string): HeldBy =>
+    ghJson<HeldBy>([
+      "api",
+      "graphql",
+      "-f",
+      `query=${HELD_BY_QUERY}`,
+      "-F",
+      `owner=${owner}`,
+      "-F",
+      `name=${name}`,
+      "-F",
+      `number=${pullRequest}`,
+      ...(cursor ? ["-f", `cursor=${cursor}`] : []),
+      "--jq",
+      ".data.repository.pullRequest",
+    ]);
+  const held = readHeld();
   return {
+    headSha: viewed.headRefOid,
     state: viewed.state,
     mergeStateStatus: viewed.mergeStateStatus,
     statusCheckRollup: viewed.statusCheckRollup,
@@ -464,22 +506,22 @@ const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
     autoMergeEnabled: viewed.autoMergeRequest !== null,
     openCodeScanningAlerts: openCodeScanningAlerts(pullRequest),
     requiredChecks: checksMainRequires(),
-    unresolvedReviewThreads: held.reviewThreads.nodes.flatMap(
-      ({ id, isResolved, path, line, comments }) => {
-        const [first] = comments.nodes;
-        if (isResolved || !first || first.author?.login === CODE_SCANNING_LOGIN)
-          return [];
-        return [
-          {
-            id,
-            author: first.author?.login ?? "ghost",
-            byABot: first.author?.__typename === "Bot",
-            location: `${path}${line ? `:${line}` : ""}`,
-            body: first.body,
-            url: first.url,
-          },
-        ];
-      },
+    unresolvedReviewThreads: readReviewThreads(
+      held.reviewThreads,
+      (cursor) => readHeld(cursor).reviewThreads,
+      (id, cursor) =>
+        ghJson<GitHubPage<ReviewComment>>([
+          "api",
+          "graphql",
+          "-f",
+          "query=query($id:ID!,$cursor:String){node(id:$id){... on PullRequestReviewThread{comments(first:100,after:$cursor){nodes{author{login __typename} body url} pageInfo{hasNextPage endCursor}}}}}",
+          "-f",
+          `id=${id}`,
+          "-f",
+          `cursor=${cursor}`,
+          "--jq",
+          ".data.node.comments",
+        ]),
     ),
     changesRequestedBy: held.latestReviews.nodes
       .filter(
@@ -490,8 +532,6 @@ const snapshotOf = (pullRequest: number): PullRequestSnapshot => {
   };
 };
 
-const CODE_SCANNING_LOGIN = "github-advanced-security";
-
 interface Author {
   readonly login: string;
   readonly __typename: string;
@@ -499,21 +539,7 @@ interface Author {
 
 interface HeldBy {
   readonly isInMergeQueue: boolean;
-  readonly reviewThreads: {
-    readonly nodes: readonly {
-      readonly id: string;
-      readonly isResolved: boolean;
-      readonly path: string;
-      readonly line: number | null;
-      readonly comments: {
-        readonly nodes: readonly {
-          readonly author: Author | null;
-          readonly body: string;
-          readonly url: string;
-        }[];
-      };
-    }[];
-  };
+  readonly reviewThreads: GitHubPage<GitHubThread>;
   readonly latestReviews: {
     readonly nodes: readonly {
       readonly state: string;
@@ -522,14 +548,15 @@ interface HeldBy {
   };
 }
 
-const HELD_BY_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
+const HELD_BY_QUERY = `query($owner: String!, $name: String!, $number: Int!, $cursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
       isInMergeQueue
-      reviewThreads(first: 100) {
+      reviewThreads(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id isResolved path line
-          comments(first: 1) { nodes { author { login __typename } body url } }
+          comments(first: 100) { nodes { author { login __typename } body url } pageInfo { hasNextPage endCursor } }
         }
       }
       latestReviews(first: 50) { nodes { state author { login __typename } } }
@@ -537,8 +564,21 @@ const HELD_BY_QUERY = `query($owner: String!, $name: String!, $number: Int!) {
   }
 }`;
 
-export const resolveReviewThreads = (threadIds: readonly string[]): void => {
+export const resolveReviewThreads = (
+  threadIds: readonly string[],
+  headSha: string,
+): void => {
   for (const threadId of threadIds) {
+    gh([
+      "api",
+      "graphql",
+      "-f",
+      "query=mutation($id: ID!, $body: String!) { addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: $id, body: $body }) { comment { id } } }",
+      "-F",
+      `id=${threadId}`,
+      "-f",
+      `body=Addressed in ${headSha}. The local gates and independent final-commit review completed before this push.`,
+    ]);
     gh([
       "api",
       "graphql",
@@ -558,7 +598,9 @@ const openCodeScanningAlerts = (pullRequest: number): readonly string[] =>
     '[.[] | "\\(.rule.description) at \\(.most_recent_instance.location.path):\\(.most_recent_instance.location.start_line)"]',
   ]);
 
-const checksTheQueueFailed = (pullRequest: number): readonly FailingCheck[] => {
+export const mergeGroupFailures = (
+  pullRequest: number,
+): readonly FailingCheck[] => {
   const runs = ghJson<
     readonly { databaseId: number; headBranch: string; conclusion: string }[]
   >([
@@ -592,11 +634,6 @@ const checksTheQueueFailed = (pullRequest: number): readonly FailingCheck[] => {
   ]);
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT = 2;
-const SIGHTINGS_THAT_MEAN_A_REQUIRED_CHECK_NEVER_RUNS = 3;
-
 export const hasMerged = (pullRequest: number): boolean =>
   ghJson<{ state: string }>([
     "pr",
@@ -607,72 +644,6 @@ export const hasMerged = (pullRequest: number): boolean =>
     "--json",
     "state",
   ]).state === "MERGED";
-
-export const waitForMerge = async (
-  pullRequest: number,
-  {
-    pollEveryMs,
-    giveUpAfterMs,
-    onPoll,
-  }: {
-    pollEveryMs: number;
-    giveUpAfterMs: number;
-    onPoll?: (status: string) => void;
-  },
-): Promise<MergeOutcome> => {
-  const deadline = Date.now() + giveUpAfterMs;
-  let outOfTheQueueSightings = 0;
-  let missingCheckSightings = 0;
-
-  while (Date.now() < deadline) {
-    const snapshot = snapshotOf(pullRequest);
-    onPoll?.(`${snapshot.state}/${snapshot.mergeStateStatus}`);
-    const verdict = judgeQueuedPullRequest(snapshot);
-
-    if (verdict.status === "merged" || verdict.status === "failed")
-      return verdict;
-    missingCheckSightings =
-      verdict.status === "missing-required-checks"
-        ? missingCheckSightings + 1
-        : 0;
-    if (
-      verdict.status === "missing-required-checks" &&
-      missingCheckSightings >= SIGHTINGS_THAT_MEAN_A_REQUIRED_CHECK_NEVER_RUNS
-    ) {
-      return {
-        status: "failed",
-        reason: `main requires ${verdict.checks.join(", ")}, which never ran on it; the ruleset or the workflow that runs it needs a person`,
-        failingChecks: [],
-        needsAPerson: true,
-      };
-    }
-    if (verdict.status === "left-the-queue") {
-      outOfTheQueueSightings += 1;
-      if (outOfTheQueueSightings >= SIGHTINGS_THAT_MEAN_THE_QUEUE_DROPPED_IT) {
-        const failingChecks = checksTheQueueFailed(pullRequest);
-        return {
-          status: "failed",
-          reason: `the merge queue dropped it${
-            failingChecks.length
-              ? `, failing ${failingChecks.map(({ name }) => name).join(", ")} on the merge group`
-              : ""
-          }`,
-          failingChecks,
-          fromTheMergeGroup: true,
-        };
-      }
-    } else {
-      outOfTheQueueSightings = 0;
-    }
-    await sleep(pollEveryMs);
-  }
-
-  return {
-    status: "failed",
-    reason: `still queued after ${Math.round(giveUpAfterMs / 60_000)} minutes`,
-    failingChecks: [],
-  };
-};
 
 export const whyTheCheckoutIsBroken = (
   repoRoot: string = REPO_ROOT,
@@ -980,3 +951,23 @@ export const loopPullRequestsInFlight = (): readonly Queued[] => {
     })),
   );
 };
+
+export function pullRequestForBranch(
+  branch: string,
+): QueuedPullRequest | undefined {
+  const pullRequests = ghJson<QueuedPullRequest[]>([
+    "pr",
+    "list",
+    "-R",
+    REPO_SLUG,
+    "--head",
+    branch,
+    "--state",
+    "all",
+    "--limit",
+    "1",
+    "--json",
+    "number,url",
+  ]);
+  return pullRequests[0];
+}

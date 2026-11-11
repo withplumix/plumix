@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PhaseRecord } from "./telemetry.js";
 import {
+  collectSessionUsage,
   Journal,
   notionalCostOf,
   usageFromSessionTranscripts,
@@ -27,6 +28,12 @@ const transcriptContaining = (...lines: string[]) => {
   writeFileSync(path, lines.join("\n"));
   return path;
 };
+
+test("missing transcripts leave usage explicitly incomplete", () => {
+  const usage = collectSessionUsage(["/missing/session.jsonl"], new Map());
+  expect(usage.complete).toBe(false);
+  expect(usage.cursors).toEqual([]);
+});
 
 describe("usageFromSessionTranscripts", () => {
   test("sums every assistant message, not only the last one", () => {
@@ -191,6 +198,20 @@ describe("Journal.record with a gate run's output", () => {
     durationMs: 1,
     outcome: "fail",
   } as const;
+
+  test("forwards a completed phase to the ship journal with its evidence path", () => {
+    const phases: PhaseRecord[] = [];
+    const journal = new Journal(
+      mkdtempSync(join(tmpdir(), "journal-")),
+      (phase) => void phases.push(phase),
+    );
+
+    journal.record(gateRun, "test failed");
+
+    expect(phases).toEqual([
+      { ...gateRun, logFile: journal.logPath(gateRun.phase) },
+    ]);
+  });
 
   test("keeps every failed run's output in the phase log the record names", () => {
     const journal = new Journal(mkdtempSync(join(tmpdir(), "journal-")));

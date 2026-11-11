@@ -130,6 +130,23 @@ jobs:
 
       - run: pnpm test:unit
 
+  sandcastle:
+    name: Sandcastle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          turbo-cache: "false"
+      - run: pnpm --dir .sandcastle install --frozen-lockfile
+      - run: pnpm --dir .sandcastle typecheck
+      - run: pnpm --dir .sandcastle test
+      - run: pnpm --dir .sandcastle run ship --status
+      - run: pnpm --dir .sandcastle run ship --report
+
   smoke:
     name: Smoke (scaffold)
     runs-on: ubuntu-latest

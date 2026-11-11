@@ -4,7 +4,7 @@ import * as sandcastle from "@ai-hero/sandcastle";
 import type { Journal } from "./telemetry.js";
 import { say } from "./log.js";
 import { waitOutALimit } from "./outage.js";
-import { notionalCostOf, usageFromSessionTranscripts } from "./telemetry.js";
+import { collectSessionUsage, notionalCostOf } from "./telemetry.js";
 
 export const PROMPT_DIR = join(import.meta.dirname, "..", "prompts");
 
@@ -81,11 +81,20 @@ export const agentPhaseRunner =
     const clock = startClock();
     const logFile = journal.logPath(phase);
     let waitedMs = 0;
+    const waiting = async (work: () => Promise<unknown>): Promise<void> => {
+      const started = Date.now();
+      try {
+        await work();
+      } finally {
+        waitedMs += Date.now() - started;
+      }
+    };
 
     try {
       const result = await waitOutALimit(
-        () =>
-          retryALostGitConfigLock(
+        async () => {
+          if (journal.account) await waiting(journal.account.wait);
+          return retryALostGitConfigLock(
             () =>
               sandbox.run({
                 ...options,
@@ -94,12 +103,19 @@ export const agentPhaseRunner =
                 logging: { type: "file", path: logFile },
               }),
             sleep,
-          ),
+          );
+        },
         {
           now: () => new Date(),
-          pause: sleep,
+          pause: (ms) =>
+            waiting(() =>
+              journal.account ? journal.account.wait() : sleep(ms),
+            ),
           onWait: (lifts, waitMs) => {
-            waitedMs += waitMs;
+            journal.account?.defer(
+              Date.now() + waitMs,
+              "Claude account unavailable",
+            );
             say(
               `    ${phase} hit the session limit; waiting until ${lifts.toISOString()} to run it again`,
             );
@@ -109,7 +125,7 @@ export const agentPhaseRunner =
       const sessionFiles = result.iterations.flatMap(({ sessionFilePath }) =>
         sessionFilePath ? [sessionFilePath] : [],
       );
-      const usage = usageFromSessionTranscripts(
+      const measured = collectSessionUsage(
         sessionFiles,
         journal.linesAlreadyBilled,
       );
@@ -126,10 +142,16 @@ export const agentPhaseRunner =
         iterations: result.iterations.length,
         completionSignal: result.completionSignal,
         commits: result.commits.length,
-        usage,
-        notionalCostUsd: notionalCostOf(usage, model),
+        usage: measured.usage,
+        usageComplete: measured.complete,
+        usageCursors: measured.cursors,
+        notionalCostUsd: measured.complete
+          ? notionalCostOf(measured.usage, model)
+          : undefined,
         logFile,
         sessionFiles,
+        sessionId: result.iterations.at(-1)?.sessionId,
+        sessionFile: result.iterations.at(-1)?.sessionFilePath,
       });
       return result;
     } catch (error) {
@@ -139,8 +161,10 @@ export const agentPhaseRunner =
         model,
         effort,
         startedAt: clock.startedAt,
-        durationMs: clock.elapsedMs(),
+        durationMs: clock.elapsedMs() - waitedMs,
+        ...(waitedMs > 0 && { waitedMs }),
         outcome: "error",
+        usageComplete: false,
         detail: error instanceof Error ? error.message : String(error),
         logFile,
       });

@@ -7,6 +7,9 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
+import type { AccountGate } from "./account.js";
+import { detail } from "./log.js";
+
 interface ModelRatesPerMillionTokens {
   readonly input: number;
   readonly output: number;
@@ -59,12 +62,16 @@ export interface PhaseRecord {
   readonly completionSignal?: string;
   readonly commits?: number;
   readonly usage?: Usage;
+  readonly usageComplete?: boolean;
+  readonly usageCursors?: readonly (readonly [string, number])[];
   readonly notionalCostUsd?: number;
   readonly findings?: FindingTally;
   readonly command?: string;
   readonly exitCode?: number;
   readonly logFile?: string;
   readonly sessionFiles?: readonly string[];
+  readonly sessionId?: string;
+  readonly sessionFile?: string;
 }
 
 const NO_USAGE: Usage = {
@@ -131,11 +138,11 @@ const parseTranscriptLine = (line: string): unknown => {
   }
 };
 
-const readLines = (path: string): readonly string[] => {
+const readLines = (path: string): readonly string[] | null => {
   try {
     return readFileSync(path, "utf8").split("\n");
   } catch {
-    return [];
+    return null;
   }
 };
 
@@ -150,20 +157,27 @@ const subagentTranscriptsOf = (sessionPath: string): readonly string[] => {
   }
 };
 
-export const usageFromSessionTranscripts = (
+export const collectSessionUsage = (
   paths: readonly string[],
   linesAlreadyBilled: Map<string, number>,
-): Usage => {
+) => {
   let total = NO_USAGE;
+  let complete = paths.length > 0;
+  const cursors: [string, number][] = [];
   const transcripts = new Set(
     paths.flatMap((path) => [path, ...subagentTranscriptsOf(path)]),
   );
 
   for (const path of transcripts) {
     const lines = readLines(path);
+    if (!lines) {
+      complete = false;
+      continue;
+    }
     const unbilled = lines.slice(linesAlreadyBilled.get(path) ?? 0);
 
     for (const line of unbilled) {
+      if (line.trim() && parseTranscriptLine(line) === null) complete = false;
       const counts = assistantTokenCountsIn(parseTranscriptLine(line));
       if (!counts) continue;
       total = plus(total, {
@@ -174,10 +188,16 @@ export const usageFromSessionTranscripts = (
       });
     }
     linesAlreadyBilled.set(path, lines.length);
+    cursors.push([path, lines.length]);
   }
 
-  return total;
+  return { usage: total, complete, cursors };
 };
+
+export const usageFromSessionTranscripts = (
+  paths: readonly string[],
+  linesAlreadyBilled: Map<string, number>,
+): Usage => collectSessionUsage(paths, linesAlreadyBilled).usage;
 
 const asSeconds = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
 const asThousands = (n: number): string =>
@@ -255,15 +275,21 @@ let journalsOpenedInThisProcess = 0;
 export class Journal {
   readonly runId = `${new Date().toISOString().replace(/[:.]/g, "-")}-${(journalsOpenedInThisProcess += 1)}`;
   readonly dir: string;
-  readonly linesAlreadyBilled = new Map<string, number>();
 
   readonly #logDir: string;
   readonly #startedAtMs = Date.now();
   readonly #phases: PhaseRecord[] = [];
+  readonly #onRecord?: (phase: PhaseRecord) => void;
   #ticket?: { number: number; title: string };
   #branch?: string;
 
-  constructor(root: string) {
+  constructor(
+    root: string,
+    onRecord?: (phase: PhaseRecord) => void,
+    readonly account?: AccountGate,
+    readonly linesAlreadyBilled = new Map<string, number>(),
+  ) {
+    this.#onRecord = onRecord;
     this.dir = join(root, "runs", this.runId);
     this.#logDir = join(this.dir, "logs");
     mkdirSync(this.#logDir, { recursive: true });
@@ -293,6 +319,7 @@ export class Journal {
       phase = { ...phase, logFile };
     }
     this.#phases.push(phase);
+    this.#onRecord?.(phase);
     this.#persist("running");
 
     const cost =
@@ -300,7 +327,7 @@ export class Journal {
         ? ""
         : ` $${phase.notionalCostUsd.toFixed(3)}`;
     const note = phaseNote(phase);
-    console.log(
+    detail(
       `    ⤷ ${this.#saidBy}${phase.phase} ${phase.outcome} ${asSeconds(phase.durationMs)}${cost}${note ? ` ${note}` : ""}`,
     );
   }

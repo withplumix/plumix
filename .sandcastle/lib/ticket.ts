@@ -1,9 +1,11 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 
 import type { RunAgentPhase, Thinker } from "./agent.js";
 import type { Executor, Gate, GateFailure } from "./gates.js";
 import type { QueuedPullRequest, Ticket } from "./github.js";
+import type { ShipHistory } from "./ship-history.js";
 import type { Journal } from "./telemetry.js";
 import {
   agentPhaseRunner,
@@ -13,8 +15,10 @@ import {
   startClock,
   taggedBlock,
 } from "./agent.js";
+import { analyseBeforeSetup } from "./analysis.js";
 import { checkBrief } from "./brief-check.js";
 import { decideOnTheBranch } from "./decide.js";
+import { prepareDelivery } from "./delivery.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import { GATES, GATES_AFTER_A_RESOLVED_REBASE, runGates } from "./gates.js";
 import {
@@ -25,13 +29,15 @@ import {
   resetBranchToMain,
   syncRepoToMain,
 } from "./github.js";
-import { say } from "./log.js";
+import { detail as say } from "./log.js";
 import { surveyMutants } from "./mutation.js";
 import { MERGE_BASE } from "./repo.js";
+import { reviewableHead, reviewHead } from "./review-proof.js";
 import {
   AN_HOUR_IN_SECONDS,
   closePlumixSandbox,
-  createPlumixSandbox,
+  createUnbuiltSandbox,
+  SETUP_STEPS,
 } from "./sandbox.js";
 
 /**
@@ -256,7 +262,7 @@ export const reviewBranch = async (
   runAgentPhase: RunAgentPhase,
   journal: Pick<Journal, "record">,
   ticket: Ticket,
-  round: number,
+  round: number | string,
   pullRequestBody: string,
   mutation: string,
 ): Promise<Review | null> => {
@@ -542,29 +548,63 @@ export const shipTicket = async (
   ticket: Ticket,
   journal: Journal,
   nextAdr: string,
+  history: ShipHistory,
 ): Promise<ShipOutcome> => {
-  const branch = `feat/${ticket.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48)}-${ticket.number}`;
+  const prepared = await prepareDelivery(ticket, history, {
+    assign: ({ number }) => assignToSelf(number),
+    reset: resetBranchToMain,
+    open: (branch) => createUnbuiltSandbox(branch),
+    sessionExists: existsSync,
+  });
+  const { branch, sandbox } = prepared;
   journal.setTicket(ticket, branch);
   say(
     `\n=== #${ticket.number} ${ticket.title}\n=== branch ${branch}\n=== run ${journal.runId}\n`,
   );
 
-  assignToSelf(ticket.number);
-  resetBranchToMain(branch);
-  const sandbox = await createPlumixSandbox(branch);
   const runAgentPhase = agentPhaseRunner(sandbox, journal);
 
   try {
     say("\n--- check brief ---");
-    const brief = await checkBrief(runAgentPhase, ticket);
+    const brief = await analyseBeforeSetup({
+      analyse: async () => {
+        const result = await checkBrief(runAgentPhase, ticket);
+        if (result.next === "implement" && result.brief)
+          history.record({
+            type: "analysis.completed",
+            issue: ticket.number,
+            brief: result.brief,
+          });
+        return result;
+      },
+      setup: async () => {
+        const started = startClock();
+        const command = SETUP_STEPS.join(" && ");
+        const setup = await sandbox.exec(command);
+        journal.record(
+          {
+            phase: "setup",
+            kind: "gate",
+            command,
+            startedAt: started.startedAt,
+            durationMs: started.elapsedMs(),
+            outcome: setup.exitCode === 0 ? "ok" : "fail",
+            exitCode: setup.exitCode,
+          },
+          setup.stdout + setup.stderr,
+        );
+        if (setup.exitCode !== 0)
+          throw new Error(`Setup failed: ${setup.stdout}${setup.stderr}`);
+      },
+    });
     if (brief.next === "park")
       return { status: "blocked", reason: brief.reason, briefFails: true };
 
-    let guidance = "";
+    let guidance =
+      (brief.brief ? `Analyst handoff:\n${brief.brief}\n\n` : "") +
+      (prepared.resumed
+        ? "This delivery was interrupted. Inspect its existing commits, uncommitted changes and tests before continuing. Preserve that work; do not reset the branch or reimplement completed changes. Complete the remaining criteria and emit the PR description."
+        : "");
     let implemented: Awaited<ReturnType<RunAgentPhase>>;
     for (let unblocked = false; ; unblocked = true) {
       say(
@@ -582,7 +622,8 @@ export const shipTicket = async (
             NEXT_ADR: nextAdr,
             GUIDANCE: guidance,
           },
-          maxIterations: 40,
+          maxIterations: prepared.sessionId ? 1 : 40,
+          resumeSession: unblocked ? undefined : prepared.sessionId,
           idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
         },
       );
@@ -631,14 +672,18 @@ export const shipTicket = async (
     const reviewed = await reviewUntilClosed(
       {
         review: (pass, pullRequestBody) =>
-          reviewBranch(
-            runAgentPhase,
-            journal,
-            ticket,
-            pass,
-            pullRequestBody,
-            mutation,
-          ),
+          reviewHead(ticket.number, history, {
+            head: () => reviewableHead(sandbox),
+            review: () =>
+              reviewBranch(
+                runAgentPhase,
+                journal,
+                ticket,
+                pass,
+                pullRequestBody,
+                mutation,
+              ),
+          }),
         fixer,
         decide: (reason) => decideOnTheBranch(runAgentPhase, ticket, reason),
       },
@@ -686,12 +731,33 @@ export const shipTicket = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
+    const finalReview = await reviewHead(ticket.number, history, {
+      head: () => reviewableHead(sandbox),
+      review: async () =>
+        reviewBranch(
+          runAgentPhase,
+          journal,
+          ticket,
+          "publish",
+          pullRequestCopy.body,
+          await surveyMutants(sandbox),
+        ),
+    });
+    if (!finalReview || finalReview.specGaps.length > 0)
+      return {
+        status: "blocked",
+        reason: finalReview
+          ? `Final commit review: ${asGapList(finalReview.specGaps)}`
+          : "Final commit has no readable independent review",
+      };
     await pushBranch(branch, sandbox.worktreePath);
     const pullRequest = openPullRequest(
       branch,
       pullRequestCopy.title,
       pullRequestCopy.body,
     );
+
+    history.record({ type: "pr.tracked", ticket, pullRequest });
 
     queueForMerge(pullRequest.number);
     return { status: "queued", pullRequest };

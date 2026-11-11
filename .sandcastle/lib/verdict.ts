@@ -8,6 +8,7 @@ export type MergeOutcome =
   | { readonly status: "merged" }
   | {
       readonly status: "failed";
+      readonly headSha?: string;
       readonly reason: string;
       readonly failingChecks: readonly FailingCheck[];
       readonly conflicted?: boolean;
@@ -27,6 +28,7 @@ export interface ReviewThread {
 }
 
 export interface PullRequestSnapshot {
+  readonly headSha: string;
   readonly state: string;
   readonly mergeStateStatus: string;
   readonly statusCheckRollup: readonly {
@@ -63,6 +65,7 @@ export const judgeQueuedPullRequest = (
       status: "failed",
       reason: "pull request was closed without merging",
       failingChecks: [],
+      needsAPerson: true,
     };
   }
   if (pullRequest.mergeStateStatus === "DIRTY") {
@@ -89,6 +92,12 @@ export const judgeQueuedPullRequest = (
       status: "failed",
       reason: `failing checks: ${failingChecks.map(({ name }) => name).join(", ")}`,
       failingChecks,
+      ...(pullRequest.unresolvedReviewThreads.length > 0 && {
+        reviewThreads: pullRequest.unresolvedReviewThreads,
+      }),
+      ...(pullRequest.openCodeScanningAlerts.length > 0 && {
+        codeScanningAlerts: pullRequest.openCodeScanningAlerts,
+      }),
     };
   }
 
@@ -99,24 +108,21 @@ export const judgeQueuedPullRequest = (
 
   if (pullRequest.isInMergeQueue) return { status: "waiting" };
 
-  const ran = new Set(pullRequest.statusCheckRollup.map(({ name }) => name));
-  const neverRan = pullRequest.requiredChecks.filter(
-    (check) => !ran.has(check),
-  );
-  if (pullRequest.statusCheckRollup.length > 0 && neverRan.length > 0) {
-    return { status: "missing-required-checks", checks: neverRan };
+  if (pullRequest.unresolvedReviewThreads.length > 0) {
+    return {
+      status: "failed",
+      failingChecks: [],
+      reason: `unresolved review threads from ${[...new Set(pullRequest.unresolvedReviewThreads.map(({ author }) => author))].join(", ")}`,
+      reviewThreads: pullRequest.unresolvedReviewThreads,
+      ...(pullRequest.openCodeScanningAlerts.length > 0 && {
+        codeScanningAlerts: pullRequest.openCodeScanningAlerts,
+      }),
+    };
   }
-
-  const byPeople = pullRequest.unresolvedReviewThreads.filter(
-    ({ byABot }) => !byABot,
-  );
-  if (byPeople.length > 0 || pullRequest.changesRequestedBy.length > 0) {
+  if (pullRequest.changesRequestedBy.length > 0) {
     const who = [
       ...pullRequest.changesRequestedBy.map(
         (login) => `${login} requested changes`,
-      ),
-      ...byPeople.map(
-        ({ author, url }) => `${author} left an open thread: ${url}`,
       ),
     ];
     return {
@@ -136,14 +142,12 @@ export const judgeQueuedPullRequest = (
     };
   }
 
-  if (pullRequest.unresolvedReviewThreads.length > 0) {
-    return {
-      status: "failed",
-      reason: `unresolved review threads from ${[...new Set(pullRequest.unresolvedReviewThreads.map(({ author }) => author))].join(", ")}`,
-      failingChecks: [],
-      reviewThreads: pullRequest.unresolvedReviewThreads,
-    };
-  }
+  const ran = new Set(pullRequest.statusCheckRollup.map(({ name }) => name));
+  const neverRan = pullRequest.requiredChecks.filter(
+    (check) => !ran.has(check),
+  );
+  if (neverRan.length > 0)
+    return { status: "missing-required-checks", checks: neverRan };
 
   if (!pullRequest.isInMergeQueue && !pullRequest.autoMergeEnabled) {
     return { status: "left-the-queue" };

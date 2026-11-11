@@ -5,3 +5,5 @@ logs/
 worktrees/
 node_modules/
 runs/
+ship.lock
+ship.drain

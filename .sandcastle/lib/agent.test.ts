@@ -1,10 +1,48 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type { Sandbox } from "@ai-hero/sandcastle";
 import { describe, expect, test } from "vitest";
 
 import type { RunAgentPhase } from "./agent.js";
-import { readOrAskAgain, retryALostGitConfigLock } from "./agent.js";
+import type { PhaseRecord } from "./telemetry.js";
+import {
+  agentPhaseRunner,
+  readOrAskAgain,
+  retryALostGitConfigLock,
+} from "./agent.js";
+import { Journal } from "./telemetry.js";
 
 const LOST_THE_LOCK =
   'Command failed (exit 255): git config --global --add safe.directory "/home/agent/workspace"\nerror: could not lock config file /home/agent/.gitconfig: File exists';
+
+test("the owner session checkpoint is retained for restart recovery", async () => {
+  const root = mkdtempSync(join(tmpdir(), "ship-agent-"));
+  const phases: PhaseRecord[] = [];
+  const journal = new Journal(root, (phase) => void phases.push(phase));
+  const sandbox = {
+    run: async () => ({
+      iterations: [
+        { sessionId: "owner", sessionFilePath: "/sessions/owner.jsonl" },
+      ],
+      commits: [],
+    }),
+  } as unknown as Sandbox;
+  try {
+    await agentPhaseRunner(sandbox, journal)(
+      "implement",
+      { model: "claude-opus-5-5", effort: "medium" },
+      { prompt: "implement" },
+    );
+
+    expect(phases[0]).toMatchObject({
+      sessionId: "owner",
+      sessionFile: "/sessions/owner.jsonl",
+    });
+  } finally {
+    rmSync(root, { recursive: true });
+  }
+});
 
 const startingAfter = (failures: readonly string[]) => {
   let calls = 0;
