@@ -1,3 +1,4 @@
+import type { DefaultRole } from "plumix/auth";
 import type { Label } from "plumix/i18n";
 import type {
   AppContext,
@@ -5,6 +6,10 @@ import type {
   PluginDescriptor,
   TermTaxonomyLabels,
 } from "plumix/plugin";
+import {
+  POST_TYPE_CAPABILITY_ACTIONS,
+  TERM_TAXONOMY_CAPABILITY_ACTIONS,
+} from "plumix/auth";
 import { enqueuePurgeTags } from "plumix/db";
 import {
   definePlugin,
@@ -139,6 +144,20 @@ declare module "plumix" {
 
 const ADMIN_ENTRY_PATH = pluginAdminEntryPath("@plumix/plugin-menu");
 
+/**
+ * Core's generic procedures reach menus at `term:menu:manage`'s tier too. The
+ * actions come from core's list, so an action core adds later is covered.
+ */
+function editorsOnly<TAction extends string>(
+  actions: Readonly<Record<TAction, readonly DefaultRole[]>>,
+): Record<TAction, readonly DefaultRole[]> {
+  const grants = {} as Record<TAction, readonly DefaultRole[]>;
+  for (const action of Object.keys(actions) as TAction[]) {
+    grants[action] = ["editor"];
+  }
+  return grants;
+}
+
 export interface MenuPluginOptions {
   /**
    * Keyed by location id. The theme renders the slots; the consumer config
@@ -171,6 +190,7 @@ export function menu(
         isHierarchical: true,
         isPublic: false,
         capabilityType: "menu_item",
+        capabilities: editorsOnly(POST_TYPE_CAPABILITY_ACTIONS),
       });
 
       ctx.registerTermTaxonomy("menu", {
@@ -179,6 +199,7 @@ export function menu(
         isHierarchical: false,
         entryTypes: ["menu_item"],
         isPublic: false,
+        capabilities: editorsOnly(TERM_TAXONOMY_CAPABILITY_ACTIONS),
       });
 
       ctx.registerTemplateDep("menus", {

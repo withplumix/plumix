@@ -1,5 +1,9 @@
 import type { testSite } from "plumix/test";
 import {
+  POST_TYPE_CAPABILITY_ACTIONS,
+  TERM_TAXONOMY_CAPABILITY_ACTIONS,
+} from "plumix/auth";
+import {
   buildManifest,
   defineEvent,
   definePlugin,
@@ -48,6 +52,28 @@ describe("@plumix/plugin-menu", () => {
     expect(taxonomy?.isHierarchical).toBe(false);
     expect(taxonomy?.entryTypes).toEqual(["menu_item"]);
     expect(taxonomy?.registeredBy).toBe("menu");
+  });
+
+  test("grants every action on menu items and menus to editors alone", async () => {
+    const { registry } = await install();
+    const grants = Object.fromEntries(
+      [...registry.capabilities.values()]
+        .filter((capability) => capability.registeredBy === "menu")
+        .map((capability) => [capability.name, [...capability.grantTo].sort()]),
+    );
+
+    expect(grants).toEqual(
+      Object.fromEntries([
+        ...Object.keys(POST_TYPE_CAPABILITY_ACTIONS).map((action) => [
+          `entry:menu_item:${action}`,
+          ["admin", "editor"],
+        ]),
+        ...Object.keys(TERM_TAXONOMY_CAPABILITY_ACTIONS).map((action) => [
+          `term:menu:${action}`,
+          ["admin", "editor"],
+        ]),
+      ]),
+    );
   });
 
   test("registers the Menus admin page in the Appearance nav group", async () => {

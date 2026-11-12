@@ -23,7 +23,7 @@ What it registers:
 - Server functions, `getMenuForLocation` and `getMenuByName`, for code that resolves a menu outside a template.
 - Two filters, `menu.item` and `menu.tree`, and two events, `menu.saved` and `menu.deleted`.
 
-Every screen and procedure checks `term:menu:manage`, the `manage` capability the `menu` taxonomy mints. It maps to the editor role, so editors and admins can change the site's navigation.
+Every screen and procedure checks `term:menu:manage`, the `manage` capability the `menu` taxonomy mints. It maps to the editor role, so editors and admins can change the site's navigation. Every capability of `menu_item` and of the `menu` taxonomy maps to the editor role too, so core's generic entry and term procedures reach menus at the same tier.
 
 ## Quickstart
 
