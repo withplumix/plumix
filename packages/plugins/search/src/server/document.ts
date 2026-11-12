@@ -20,7 +20,7 @@ export function entryDocumentBody(
 ): string {
   const blocks = isEntryContent(entry.content) ? entry.content.blocks : [];
   return [
-    (entry.excerpt ?? "").trim(),
+    entryListingText(entry),
     extractBlockText(blocks, roster),
     extractMetaText(entry.meta, metaFields),
   ]
@@ -28,10 +28,17 @@ export function entryDocumentBody(
     .join("\n");
 }
 
+/** What a listing shows of an entry besides its title. */
+export function entryListingText(entry: {
+  readonly excerpt: string | null;
+}): string {
+  return (entry.excerpt ?? "").trim();
+}
+
 /**
- * Excludes unregistered types (revisions, autosaves). An access policy is
- * applied when a search runs, not here. Ignores `excludeFromSearch`: the admin
- * palette reads the same index.
+ * Excludes unregistered types (revisions, autosaves). Which entries a visitor
+ * may list is decided when a search runs, not here. Ignores
+ * `excludeFromSearch`: the admin palette reads the same index.
  */
 export function isIndexableEntryType(
   plugins: PluginRegistry,

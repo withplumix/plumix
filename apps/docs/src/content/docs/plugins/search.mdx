@@ -125,13 +125,13 @@ The page is not edge-cached, for the reason core leaves its own out: the query s
 
 ### Gated entries
 
-An entry type with an [`access` policy](/access/overview/) is indexed like any other type. Its policy is applied when a search runs, per entry and for the visitor searching, inside the same query that ranks the results. A page is never cut short by filtering, and `nextUrl` is there only when another page of results is:
+An entry type with an [`access` policy](/access/overview/) is indexed for an anonymous visitor: an entry whose policy holds its content back from one is indexed by its title and excerpt alone, never its body, whoever searches. Which entries a visitor may list is decided when a search runs, per entry and for the visitor searching, inside the same query that ranks the results. A page is never cut short by filtering, and `nextUrl` is there only when another page of results is:
 
 - A visitor with no session finds what an anonymous visitor may list. An entry whose policy redirects or hard-challenges that visitor is not a result.
 - A signed-in member finds the entries their policies let them list. That page is rendered for them alone and leaves as `private, no-store`.
-- An entry whose policy lists it but holds its content back, a soft `challenge`, is a teaser. A word anywhere in it finds it, its body included, but its snippet is its whole excerpt, unhighlighted, never the text around the match. A search can tell a visitor that a word is somewhere in a teaser's body, and not what surrounds it.
+- An entry whose policy lists it but holds its content back, a soft `challenge`, is a teaser. A word from its title or excerpt finds it, and nothing in its body does, for a member whose policy grants the body too. Its snippet is its whole excerpt, unhighlighted.
 
-Changing an entry's access choice takes effect on the next search, with no reindex.
+Changing an entry's access choice takes effect on the next search, and saving it re-indexes the entry, so its body enters or leaves the index with the choice. Changing what a policy answers an anonymous visitor reaches entries already indexed only through a [rebuild](#rebuilding-the-index).
 
 <Aside type="caution" title="Rebuild once after upgrading to 0.2">
   Before 0.2, an entry type under an access policy was never indexed. Entries
@@ -238,7 +238,7 @@ Term meta is not indexed either — a taxonomy has no such declaration.
 
 ## The admin command palette
 
-The palette's Content results are ranked out of the same index, so the entry an editor wants is near the top rather than merely the one edited most recently, and a word from the middle of a body finds it.
+The palette's Content results are ranked out of the same index, so the entry an editor wants is near the top rather than merely the one edited most recently, and a word from the middle of a body finds it. The index holds the body only of an entry an anonymous visitor may read, so a gated entry's body finds it in neither place.
 
 Nothing is configured. The plugin registers a search provider that answers ahead of core's, core's provider stays registered underneath, and providers sharing a group fill it between them: the ranked matches lead and core's title-and-excerpt matches fill whatever is left. That is the whole of the degrading story — no switch and no health check. Whatever the index cannot answer, core still does: an entry not yet projected, every type before the index exists, and a half-typed word, since the index matches whole terms and an editor mid-word has not typed one. The cost is that both queries run on every keystroke.
 
