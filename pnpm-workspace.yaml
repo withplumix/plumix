@@ -93,8 +93,8 @@ catalog:
   jsonc-parser: ^3.3.1
   prettier: ^3.9.10
   publint: ^0.3.25
-  radix-ui: ^1.6.7
-  react-hook-form: ^7.90.0
+  radix-ui: ^1.8.1
+  react-hook-form: ^7.91.0
   sharp: ^0.35.5
   sonner: ^2.0.8
   tailwind-merge: ^3.7.0
@@ -107,9 +107,9 @@ catalog:
 # `catalog:<name>` from consumer package.json files.
 catalogs:
   cloudflare:
-    "@cloudflare/vite-plugin": ^1.66.0
-    "@cloudflare/workers-types": ^5.20261026.1
-    wrangler: ^4.154.0
+    "@cloudflare/vite-plugin": ^1.67.0
+    "@cloudflare/workers-types": ^5.20261102.1
+    wrangler: ^4.156.1
   dnd-kit:
     "@dnd-kit/core": ^6.3.1
     "@dnd-kit/modifiers": ^9.0.0
@@ -120,12 +120,12 @@ catalogs:
     drizzle-orm: ^0.45.4
     drizzle-valibot: ^0.4.2
   lingui:
-    "@lingui/cli": ^6.9.1
-    "@lingui/conf": ^6.9.1
-    "@lingui/core": ^6.9.1
-    "@lingui/format-po": ^6.9.1
-    "@lingui/react": ^6.9.1
-    "@lingui/vite-plugin": ^6.9.1
+    "@lingui/cli": ^6.11.0
+    "@lingui/conf": ^6.11.0
+    "@lingui/core": ^6.11.0
+    "@lingui/format-po": ^6.11.0
+    "@lingui/react": ^6.11.0
+    "@lingui/vite-plugin": ^6.11.0
   orpc:
     "@orpc/client": ^1.16.1
     "@orpc/openapi": ^1.16.1
@@ -138,8 +138,8 @@ catalogs:
   react:
     "@types/react": ^19.3.0
     "@types/react-dom": ^19.3.0
-    react: ^19.3.0
-    react-dom: ^19.3.0
+    react: ^19.3.1
+    react-dom: ^19.3.1
   tailwind:
     "@tailwindcss/node": ^4.3.3
     "@tailwindcss/oxide": ^4.3.3
@@ -148,8 +148,8 @@ catalogs:
     "@tailwindcss/vite": ^4.3.3
     tailwindcss: ^4.3.3
   tanstack:
-    "@tanstack/react-query": ^5.105.0
-    "@tanstack/react-query-devtools": ^5.105.0
+    "@tanstack/react-query": ^5.105.2
+    "@tanstack/react-query-devtools": ^5.105.2
     "@tanstack/react-router": ^1.170.46
     "@tanstack/react-router-devtools": ^1.167.2
     "@tanstack/react-table": ^9.2.8
@@ -177,8 +177,8 @@ catalogs:
     "@tiptap/pm": ^3.32.0
     "@tiptap/react": ^3.32.0
   vite:
-    "@vitejs/plugin-react": ^6.1.2
-    vite: ^8.3.4
+    "@vitejs/plugin-react": ^6.2.1
+    vite: ^8.3.5
   vitest:
     "@vitest/coverage-v8": ^5.0.5
     vitest: ^5.0.5
