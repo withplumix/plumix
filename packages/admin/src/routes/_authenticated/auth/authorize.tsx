@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@plumix/admin-ui/alert";
 import type { ConsentClient, ConsentScope } from "./-consent-card.js";
 import { authorizeUrl } from "./-authorize-url.js";
 import { ConsentCard } from "./-consent-card.js";
+import { isHttpUrl } from "./-http-url.js";
 
 const param = v.optional(v.pipe(v.string(), v.maxLength(2048)));
 
@@ -108,7 +109,7 @@ function Consent({
   // Both answers end at the client: the server built the URL from the
   // client's verified redirect URI.
   const leave = ({ redirectTo }: { redirectTo: string }): void => {
-    window.location.assign(redirectTo);
+    if (isHttpUrl(redirectTo)) window.location.assign(redirectTo);
   };
   const approve = useMutation({
     mutationFn: () =>
