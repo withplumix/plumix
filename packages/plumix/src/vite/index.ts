@@ -2,8 +2,6 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cp, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, relative, resolve, sep } from "node:path";
-import type { SourceMapInput } from "@jridgewell/trace-mapping";
-import type { IncomingMessage } from "node:http";
 import type { Plugin, UserConfig } from "vite";
 import * as v from "valibot";
 import { mergeConfig } from "vite";
@@ -20,16 +18,9 @@ import {
   configuredSlotsOf,
   generateSchemaSource,
   injectManifestIntoHtml,
-  isTrustedDevHost,
   projectCoreCatalogLocales,
   unknownRoleGrants,
 } from "@plumix/core";
-import {
-  DEV_ERROR_CLIENT_ERRORS_ENDPOINT,
-  DEV_ERROR_SOURCE_ENDPOINT,
-  DEV_ERROR_STACK_ENDPOINT,
-  DEV_ERROR_TERMINAL_ENDPOINT,
-} from "@plumix/core/dev-client";
 
 import type { LoadConfigOptions } from "../cli/load-config.js";
 import type { BlockModuleRef } from "./block-module-resolver.js";
@@ -41,12 +32,7 @@ import { withAdminCatalogLocales } from "./admin-catalog-locales.js";
 import { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
 import { generateIslandsRendererEntrySource } from "./auth-method-clients-codegen.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
-import { handleDevErrorSourceRequest } from "./dev-error-source.js";
-import {
-  handleDevErrorStackRequest,
-  resolveClientStack,
-} from "./dev-error-stack.js";
-import { createTerminalForwarder } from "./dev-error-terminal.js";
+import { serveDevEndpoints } from "./dev-endpoints.js";
 import {
   collectEditorBlockModules,
   collectEditorShortcodeModules,
@@ -378,111 +364,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     configureServer(server) {
       // A Vite restart reuses this plugin object, and must stage afresh.
       prepared = undefined;
-      // The worker has no `fs`. Registered ahead of the @cloudflare/vite-plugin
-      // proxy, so the request never reaches the worker.
-      server.middlewares.use((req, res, next) => {
-        const rawUrl = req.url ?? "";
-        const isSourceRequest =
-          (req.method === "GET" || req.method === "HEAD") &&
-          (rawUrl === DEV_ERROR_SOURCE_ENDPOINT ||
-            rawUrl.startsWith(DEV_ERROR_SOURCE_ENDPOINT + "?"));
-        // Widest disclosure the dev server has — any file under the fs
-        // allowlist — so the loopback gate matters here most of all (#2007).
-        if (!isSourceRequest || !isTrustedDevHost(req.headers.host)) {
-          next();
-          return;
-        }
-        // Vite's own dev fs allowlist — spans the workspace root, so symlinked
-        // monorepo packages resolve too.
-        const allow = server.config.server.fs.allow;
-        void handleDevErrorSourceRequest(rawUrl, allow, {
-          readFile: (path) => readFile(path, "utf8"),
-        })
-          .then(({ status, body }) => {
-            res.statusCode = status;
-            if (body === null) {
-              res.end();
-              return;
-            }
-            res.setHeader("content-type", "application/json; charset=utf-8");
-            res.end(body);
-          })
-          .catch(() => {
-            res.statusCode = 500;
-            res.end();
-          });
-      });
-      // Shared by the two POST endpoints below: map a browser module URL to its
-      // dev transform sourcemap + file, so both surfaces resolve the same way.
-      const lookup = async (url: string) => {
-        const mod = await server.moduleGraph.getModuleByUrl(url);
-        if (!mod) return null;
-        // Vite's `SourceMap` is a valid encoded map at runtime; its type just
-        // diverges from trace-mapping's `SourceMapInput` (encoded vs decoded
-        // `mappings`). The resolver only reads it through `TraceMap`.
-        const map = (mod.transformResult?.map ?? null) as SourceMapInput | null;
-        return { map, file: mod.file };
-      };
-
-      // Register a dev-only endpoint that reads a JSON POST body and answers
-      // with JSON. Ordered ahead of the worker proxy (plumix precedes it), so
-      // these never reach the worker.
-      const usePostJson = (
-        endpoint: string,
-        handle: (body: string) => Promise<{ status: number; body?: string }>,
-      ): void => {
-        server.middlewares.use((req, res, next) => {
-          if (
-            req.method !== "POST" ||
-            (req.url ?? "") !== endpoint ||
-            !isTrustedDevHost(req.headers.host)
-          ) {
-            next();
-            return;
-          }
-          readBody(req)
-            .then(handle)
-            .then(({ status, body }) => {
-              res.statusCode = status;
-              res.setHeader("content-type", "application/json; charset=utf-8");
-              res.end(body ?? "{}");
-            })
-            .catch(() => {
-              res.statusCode = 500;
-              res.end();
-            });
-        });
-      };
-
-      // Only the dev server's per-module sourcemaps can map the browser's
-      // transformed positions.
-      usePostJson(DEV_ERROR_STACK_ENDPOINT, (body) =>
-        handleDevErrorStackRequest(body, { lookup }),
-      );
-
-      // One instance per dev session holds the collapse state.
-      const forwarder = createTerminalForwarder({
-        resolveStack: (stack) => resolveClientStack(stack, { lookup }),
-        print: (message) => server.config.logger.info(message),
-        root: server.config.root,
-      });
-      usePostJson(DEV_ERROR_TERMINAL_ENDPOINT, (body) =>
-        forwarder.handle(body),
-      );
-
-      server.middlewares.use((req, res, next) => {
-        if (
-          req.method !== "GET" ||
-          (req.url ?? "") !== DEV_ERROR_CLIENT_ERRORS_ENDPOINT ||
-          !isTrustedDevHost(req.headers.host)
-        ) {
-          next();
-          return;
-        }
-        res.statusCode = 200;
-        res.setHeader("content-type", "application/json; charset=utf-8");
-        res.end(JSON.stringify({ errors: forwarder.read() }));
-      });
+      serveDevEndpoints(server);
 
       // Outside the root, a workspace plugin's files need adding to the watch.
       void prepare((message) => server.config.logger.warn(message))
@@ -834,28 +716,6 @@ function satisfiesLoose(installed: string, range: string): boolean {
     return rMajor === iMajor && rMinor === iMinor;
   }
   return rMajor === iMajor;
-}
-
-/**
- * Bounded so a stray large POST to the dev server can't grow memory unchecked.
- */
-const MAX_DEV_ERROR_BODY_BYTES = 1024 * 1024;
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let bytes = 0;
-    req.on("data", (chunk: Buffer) => {
-      bytes += chunk.length;
-      if (bytes > MAX_DEV_ERROR_BODY_BYTES) {
-        req.destroy();
-        reject(new Error("dev-error request body too large"));
-        return;
-      }
-      chunks.push(chunk);
-    });
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    req.on("error", reject);
-  });
 }
 
 export { plumix as default };

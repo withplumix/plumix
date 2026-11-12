@@ -1,4 +1,4 @@
-import { isAbsolute, resolve, sep } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 
 // The worker has no `fs`, so the dev error page lazy-fetches each frame's
 // excerpt from this Node-side resolver.
@@ -18,6 +18,8 @@ export interface SourceExcerpt {
 
 export interface ResolveSourceDeps {
   readonly readFile: (path: string) => Promise<string>;
+  /** Whether the dev server would serve `path`, by its `server.fs` rules. */
+  readonly isServable: (path: string) => boolean;
 }
 
 const DEFAULT_RADIUS = 5;
@@ -46,24 +48,20 @@ export function sliceExcerpt(
 }
 
 /**
- * Returns `null` for a malformed request, an unreadable file, or a path outside
- * `allow`, the dev server's fs allowlist, so a crafted request can't exfiltrate
- * files.
+ * Returns `"denied"` for a file the dev server would not serve, and `null` for
+ * a malformed request or an unreadable file.
  */
 export async function resolveSourceExcerpt(
-  query: { file: string | null; line: number | null; allow: readonly string[] },
+  query: { file: string | null; line: number | null },
   deps: ResolveSourceDeps,
-): Promise<SourceExcerpt | null> {
-  const { file, line, allow } = query;
+): Promise<SourceExcerpt | "denied" | null> {
+  const { file, line } = query;
   if (file === null || line === null) return null;
   if (!Number.isInteger(line) || line < 1) return null;
   if (!isAbsolute(file)) return null;
 
   const resolved = resolve(file);
-  const permitted = allow.some(
-    (root) => resolved === root || resolved.startsWith(root + sep),
-  );
-  if (!permitted) return null;
+  if (!deps.isServable(resolved)) return "denied";
 
   let source: string;
   try {
@@ -76,7 +74,6 @@ export async function resolveSourceExcerpt(
 
 export async function handleDevErrorSourceRequest(
   rawUrl: string,
-  allow: readonly string[],
   deps: ResolveSourceDeps,
 ): Promise<{ readonly status: number; readonly body: string | null }> {
   const params = new URL(rawUrl, "http://localhost").searchParams;
@@ -85,10 +82,10 @@ export async function handleDevErrorSourceRequest(
     {
       file: params.get("file"),
       line: rawLine === null ? null : Number(rawLine),
-      allow,
     },
     deps,
   );
+  if (excerpt === "denied") return { status: 403, body: null };
   return excerpt === null
     ? { status: 404, body: null }
     : { status: 200, body: JSON.stringify(excerpt) };

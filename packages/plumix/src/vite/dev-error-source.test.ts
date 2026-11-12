@@ -41,14 +41,14 @@ describe("sliceExcerpt", () => {
 });
 
 describe("resolveSourceExcerpt", () => {
-  const allow = ["/proj"];
+  const isServable = (path: string) => path.startsWith("/proj/");
 
-  test("reads an allowed source file and returns its excerpt", async () => {
+  test("reads a servable source file and returns its excerpt", async () => {
     const readFile = vi.fn().mockResolvedValue(source);
 
     const excerpt = await resolveSourceExcerpt(
-      { file: "/proj/src/theme.tsx", line: 4, allow },
-      { readFile },
+      { file: "/proj/src/theme.tsx", line: 4 },
+      { readFile, isServable },
     );
 
     expect(readFile).toHaveBeenCalledWith("/proj/src/theme.tsx");
@@ -69,72 +69,41 @@ describe("resolveSourceExcerpt", () => {
     });
   });
 
-  test("allows a hoisted node_modules file under an allowed root", async () => {
-    const readFile = vi.fn().mockResolvedValue(source);
+  test("denies a file the dev server would not serve, and never reads it", async () => {
+    const readFile = vi.fn();
 
-    const excerpt = await resolveSourceExcerpt(
-      { file: "/proj/node_modules/.pnpm/react/index.js", line: 1, allow },
-      { readFile },
+    expect(
+      await resolveSourceExcerpt(
+        { file: "/etc/passwd", line: 1 },
+        { readFile, isServable },
+      ),
+    ).toBe("denied");
+    expect(readFile).not.toHaveBeenCalled();
+  });
+
+  test("asks about the path with any traversal resolved", async () => {
+    const asked = vi.fn(isServable);
+
+    await resolveSourceExcerpt(
+      { file: "/proj/../etc/passwd", line: 1 },
+      { readFile: vi.fn(), isServable: asked },
     );
 
-    expect(excerpt?.file).toBe("/proj/node_modules/.pnpm/react/index.js");
-  });
-
-  test("refuses a node_modules file outside every allowed root", async () => {
-    const readFile = vi.fn();
-
-    // Broadening to any `node_modules` tree would be an arbitrary-read vector;
-    // only trees under an allowed root (Vite's `fs.allow`) are readable.
-    expect(
-      await resolveSourceExcerpt(
-        { file: "/other/node_modules/.pnpm/react/index.js", line: 1, allow },
-        { readFile },
-      ),
-    ).toBeNull();
-    expect(readFile).not.toHaveBeenCalled();
-  });
-
-  test("refuses a file outside the root and never reads it", async () => {
-    const readFile = vi.fn();
-
-    expect(
-      await resolveSourceExcerpt(
-        { file: "/etc/passwd", line: 1, allow },
-        {
-          readFile,
-        },
-      ),
-    ).toBeNull();
-    expect(readFile).not.toHaveBeenCalled();
-  });
-
-  test("refuses a path that escapes the root via traversal", async () => {
-    const readFile = vi.fn();
-
-    expect(
-      await resolveSourceExcerpt(
-        { file: "/proj/../etc/passwd", line: 1, allow },
-        { readFile },
-      ),
-    ).toBeNull();
-    expect(readFile).not.toHaveBeenCalled();
+    expect(asked).toHaveBeenCalledWith("/etc/passwd");
   });
 
   test("returns null for missing or malformed query params", async () => {
     const readFile = vi.fn();
-    const deps = { readFile };
+    const deps = { readFile, isServable };
 
     expect(
-      await resolveSourceExcerpt({ file: null, line: 4, allow }, deps),
+      await resolveSourceExcerpt({ file: null, line: 4 }, deps),
     ).toBeNull();
     expect(
-      await resolveSourceExcerpt(
-        { file: "/proj/a.ts", line: null, allow },
-        deps,
-      ),
+      await resolveSourceExcerpt({ file: "/proj/a.ts", line: null }, deps),
     ).toBeNull();
     expect(
-      await resolveSourceExcerpt({ file: "/proj/a.ts", line: 0, allow }, deps),
+      await resolveSourceExcerpt({ file: "/proj/a.ts", line: 0 }, deps),
     ).toBeNull();
     expect(readFile).not.toHaveBeenCalled();
   });
@@ -144,25 +113,22 @@ describe("resolveSourceExcerpt", () => {
 
     expect(
       await resolveSourceExcerpt(
-        { file: "/proj/gone.ts", line: 1, allow },
-        {
-          readFile,
-        },
+        { file: "/proj/gone.ts", line: 1 },
+        { readFile, isServable },
       ),
     ).toBeNull();
   });
 });
 
 describe("handleDevErrorSourceRequest", () => {
-  const allow = ["/proj"];
+  const isServable = (path: string) => path.startsWith("/proj/");
 
   test("parses the query and returns the excerpt as a JSON body", async () => {
     const readFile = vi.fn().mockResolvedValue("a\nb\nc");
 
     const result = await handleDevErrorSourceRequest(
       "/@plumix-dev-error-source?file=%2Fproj%2Fa.ts&line=2",
-      allow,
-      { readFile },
+      { readFile, isServable },
     );
 
     expect(readFile).toHaveBeenCalledWith("/proj/a.ts");
@@ -174,11 +140,19 @@ describe("handleDevErrorSourceRequest", () => {
     });
   });
 
-  test("returns a 404 with no body for a request that can't be resolved", async () => {
+  test("returns a 403 with no body for a file the dev server would not serve", async () => {
     const result = await handleDevErrorSourceRequest(
       "/@plumix-dev-error-source?file=%2Fetc%2Fpasswd&line=1",
-      allow,
-      { readFile: vi.fn() },
+      { readFile: vi.fn(), isServable },
+    );
+
+    expect(result).toEqual({ status: 403, body: null });
+  });
+
+  test("returns a 404 with no body for a file that can't be read", async () => {
+    const result = await handleDevErrorSourceRequest(
+      "/@plumix-dev-error-source?file=%2Fproj%2Fgone.ts&line=1",
+      { readFile: vi.fn().mockRejectedValue(new Error("ENOENT")), isServable },
     );
 
     expect(result).toEqual({ status: 404, body: null });
