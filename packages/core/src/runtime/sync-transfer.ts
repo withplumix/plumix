@@ -14,17 +14,17 @@ import { jsonResponse, methodNotAllowed } from "./contract/http.js";
 import { authorizeSyncOperator } from "./sync-operator.js";
 
 /** The sync routes that move a site's data, each with the method it takes. */
-const ACTIONS = {
+export const SYNC_TRANSFER_ACTIONS = {
   heads: "GET",
   export: "GET",
   import: "POST",
   snapshot: "POST",
 } as const;
 
-export type SyncTransferAction = keyof typeof ACTIONS;
+export type SyncTransferAction = keyof typeof SYNC_TRANSFER_ACTIONS;
 
 export function isSyncTransferAction(name: string): name is SyncTransferAction {
-  return Object.hasOwn(ACTIONS, name);
+  return Object.hasOwn(SYNC_TRANSFER_ACTIONS, name);
 }
 
 /** Every owner's tracking table, which is all the site can name a head by. */
@@ -163,7 +163,7 @@ export async function handleSyncTransfer(
   ctx: AppContext,
   action: SyncTransferAction,
 ): Promise<Response> {
-  const method = ACTIONS[action];
+  const method = SYNC_TRANSFER_ACTIONS[action];
   if (ctx.request.method !== method) return methodNotAllowed([method]);
   const authed = await authorizeSyncOperator(ctx);
   if (authed instanceof Response) return authed;

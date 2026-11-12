@@ -69,7 +69,7 @@ migrate`.
   `sync:after` listener and then `cdn.purgeAll`, attempts each step whatever
   the others did, and reports every failure instead of throwing. A remote end
   reaches it through `POST /_plumix/api/v1/system/sync/settle`, which needs an
-  API token whose user holds `settings:manage`.
+  API token with no scopes whose user holds `settings:manage`.
 - **The other routes sit beside settle.** `GET …/sync/heads`, `GET …/sync/export`,
   `POST …/sync/import` and `POST …/sync/snapshot` answer under the same gate on
   every runtime, and with 501 where the database slot has no `openSync`, which
