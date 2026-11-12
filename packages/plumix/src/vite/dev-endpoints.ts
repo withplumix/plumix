@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { SourceMapInput } from "@jridgewell/trace-mapping";
-import type { IncomingMessage } from "node:http";
+import type { IncomingHttpHeaders, IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
 import { isFileLoadingAllowed, normalizePath } from "vite";
 
@@ -94,7 +94,7 @@ export function createDevEndpoints(server: ViteDevServer): DevEndpoint[] {
 /**
  * Registers every {@link createDevEndpoints} endpoint. Called ahead of the
  * @cloudflare/vite-plugin proxy, so these requests never reach the worker, and
- * each answers only a loopback host (#2007).
+ * each answers only a loopback host (#2007) on its own origin.
  */
 export function serveDevEndpoints(server: ViteDevServer): void {
   for (const endpoint of createDevEndpoints(server)) {
@@ -110,12 +110,22 @@ export function serveDevEndpoints(server: ViteDevServer): void {
         next();
         return;
       }
+      // Vite's CORS middleware ran first; the dev client is same-origin.
+      res.removeHeader("access-control-allow-origin");
+      if (!isSameOriginDevRequest(req.headers)) {
+        res.statusCode = 403;
+        res.end();
+        return;
+      }
+      if (endpoint.method === "POST" && !isJson(req.headers["content-type"])) {
+        res.statusCode = 415;
+        res.end();
+        return;
+      }
       const body = endpoint.method === "POST" ? readBody(req) : "";
       void Promise.resolve(body)
         .then((text) => endpoint.handle(url, text))
         .then((answer) => {
-          // Vite's CORS middleware ran first; the dev client is same-origin.
-          res.removeHeader("access-control-allow-origin");
           res.statusCode = answer.status;
           if (answer.body === null) {
             res.end();
@@ -130,6 +140,30 @@ export function serveDevEndpoints(server: ViteDevServer): void {
         });
     });
   }
+}
+
+/**
+ * Any page the developer has open can send these a request, so it must come
+ * from the dev server's own origin, not only to its loopback host.
+ */
+function isSameOriginDevRequest(headers: IncomingHttpHeaders): boolean {
+  const { host, origin } = headers;
+  if (origin !== undefined) {
+    return URL.canParse(origin) && new URL(origin).host === host?.toLowerCase();
+  }
+  // A no-cors GET carries no `Origin`. A request with neither header comes
+  // from outside a browser.
+  const site = headers["sec-fetch-site"];
+  return site === undefined || site === "same-origin" || site === "none";
+}
+
+/**
+ * Another origin can send this type only as a CORS request, which carries an
+ * `Origin`.
+ */
+function isJson(contentType: string | undefined): boolean {
+  const type = contentType?.split(";", 1)[0]?.trim().toLowerCase();
+  return type === "application/json";
 }
 
 /**

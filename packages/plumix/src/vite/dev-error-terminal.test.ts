@@ -258,6 +258,31 @@ describe("createTerminalForwarder", () => {
     expect(d.lines).toEqual(["[browser] <Ev il> boom [2Jwiped"]);
   });
 
+  test("strips control characters from a frame the stack names", async () => {
+    // A frame the module graph doesn't know keeps the path from the client's
+    // stack.
+    const d = deps([
+      frame({
+        file: "/proj/src/a\u001b[0mb\u007fé.js",
+        functionName: "f\u009bn\u009f",
+      }),
+    ]);
+    const forwarder = createTerminalForwarder(d);
+
+    await forwarder.handle(
+      body([
+        { kind: "exception", level: "error", message: "boom", stack: "s" },
+      ]),
+    );
+
+    expect(d.lines).toEqual([
+      ["[browser] boom", "    at f n  (src/a [0mb é.js:14:20)"].join("\n"),
+    ]);
+    expect(forwarder.read()[0]?.stack).toEqual([
+      frame({ file: "/proj/src/a [0mb é.js", functionName: "f n " }),
+    ]);
+  });
+
   test("skips entries that don't look like a forwarded log", async () => {
     const d = deps([]);
     const forwarder = createTerminalForwarder(d);
