@@ -93,6 +93,8 @@ const NO_AUTH_METHODS: AuthMethodsSummary = Object.freeze({
 
 export interface CreateAppContextArgs<TSchema extends Record<string, unknown>> {
   readonly db: Db<TSchema>;
+  /** `db` when omitted. */
+  readonly credentialDb?: Db<TSchema>;
   readonly env: PlumixEnv;
   readonly request: Request;
   readonly config: PlumixConfig;
@@ -247,6 +249,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
   let collector: RequestTelemetryCollector | undefined;
   const base: AppContextBase<TSchema> = {
     db: args.db,
+    credentialDb: args.credentialDb ?? args.db,
     env: args.env,
     request: args.request,
     config: args.config,

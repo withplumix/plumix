@@ -279,6 +279,52 @@ describe("createPlumixHandler — fetch", () => {
     expect(seenIsAuthenticated).toBe(false);
   });
 
+  test("an authenticator reads through the request's credential database, not its read database", async () => {
+    const readDb = { name: "read" };
+    const credentialDb = { name: "credential" };
+    const seen: unknown[] = [];
+    const guarded = definePlugin("guarded", {
+      setup: (ctx) => {
+        ctx.registerRoute({
+          method: "GET",
+          path: "/me",
+          auth: "authenticated",
+          handler: () => new Response("ok"),
+        });
+      },
+    });
+    const handler = await handlerFor({
+      plugins: [guarded],
+      database: {
+        kind: "scoped",
+        connect: () => ({ db: {} }),
+        connectRequest: () => ({
+          db: readDb,
+          credentialDb,
+          commit: (response) => response,
+        }),
+      },
+      auth: auth({
+        passkey: stubAuth.passkey,
+        authenticator: {
+          authenticate: (_request, db) => {
+            seen.push(db);
+            return Promise.resolve(null);
+          },
+        },
+      }),
+    });
+
+    await handler.fetch(
+      new Request("https://cms.example/_plumix/guarded/me", {
+        headers: { authorization: "Bearer pl_pat_x" },
+      }),
+      { env: {} },
+    );
+
+    expect(seen).toEqual([credentialDb]);
+  });
+
   test("a bearer-only request is still classified unauthenticated", async () => {
     let seenIsAuthenticated: boolean | undefined;
     const handler = await handlerFor({

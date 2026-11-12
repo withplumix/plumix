@@ -42,9 +42,13 @@ export function authenticateTraced(
   authenticator: RequestAuthenticator,
 ): Promise<AuthResult | null> {
   return ctx.telemetry.span("auth", async (s) => {
-    const result = await authenticator.authenticate(ctx.request, ctx.db, {
-      startingUserMeta: startingMeta(listUserMetaFields(ctx.plugins)),
-    });
+    const result = await authenticator.authenticate(
+      ctx.request,
+      ctx.credentialDb,
+      {
+        startingUserMeta: startingMeta(listUserMetaFields(ctx.plugins)),
+      },
+    );
     s.set("auth.authenticated", result !== null);
     if (result) s.set("auth.user.id", result.user.id);
     return result;

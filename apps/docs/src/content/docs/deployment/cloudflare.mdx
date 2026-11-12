@@ -146,7 +146,7 @@ The `session` option decides how reads are routed, and it takes three values.
 
 `"disabled"` is the default. Every read and write goes to the primary database, so a read always sees the write that preceded it.
 
-`"auto"` turns on the D1 Sessions API. Writes go to the primary. A read from a request carrying a Plumix session cookie resumes the caller's prior bookmark when one is present and well formed, so a signed-in editor never reads behind their own write. Anonymous reads go to the nearest replica.
+`"auto"` turns on the D1 Sessions API. Writes go to the primary. A read from a request carrying a Plumix session cookie resumes the caller's prior bookmark when one is present and well formed, so a signed-in editor never reads behind their own write. Anonymous reads go to the nearest replica. Sessions and API tokens are always checked against the primary, whatever the request's method or bookmark.
 
 `"primary-first"` uses the Sessions API but defaults to the primary, so you get the bookmark machinery without nearest-replica routing.
 
