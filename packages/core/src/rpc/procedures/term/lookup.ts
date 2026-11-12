@@ -1,5 +1,3 @@
-import type { SQL } from "drizzle-orm";
-
 import type { TermFieldScope } from "../../../plugin/fields/term.js";
 import type {
   LookupAdapter,
@@ -9,6 +7,7 @@ import type {
 import { and, inArray, like, or } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { buildTermArchiveUrls } from "../../../route/permalink.js";
+import { canReadTermTaxonomy } from "../../../terms/read-service.js";
 import { LookupScopeError } from "../lookup.errors.js";
 
 const DEFAULT_LIST_LIMIT = 20;
@@ -38,7 +37,12 @@ export const termLookupAdapter = {
   kind: "term",
 
   async list(ctx, options) {
-    const conditions = scopeConditions(options.scope);
+    // A caller-supplied scope names taxonomies but doesn't admit them.
+    const taxonomies = scopeTaxonomies(options.scope).filter(
+      (taxonomy) => ctx.user === null || canReadTermTaxonomy(ctx, taxonomy),
+    );
+    if (taxonomies.length === 0) return [];
+    const conditions = [inArray(terms.taxonomy, taxonomies)];
     let limit: number;
     if (options.ids !== undefined) {
       // Invalid ids drop silently and read as orphans. The limit follows the id
@@ -77,8 +81,10 @@ export const termLookupAdapter = {
       .map((id) => parseTermId(id))
       .filter((id): id is number => id !== null);
     if (numericIds.length === 0) return [];
-    const conditions = scopeConditions(options.scope);
-    conditions.push(inArray(terms.id, numericIds));
+    const conditions = [
+      inArray(terms.taxonomy, scopeTaxonomies(options.scope)),
+      inArray(terms.id, numericIds),
+    ];
     const rows = await ctx.db
       .select(TERM_ROW_COLUMNS)
       .from(terms)
@@ -96,15 +102,13 @@ function parseTermId(id: string): number | null {
   return Number.isSafeInteger(parsed) ? parsed : null;
 }
 
-function scopeConditions(scope: TermFieldScope | undefined): SQL[] {
-  // See `entry/lookup.ts` for the same security note: enforcing the
-  // taxonomy filter at runtime guards against wire-side callers that
-  // omit it and would otherwise enumerate every term across every
-  // taxonomy.
+function scopeTaxonomies(scope: TermFieldScope | undefined): string[] {
+  // Checked at runtime because a wire caller could omit it and enumerate
+  // every term of every taxonomy.
   if (!scope?.termTaxonomies || scope.termTaxonomies.length === 0) {
     throw LookupScopeError.termTaxonomiesRequired();
   }
-  return [inArray(terms.taxonomy, scope.termTaxonomies as string[])];
+  return [...scope.termTaxonomies];
 }
 
 function clampLimit(requested: number | undefined): number {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { entryCapability } from "../../src/access/contract/capability.js";
+import { ENTRY_STATUSES } from "../../src/db/schema/entries.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { photoLookupAdapter } from "../../src/test/photo-lookup.js";
 import { testSite } from "../../src/test/site.js";
@@ -149,4 +150,167 @@ describe("a lookup gated on an entry type's capability", () => {
       data: { capability: "entry:post:edit_any" },
     });
   });
+});
+
+/**
+ * A public and a private entry type, a taxonomy only editors read, and a
+ * plugin kind gated on a capability.
+ */
+const catalog = definePlugin("catalog", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryType("note", { label: "Notes" });
+    ctx.registerTermTaxonomy("category", { label: "Categories" });
+    ctx.registerTermTaxonomy("tag", { label: "Tags" });
+    ctx.registerTermTaxonomy("desk", {
+      label: "Desks",
+      capabilities: { read: ["editor"] },
+    });
+    ctx.registerLookupAdapter({
+      kind: "photo",
+      adapter: photoLookupAdapter,
+      capability: entryCapability("post", "edit_any"),
+    });
+  },
+});
+
+const catalogSite = await testSite({ plugins: [catalog] });
+
+/** Calls a procedure over the wire; `null` when it refuses the caller. */
+type Rpc = (path: string, input: unknown) => Promise<unknown>;
+
+function rpcOver(
+  visit: typeof catalogSite.visit,
+  headers: Record<string, string> = {},
+): Rpc {
+  return async (path, input) => {
+    const page = await visit(`/_plumix/rpc/${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify({ json: input }),
+    });
+    return page.status === 200
+      ? (JSON.parse(page.body) as { json: unknown }).json
+      : null;
+  };
+}
+
+const callers = [
+  {
+    caller: "a visitor",
+    rpcFor: () => Promise.resolve(rpcOver(catalogSite.visit)),
+  },
+  {
+    caller: "a member",
+    rpcFor: () =>
+      Promise.resolve(rpcOver(catalogSite.actingAs("member").visit)),
+  },
+  {
+    caller: "an admin's token scoped to tags",
+    rpcFor: async () => {
+      const admin = await catalogSite.factory.admin.create();
+      const { secret } = await catalogSite.factory.apiToken.create({
+        userId: admin.id,
+        scopes: ["term:tag:read"],
+      });
+      return rpcOver(catalogSite.visit, { authorization: `Bearer ${secret}` });
+    },
+  },
+] as const;
+
+function idsOf(rows: unknown): string[] {
+  return Array.isArray(rows)
+    ? rows.map((row: { readonly id: number | string }) => String(row.id))
+    : [];
+}
+
+/** One slice of an ungated kind, and what its list procedure shows of it. */
+interface Slice {
+  readonly slice: string;
+  readonly kind: string;
+  readonly scope: Record<string, unknown>;
+  readonly seed: () => Promise<unknown>;
+  readonly listed: (rpc: Rpc) => Promise<string[]>;
+}
+
+const registry = catalogSite.context.plugins;
+
+const slicesByKind: Record<string, () => Slice[]> = {
+  term: () =>
+    [...registry.termTaxonomies.keys()].map((taxonomy) => ({
+      slice: `${taxonomy} terms`,
+      kind: "term",
+      scope: { termTaxonomies: [taxonomy] },
+      seed: () => catalogSite.factory.term.create({ taxonomy }),
+      listed: async (rpc) =>
+        idsOf(await rpc("term/list", { taxonomy, limit: 200 })),
+    })),
+  entry: () =>
+    [...registry.entryTypes.keys()].map((type) => ({
+      slice: `${type} entries`,
+      kind: "entry",
+      scope: { entryTypes: [type] },
+      seed: () =>
+        Promise.all([
+          catalogSite.factory.entry.create({ type, status: "published" }),
+          catalogSite.factory.entry.create({ type, status: "draft" }),
+        ]),
+      // Per status, since one the caller can't read empties a mixed list.
+      listed: async (rpc) =>
+        (
+          await Promise.all(
+            ENTRY_STATUSES.map((status) =>
+              rpc("entry/list", { type, status, limit: 100 }),
+            ),
+          )
+        ).flatMap(idsOf),
+    })),
+};
+
+const adapters = [...registry.lookupAdapters.values()];
+const ungatedKinds = adapters
+  .filter((registered) => registered.capability === null)
+  .map((registered) => registered.kind);
+const slices = ungatedKinds.flatMap((kind) => slicesByKind[kind]?.() ?? []);
+const gated = adapters.flatMap(({ kind, capability }) =>
+  capability === null ? [] : [{ kind, capability }],
+);
+
+describe("a lookup and its kind's list procedure", () => {
+  test("cover every ungated kind registered", () => {
+    expect(ungatedKinds.sort()).toEqual(Object.keys(slicesByKind).sort());
+  });
+
+  test.each(
+    callers.flatMap((caller) => slices.map((s) => ({ ...caller, ...s }))),
+  )(
+    "offer $caller no $slice the list procedure refuses",
+    async ({ rpcFor, kind, scope, seed, listed }) => {
+      await seed();
+      const rpc = await rpcFor();
+
+      const looked = (await rpc("lookup/list", {
+        kind,
+        scope,
+        limit: 100,
+      })) as {
+        readonly items: unknown;
+      } | null;
+
+      expect(await listed(rpc)).toEqual(
+        expect.arrayContaining(idsOf(looked?.items)),
+      );
+    },
+  );
+
+  test.each(
+    callers.flatMap((caller) => gated.map((g) => ({ ...caller, ...g }))),
+  )(
+    "refuse $caller the $kind lookup, gated on a capability it lacks",
+    async ({ rpcFor, kind }) => {
+      const rpc = await rpcFor();
+
+      expect(await rpc("lookup/list", { kind })).toBeNull();
+    },
+  );
 });

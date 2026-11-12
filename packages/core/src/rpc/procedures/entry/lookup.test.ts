@@ -32,7 +32,10 @@ const pooledPagesSite = await testSite({
   ],
 });
 
-/** A public, nestable `page` and a `ledger` that is never rendered. */
+/**
+ * A public, nestable `page`, a `ledger` that is never rendered, and a public
+ * `memo` only editors read.
+ */
 const pagesSite = await testSite({
   plugins: [
     definePlugin("pages", {
@@ -43,6 +46,11 @@ const pagesSite = await testSite({
           isHierarchical: true,
         });
         ctx.registerEntryType("ledger", { label: "Ledgers", isPublic: false });
+        ctx.registerEntryType("memo", {
+          label: "Memos",
+          isPublic: true,
+          capabilities: { read: ["editor"] },
+        });
       },
     }),
   ],
@@ -435,6 +443,23 @@ describe("entryLookupAdapter.list and the viewer", () => {
     });
 
     expect(rows.map((row) => row.id)).toEqual([String(live.id)]);
+  });
+
+  test("offers a signed-in caller who may not read a public type none of its entries", async () => {
+    const admin = await pagesSite.factory.admin.create();
+    const member = await pagesSite.factory.member.create();
+    await pagesSite.factory.entry.create({
+      type: "memo",
+      status: "published",
+      authorId: admin.id,
+    });
+
+    const rows = await entryLookupAdapter.list(
+      pagesSite.actingAs(member).context,
+      { scope: { entryTypes: ["memo"] }, limit: 100 },
+    );
+
+    expect(rows).toEqual([]);
   });
 
   test("joins two viewer rules with OR without losing the scope filter", async () => {

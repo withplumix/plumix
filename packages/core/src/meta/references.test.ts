@@ -9,12 +9,14 @@ import type {
 } from "../plugin/manifest.js";
 import type { DispatcherHarness } from "../test/dispatcher.js";
 import type { PhotoReference } from "../test/photo-lookup.js";
+import { deriveTermTaxonomyCapabilities } from "../access/contract/rbac.js";
 import { withUser } from "../auth/with-user.js";
 import { declaredPageTags } from "../cdn/contract/page-tags.js";
 import { eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { readEntryType } from "../entries/read-service.js";
 import { createPluginRegistry } from "../plugin/manifest.js";
+import { toRegisteredTermTaxonomy } from "../plugin/registry.js";
 import { fireEntryPublished } from "../rpc/procedures/entry/lifecycle.js";
 import { publishDueScheduledEntries } from "../rpc/procedures/entry/publish-scheduled.js";
 import { registerCoreLookupAdapters } from "../rpc/procedures/lookup-adapters.js";
@@ -592,6 +594,16 @@ function registryWithTermListRef(
 ) {
   const registry: MutablePluginRegistry = createPluginRegistry();
   registerCoreLookupAdapters(registry);
+  // The term lookup admits only taxonomies the caller can read.
+  for (const name of ["category", "tag"]) {
+    registry.termTaxonomies.set(
+      name,
+      toRegisteredTermTaxonomy(name, { label: name }, "test"),
+    );
+    for (const cap of deriveTermTaxonomyCapabilities(name, {})) {
+      registry.capabilities.set(cap.name, { ...cap, registeredBy: "test" });
+    }
+  }
   const fullField = {
     key: "tags",
     label: "Tags",

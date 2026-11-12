@@ -29,9 +29,8 @@ export function registerCoreLookupAdapters(
   registry.lookupAdapters.set("term", {
     kind: "term",
     adapter: termLookupAdapter,
-    // Term names + slugs are public (`term:<taxonomy>:read` is on the
-    // member baseline); per-taxonomy scoping is enforced inside
-    // the adapter via `inArray(terms.taxonomy, …)`.
+    // Ungated like `term.list`; the adapter checks read on each taxonomy
+    // the scope names.
     capability: null,
     registeredBy: null,
   });
