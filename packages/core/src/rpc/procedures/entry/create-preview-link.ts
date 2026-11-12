@@ -1,21 +1,22 @@
 import { createPreviewToken } from "../../../auth/preview-token.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
-import { canReadEntry } from "../../../entries/visibility.js";
+import { canEditEntry } from "../../../entries/editability.js";
 import { buildEntryPermalink } from "../../../route/permalink.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryCreatePreviewLinkInputSchema } from "./schemas.js";
 
 /**
- * Gated by `canReadEntry`, so only someone who can already see the draft can
- * hand it out. 404, not 403, to avoid leaking which rows exist.
+ * Gated by `canEditEntry`: a preview is an editing tool, and only an editor
+ * of the entry may see its unpublished state. 404, not 403, to avoid leaking
+ * which rows exist.
  */
 export const createPreviewLink = base
   .use(authenticated)
   .input(entryCreatePreviewLinkInputSchema)
   .handler(async ({ input, context, errors }) => {
     const entry = await loadAuthoredEntry(context.db, input.id);
-    if (!entry || !(await canReadEntry(context, entry))) {
+    if (!entry || !canEditEntry(context, entry)) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
 
