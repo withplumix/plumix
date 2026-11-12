@@ -35,8 +35,9 @@ export async function listTerms(
   if (!ctx.plugins.termTaxonomies.has(input.taxonomy)) {
     throw TermReadError.taxonomyNotFound(input.taxonomy);
   }
-  const readCap = spellTermCapability(input.taxonomy, "read");
-  if (!ctx.auth.can(readCap)) throw TermReadError.forbidden(readCap);
+  if (!canReadTermTaxonomy(ctx, input.taxonomy)) {
+    throw TermReadError.forbidden(spellTermCapability(input.taxonomy, "read"));
+  }
 
   const conditions = [eq(terms.taxonomy, input.taxonomy)];
   if (input.parentId === null) {
@@ -68,6 +69,14 @@ export async function getTerm(
 ): Promise<WithResolvedMeta<Term>> {
   const row = await findReadableTerm(ctx, input);
   return { ...row, meta: await resolveTermMeta(ctx, row.taxonomy, row.meta) };
+}
+
+/** Whether the caller may read a taxonomy's terms, token scopes included. */
+export function canReadTermTaxonomy(
+  ctx: Pick<AppContext, "auth">,
+  taxonomy: string,
+): boolean {
+  return ctx.auth.can(spellTermCapability(taxonomy, "read"));
 }
 
 /**

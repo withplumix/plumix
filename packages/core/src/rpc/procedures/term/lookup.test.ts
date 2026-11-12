@@ -16,6 +16,14 @@ const taxonomies = definePlugin("taxonomies", {
       entryTypes: ["post"],
       isHierarchical: true,
     });
+    ctx.registerTermTaxonomy("internal", {
+      label: "Internal",
+      isPublic: false,
+    });
+    ctx.registerTermTaxonomy("desk", {
+      label: "Desks",
+      capabilities: { read: ["editor"] },
+    });
   },
 });
 
@@ -126,6 +134,30 @@ describe("termLookupAdapter", () => {
     await expect(
       termLookupAdapter.list(site.context, { scope: { termTaxonomies: [] } }),
     ).rejects.toThrow(/termTaxonomies is required/);
+  });
+
+  test("answers a caller with no principal from every taxonomy the scope names", async () => {
+    // Public nav resolves menu targets through this adapter with no principal.
+    await site.factory.category.create({ name: "Open" });
+    await site.factory.term.create({ taxonomy: "desk", name: "Staff" });
+
+    const rows = await termLookupAdapter.list(site.context, {
+      scope: { termTaxonomies: ["category", "desk"] },
+    });
+
+    expect(rows.map((r) => r.label)).toEqual(["Open", "Staff"]);
+  });
+
+  test("leaves out a taxonomy the caller may not read", async () => {
+    const member = await site.factory.user.create({ role: "member" });
+    await site.factory.category.create({ name: "Open" });
+    await site.factory.term.create({ taxonomy: "desk", name: "Closed" });
+
+    const rows = await termLookupAdapter.list(site.actingAs(member).context, {
+      scope: { termTaxonomies: ["category", "desk"] },
+    });
+
+    expect(rows.map((r) => r.label)).toEqual(["Open"]);
   });
 
   test("list() searches by name", async () => {

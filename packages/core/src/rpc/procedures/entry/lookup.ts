@@ -185,6 +185,7 @@ async function visibleTypeRows(
 ): Promise<SQL | undefined> {
   const readable = await readableEntryRows(ctx, type);
   if (readable !== null) return readable;
+  if (ctx.user !== null) return undefined;
   if (!ctx.plugins.entryTypes.get(type)?.isPublic) return undefined;
   return referenceableEntryRows(ctx, type);
 }
