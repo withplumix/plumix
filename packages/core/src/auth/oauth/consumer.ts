@@ -21,6 +21,7 @@ interface BuildAuthorizeUrlInput {
 interface BuiltAuthorizeUrl {
   readonly url: string;
   readonly state: string;
+  readonly browserNonce: string;
 }
 
 export async function buildAuthorizeUrl(
@@ -31,7 +32,7 @@ export async function buildAuthorizeUrl(
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await computeS256Challenge(codeVerifier);
 
-  const { state } = await issueOAuthState(input.db, {
+  const { state, browserNonce } = await issueOAuthState(input.db, {
     provider: input.providerKey,
     codeVerifier,
     // Undefined is dropped from the persisted JSON payload, so an admin-
@@ -49,7 +50,7 @@ export async function buildAuthorizeUrl(
   url.searchParams.set("code_challenge_method", "S256");
   provider.decorateAuthorizeUrl?.(url);
 
-  return { url: url.toString(), state };
+  return { url: url.toString(), state, browserNonce };
 }
 
 interface ExchangeAndFetchInput {
