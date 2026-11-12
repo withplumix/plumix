@@ -1,8 +1,7 @@
-import type { BatchItem } from "drizzle-orm/batch";
-
 import type { Db } from "../context/app-context.js";
 import type { JsonValue } from "../json.js";
 import type { SettingsRow } from "../template-deps-core.js";
+import { runBatch } from "../db/batch.js";
 import { ConflictError } from "../db/concurrency.js";
 import {
   and,
@@ -108,17 +107,6 @@ export async function bumpSettingsGroup(db: Db, group: string): Promise<void> {
   }
 }
 
-type Batchable = Db & {
-  batch(
-    items: readonly [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-  ): Promise<readonly object[]>;
-};
-
-/** D1 and libSQL send a batch in one round trip; the sync drivers have none. */
-function canBatch(db: Db): db is Batchable {
-  return "batch" in db && typeof db.batch === "function";
-}
-
 /** One row per statement and the deletes chunked, under D1's parameter cap. */
 export async function writeSettingsKeys(
   db: Db,
@@ -144,11 +132,7 @@ export async function writeSettingsKeys(
   ];
   const [first, ...rest] = statements;
   if (!first) return;
-  if (canBatch(db)) {
-    await db.batch([first, ...rest]);
-    return;
-  }
-  for (const statement of statements) await statement;
+  await runBatch(db, [first, ...rest]);
 }
 
 /** A row binds its group, key and value, so a statement's rows stay under D1's cap. */

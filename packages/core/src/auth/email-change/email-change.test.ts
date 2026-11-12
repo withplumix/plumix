@@ -1,12 +1,17 @@
 import { describe, expect, test } from "vitest";
 
+import type { AuthTokenType } from "../../db/schema/auth_tokens.js";
 import type { MailSender } from "../../mail/contract/registry.js";
 import { and, eq } from "../../db/index.js";
-import { authTokens } from "../../db/schema/auth_tokens.js";
+import { AUTH_TOKEN_TYPES, authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
 import { fakeMail } from "../../test/mail-fake.js";
 import { testSite } from "../../test/site.js";
+import { validateInviteToken } from "../invite.js";
+import { requestMagicLink } from "../magic-link/request.js";
+import { consumeMagicLinkToken } from "../magic-link/verify.js";
+import { consumeChallenge } from "../passkey/challenges.js";
 import { createSession } from "../sessions.js";
 import { hashToken } from "../tokens.js";
 import {
@@ -213,6 +218,32 @@ describe("verifyEmailChange", () => {
     expect(tokenRow).toBeUndefined();
   });
 
+  test("a magic link mailed to the old address no longer signs in", async () => {
+    const { db } = site.context;
+    const user = await site.factory.user.create({
+      email: "alice@old.example",
+    });
+    await requestMagicLink(db, {
+      email: "alice@old.example",
+      origin: ORIGIN,
+      basePath: "/",
+      mail: site.context.mail,
+    });
+    const [link] = site.mail.sent("magicLink");
+    const magicToken = new URL(link?.props.url ?? "").searchParams.get("token");
+    const { token } = await requestEmailChange(db, {
+      userId: user.id,
+      newEmail: "alice@new.example",
+      origin: ORIGIN,
+      mail: site.context.mail,
+    });
+    await verifyEmailChange(db, token);
+
+    await expect(
+      consumeMagicLinkToken(db, magicToken ?? ""),
+    ).rejects.toMatchObject({ code: "token_invalid" });
+  });
+
   test("returns token_invalid for an unknown token", async () => {
     const { db } = site.context;
     await expect(
@@ -291,6 +322,69 @@ describe("verifyEmailChange", () => {
       code: "account_disabled",
     });
   });
+});
+
+type Redeem = (rawToken: string) => Promise<boolean>;
+
+/**
+ * How each type is redeemed when it signs its holder in or enrols a
+ * credential, or why it does neither.
+ */
+const redeemers: Record<AuthTokenType, Redeem | string> = {
+  magic_link: (raw) =>
+    consumeMagicLinkToken(site.context.db, raw).then(
+      () => true,
+      () => false,
+    ),
+  invite: (raw) =>
+    validateInviteToken(site.context.db, raw).then(
+      () => true,
+      () => false,
+    ),
+  webauthn_challenge: async (raw) =>
+    (await consumeChallenge(site.context.db, raw)) !== null,
+  email_verification: "consumed by the email change itself",
+  oauth_state: "bound to no user",
+  preview_link: "reveals one entry's draft and signs no one in",
+};
+
+const signInRedeemers = AUTH_TOKEN_TYPES.flatMap((type) => {
+  const redeem = redeemers[type];
+  return typeof redeem === "function" ? [[type, redeem] as const] : [];
+});
+
+describe("verifyEmailChange revokes the user's sign-in tokens", () => {
+  test.each(signInRedeemers)(
+    "a %s issued before the change is refused after it",
+    async (type, redeem) => {
+      const { db } = site.context;
+      const user = await site.factory.user.create({
+        email: "alice@old.example",
+      });
+      // Carries every field the invite and the passkey challenge read.
+      const issue = () =>
+        site.factory.authToken.create({
+          type,
+          userId: user.id,
+          email: user.email,
+          role: "member",
+          payload: { ceremony: "invite" },
+        });
+      const redeemedEarly = await issue();
+      const held = await issue();
+      expect(await redeem(redeemedEarly.token)).toBe(true);
+
+      const { token } = await requestEmailChange(db, {
+        userId: user.id,
+        newEmail: "alice@new.example",
+        origin: ORIGIN,
+        mail: site.context.mail,
+      });
+      await verifyEmailChange(db, token);
+
+      expect(await redeem(held.token)).toBe(false);
+    },
+  );
 });
 
 describe("cancelEmailChange", () => {
