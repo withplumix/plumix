@@ -562,15 +562,15 @@ sequenceDiagram
   B->>RE: GET /_plumix/auth/oauth/github/start
   RE->>D: Request with its context
   D->>M: Routes to the declared method
-  M->>DB: Stores a single-use state, hashed, with the PKCE verifier
-  M-->>D: Redirect to the provider with the state and PKCE challenge
-  D-->>B: The redirect
+  M->>DB: Stores a single-use state, hashed, with the PKCE verifier and a nonce's hash
+  M-->>D: Set-Cookie plumix_oauth_state with the nonce, then a redirect to the provider with the state and PKCE challenge
+  D-->>B: The cookie and the redirect
   B->>O: Signs in and consents
   O-->>B: Redirect back with a code and the state
   B->>RE: GET the callback
   RE->>D: Request with its context
   D->>M: Routes the callback
-  M->>DB: Consumes the state, so it can't be replayed
+  M->>DB: Consumes the state, so it can't be replayed, and refuses it unless the cookie's nonce matches
   M->>O: Exchanges the code and verifier for the email and whether it is verified [OAuth 2.0]
   M->>K: proveIdentity with the provider account and email
   K->>K: Finds the linked account, else matches by email and refuses an unverified one

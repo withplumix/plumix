@@ -31,26 +31,56 @@ describe("oauth state store", () => {
 
   test("consume returns the payload and deletes the row (single-use)", async () => {
     const db = await createTestDb();
+    const { state, browserNonce } = await issueOAuthState(db, {
+      provider: "google",
+      codeVerifier: "abc",
+    });
+
+    const first = await consumeOAuthState(db, state, browserNonce);
+    expect(first).toEqual({ provider: "google", codeVerifier: "abc" });
+
+    const replay = await consumeOAuthState(db, state, browserNonce);
+    expect(replay).toBeNull();
+  });
+
+  test("consume rejects another browser's nonce and still deletes the row", async () => {
+    const db = await createTestDb();
     const { state } = await issueOAuthState(db, {
       provider: "google",
       codeVerifier: "abc",
     });
 
-    const first = await consumeOAuthState(db, state);
-    expect(first).toEqual({ provider: "google", codeVerifier: "abc" });
+    expect(await consumeOAuthState(db, state, "another-nonce")).toBeNull();
+    const row = await db.query.authTokens.findFirst({
+      where: eq(authTokens.hash, await hashToken(state)),
+    });
+    expect(row).toBeUndefined();
+  });
 
-    const replay = await consumeOAuthState(db, state);
-    expect(replay).toBeNull();
+  test("persists the nonce's hash, never the raw value", async () => {
+    const db = await createTestDb();
+    const { state, browserNonce } = await issueOAuthState(db, {
+      provider: "github",
+      codeVerifier: "v",
+    });
+
+    const row = await db.query.authTokens.findFirst({
+      where: eq(authTokens.hash, await hashToken(state)),
+    });
+    expect(row?.payload).toMatchObject({
+      browserNonceHash: await hashToken(browserNonce),
+    });
+    expect(JSON.stringify(row?.payload)).not.toContain(browserNonce);
   });
 
   test("round-trips a redirectTo through the payload", async () => {
     const db = await createTestDb();
-    const { state } = await issueOAuthState(db, {
+    const { state, browserNonce } = await issueOAuthState(db, {
       provider: "github",
       codeVerifier: "v",
       redirectTo: "/account/saved",
     });
-    expect(await consumeOAuthState(db, state)).toEqual({
+    expect(await consumeOAuthState(db, state, browserNonce)).toEqual({
       provider: "github",
       codeVerifier: "v",
       redirectTo: "/account/saved",
@@ -59,30 +89,30 @@ describe("oauth state store", () => {
 
   test("omits redirectTo from the payload when none was issued", async () => {
     const db = await createTestDb();
-    const { state } = await issueOAuthState(db, {
+    const { state, browserNonce } = await issueOAuthState(db, {
       provider: "github",
       codeVerifier: "v",
     });
-    const consumed = await consumeOAuthState(db, state);
+    const consumed = await consumeOAuthState(db, state, browserNonce);
     expect(consumed).not.toHaveProperty("redirectTo");
   });
 
   test("consume rejects an unknown state without throwing", async () => {
     const db = await createTestDb();
     expect(
-      await consumeOAuthState(db, "definitely-not-a-real-token"),
+      await consumeOAuthState(db, "definitely-not-a-real-token", "nonce"),
     ).toBeNull();
   });
 
   test("consume rejects an expired state and removes the row", async () => {
     const db = await createTestDb();
-    const { state } = await issueOAuthState(
+    const { state, browserNonce } = await issueOAuthState(
       db,
       { provider: "github", codeVerifier: "v" },
       -1, // already expired
     );
 
-    expect(await consumeOAuthState(db, state)).toBeNull();
+    expect(await consumeOAuthState(db, state, browserNonce)).toBeNull();
     const hash = await hashToken(state);
     const row = await db.query.authTokens.findFirst({
       where: eq(authTokens.hash, hash),
@@ -103,7 +133,7 @@ describe("oauth state store", () => {
       role: "member",
       expiresAt: new Date(Date.now() + 60_000),
     });
-    expect(await consumeOAuthState(db, raw)).toBeNull();
+    expect(await consumeOAuthState(db, raw, "nonce")).toBeNull();
     const row = await db.query.authTokens.findFirst({
       where: eq(authTokens.hash, hash),
     });

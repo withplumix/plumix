@@ -63,19 +63,33 @@ const withThemeLoginUnderBasePath = await testSite({
  */
 const navigation = { headers: { "x-plumix-request": "" } };
 
-/** The state a started sign-in left, as the provider sends it back. */
+interface Browser {
+  readonly headers: Record<string, string>;
+}
+
+/** A browser holding a sign-in's cookie, which the callback reads first. */
+function browserWith(nonce: string): Browser {
+  return {
+    headers: { ...navigation.headers, cookie: `plumix_oauth_state=${nonce}` },
+  };
+}
+
+/**
+ * The state a started sign-in left, as the provider sends it back, and the
+ * browser that started it.
+ */
 async function stateFor(
   on: typeof site,
   provider: "github" | "google",
   codeVerifier: string,
   redirectTo?: string,
-): Promise<string> {
-  const { state } = await issueOAuthState(on.context.db, {
+): Promise<{ state: string; browser: Browser }> {
+  const { state, browserNonce } = await issueOAuthState(on.context.db, {
     provider,
     codeVerifier,
     redirectTo,
   });
-  return state;
+  return { state, browser: browserWith(browserNonce) };
 }
 
 function githubAnswers(
@@ -133,7 +147,7 @@ describe("an oauth callback with a bad state", () => {
   test("is refused when the state is unknown", async () => {
     const page = await site.visit(
       "/_plumix/auth/oauth/github/callback?code=abc&state=nope",
-      navigation,
+      browserWith("some-nonce"),
     );
 
     expect(page.status).toBe(302);
@@ -141,11 +155,11 @@ describe("an oauth callback with a bad state", () => {
   });
 
   test("is refused when the state was issued for another provider", async () => {
-    const state = await stateFor(site, "google", "verifier");
+    const { state, browser } = await stateFor(site, "google", "verifier");
 
     const page = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -154,15 +168,55 @@ describe("an oauth callback with a bad state", () => {
 
   test("is refused, with no provider call, when the code is oversized", async () => {
     await site.factory.admin.create();
-    const state = await stateFor(site, "github", "v-oversize");
+    const { state, browser } = await stateFor(site, "github", "v-oversize");
 
     const page = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=${"x".repeat(8192)}&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.headers.get("location")).toContain("oauth_error=state_invalid");
     site.fetch.assertNotFetched("*");
+  });
+});
+
+describe("the cookie a started sign-in left", () => {
+  test("is cleared when the sign-in finishes", async () => {
+    await site.factory.member.create({ email: "alice@example.com" });
+    const { state, browser } = await stateFor(site, "github", "v-clear");
+    githubAnswers(
+      site,
+      {
+        id: 9004,
+        login: "alice",
+        name: "Alice",
+        email: "alice@example.com",
+        avatar_url: null,
+      },
+      [{ email: "alice@example.com", primary: true, verified: true }],
+    );
+
+    const page = await site.visit(
+      `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
+      browser,
+    );
+
+    expect(page.headers.get("set-cookie")).toContain("plumix_session=");
+    expect(page.headers.get("set-cookie")).toContain(
+      "plumix_oauth_state=; Path=/_plumix/auth/oauth/github; Max-Age=0",
+    );
+  });
+
+  test("is cleared when the sign-in is refused", async () => {
+    const page = await site.visit(
+      "/_plumix/auth/oauth/github/callback?code=abc&state=nope",
+      browserWith("some-nonce"),
+    );
+
+    expect(page.headers.get("location")).toContain("oauth_error=state_expired");
+    expect(page.headers.get("set-cookie")).toContain(
+      "plumix_oauth_state=; Path=/_plumix/auth/oauth/github; Max-Age=0",
+    );
   });
 });
 
@@ -179,15 +233,15 @@ describe("a provider's error on the callback", () => {
 
   test("consumes the state, so it can't be replayed", async () => {
     await site.factory.admin.create();
-    const state = await stateFor(site, "github", "v-canceled");
+    const { state, browser } = await stateFor(site, "github", "v-canceled");
     await site.visit(
       `/_plumix/auth/oauth/github/callback?error=access_denied&state=${state}`,
-      navigation,
+      browser,
     );
 
     const replay = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(replay.headers.get("location")).toContain(
@@ -199,7 +253,11 @@ describe("a provider's error on the callback", () => {
 describe("exchanging the code", () => {
   test("sends the client secret in Basic auth, never in the body", async () => {
     await withMemberDomain.factory.admin.create();
-    const state = await stateFor(withMemberDomain, "github", "v-basic");
+    const { state, browser } = await stateFor(
+      withMemberDomain,
+      "github",
+      "v-basic",
+    );
     githubAnswers(
       withMemberDomain,
       { id: 1, login: "x", name: null, email: null, avatar_url: null },
@@ -208,7 +266,7 @@ describe("exchanging the code", () => {
 
     await withMemberDomain.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     // client_secret stays out of the body, and so out of server access logs
@@ -231,7 +289,7 @@ describe("exchanging the code", () => {
 
   test("lands on the login page when the provider refuses it", async () => {
     await site.factory.admin.create();
-    const state = await stateFor(site, "github", "v-x");
+    const { state, browser } = await stateFor(site, "github", "v-x");
     site.fetch.route(
       "POST",
       "https://github.com/login/oauth/access_token",
@@ -240,7 +298,7 @@ describe("exchanging the code", () => {
 
     const page = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -251,7 +309,7 @@ describe("exchanging the code", () => {
 
   test("consumes the state even when the provider refuses it", async () => {
     await site.factory.admin.create();
-    const state = await stateFor(site, "github", "v-y");
+    const { state, browser } = await stateFor(site, "github", "v-y");
     site.fetch.route(
       "POST",
       "https://github.com/login/oauth/access_token",
@@ -259,12 +317,12 @@ describe("exchanging the code", () => {
     );
     await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     const replay = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(replay.headers.get("location")).toContain(
@@ -279,7 +337,7 @@ describe("signing in an existing user", () => {
     const alice = await site.factory.editor.create({
       email: "alice@example.com",
     });
-    const state = await stateFor(site, "github", "v-1");
+    const { state, browser } = await stateFor(site, "github", "v-1");
     githubAnswers(
       site,
       {
@@ -294,7 +352,7 @@ describe("signing in an existing user", () => {
 
     const page = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -319,7 +377,12 @@ describe("signing in an existing user", () => {
 
   test("returns them to a safe redirectTo carried in the state", async () => {
     await site.factory.member.create({ email: "alice@example.com" });
-    const state = await stateFor(site, "github", "v-rt", "/account/saved");
+    const { state, browser } = await stateFor(
+      site,
+      "github",
+      "v-rt",
+      "/account/saved",
+    );
     githubAnswers(
       site,
       {
@@ -334,7 +397,7 @@ describe("signing in an existing user", () => {
 
     const page = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -346,7 +409,12 @@ describe("signing in an existing user", () => {
   // become a navigation target, so the callback checks it again.
   test("lands them on the site root when the stored redirectTo is unsafe", async () => {
     await site.factory.member.create({ email: "alice@example.com" });
-    const state = await stateFor(site, "github", "v-rt2", "https://evil.com");
+    const { state, browser } = await stateFor(
+      site,
+      "github",
+      "v-rt2",
+      "https://evil.com",
+    );
     githubAnswers(
       site,
       {
@@ -361,7 +429,7 @@ describe("signing in an existing user", () => {
 
     const page = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -391,9 +459,11 @@ describe("signing in an existing user", () => {
       [{ email: "reader@example.com", primary: true, verified: true }],
     );
 
+    const cookie = (start.headers.get("set-cookie") ?? "").split(";")[0] ?? "";
+
     const callback = await site.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state ?? ""}`,
-      navigation,
+      { headers: { ...navigation.headers, cookie } },
     );
 
     expect(callback.status).toBe(302);
@@ -405,7 +475,11 @@ describe("signing in an existing user", () => {
 describe("signing up through oauth", () => {
   test("gives a listed domain's newcomer that domain's role", async () => {
     await withAuthorDomain.factory.admin.create();
-    const state = await stateFor(withAuthorDomain, "google", "v-2");
+    const { state, browser } = await stateFor(
+      withAuthorDomain,
+      "google",
+      "v-2",
+    );
     googleAnswers(withAuthorDomain, {
       sub: "google-42",
       email: "newcomer@example.com",
@@ -416,7 +490,7 @@ describe("signing up through oauth", () => {
 
     const page = await withAuthorDomain.visit(
       `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -432,7 +506,11 @@ describe("signing up through oauth", () => {
 
   test("stores the provider's name and avatar on the new user", async () => {
     await withAuthorDomain.factory.admin.create();
-    const state = await stateFor(withAuthorDomain, "google", "v-profile");
+    const { state, browser } = await stateFor(
+      withAuthorDomain,
+      "google",
+      "v-profile",
+    );
     googleAnswers(withAuthorDomain, {
       sub: "google-42",
       email: "newcomer@example.com",
@@ -443,7 +521,7 @@ describe("signing up through oauth", () => {
 
     await withAuthorDomain.visit(
       `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     const created = await withAuthorDomain.context.db.query.users.findFirst({
@@ -459,7 +537,11 @@ describe("signing up through oauth", () => {
   // self-signup creates the user at "member".
   test("gives an unlisted email the self-signup role", async () => {
     await withSelfSignup.factory.admin.create();
-    const state = await stateFor(withSelfSignup, "google", "v-self");
+    const { state, browser } = await stateFor(
+      withSelfSignup,
+      "google",
+      "v-self",
+    );
     googleAnswers(withSelfSignup, {
       sub: "google-self",
       email: "visitor@anywhere.test",
@@ -470,7 +552,7 @@ describe("signing up through oauth", () => {
 
     const page = await withSelfSignup.visit(
       `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -483,7 +565,11 @@ describe("signing up through oauth", () => {
 
   test("refuses an unlisted domain, creating no user and no session", async () => {
     await withEditorDomain.factory.admin.create();
-    const state = await stateFor(withEditorDomain, "google", "v-3");
+    const { state, browser } = await stateFor(
+      withEditorDomain,
+      "google",
+      "v-3",
+    );
     googleAnswers(withEditorDomain, {
       sub: "g-1",
       email: "stranger@notallowed.com",
@@ -494,7 +580,7 @@ describe("signing up through oauth", () => {
 
     const page = await withEditorDomain.visit(
       `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -510,7 +596,7 @@ describe("signing up through oauth", () => {
 
   test("logs a refused identity as sign_in_refused", async () => {
     await site.factory.admin.create();
-    const state = await stateFor(site, "google", "v-3");
+    const { state, browser } = await stateFor(site, "google", "v-3");
     googleAnswers(site, {
       sub: "g-1",
       email: "stranger@notallowed.com",
@@ -521,7 +607,7 @@ describe("signing up through oauth", () => {
 
     await site.visit(
       `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(site.logger.lines.filter((line) => line.level === "warn")).toEqual([
@@ -541,7 +627,11 @@ describe("signing up through oauth", () => {
 describe("a github account with no public email", () => {
   test("signs up with the verified primary from /user/emails", async () => {
     await withMemberDomain.factory.admin.create();
-    const state = await stateFor(withMemberDomain, "github", "v-fallback");
+    const { state, browser } = await stateFor(
+      withMemberDomain,
+      "github",
+      "v-fallback",
+    );
     githubAnswers(
       withMemberDomain,
       {
@@ -556,7 +646,7 @@ describe("a github account with no public email", () => {
 
     const page = await withMemberDomain.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.status).toBe(302);
@@ -570,7 +660,7 @@ describe("a github account with no public email", () => {
 
   test("is refused when that primary is unverified", async () => {
     await withMemberDomain.factory.admin.create();
-    const state = await stateFor(
+    const { state, browser } = await stateFor(
       withMemberDomain,
       "github",
       "v-fallback-unverified",
@@ -583,7 +673,7 @@ describe("a github account with no public email", () => {
 
     const page = await withMemberDomain.visit(
       `/_plumix/auth/oauth/github/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.headers.get("location")).toContain(
@@ -595,7 +685,7 @@ describe("a github account with no public email", () => {
 describe("a provider profile with no email", () => {
   test("is refused as email_missing", async () => {
     await site.factory.admin.create();
-    const state = await stateFor(site, "google", "v-malformed");
+    const { state, browser } = await stateFor(site, "google", "v-malformed");
     site.fetch.route(
       "POST",
       "https://oauth2.googleapis.com/token",
@@ -609,7 +699,7 @@ describe("a provider profile with no email", () => {
 
     const page = await site.visit(
       `/_plumix/auth/oauth/google/callback?code=abc&state=${state}`,
-      navigation,
+      browser,
     );
 
     expect(page.headers.get("location")).toContain("oauth_error=email_missing");
@@ -620,7 +710,7 @@ describe("a failed callback under a theme login", () => {
   test("lands on the theme's login page", async () => {
     const page = await withThemeLogin.visit(
       "/_plumix/auth/oauth/github/callback?code=abc&state=nope",
-      navigation,
+      browserWith("some-nonce"),
     );
 
     page.assertRedirect("/account/login?oauth_error=state_expired");

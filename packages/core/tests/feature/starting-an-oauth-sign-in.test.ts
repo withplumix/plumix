@@ -97,6 +97,44 @@ describe("starting an oauth sign-in", () => {
     expect(rows.map((row) => row.type)).toContain("oauth_state");
   });
 
+  test("holds the sign-in's browser in a short-lived cookie the callback reads", async () => {
+    await site.factory.admin.create();
+
+    const page = await site.visit(
+      "/_plumix/auth/oauth/github/start",
+      navigation,
+    );
+
+    expect(page.headers.get("set-cookie")).toMatch(
+      /^plumix_oauth_state=[\w-]+; Path=\/_plumix\/auth\/oauth\/github; Max-Age=600; HttpOnly; SameSite=Lax; Secure$/,
+    );
+  });
+
+  test("leaves Secure off the cookie over plain http", async () => {
+    await site.factory.admin.create();
+
+    const page = await site.visit(
+      "http://cms.example/_plumix/auth/oauth/github/start",
+      navigation,
+    );
+
+    expect(page.headers.get("set-cookie")).toContain("plumix_oauth_state=");
+    expect(page.headers.get("set-cookie")).not.toContain("Secure");
+  });
+
+  test("scopes the cookie to the base path", async () => {
+    await underBasePath.factory.admin.create();
+
+    const page = await underBasePath.visit(
+      "/custom-directory/_plumix/auth/oauth/github/start",
+      navigation,
+    );
+
+    expect(page.headers.get("set-cookie")).toContain(
+      "Path=/custom-directory/_plumix/auth/oauth/github;",
+    );
+  });
+
   test("carries the base path in the redirect_uri", async () => {
     await underBasePath.factory.admin.create();
 

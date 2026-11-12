@@ -2,9 +2,9 @@ import type { Db } from "../../context/app-context.js";
 import { now } from "../../clock.js";
 import { and, eq } from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
-import { generateToken, hashToken } from "../tokens.js";
+import { generateToken, hashToken, safeEqual } from "../tokens.js";
 
-const OAUTH_STATE_TTL_SECONDS = 10 * 60;
+export const OAUTH_STATE_TTL_SECONDS = 10 * 60;
 
 interface OAuthStatePayload {
   readonly provider: string;
@@ -19,6 +19,11 @@ interface OAuthStatePayload {
 interface IssuedOAuthState {
   /** Never persisted; only its hash is stored. */
   readonly state: string;
+  /**
+   * Held by the browser that started the sign-in, in a cookie; only its hash
+   * is stored.
+   */
+  readonly browserNonce: string;
   readonly expiresAt: Date;
 }
 
@@ -33,20 +38,27 @@ export async function issueOAuthState(
   ttlSeconds: number = OAUTH_STATE_TTL_SECONDS,
 ): Promise<IssuedOAuthState> {
   const state = generateToken();
+  const browserNonce = generateToken();
   const hash = await hashToken(state);
   const expiresAt = new Date(now().getTime() + ttlSeconds * 1000);
   await db.insert(authTokens).values({
     hash,
     type: "oauth_state",
-    payload: { ...payload },
+    payload: { ...payload, browserNonceHash: await hashToken(browserNonce) },
     expiresAt,
   });
-  return { state, expiresAt };
+  return { state, browserNonce, expiresAt };
 }
 
+/**
+ * Null unless `browserNonce` is the one issued with `state`, so the sign-in
+ * finishes only in the browser that started it. The row is consumed either
+ * way.
+ */
 export async function consumeOAuthState(
   db: Db,
   state: string,
+  browserNonce: string,
 ): Promise<OAuthStatePayload | null> {
   const hash = await hashToken(state);
 
@@ -60,10 +72,14 @@ export async function consumeOAuthState(
   if (!row) return null;
   if (row.expiresAt.getTime() < now().getTime()) return null;
 
-  const payload = row.payload as Partial<OAuthStatePayload> | null;
+  const payload = row.payload as Partial<
+    OAuthStatePayload & { browserNonceHash: string }
+  > | null;
   if (
     typeof payload?.provider !== "string" ||
-    typeof payload.codeVerifier !== "string"
+    typeof payload.codeVerifier !== "string" ||
+    typeof payload.browserNonceHash !== "string" ||
+    !safeEqual(payload.browserNonceHash, await hashToken(browserNonce))
   ) {
     return null;
   }
