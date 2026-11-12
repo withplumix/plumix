@@ -1,4 +1,5 @@
 import type { CdnStore, ConnectedCdn } from "plumix";
+import type { AccessOutcome } from "plumix/auth";
 import type { User } from "plumix/schema";
 import type { DispatcherHarness } from "plumix/test";
 import {
@@ -10,6 +11,7 @@ import {
 } from "plumix/auth";
 import { defineEntryContent } from "plumix/blocks";
 import { definePlugin, pageFacts } from "plumix/plugin";
+import { ENTRY_STATUSES } from "plumix/schema";
 import { defineTheme, fallback, forArchiveType } from "plumix/theme";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -370,12 +372,128 @@ describe("entries under an access policy", () => {
     });
     await index();
 
-    const body = await (await h.fetch("/search/rockwool")).text();
+    const body = await (await h.fetch("/search/greenhouse")).text();
 
     expect(body).toContain("/page/teaser");
     expect(body).toContain("What a greenhouse grows in winter");
     expect(body).not.toContain("soaked");
   });
+});
+
+/**
+ * Every outcome a policy can answer an anonymous visitor with, keyed so a new
+ * outcome type fails to compile here until it has a row.
+ */
+const ANONYMOUS_OUTCOMES: Record<
+  AccessOutcome["type"] | "softChallenge",
+  AccessOutcome
+> = {
+  grant: grant("members"),
+  redirect: { type: "redirect" },
+  challenge: challenge("subscribe"),
+  softChallenge: challenge("paywall", { soft: true }),
+};
+
+const gatedPages = definePlugin("gated-pages", {
+  setup: (ctx) => {
+    ctx.registerEntryType("gated", {
+      label: "Gated",
+      isPublic: true,
+      access: {
+        default: anonymousPolicy,
+        policies: Object.entries(ANONYMOUS_OUTCOMES).map(([key, outcome]) => ({
+          key,
+          label: key,
+          policy: definePolicy({
+            segments: ["members"],
+            resolve: () => outcome,
+          }),
+        })),
+      },
+    });
+  },
+});
+
+type Shown = "nothing" | "listing" | "everything";
+
+/** What an anonymous visitor is shown of an entry in each state. */
+const ANONYMOUS_READING: readonly {
+  status: (typeof ENTRY_STATUSES)[number];
+  access: keyof typeof ANONYMOUS_OUTCOMES;
+  shown: Shown;
+}[] = [
+  { status: "draft", access: "grant", shown: "nothing" },
+  { status: "draft", access: "redirect", shown: "nothing" },
+  { status: "draft", access: "challenge", shown: "nothing" },
+  { status: "draft", access: "softChallenge", shown: "nothing" },
+  { status: "published", access: "grant", shown: "everything" },
+  { status: "published", access: "redirect", shown: "nothing" },
+  { status: "published", access: "challenge", shown: "nothing" },
+  { status: "published", access: "softChallenge", shown: "listing" },
+  { status: "scheduled", access: "grant", shown: "nothing" },
+  { status: "scheduled", access: "redirect", shown: "nothing" },
+  { status: "scheduled", access: "challenge", shown: "nothing" },
+  { status: "scheduled", access: "softChallenge", shown: "nothing" },
+  { status: "trash", access: "grant", shown: "nothing" },
+  { status: "trash", access: "redirect", shown: "nothing" },
+  { status: "trash", access: "challenge", shown: "nothing" },
+  { status: "trash", access: "softChallenge", shown: "nothing" },
+];
+
+/** Each query, and the least an entry must show for it to find the entry. */
+const QUERIES: readonly { query: string; needs: Exclude<Shown, "nothing"> }[] =
+  [
+    { query: "hydroponics", needs: "listing" },
+    { query: "greenhouse", needs: "listing" },
+    { query: "rockwool", needs: "everything" },
+    { query: '"rockwool soaked"', needs: "everything" },
+  ];
+
+describe("what an anonymous search finds", () => {
+  test("the states read cover every entry status", () => {
+    expect(new Set(ANONYMOUS_READING.map(({ status }) => status))).toEqual(
+      new Set(ENTRY_STATUSES),
+    );
+  });
+
+  test.each(
+    ANONYMOUS_READING.flatMap((state) =>
+      QUERIES.map(({ query, needs }) => ({
+        ...state,
+        query,
+        finds: state.shown === "everything" || state.shown === needs,
+      })),
+    ),
+  )(
+    "a $status entry under $access is found by $query: $finds",
+    async ({ status, access, query, finds }) => {
+      ({
+        h,
+        admin,
+        runSchedule: index,
+      } = await createSearchHarness({
+        config: { plugins: [contentPlugin, gatedPages, search()], theme },
+      }));
+      await publish({
+        type: "gated",
+        status,
+        // Far enough ahead that the run which indexes it does not publish it.
+        publishedAt: new Date("2999-01-01T00:00:00Z"),
+        slug: "gated-entry",
+        title: "Hydroponics",
+        excerpt: "What a greenhouse grows in winter",
+        content: defineEntryContent([
+          paragraph("<p>The members method: rockwool soaked overnight</p>"),
+        ]),
+        meta: { [ACCESS_POLICY_META_KEY]: access },
+      });
+      await index();
+
+      const page = await h.fetch(`/search/${encodeURIComponent(query)}`);
+
+      expect((await page.text()).includes("/gated/gated-entry")).toBe(finds);
+    },
+  );
 });
 
 describe("with core's search routes turned off", () => {

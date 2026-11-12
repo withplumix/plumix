@@ -1,11 +1,14 @@
 import type { AppContext, MutablePluginRegistry } from "plumix/plugin";
+import { challenge, definePolicy } from "plumix/auth";
+import { blockTextRoster, blockTextVersion } from "plumix/blocks";
 import { eq, sql } from "plumix/db";
 import { text } from "plumix/fields";
 import { entries, terms } from "plumix/schema";
-import { factoriesFor } from "plumix/test";
+import { factoriesFor, toRegisteredEntryType } from "plumix/test";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SearchTestDb } from "../test/db.js";
+import { searchDocuments } from "../db/schema.js";
 import {
   createSearchContext,
   indexedSourceIds,
@@ -18,6 +21,7 @@ import {
   TERMS_PER_RUN,
 } from "./drain.js";
 import { currentExtractorVersion, indexTerms } from "./index-writer.js";
+import { metaTextVersion, searchableMetaRoster } from "./meta-text.js";
 import { advanceReindex, startReindex } from "./reindex.js";
 
 let db: SearchTestDb;
@@ -103,6 +107,47 @@ describe("repairStaleEntries", () => {
     await repairStaleEntries(ctx, currentExtractorVersion(ctx), 10);
 
     expect(await indexedSourceIds(db, "aquaponics")).toEqual([entry.id]);
+  });
+
+  test("re-extracts a teaser an earlier release indexed with its body", async () => {
+    plugins.entryTypes.set(
+      "post",
+      toRegisteredEntryType(
+        "post",
+        {
+          label: "Posts",
+          access: {
+            default: definePolicy({
+              segments: [],
+              resolve: () => challenge("paywall", { soft: true }),
+            }),
+          },
+        },
+        "test",
+      ),
+    );
+    const entry = await factoriesFor(db).entry.create({
+      authorId,
+      status: "published",
+      publishedAt: new Date(),
+      title: "Winter growing",
+      slug: "winter-growing",
+      excerpt: "What a greenhouse grows",
+    });
+    await db.run(sql`DELETE FROM entry_changes`);
+    const earlierReleaseVersion = `${blockTextVersion(blockTextRoster(ctx.blocks))}.${metaTextVersion(searchableMetaRoster(plugins, ["post"]))}`;
+    await db.insert(searchDocuments).values({
+      sourceType: "entry",
+      sourceId: entry.id,
+      title: "Winter growing",
+      body: "What a greenhouse grows\nAquaponics",
+      extractorVersion: earlierReleaseVersion,
+    });
+
+    await repairStaleEntries(ctx, currentExtractorVersion(ctx), 10);
+
+    expect(await indexedSourceIds(db, "aquaponics")).toEqual([]);
+    expect(await indexedSourceIds(db, "greenhouse")).toEqual([entry.id]);
   });
 
   test("stops offering a document it has already brought up to date", async () => {

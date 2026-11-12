@@ -25,7 +25,7 @@ let ctx: AppContext;
 let plugins: MutablePluginRegistry;
 let authorId: number;
 
-/** An entry type under an access policy, which a search applies, not the index. */
+/** An entry type whose policy shows an anonymous visitor nothing. */
 const GATED = {
   access: {
     default: {
@@ -99,6 +99,14 @@ describe("indexEntries", () => {
     await indexEntries(ctx, [entry.id]);
 
     expect(await matches("hydroponics")).toEqual([entry.id]);
+  });
+
+  test("never indexes an entry whose type is not registered", async () => {
+    const entry = await seed({ type: "revision", title: "Hydroponics" });
+
+    await indexEntries(ctx, [entry.id]);
+
+    expect(await matches("hydroponics")).toEqual([]);
   });
 
   test("drops an entry that has gone from the database", async () => {

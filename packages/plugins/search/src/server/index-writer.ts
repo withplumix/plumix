@@ -1,5 +1,7 @@
+import type { EntryAccessSubject } from "plumix/auth";
 import type { BlockRegistry, BlockTextRoster } from "plumix/blocks";
 import type { AppContext } from "plumix/plugin";
+import { anonymousContext, entryPolicyAdmits } from "plumix/auth";
 import { blockTextRoster, blockTextVersion } from "plumix/blocks";
 import {
   and,
@@ -17,6 +19,7 @@ import type { SearchableMetaRoster } from "./meta-text.js";
 import { searchDocuments } from "../db/schema.js";
 import {
   entryDocumentBody,
+  entryListingText,
   indexableEntryTypes,
   isIndexableEntryType,
   isSearchableTaxonomy,
@@ -34,6 +37,13 @@ const IDS_PER_STATEMENT = D1_MAX_BOUND_PARAMETERS - 10;
  * every term stale on any declaration change.
  */
 const TERM_EXTRACTOR_VERSION = "term/1";
+
+/**
+ * Moves when what an entry's document holds changes for reasons other than a
+ * roster, so documents written under the old rule are re-extracted.
+ */
+const ENTRY_PROJECTION_VERSION = "public/1";
+
 const DOCUMENTS_PER_STATEMENT = 18;
 
 interface BlockExtractor {
@@ -75,9 +85,9 @@ function extractorFor(ctx: AppContext): Extractor {
   return {
     blocks: roster,
     meta,
-    // Composite, so either half moving marks the documents both produced
-    // stale. Legible on sight, which a combined hash would not be.
-    version: `${version}.${metaTextVersion(meta)}`,
+    // Composite, so any part moving marks the documents it produced stale.
+    // Legible on sight, which a combined hash would not be.
+    version: `${version}.${metaTextVersion(meta)}.${ENTRY_PROJECTION_VERSION}`,
   };
 }
 
@@ -95,6 +105,7 @@ export async function indexEntries(
   entryIds: Iterable<number>,
 ): Promise<void> {
   const extractor = extractorFor(ctx);
+  const anonymous = anonymousContext(ctx);
   await project(ctx, "entry", entryIds, async (chunk) => {
     const rows = await ctx.db
       .select({
@@ -107,20 +118,38 @@ export async function indexEntries(
       })
       .from(entries)
       .where(inArray(entries.id, chunk));
-    return rows
-      .filter((row) => isIndexableEntryType(ctx.plugins, row.type))
-      .map((row) => ({
+    const indexable = rows.filter((row) =>
+      isIndexableEntryType(ctx.plugins, row.type),
+    );
+    return Promise.all(
+      indexable.map(async (row) => ({
         sourceType: "entry" as const,
         sourceId: row.id,
         title: row.title,
-        body: entryDocumentBody(
-          row,
-          extractor.blocks,
-          extractor.meta.get(row.type) ?? [],
-        ),
+        body: await documentBody(anonymous, row, extractor),
         extractorVersion: extractor.version,
-      }));
+      })),
+    );
   });
+}
+
+/**
+ * Read as an anonymous visitor, so one search over the index cannot surface
+ * text a listing of the entry withholds from someone.
+ */
+async function documentBody(
+  anonymous: AppContext,
+  entry: Parameters<typeof entryDocumentBody>[0] & EntryAccessSubject,
+  extractor: Extractor,
+): Promise<string> {
+  if (!(await entryPolicyAdmits(anonymous, entry, "content"))) {
+    return entryListingText(entry);
+  }
+  return entryDocumentBody(
+    entry,
+    extractor.blocks,
+    extractor.meta.get(entry.type) ?? [],
+  );
 }
 
 export async function indexTerms(
