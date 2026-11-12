@@ -34,8 +34,8 @@ export interface InspectorView {
 }
 
 /**
- * What the block inspector shows for the active block, or `null` when nothing
- * is selected. `canRefresh` says whether the host wired a loader refresh.
+ * The inspector's view of the active block, or `null` when none is selected.
+ * `loaderBlocks` names the blocks the canvas reported declaring loaders.
  */
 export function inspectorView(
   registry: BlockRegistry,
@@ -43,6 +43,7 @@ export function inspectorView(
   activeId: string | null,
   bucket: StyleBucket,
   canRefresh: boolean,
+  loaderBlocks: ReadonlySet<string>,
   allowed?: ReadonlySet<string>,
   layout: LayoutGate = layoutGate(true),
 ): InspectorView | null {
@@ -66,7 +67,9 @@ export function inspectorView(
   const tableId = layout.editsLayout
     ? enclosingTableId(tree, block.id, registry)
     : null;
-  const showRefresh = canRefresh && Boolean(spec?.loaders);
+  // A block with no loader data yet, such as one just inserted, still shows
+  // it: refresh is how it gets its data.
+  const showRefresh = canRefresh && loaderBlocks.has(block.name);
   const showAddColumn = layout.editsLayout && block.name === "core/columns";
 
   return {

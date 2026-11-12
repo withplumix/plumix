@@ -2,14 +2,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import type { EntryContent } from "../entry-content.js";
-import type { HtmlAllowlist } from "../html/sanitize.js";
+import type { HtmlAllowlist } from "../html/allowlist.js";
 import { createBlockRegistry } from "../block-registry.js";
+import { loadBlockViews } from "../block-views.js";
+import { BASELINE_HTML_ALLOWLIST } from "../html/allowlist.js";
 import { HtmlAllowlistProvider } from "../html/context.js";
-import { BASELINE_HTML_ALLOWLIST } from "../html/sanitize.js";
 import { richTextBlock } from "../rich-text/index.js";
 import { BlockRenderer, PlumixProvider } from "./index.js";
 
 const registry = createBlockRegistry([richTextBlock]);
+await loadBlockViews(registry);
 const content: EntryContent = {
   version: "plumix.v2",
   blocks: [

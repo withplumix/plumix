@@ -7,7 +7,7 @@ import { renderBlockTreeToHtml } from "../test/index.js";
 import { columnsBlock } from "./index.js";
 
 describe("core/columns", () => {
-  test("renders its columns in a bare seam row (no legacy data markers)", () => {
+  test("renders its columns in a bare seam row (no legacy data markers)", async () => {
     const tree: readonly BlockNode[] = [
       {
         id: "c1",
@@ -45,7 +45,7 @@ describe("core/columns", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml(
+    const html = await renderBlockTreeToHtml(
       [columnsBlock, columnBlock, richTextBlock],
       tree,
     );
@@ -61,12 +61,12 @@ describe("core/columns", () => {
     expect(columnsBlock.defaultStyles?.large?.gap).toBe("20px");
   });
 
-  test("stacks columns below the tablet breakpoint by default", () => {
+  test("stacks columns below the tablet breakpoint by default", async () => {
     const tree: readonly BlockNode[] = [
       { id: "c1", name: "core/columns", attrs: {} },
     ];
 
-    const html = renderBlockTreeToHtml([columnsBlock], tree);
+    const html = await renderBlockTreeToHtml([columnsBlock], tree);
 
     // Builder's stackColumnsAt default is 'tablet' — a scoped media query flips
     // the row to a column below the tablet breakpoint (991px default).
@@ -75,29 +75,29 @@ describe("core/columns", () => {
     expect(html).toContain("plumix-cols-c1");
   });
 
-  test("stackAt=mobile stacks below the mobile breakpoint instead", () => {
+  test("stackAt=mobile stacks below the mobile breakpoint instead", async () => {
     const tree: readonly BlockNode[] = [
       { id: "c1", name: "core/columns", attrs: { stackAt: "mobile" } },
     ];
 
-    const html = renderBlockTreeToHtml([columnsBlock], tree);
+    const html = await renderBlockTreeToHtml([columnsBlock], tree);
 
     expect(html).toContain("@media (max-width: 640px)");
     expect(html).not.toContain("991px");
   });
 
-  test("stackAt=never emits no stacking media query", () => {
+  test("stackAt=never emits no stacking media query", async () => {
     const tree: readonly BlockNode[] = [
       { id: "c1", name: "core/columns", attrs: { stackAt: "never" } },
     ];
 
-    const html = renderBlockTreeToHtml([columnsBlock], tree);
+    const html = await renderBlockTreeToHtml([columnsBlock], tree);
 
     expect(html).not.toContain("@media");
     expect(html).not.toContain("flex-direction: column");
   });
 
-  test("reverseWhenStacked stacks in reverse order", () => {
+  test("reverseWhenStacked stacks in reverse order", async () => {
     const tree: readonly BlockNode[] = [
       {
         id: "c1",
@@ -106,7 +106,7 @@ describe("core/columns", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml([columnsBlock], tree);
+    const html = await renderBlockTreeToHtml([columnsBlock], tree);
 
     expect(html).toContain("flex-direction: column-reverse");
   });

@@ -19,6 +19,8 @@ new RuleTester({
     'const Editor = lazy(() => import("./editor.js"));',
     'const Editor = React.lazy(() => import("./editor.js"));',
     'type Routes = typeof import("./routes.js");',
+    'defineBlock({ name: "acme/hero", view: () => import("./hero.view.js") });',
+    'const spec = { view: () => import("./card.view.js").then(({ cardView }) => cardView("acme/card")) };',
   ],
   invalid: [
     {
@@ -31,6 +33,14 @@ new RuleTester({
     },
     {
       code: 'const load = loadOnce(async () => (request) => import("./per-call.js"));',
+      errors: [{ messageId: "outsideLoadOnce" }],
+    },
+    {
+      code: 'const spec = { view: () => () => import("./per-call.js") };',
+      errors: [{ messageId: "outsideLoadOnce" }],
+    },
+    {
+      code: 'const spec = { render: () => import("./hero.view.js") };',
       errors: [{ messageId: "outsideLoadOnce" }],
     },
     {

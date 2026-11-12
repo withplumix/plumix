@@ -1,8 +1,4 @@
-import type { ReactNode } from "react";
-
 import { defineBlock } from "../block-registry.js";
-
-const DEFAULT_SUMMARY = "Details";
 
 export const detailsBlock = defineBlock({
   name: "core/details",
@@ -38,19 +34,5 @@ export const detailsBlock = defineBlock({
   ],
   text: [{ name: "summary" }],
   defaults: { summary: "", open: false },
-  render: ({ attrs }): ReactNode => {
-    const summaryRaw = attrs.summary as string | undefined;
-    const summary =
-      typeof summaryRaw === "string" && summaryRaw.length > 0
-        ? summaryRaw
-        : DEFAULT_SUMMARY;
-    const open = attrs.open === true;
-    const Content = attrs.content as (() => ReactNode) | undefined;
-    return (
-      <details open={open}>
-        <summary>{summary}</summary>
-        {Content ? <Content /> : null}
-      </details>
-    );
-  },
+  view: () => import("./details.view.js"),
 });

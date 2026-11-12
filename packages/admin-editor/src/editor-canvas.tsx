@@ -30,12 +30,17 @@ import {
   DEFAULT_BLOCK_CONTEXT,
   editAppender,
   HtmlAllowlistProvider,
+  loadBlockViews,
 } from "@plumix/core/blocks";
 import { BlockTree, PlumixProvider } from "@plumix/core/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { mergeDeps, unresolvedDeps } from "./block-deps.js";
 import { canvasContextValue } from "./canvas-context.js";
+import {
+  createLoaderBlocksReporter,
+  createTreeCommitter,
+} from "./canvas-views.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
 import { mergeLoaderData } from "./merge-loader-data.js";
@@ -111,22 +116,49 @@ export function EditorCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let disposed = false;
+    // A tree commits only once its blocks' views have loaded, so the canvas
+    // never shows a block it can't render; a newer tree supersedes one still
+    // loading.
+    const offerTree = createTreeCommitter(registry, (names) =>
+      loadBlockViews(registry, names),
+    );
+    const commitTree = (next: readonly BlockNode[]): void => {
+      if (!disposed) setTree(next);
+    };
+    const reporter = createLoaderBlocksReporter(registry, (names) =>
+      connectionRef.current?.reportLoaderBlocks(names),
+    );
+    const loaded = (): void => {
+      if (!disposed) reporter.update();
+    };
     const connection = connectRuntime({
       parentWindow: window.parent,
       origin,
-      onTree: setTree,
+      onTree: (next) => void offerTree(next, commitTree).then(loaded),
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
       onDeps: (resolved) => setDeps((prior) => mergeDeps(prior, resolved)),
       onConfig: setConfig,
       onXray: setXray,
+      // A hovered catalog item: load its view so the insert renders at once.
+      onPrefetchBlocks: (names) =>
+        void loadBlockViews(registry, names).then(loaded),
+      onConnect: () => reporter.resend(),
     });
     connectionRef.current = connection;
+    // The seed tree's views loaded before mount; the rest load while idle.
+    reporter.update();
+    const cancelIdle = whenIdle(
+      () => void loadBlockViews(registry).then(loaded),
+    );
     return () => {
+      disposed = true;
+      cancelIdle();
       connection.dispose();
       connectionRef.current = null;
     };
-  }, [origin]);
+  }, [origin, registry]);
 
   // An attribute a declaration reads, or an inserted block, can name a key
   // the SSR render never loaded; the host resolves it on the server.
@@ -379,6 +411,19 @@ export function EditorCanvas({
       </PlumixProvider>
     </HtmlAllowlistProvider>
   );
+}
+
+/**
+ * Runs `task` once the browser is idle, or on a timer where it has no
+ * `requestIdleCallback`. Returns a cancel.
+ */
+function whenIdle(task: () => void): () => void {
+  if (typeof requestIdleCallback === "function") {
+    const handle = requestIdleCallback(task);
+    return () => cancelIdleCallback(handle);
+  }
+  const handle = setTimeout(task, 1);
+  return () => clearTimeout(handle);
 }
 
 /** Bounding box covering all rects, or null when there are none. */

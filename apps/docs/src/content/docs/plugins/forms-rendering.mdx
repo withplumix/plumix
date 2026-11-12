@@ -62,17 +62,23 @@ export function Chrome() {
 
 ## By replacing the block
 
-A theme that declares a block under the plugin's own name replaces its render outright, because a theme block wins a name collision with a plugin block. You take over the render without forking the plugin:
+A theme that declares a block under the plugin's own name replaces its view outright, because a theme block wins a name collision with a plugin block. You take over the render without forking the plugin:
 
 ```tsx no-typecheck
 import { defineBlock } from "plumix/blocks";
 import { defineTheme } from "plumix/theme";
 
-import { MyForm } from "./my-form";
 import { templates } from "./templates";
 
 export const theme = defineTheme({
-  blocks: [defineBlock({ name: "forms/form", title: "Form", render: MyForm })],
+  blocks: [
+    defineBlock({
+      name: "forms/form",
+      title: "Form",
+      // A module whose default export is your form component.
+      view: () => import("./my-form"),
+    }),
+  ],
   templates,
 });
 ```

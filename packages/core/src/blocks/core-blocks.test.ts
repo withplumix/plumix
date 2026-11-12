@@ -128,8 +128,8 @@ describe("coreBlocks", () => {
   // Membership is what decides whether stored content resolves, so assert the
   // consequence rather than only the list: a `core/html` node used to render as
   // an unknown block on every site.
-  test("resolves a stored core/html node through the registry", () => {
-    const html = renderBlockTreeToHtml(coreBlocks, [
+  test("resolves a stored core/html node through the registry", async () => {
+    const html = await renderBlockTreeToHtml(coreBlocks, [
       { id: "h1", name: "core/html", attrs: { html: "<p>Stored</p>" } },
     ]);
 

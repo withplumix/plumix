@@ -10,6 +10,7 @@ import type {
   RuntimeMigrations,
 } from "@plumix/core";
 import { auth, definePlugin, plumix } from "@plumix/core";
+import { defineBlock } from "@plumix/core/blocks";
 
 import { resolveCommandApp, run, runCommand } from "./index.js";
 import { report } from "./report.js";
@@ -43,8 +44,17 @@ function testConfig(): PlumixConfig {
     }),
     plugins: [
       definePlugin("probe", {
-        setup: () => {
+        setup: (ctx) => {
           registrations.push("probe");
+          ctx.registerBlock(
+            defineBlock({
+              name: "probe/chart",
+              view: () => {
+                registrations.push("probe/chart view");
+                return Promise.resolve({ default: () => null });
+              },
+            }),
+          );
         },
       }),
     ],
@@ -63,6 +73,12 @@ describe("resolveCommandApp", () => {
 
     expect(resolved.config).toBe(config);
     expect(registrations).toEqual(["probe"]);
+  });
+
+  test("a command's app imports no block view, which only a render needs", async () => {
+    await resolveCommandApp(command({}), testConfig(), "build");
+
+    expect(registrations).not.toContain("probe/chart view");
   });
 
   test("skips the eager build when the command defers the app to its runtime", async () => {

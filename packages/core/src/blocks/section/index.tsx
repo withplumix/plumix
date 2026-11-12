@@ -1,5 +1,3 @@
-import type { CSSProperties, ReactNode } from "react";
-
 import { defineBlock } from "../block-registry.js";
 
 export const sectionBlock = defineBlock({
@@ -40,19 +38,5 @@ export const sectionBlock = defineBlock({
       paddingRight: "1.25rem",
     },
   },
-  render: ({ attrs, blockProps }): ReactNode => {
-    const maxWidth =
-      typeof attrs.maxWidth === "string" && attrs.maxWidth !== ""
-        ? attrs.maxWidth
-        : "1200px";
-    const Content = attrs.content as (() => ReactNode) | undefined;
-    const inner: CSSProperties = { maxWidth, marginInline: "auto" };
-    return (
-      <section {...blockProps}>
-        <div data-plumix-section-inner="" style={inner}>
-          {Content ? <Content /> : null}
-        </div>
-      </section>
-    );
-  },
+  view: () => import("./section.view.js"),
 });

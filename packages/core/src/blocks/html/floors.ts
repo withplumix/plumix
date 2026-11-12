@@ -1,4 +1,4 @@
-import type { HtmlAllowlist } from "./sanitize.js";
+import type { HtmlAllowlist } from "./allowlist.js";
 import { BLOCKED_SCHEMES } from "../marks/safe-href.js";
 
 /**

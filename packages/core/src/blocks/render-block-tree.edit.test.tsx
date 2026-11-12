@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 
 import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry, defineBlock } from "./block-registry.js";
+import { loadBlockViews } from "./block-views.js";
 import { columnsBlock } from "./columns/index.js";
 import { groupBlock } from "./group/index.js";
 import { renderBlockTree } from "./render-block-tree.js";
@@ -21,16 +22,25 @@ const selfSeamBlock = defineBlock({
   name: "test/self-seam",
   selfSeam: true,
   inputs: [{ name: "text", type: "text" }],
-  render: ({ attrs, blockProps }) =>
-    createElement("h2", blockProps, (attrs as { text?: string }).text ?? ""),
+  view: () =>
+    Promise.resolve({
+      default: ({ attrs, blockProps }) =>
+        createElement(
+          "h2",
+          blockProps,
+          (attrs as { text?: string }).text ?? "",
+        ),
+    }),
 });
 
 const registry = createBlockRegistry([selfSeamBlock, groupBlock, columnsBlock]);
+await loadBlockViews(registry);
 const tableRegistry = createBlockRegistry([
   tableBlock,
   tableBodyRowBlock,
   tableCellBlock,
 ]);
+await loadBlockViews(tableRegistry);
 const tree: readonly BlockNode[] = [
   { id: "abc", name: "test/self-seam", attrs: { text: "Hi" } },
 ];

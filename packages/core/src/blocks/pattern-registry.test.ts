@@ -128,7 +128,13 @@ describe("block()", () => {
 describe("assignPatternIds", () => {
   const blocks = createBlockRegistry([
     groupBlock,
-    defineBlock({ name: "acme/team", render: () => null }),
+    defineBlock({
+      name: "acme/team",
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
+    }),
   ]);
 
   // A node's slot children are numbered before the node itself.

@@ -42,7 +42,7 @@ export function bootEditor({
   shortcodes,
 }: BootEditorOptions = {}): void {
   if (typeof window === "undefined" || typeof document === "undefined") return;
-  mountEditorRuntime({
+  void mountEditorRuntime({
     doc: document,
     registry: buildEditorRegistry(blocks),
     shortcodes: buildEditorShortcodes(shortcodes),

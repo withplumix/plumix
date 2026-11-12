@@ -1,7 +1,7 @@
 import { createContext, useContext } from "react";
 
-import type { HtmlAllowlist } from "./sanitize.js";
-import { BASELINE_HTML_ALLOWLIST } from "./sanitize.js";
+import type { HtmlAllowlist } from "./allowlist.js";
+import { BASELINE_HTML_ALLOWLIST } from "./allowlist.js";
 
 /**
  * Defaults to the baseline so a consumer without a provider still renders

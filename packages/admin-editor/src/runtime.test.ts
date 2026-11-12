@@ -11,7 +11,13 @@ describe("buildEditorRegistry", () => {
   });
 
   test("adds plugin block specs alongside core", () => {
-    const widget = defineBlock({ name: "acme/widget", render: () => null });
+    const widget = defineBlock({
+      name: "acme/widget",
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
+    });
     const registry = buildEditorRegistry([widget]);
     expect(registry.has("core/rich-text")).toBe(true);
     expect(registry.has("acme/widget")).toBe(true);
@@ -20,7 +26,10 @@ describe("buildEditorRegistry", () => {
   test("a plugin spec overrides a core block of the same name (last write wins)", () => {
     const override = defineBlock({
       name: "core/rich-text",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
     });
     const registry = buildEditorRegistry([override]);
     expect(registry.get("core/rich-text")).toBe(override);

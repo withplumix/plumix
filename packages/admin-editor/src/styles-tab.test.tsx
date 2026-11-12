@@ -16,7 +16,15 @@ import { EditorProvider } from "./provider.js";
 import { StylesTab } from "./styles-tab.js";
 
 const i18n = setupI18n({ locale: "en", messages: { en: {} } });
-const registry = createBlockRegistry([{ name: "core/x", render: () => null }]);
+const registry = createBlockRegistry([
+  {
+    name: "core/x",
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
+  },
+]);
 
 function markup(
   tree: readonly BlockNode[],

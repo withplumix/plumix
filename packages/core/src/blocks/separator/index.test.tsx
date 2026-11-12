@@ -4,16 +4,16 @@ import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { separatorBlock } from "./index.js";
 
 describe("core/separator", () => {
-  test("renders a bare <hr> with no wrapper element", () => {
-    const html = renderBlockSpecToHtml(separatorBlock, {});
+  test("renders a bare <hr> with no wrapper element", async () => {
+    const html = await renderBlockSpecToHtml(separatorBlock, {});
 
     // selfSeam: the block is the <hr>, not a div wrapping it.
     expect(html).toContain("<hr");
     expect(html).not.toContain("<div");
   });
 
-  test("seeds theme-overridable default styles onto the rule itself", () => {
-    const html = renderBlockTreeToHtml(
+  test("seeds theme-overridable default styles onto the rule itself", async () => {
+    const html = await renderBlockTreeToHtml(
       [separatorBlock],
       [
         {

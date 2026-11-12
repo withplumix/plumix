@@ -211,7 +211,11 @@ async function settleInSite(
   env: PlumixEnv,
   event: SyncAfterEvent,
 ): Promise<SyncSettleReport> {
-  const handler = createRuntimeHandler(await buildApp(config));
+  // The settle renders no block, and outside Vite a view's CSS import can't
+  // load.
+  const handler = createRuntimeHandler(
+    await buildApp(config, { skipBlockViews: true }),
+  );
   try {
     const { run } = handler;
     if (run === undefined) throw CloudflareCliError.syncSiteCannotRun();

@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { BlockLoaderArgs, LoaderErrorEvent } from "./loaders.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
+import { loadBlockViews } from "./block-views.js";
 import {
   BlockLoaderError,
   collectLoaderEntries,
@@ -10,10 +11,17 @@ import {
 } from "./loaders.js";
 
 describe("collectLoaderEntries", () => {
-  test("returns empty list when no block in the tree declares loaders", () => {
+  test("returns empty list when no block in the tree declares loaders", async () => {
     const registry = createBlockRegistry([
-      { name: "core/heading", render: () => null },
+      {
+        name: "core/heading",
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
+      },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       { id: "h1", name: "core/heading", attrs: {} },
     ];
@@ -21,19 +29,26 @@ describe("collectLoaderEntries", () => {
     expect(collectLoaderEntries(tree, registry)).toEqual([]);
   });
 
-  test("recurses into slot-children to find nested loader-bearing blocks", () => {
+  test("recurses into slot-children to find nested loader-bearing blocks", async () => {
     const registry = createBlockRegistry([
       {
         name: "core/group",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         inputs: [{ name: "children", type: "slot" }],
       },
       {
         name: "acme/posts",
-        render: () => null,
-        loaders: { posts: () => Promise.resolve([]) },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: { posts: () => Promise.resolve([]) },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       {
         id: "g1",
@@ -57,32 +72,55 @@ describe("collectLoaderEntries", () => {
   test.each([
     ["an empty data array", []],
     ["a data array of id/name objects", [{ id: "1", name: "acme/posts" }]],
-  ])("does not collect from %s in an attr no slot declares", (_, people) => {
-    const registry = createBlockRegistry([
-      { name: "acme/team", render: () => null },
-      {
-        name: "acme/posts",
-        render: () => null,
-        loaders: { posts: () => Promise.resolve([]) },
-      },
-    ]);
-    const tree: readonly BlockNode[] = [
-      { id: "t1", name: "acme/team", attrs: { people } },
-    ];
+  ])(
+    "does not collect from %s in an attr no slot declares",
+    async (_, people) => {
+      const registry = createBlockRegistry([
+        {
+          name: "acme/team",
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+            }),
+        },
+        {
+          name: "acme/posts",
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+              loaders: { posts: () => Promise.resolve([]) },
+            }),
+        },
+      ]);
+      await loadBlockViews(registry);
+      const tree: readonly BlockNode[] = [
+        { id: "t1", name: "acme/team", attrs: { people } },
+      ];
 
-    expect(collectLoaderEntries(tree, registry)).toEqual([]);
-  });
+      expect(collectLoaderEntries(tree, registry)).toEqual([]);
+    },
+  );
 
-  test("emits one entry per block whose spec declares loaders", () => {
+  test("emits one entry per block whose spec declares loaders", async () => {
     const fetchPosts = () => Promise.resolve([{ id: 1 }]);
     const registry = createBlockRegistry([
-      { name: "core/heading", render: () => null },
+      {
+        name: "core/heading",
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
+      },
       {
         name: "acme/posts",
-        render: () => null,
-        loaders: { posts: fetchPosts },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: { posts: fetchPosts },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       { id: "h1", name: "core/heading", attrs: {} },
       { id: "p1", name: "acme/posts", attrs: {} },
@@ -101,10 +139,14 @@ describe("resolveBlockLoaders", () => {
     const registry = createBlockRegistry([
       {
         name: "acme/posts",
-        render: () => null,
-        loaders: { posts: () => Promise.resolve(["a", "b"]) },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: { posts: () => Promise.resolve(["a", "b"]) },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       { id: "p1", name: "acme/posts", attrs: {} },
     ];
@@ -134,9 +176,24 @@ describe("resolveBlockLoaders", () => {
         return value;
       };
       const registry = createBlockRegistry([
-        { name: "acme/slow-a", render: () => null, loaders: { v: gate(1) } },
-        { name: "acme/slow-b", render: () => null, loaders: { v: gate(2) } },
+        {
+          name: "acme/slow-a",
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+              loaders: { v: gate(1) },
+            }),
+        },
+        {
+          name: "acme/slow-b",
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+              loaders: { v: gate(2) },
+            }),
+        },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         { id: "a", name: "acme/slow-a", attrs: {} },
         { id: "b", name: "acme/slow-b", attrs: {} },
@@ -169,10 +226,14 @@ describe("resolveBlockLoaders", () => {
       const registry = createBlockRegistry([
         {
           name: "acme/slow-pair",
-          render: () => null,
-          loaders: { one: gate(1), two: gate(2) },
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+              loaders: { one: gate(1), two: gate(2) },
+            }),
         },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         { id: "n1", name: "acme/slow-pair", attrs: {} },
       ];
@@ -191,22 +252,26 @@ describe("resolveBlockLoaders", () => {
     const registry = createBlockRegistry([
       {
         name: "acme/sync-throw",
-        render: () => null,
-        // Throws before returning a Promise — easy to do by accident
-        // when the loader body forgets `await` and dereferences an
-        // unexpected null.
-        loaders: {
-          v: () => {
-            throw new Error("sync-fail");
-          },
-        },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: {
+              v: () => {
+                throw new Error("sync-fail");
+              },
+            },
+          }),
       },
       {
         name: "acme/fine",
-        render: () => null,
-        loaders: { v: () => Promise.resolve("ok") },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: { v: () => Promise.resolve("ok") },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       { id: "x", name: "acme/sync-throw", attrs: {} },
       { id: "y", name: "acme/fine", attrs: {} },
@@ -223,15 +288,22 @@ describe("resolveBlockLoaders", () => {
     const registry = createBlockRegistry([
       {
         name: "acme/breaks",
-        render: () => null,
-        loaders: { v: () => Promise.reject(new Error("nope")) },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: { v: () => Promise.reject(new Error("nope")) },
+          }),
       },
       {
         name: "acme/fine",
-        render: () => null,
-        loaders: { v: () => Promise.resolve("ok") },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: { v: () => Promise.resolve("ok") },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       { id: "x", name: "acme/breaks", attrs: {} },
       { id: "y", name: "acme/fine", attrs: {} },
@@ -250,13 +322,17 @@ describe("resolveBlockLoaders", () => {
     const registry = createBlockRegistry([
       {
         name: "acme/two-loaders",
-        render: () => null,
-        loaders: {
-          ok: () => Promise.resolve("fine"),
-          bad: () => Promise.reject(new Error("kaboom")),
-        },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: {
+              ok: () => Promise.resolve("fine"),
+              bad: () => Promise.reject(new Error("kaboom")),
+            },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       { id: "n1", name: "acme/two-loaders", attrs: {} },
     ];
@@ -286,16 +362,20 @@ describe("resolveBlockLoaders", () => {
     const registry = createBlockRegistry([
       {
         name: "acme/echo",
-        render: () => null,
-        loaders: {
-          v: ({ ctx, attrs }: BlockLoaderArgs) => {
-            seenCtx = ctx;
-            seenAttrs = attrs;
-            return Promise.resolve("ok");
-          },
-        },
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: {
+              v: ({ ctx, attrs }: BlockLoaderArgs) => {
+                seenCtx = ctx;
+                seenAttrs = attrs;
+                return Promise.resolve("ok");
+              },
+            },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const ctx = { request: new Request("https://example.test/?q=foo") };
     const tree: readonly BlockNode[] = [
       { id: "e", name: "acme/echo", attrs: { foo: 1 } },
@@ -310,7 +390,13 @@ describe("resolveBlockLoaders", () => {
 
 describe("BlockLoaderError", () => {
   const event = (error: unknown): LoaderErrorEvent => ({
-    spec: { name: "acme/posts", render: () => null },
+    spec: {
+      name: "acme/posts",
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
+    },
     node: { id: "n1", name: "acme/posts", attrs: {} },
     key: "posts",
     error,

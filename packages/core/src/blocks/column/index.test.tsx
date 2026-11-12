@@ -6,7 +6,7 @@ import { renderBlockTreeToHtml } from "../test/index.js";
 import { columnBlock } from "./index.js";
 
 describe("core/column", () => {
-  test("renders its content slot in a bare seam div (the flex item)", () => {
+  test("renders its content slot in a bare seam div (the flex item)", async () => {
     const tree: readonly BlockNode[] = [
       {
         id: "col1",
@@ -19,7 +19,10 @@ describe("core/column", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml([columnBlock, richTextBlock], tree);
+    const html = await renderBlockTreeToHtml(
+      [columnBlock, richTextBlock],
+      tree,
+    );
 
     expect(html).toContain("<p>Hi</p>");
     // selfSeam: no wrapper div, no legacy column data-marker.
@@ -36,34 +39,34 @@ describe("core/column", () => {
     expect(columnBlock.requiresParent).toEqual(["core/columns"]);
   });
 
-  test("a width sets a shrinkable flex-basis, overriding the equal split", () => {
+  test("a width sets a shrinkable flex-basis, overriding the equal split", async () => {
     const tree: readonly BlockNode[] = [
       { id: "col1", name: "core/column", attrs: { width: "30%" } },
     ];
 
-    const html = renderBlockTreeToHtml([columnBlock], tree);
+    const html = await renderBlockTreeToHtml([columnBlock], tree);
 
     // Basis with shrink (no grow) — the inline style wins over the class-level
     // equal split, and shrink keeps a full row gap-safe instead of overflowing.
     expect(html).toContain("flex:0 1 30%");
   });
 
-  test("a bare number width is treated as a percent", () => {
+  test("a bare number width is treated as a percent", async () => {
     const tree: readonly BlockNode[] = [
       { id: "col1", name: "core/column", attrs: { width: "70" } },
     ];
 
-    const html = renderBlockTreeToHtml([columnBlock], tree);
+    const html = await renderBlockTreeToHtml([columnBlock], tree);
 
     expect(html).toContain("flex:0 1 70%");
   });
 
-  test("ignores an unsafe width value (falls back to equal split)", () => {
+  test("ignores an unsafe width value (falls back to equal split)", async () => {
     const tree: readonly BlockNode[] = [
       { id: "col1", name: "core/column", attrs: { width: "30%;} evil" } },
     ];
 
-    const html = renderBlockTreeToHtml([columnBlock], tree);
+    const html = await renderBlockTreeToHtml([columnBlock], tree);
 
     expect(html).not.toContain("flex:");
     expect(html).not.toContain("evil");

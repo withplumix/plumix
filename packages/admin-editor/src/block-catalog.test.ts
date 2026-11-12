@@ -29,7 +29,7 @@ import {
 } from "./block-catalog.js";
 
 const spec = (over: Partial<BlockSpec> & { name: string }): BlockSpec => ({
-  render: () => null,
+  view: () => Promise.resolve({ default: () => null }),
   ...over,
 });
 

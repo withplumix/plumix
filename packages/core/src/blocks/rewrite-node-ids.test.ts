@@ -7,7 +7,13 @@ import { rewriteBlockNodeIds } from "./rewrite-node-ids.js";
 
 const blocks = createBlockRegistry([
   groupBlock,
-  defineBlock({ name: "acme/team", render: () => null }),
+  defineBlock({
+    name: "acme/team",
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
+  }),
 ]);
 
 const heading = (id: string, text: string): BlockNode => ({

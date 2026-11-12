@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import { defineBlock } from "../block-registry.js";
 
 export const groupBlock = defineBlock({
@@ -17,11 +15,5 @@ export const groupBlock = defineBlock({
       label: { id: "block.core.group.input.content.label", message: "Content" },
     },
   ],
-  render: ({ attrs, blockProps, tagName }): ReactNode => {
-    const Content = attrs.content as (() => ReactNode) | undefined;
-    // Honor the author's root-element override (Builder's tag-name); the Box is
-    // a generic container, so div/section/nav/etc are all valid.
-    const Tag = tagName ?? "div";
-    return <Tag {...blockProps}>{Content ? <Content /> : null}</Tag>;
-  },
+  view: () => import("./group.view.js"),
 });

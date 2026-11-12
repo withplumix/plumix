@@ -231,7 +231,8 @@ export async function runCommand(
       runtimeMigrations,
       plugins: async () => {
         const { buildApp } = await loadCore();
-        return (await buildApp(loaded.config)).plugins;
+        return (await buildApp(loaded.config, { skipBlockViews: true }))
+          .plugins;
       },
     });
   }
@@ -263,7 +264,9 @@ export async function resolveCommandApp(
     );
   }
   const { buildApp } = await loadCore();
-  return buildApp(config);
+  // A command never renders a block, and outside Vite a view's CSS import
+  // can't load.
+  return buildApp(config, { skipBlockViews: true });
 }
 
 /**

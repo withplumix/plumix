@@ -23,6 +23,7 @@
   },
   "include": [
     "plumix.config.ts",
+    "playground-env.d.ts",
     "theme.ts",
     "auth",
     "blocks",

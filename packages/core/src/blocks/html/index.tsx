@@ -1,17 +1,4 @@
-import type { ReactNode } from "react";
-
-import type { BlockNodeRenderProps } from "../render-block-tree.js";
 import { defineBlock } from "../block-registry.js";
-import { useHtmlAllowlist } from "./context.js";
-import { sanitizeHtml } from "./sanitize.js";
-
-function HtmlBlockRender({ attrs }: BlockNodeRenderProps): ReactNode {
-  const allowlist = useHtmlAllowlist();
-  const raw = (attrs.html as string | undefined) ?? "";
-  return (
-    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(raw, allowlist) }} />
-  );
-}
 
 export const htmlBlock = defineBlock({
   name: "core/html",
@@ -37,5 +24,5 @@ export const htmlBlock = defineBlock({
   // A raw-HTML block may hold a widget rather than writing.
   text: [{ name: "html", html: true, prose: false }],
   defaults: { html: "<p>Custom HTML</p>" },
-  render: HtmlBlockRender,
+  view: () => import("./html.view.js"),
 });

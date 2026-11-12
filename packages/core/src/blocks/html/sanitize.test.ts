@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { LINK_SCHEMES } from "../marks/safe-href.js";
-import { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./sanitize.js";
+import { BASELINE_HTML_ALLOWLIST } from "./allowlist.js";
+import { sanitizeHtml } from "./sanitize.js";
 
 describe("sanitizeHtml — baseline allowlist", () => {
   test("returns empty string when input is empty", () => {

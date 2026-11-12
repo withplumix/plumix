@@ -2,6 +2,7 @@ import type { JsonObject } from "../json.js";
 import type { BlockRegistry, BlockSpec } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { blockSlotKeys } from "./block-slots.js";
+import { blockViewModule } from "./block-views.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
@@ -41,17 +42,6 @@ export type TemplateDepDeclarations = {
     | ((prev: readonly TemplateDepKey<K>[]) => readonly TemplateDepKey<K>[]);
 };
 
-/**
- * Rejects a kind no `TemplateDepRegistry` entry names. Checked on the spec, not
- * as `Deps`'s constraint, so the constraint still types a kind's `prev`.
- */
-export interface KnownBlockDepKinds<Attrs, D> {
-  readonly deps?: BlockDeps<
-    Attrs,
-    Readonly<Record<Exclude<keyof D, keyof TemplateDepRegistry>, never>>
-  >;
-}
-
 type DeclaredKey<V> = V extends readonly (infer Key extends string)[]
   ? Key
   : V extends (prev: never) => readonly (infer Key extends string)[]
@@ -59,7 +49,7 @@ type DeclaredKey<V> = V extends readonly (infer Key extends string)[]
     : never;
 
 /**
- * What `render` reads: each declared kind's results under each declared key,
+ * What the view reads: each declared kind's results under each declared key,
  * `null` when the loader returned nothing for it or threw.
  */
 export type BlockDepResults<D> = {
@@ -91,10 +81,14 @@ export type LoadedDeps = Readonly<
 const NO_INHERITED_KEYS: readonly string[] = [];
 
 export function blockDepKeys(spec: BlockSpec, node: BlockNode): DepKeys {
-  const { deps } = spec;
+  const deps: unknown = blockViewModule(spec).deps;
   if (deps === undefined) return {};
   const declared: unknown =
-    typeof deps === "function" ? deps(node.attrs ?? {}) : deps;
+    typeof deps === "function"
+      ? (deps as (attrs: JsonObject) => TemplateDepDeclarations)(
+          node.attrs ?? {},
+        )
+      : deps;
   if (typeof declared !== "object" || declared === null) return {};
   const keys: Record<string, readonly string[]> = {};
   for (const [kind, value] of Object.entries(declared)) {

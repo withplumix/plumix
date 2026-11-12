@@ -43,13 +43,16 @@ const routeProbe = definePlugin("route-probe", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/route-probe",
-        loaders: {
-          params: ({ ctx: appCtx }: BlockLoaderArgs) => {
-            loaderSaw.push(appCtx);
-            return Promise.resolve(null);
-          },
-        },
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: {
+              params: ({ ctx: appCtx }: BlockLoaderArgs) => {
+                loaderSaw.push(appCtx);
+                return Promise.resolve(null);
+              },
+            },
+          }),
       }),
     );
   },

@@ -4,8 +4,8 @@ import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { codeBlock } from "./index.js";
 
 describe("core/code", () => {
-  test("renders a bare <pre> with the code text when no language is set", () => {
-    const html = renderBlockSpecToHtml(codeBlock, {
+  test("renders a bare <pre> with the code text when no language is set", async () => {
+    const html = await renderBlockSpecToHtml(codeBlock, {
       text: "const x = 1;",
     });
 
@@ -13,8 +13,8 @@ describe("core/code", () => {
     expect(html).toBe("<pre>const x = 1;</pre>");
   });
 
-  test("seeds theme-overridable default styles onto the <pre>", () => {
-    const html = renderBlockTreeToHtml(
+  test("seeds theme-overridable default styles onto the <pre>", async () => {
+    const html = await renderBlockTreeToHtml(
       [codeBlock],
       [
         {
@@ -34,8 +34,8 @@ describe("core/code", () => {
     expect(html).toContain("SFMono-Regular, Menlo, monospace");
   });
 
-  test("syntax-highlights the code for a supported language", () => {
-    const html = renderBlockSpecToHtml(codeBlock, {
+  test("syntax-highlights the code for a supported language", async () => {
+    const html = await renderBlockSpecToHtml(codeBlock, {
       text: "fn main() {}",
       language: "rust",
     });
@@ -47,8 +47,8 @@ describe("core/code", () => {
     expect(html).toContain("--plumix-code-");
   });
 
-  test("falls back to plain <code> for a language no grammar covers", () => {
-    const html = renderBlockSpecToHtml(codeBlock, {
+  test("falls back to plain <code> for a language no grammar covers", async () => {
+    const html = await renderBlockSpecToHtml(codeBlock, {
       text: "IDENTIFICATION DIVISION.",
       language: "cobol",
     });
@@ -60,8 +60,8 @@ describe("core/code", () => {
     expect(html).not.toContain('class="hljs"');
   });
 
-  test("treats whitespace-only language as no language", () => {
-    const html = renderBlockSpecToHtml(codeBlock, {
+  test("treats whitespace-only language as no language", async () => {
+    const html = await renderBlockSpecToHtml(codeBlock, {
       text: "noop",
       language: "   ",
     });
@@ -70,8 +70,8 @@ describe("core/code", () => {
     expect(html).not.toContain("data-language");
   });
 
-  test("normalizes an alias to its canonical id at render", () => {
-    const html = renderBlockSpecToHtml(codeBlock, {
+  test("normalizes an alias to its canonical id at render", async () => {
+    const html = await renderBlockSpecToHtml(codeBlock, {
       text: "const x = 1;",
       language: "ts",
     });
@@ -79,8 +79,8 @@ describe("core/code", () => {
     expect(html).toContain('data-language="typescript"');
   });
 
-  test("a freshly inserted block carries visible placeholder code", () => {
-    const html = renderBlockSpecToHtml(codeBlock, codeBlock.defaults);
+  test("a freshly inserted block carries visible placeholder code", async () => {
+    const html = await renderBlockSpecToHtml(codeBlock, codeBlock.defaults);
 
     expect(html).toContain("Your code here");
   });

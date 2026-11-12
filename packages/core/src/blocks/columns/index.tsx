@@ -1,9 +1,5 @@
-import type { ReactNode } from "react";
-
 import type { BlockNode } from "../render-block-tree.js";
-import type { ThemeBreakpoints } from "../styles/style-emitter.js";
 import { defineBlock } from "../block-registry.js";
-import { DEFAULT_BREAKPOINTS } from "../styles/style-emitter.js";
 
 /**
  * Two equal columns, each seeded with a paragraph so a fresh row isn't bare.
@@ -21,32 +17,8 @@ const DEFAULT_COLUMNS: readonly BlockNode[] = [
   },
 ];
 
-const STACK_AT = ["tablet", "mobile", "never"] as const;
-type StackAt = (typeof STACK_AT)[number];
+type StackAt = "tablet" | "mobile" | "never";
 const DEFAULT_STACK_AT: StackAt = "tablet";
-
-function pickStackAt(raw: unknown): StackAt {
-  return typeof raw === "string" &&
-    (STACK_AT as readonly string[]).includes(raw)
-    ? (raw as StackAt)
-    : DEFAULT_STACK_AT;
-}
-
-/**
- * Emitted by the block rather than a stylesheet so it follows the theme's
- * breakpoints.
- */
-function stackStyleCss(
-  nodeId: string,
-  stackAt: StackAt,
-  reverse: boolean,
-  breakpoints: ThemeBreakpoints,
-): string {
-  if (stackAt === "never") return "";
-  const max = stackAt === "mobile" ? breakpoints.mobile : breakpoints.tablet;
-  const direction = reverse ? "column-reverse" : "column";
-  return `@media (max-width: ${max}px) { .plumix-cols-${nodeId} { flex-direction: ${direction}; } }`;
-}
 
 export const columnsBlock = defineBlock({
   name: "core/columns",
@@ -109,31 +81,9 @@ export const columnsBlock = defineBlock({
   ],
   defaults: { stackAt: DEFAULT_STACK_AT },
   // A flex row with a gap. Responsive stacking rides a scoped media query keyed
-  // off `stackAt` (see render), not a seeded bucket, so the preset owns it.
+  // off `stackAt` (see the view), not a seeded bucket, so the preset owns it.
   defaultStyles: {
     large: { display: "flex", gap: "20px", alignItems: "stretch" },
   },
-  render: ({ attrs, blockProps, nodeId, breakpoints }): ReactNode => {
-    const Columns = attrs.columns as (() => ReactNode) | undefined;
-    const stackCss = nodeId
-      ? stackStyleCss(
-          nodeId,
-          pickStackAt(attrs.stackAt),
-          attrs.reverseWhenStacked === true,
-          breakpoints ?? DEFAULT_BREAKPOINTS,
-        )
-      : "";
-    // A dedicated scoping class the stacking `<style>` targets — always present
-    // (unlike the style-slot class, which a user could clear).
-    const className =
-      [blockProps.className, nodeId ? `plumix-cols-${nodeId}` : null]
-        .filter(Boolean)
-        .join(" ") || undefined;
-    return (
-      <div {...blockProps} className={className}>
-        {stackCss ? <style>{stackCss}</style> : null}
-        {Columns ? <Columns /> : null}
-      </div>
-    );
-  },
+  view: () => import("./columns.view.js"),
 });

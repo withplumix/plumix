@@ -1,8 +1,13 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { coreBlocks, createBlockRegistry } from "@plumix/core/blocks";
+import {
+  coreBlocks,
+  createBlockRegistry,
+  loadBlockViews,
+} from "@plumix/core/blocks";
 
+import { treeBlockNames } from "../src/canvas-views.js";
 import { EditorCanvas } from "../src/editor-canvas.js";
 import { copySpec } from "./copy-block.js";
 import { feedSpec } from "./feed-block.js";
@@ -21,6 +26,9 @@ const registry = createBlockRegistry([
   copySpec,
   searchSpec,
 ]);
+
+// As `mountEditorRuntime` does: the seed's views load before the first render.
+await loadBlockViews(registry, treeBlockNames(SEED_BLOCKS, registry));
 
 const root = document.getElementById("root");
 if (root) {

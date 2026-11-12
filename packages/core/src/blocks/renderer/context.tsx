@@ -58,7 +58,7 @@ export interface PlumixContextValue {
   readonly queriedEntry?: RendererQueriedEntry | null;
   /** Render locale, threaded to the walker for shortcode/`Intl` output. */
   readonly locale?: string;
-  /** Compiled catalog for `locale`, which a block's `render` resolves its
+  /** Compiled catalog for `locale`, which a block's view resolves its
    *  strings from via `BlockContext.t`. */
   readonly catalog?: CompiledCatalog;
   /** Registered shortcodes for rich-text body expansion. */

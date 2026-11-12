@@ -23,7 +23,7 @@ import {
 import { BlockIcon } from "./block-icon.js";
 import { topLevelIndexAfter } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
-import { useEditorStore } from "./provider.js";
+import { useBlockPrefetchRef, useEditorStore } from "./provider.js";
 
 interface BlockCatalogProps {
   readonly patterns?: readonly InserterPattern[];
@@ -55,6 +55,7 @@ export function BlockCatalog({
   const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
   const startBlockDrag = useEditorStore((s) => s.startBlockDrag);
+  const prefetchRef = useBlockPrefetchRef();
   const insertAt = useEditorStore((s) =>
     topLevelIndexAfter(s.tree, s.activeId, registry),
   );
@@ -153,6 +154,8 @@ export function BlockCatalog({
               // The slot inserter floats over the canvas, where a drag
               // started here would drop a second copy on release.
               onPointerDown={target ? undefined : () => startBlockDrag(entry)}
+              // Loads the block's view in the canvas before the insert lands.
+              onIntent={() => prefetchRef?.current?.([entry.name])}
               onClick={() => insertEntry(createNodeFromEntry(registry, entry))}
             />
           ))}
@@ -206,12 +209,15 @@ function CatalogCard({
   label,
   onClick,
   onPointerDown,
+  onIntent,
 }: {
   readonly testId: string;
   readonly icon?: string;
   readonly label: string;
   readonly onClick: () => void;
   readonly onPointerDown?: () => void;
+  /** The author hovered or focused the card, so an insert may follow. */
+  readonly onIntent?: () => void;
 }): ReactElement {
   return (
     <button
@@ -219,6 +225,8 @@ function CatalogCard({
       data-testid={testId}
       onClick={onClick}
       onPointerDown={onPointerDown}
+      onPointerEnter={onIntent}
+      onFocus={onIntent}
       title={label}
       className="border-border hover:bg-accent hover:border-accent-foreground/20 flex aspect-square flex-col items-center justify-center gap-1.5 rounded-md border p-2 text-center"
     >

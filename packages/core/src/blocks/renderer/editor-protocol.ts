@@ -71,6 +71,14 @@ export type HostMessage =
     }
   | {
       /**
+       * Blocks the author may insert next, such as a hovered catalog item. The
+       * canvas loads their view modules so the insert renders at once.
+       */
+      readonly type: "host:prefetch-blocks";
+      readonly names: readonly string[];
+    }
+  | {
+      /**
        * X-ray view toggle — the canvas outlines every block while on. Pushed on
        * change and once the canvas is ready (initial sync).
        */
@@ -139,6 +147,15 @@ export type CanvasMessage =
        */
       readonly type: "canvas:requestDeps";
       readonly tree: readonly BlockNode[];
+    }
+  | {
+      /**
+       * The loaded blocks whose view module declares loaders, for the shell's
+       * Refresh control: the shell loads no view module. Sent on connect and
+       * whenever more load.
+       */
+      readonly type: "canvas:loader-blocks";
+      readonly names: readonly string[];
     }
   | {
       /**

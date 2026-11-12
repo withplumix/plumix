@@ -4,7 +4,7 @@ import type { JsonObject } from "../json.js";
 import type { RenderEnvPolicy } from "./render-env.js";
 import type { PlumixContextValue } from "./renderer/context.js";
 import { createBlockRegistry } from "./block-registry.js";
-import { BASELINE_HTML_ALLOWLIST } from "./html/sanitize.js";
+import { BASELINE_HTML_ALLOWLIST } from "./html/allowlist.js";
 import {
   parseRenderEnv,
   RENDER_ENV_POLICY,

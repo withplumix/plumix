@@ -224,6 +224,10 @@ Answering a conflict by discarding the author's refused work and reloading what 
 A named, registered content component. The registered _definition_ is the block spec; a single stored instance in an entry's content tree is a block node — keep the two senses distinct.
 _Avoid_: Gutenberg, Builder.io (these are the reference models, not plumix terms)
 
+**View module**:
+The module a block spec's `view` imports lazily, holding what renders or runs on the server: the block's view (its default export) and its `loaders`, `deps` and `errorFallback`. The block spec itself holds only what the editor needs before anything renders. See ADR 0071.
+_Avoid_: render function, block component
+
 **Block input**:
 A single editable control declared on a block — an attribute, a style-bound property, or a slot input.
 

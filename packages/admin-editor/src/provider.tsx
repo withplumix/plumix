@@ -29,6 +29,12 @@ type LoaderDataPush = (data: SerializedLoaderData) => void;
 const LoaderPushContext =
   createContext<RefObject<LoaderDataPush | null> | null>(null);
 
+/** Asks the canvas to load blocks' view modules ahead of an insert. */
+type BlockPrefetch = (names: readonly string[]) => void;
+
+const BlockPrefetchContext =
+  createContext<RefObject<BlockPrefetch | null> | null>(null);
+
 /** Uncontrolled: `initialTree` seeds once and is never fed back mid-session. */
 export function EditorProvider({
   registry,
@@ -72,6 +78,7 @@ export function EditorProvider({
   );
   const [camera] = useState<CameraStoreApi>(() => createCameraStore({ zoom }));
   const loaderPushRef = useRef<LoaderDataPush | null>(null);
+  const prefetchRef = useRef<BlockPrefetch | null>(null);
 
   // The only document→camera coupling: a device switch re-enters fit mode.
   useEffect(
@@ -86,7 +93,9 @@ export function EditorProvider({
     <EditorStoreContext.Provider value={store}>
       <CameraStoreContext.Provider value={camera}>
         <LoaderPushContext.Provider value={loaderPushRef}>
-          {children}
+          <BlockPrefetchContext.Provider value={prefetchRef}>
+            {children}
+          </BlockPrefetchContext.Provider>
         </LoaderPushContext.Provider>
       </CameraStoreContext.Provider>
     </EditorStoreContext.Provider>
@@ -98,6 +107,13 @@ export function EditorProvider({
  *  EditorProvider (e.g. an isolated unit render) — callers no-op then. */
 export function useLoaderPushRef(): RefObject<LoaderDataPush | null> | null {
   return useContext(LoaderPushContext);
+}
+
+/** The view-module prefetch channel ref. CanvasFrame sets `.current` when its
+ *  bridge connects; a catalog item calls it on hover or focus. Null outside an
+ *  EditorProvider — callers no-op then. */
+export function useBlockPrefetchRef(): RefObject<BlockPrefetch | null> | null {
+  return useContext(BlockPrefetchContext);
 }
 
 export function useEditorStore<T>(selector: (state: EditorStore) => T): T {

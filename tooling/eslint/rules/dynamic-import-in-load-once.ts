@@ -32,7 +32,10 @@ function loaderName({ callee }: CallExpressionNode): string | undefined {
  * The nearest enclosing function must be the factory itself: one nested inside
  * it runs per call again.
  */
-function insideLoader(node: Rule.Node): boolean {
+function insideLoader(
+  node: Rule.Node,
+  blockViews: ReadonlySet<Rule.Node>,
+): boolean {
   let fn: Rule.Node | null = node.parent;
   while (
     fn !== null &&
@@ -43,6 +46,7 @@ function insideLoader(node: Rule.Node): boolean {
     fn = fn.parent;
   }
   if (fn === null || fn.type === "FunctionDeclaration") return false;
+  if (blockViews.has(fn)) return true;
   const call = fn.parent;
   if (call.type !== "CallExpression" || !call.arguments.includes(fn)) {
     return false;
@@ -65,9 +69,15 @@ export const dynamicImportInLoadOnce: Rule.RuleModule = {
     schema: [],
   },
   create(context) {
+    // A block's `view: () => import(…)`: `loadBlockViews` imports it once per
+    // spec and retries a failed import, as `loadOnce` would.
+    const blockViews = new Set<Rule.Node>();
     return {
+      "Property[computed=false][key.name='view'] > :function"(node: Rule.Node) {
+        blockViews.add(node);
+      },
       ImportExpression(node: Rule.Node) {
-        if (!insideLoader(node)) {
+        if (!insideLoader(node, blockViews)) {
           context.report({ node, messageId: "outsideLoadOnce" });
         }
       },

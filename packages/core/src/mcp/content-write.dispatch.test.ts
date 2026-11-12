@@ -46,25 +46,37 @@ function mcpHarness(): Promise<DispatcherHarness> {
 const card = defineBlock({
   name: "site/card",
   title: "Card",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   inputs: [{ name: "body", type: "slot", allowedBlocks: ["core/rich-text"] }],
 });
 
 const tabs = defineBlock({
   name: "site/tabs",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   inputs: [{ name: "items", type: "slot" }],
 });
 
 const tab = defineBlock({
   name: "site/tab",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   requiresParent: ["site/tabs"],
 });
 
 const gated = defineBlock({
   name: "site/gated",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   capability: "entry:post:publish",
 });
 

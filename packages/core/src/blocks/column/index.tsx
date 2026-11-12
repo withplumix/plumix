@@ -1,25 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
-
 import { defineBlock } from "../block-registry.js";
-
-/**
- * A bare CSS length/percentage — the only shape a column width may take. Keeps
- * the value inert when spread into an inline `flex` style.
- */
-const SAFE_WIDTH = /^\d+(\.\d+)?(px|%|rem|em|vw|vh|ch)$/;
-
-/**
- * Shrink but not grow, so several fixed widths fit the row instead of
- * overflowing it. A bare number is a percent, matching Builder's column width.
- */
-function columnFlex(width: unknown): CSSProperties | undefined {
-  if (typeof width !== "string") return undefined;
-  const value = width.trim();
-  const normalized = /^\d+(\.\d+)?$/.test(value) ? `${value}%` : value;
-  return SAFE_WIDTH.test(normalized)
-    ? { flex: `0 1 ${normalized}` }
-    : undefined;
-}
 
 export const columnBlock = defineBlock({
   name: "core/column",
@@ -50,12 +29,5 @@ export const columnBlock = defineBlock({
   defaultStyles: {
     large: { flexGrow: "1", flexBasis: "0", minWidth: "0" },
   },
-  render: ({ attrs, blockProps }): ReactNode => {
-    const Content = attrs.content as (() => ReactNode) | undefined;
-    return (
-      <div {...blockProps} style={columnFlex(attrs.width)}>
-        {Content ? <Content /> : null}
-      </div>
-    );
-  },
+  view: () => import("./column.view.js"),
 });

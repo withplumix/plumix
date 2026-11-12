@@ -2,12 +2,20 @@ import { describe, expect, test } from "vitest";
 
 import type { JsonObject } from "../json.js";
 import type { BlockSpec } from "./block-registry.js";
+import type { BlockView } from "./render-block-tree.js";
 import { resolveBlockTransforms } from "./transforms.js";
 
-const noopRender: BlockSpec["render"] = () => null;
+const noopRender: BlockView = () => null;
 
 function spec(name: string, transforms?: BlockSpec["transforms"]): BlockSpec {
-  return { name, render: noopRender, transforms };
+  return {
+    name,
+    view: () =>
+      Promise.resolve({
+        default: noopRender,
+      }),
+    transforms,
+  };
 }
 
 describe("resolveBlockTransforms", () => {

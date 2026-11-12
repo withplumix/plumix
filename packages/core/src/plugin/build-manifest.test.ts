@@ -1298,7 +1298,10 @@ describe("buildManifest", () => {
             title: "Callout",
             category: "interactive",
             icon: "lightbulb",
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         );
       },
@@ -1321,7 +1324,10 @@ describe("buildManifest", () => {
         defineBlock({
           name: "eduscope/chart",
           title: "Chart",
-          render: () => null,
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+            }),
         }),
       ],
     });
@@ -1340,7 +1346,10 @@ describe("buildManifest", () => {
           defineBlock({
             name: "forms/form",
             title: "Form",
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         );
       },
@@ -1349,7 +1358,14 @@ describe("buildManifest", () => {
 
     const manifest = buildManifest(registry, {
       blocks: [
-        defineBlock({ name: "acme/hero", title: "Hero", render: () => null }),
+        defineBlock({
+          name: "acme/hero",
+          title: "Hero",
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+            }),
+        }),
       ],
       allowedBlocks: ["core/columns", "acme/missing"],
     });
@@ -1389,7 +1405,10 @@ describe("buildManifest", () => {
           defineBlock({
             name: "shared/card",
             title: "Plugin",
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         );
       },
@@ -1401,7 +1420,10 @@ describe("buildManifest", () => {
         defineBlock({
           name: "shared/card",
           title: "Theme",
-          render: () => null,
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+            }),
         }),
       ],
     });
@@ -1421,7 +1443,10 @@ describe("buildManifest", () => {
             description: "Highlight an aside passage.",
             keywords: ["aside", "note", "tip"],
             inserter: false,
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         );
       },
@@ -1458,7 +1483,10 @@ describe("buildManifest", () => {
                 attrs: { ratio: "33/33/33" },
               },
             ],
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         );
       },
@@ -1494,14 +1522,20 @@ describe("buildManifest", () => {
           defineBlock({
             name: "acme/zebra",
             title: "Zebra",
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         );
         ctx.registerBlock(
           defineBlock({
             name: "acme/apple",
             title: "Apple",
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         );
         ctx.registerMark(zoomMark);
@@ -2149,7 +2183,13 @@ describe("buildManifest visibility projection", () => {
     const plugin = definePlugin("acme", {
       setup: (ctx) => {
         ctx.registerBlock(
-          defineBlock({ name: "acme/team", render: () => null }),
+          defineBlock({
+            name: "acme/team",
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
+          }),
         );
         ctx.registerPattern({
           name: "acme/team-intro",

@@ -7,7 +7,13 @@ import { groupBlock } from "./group/index.js";
 
 const blocks = createBlockRegistry([
   groupBlock,
-  defineBlock({ name: "acme/team", render: () => null }),
+  defineBlock({
+    name: "acme/team",
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
+  }),
 ]);
 
 const tree: readonly BlockNode[] = [

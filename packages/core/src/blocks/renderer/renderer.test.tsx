@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import type { ShortcodeSpec } from "../shortcodes/types.js";
 import { createBlockRegistry } from "../block-registry.js";
+import { loadBlockViews } from "../block-views.js";
 import { richTextBlock } from "../rich-text/index.js";
 import {
   BlockRenderer,
@@ -15,12 +16,16 @@ import {
 const headingRegistry = createBlockRegistry([
   {
     name: "core/heading",
-    render: ({ attrs }) => {
-      const { text } = attrs as { readonly text: string };
-      return <h1>{text}</h1>;
-    },
+    view: () =>
+      Promise.resolve({
+        default: ({ attrs }) => {
+          const { text } = attrs as { readonly text: string };
+          return <h1>{text}</h1>;
+        },
+      }),
   },
 ]);
+await loadBlockViews(headingRegistry);
 
 describe("BlockRenderer", () => {
   test("renders block tree using the registry from PlumixProvider", () => {
@@ -38,7 +43,7 @@ describe("BlockRenderer", () => {
     expect(html).toContain("Hello");
   });
 
-  test("threads the queried entry from the provider into body shortcode context", () => {
+  test("threads the queried entry from the provider into body shortcode context", async () => {
     const authorShortcode: ShortcodeSpec = {
       name: "author",
       render: ({ context }) => {
@@ -47,6 +52,7 @@ describe("BlockRenderer", () => {
       },
     };
     const registry = createBlockRegistry([richTextBlock]);
+    await loadBlockViews(registry);
     const content = {
       version: "plumix.v2" as const,
       blocks: [
@@ -69,12 +75,13 @@ describe("BlockRenderer", () => {
     expect(html).toContain("Ada");
   });
 
-  test("threads shortcodes + locale from the provider into rich-text body expansion", () => {
+  test("threads shortcodes + locale from the provider into rich-text body expansion", async () => {
     const yearShortcode: ShortcodeSpec = {
       name: "year",
       render: ({ context }) => `Y-${context.locale}`,
     };
     const registry = createBlockRegistry([richTextBlock]);
+    await loadBlockViews(registry);
     const content = {
       version: "plumix.v2" as const,
       blocks: [

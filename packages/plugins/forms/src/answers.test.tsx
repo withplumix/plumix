@@ -2,6 +2,7 @@ import type { EntryContent } from "plumix/blocks";
 import { createBlockRegistry } from "plumix/blocks";
 import { BlockRenderer, PlumixProvider } from "plumix/blocks/renderer";
 import { group, repeater, select, text, toggle } from "plumix/fields";
+import { loadBlockViews } from "plumix/test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
@@ -28,18 +29,18 @@ function signupWith(planDefault: "basic" | "pro") {
 }
 
 /** The field keys the browser is served for a form. */
-function renderedKeys(form: FormDefinition): readonly string[] {
+async function renderedKeys(form: FormDefinition): Promise<readonly string[]> {
   const formRegistry = createFormRegistry();
   formRegistry.register(form, "config");
   const block = createFormBlock(formRegistry);
+  const registry = createBlockRegistry([block]);
+  await loadBlockViews(registry);
   const content: EntryContent = {
     version: "plumix.v2",
     blocks: [{ id: "n", name: block.name, attrs: { slug: form.slug } }],
   };
   const html = renderToStaticMarkup(
-    <PlumixProvider
-      value={{ registry: createBlockRegistry([block]), mode: "live" }}
-    >
+    <PlumixProvider value={{ registry, mode: "live" }}>
       <BlockRenderer content={content} />
     </PlumixProvider>,
   );
@@ -60,21 +61,21 @@ function keysOnSubmit(
 describe("a condition", () => {
   test.each(["basic", "pro"] as const)(
     "decides the same fields on the server as in the browser (%s)",
-    (planValue) => {
+    async (planValue) => {
       const form = signupWith(planValue);
 
       expect(
         keysOnSubmit(form, new URLSearchParams([["plan", planValue]])),
-      ).toEqual(renderedKeys(form));
+      ).toEqual(await renderedKeys(form));
     },
   );
 
   // Markup is built once from defaults and cached; the handler must judge the
   // driver the visitor actually submitted.
-  test("judges the submitted driver, not the one the markup was built from", () => {
+  test("judges the submitted driver, not the one the markup was built from", async () => {
     const servedAsBasic = signupWith("basic");
 
-    expect(renderedKeys(servedAsBasic)).toEqual(["plan"]);
+    expect(await renderedKeys(servedAsBasic)).toEqual(["plan"]);
     expect(
       keysOnSubmit(servedAsBasic, new URLSearchParams([["plan", "pro"]])),
     ).toEqual(["plan", "seats"]);
@@ -84,7 +85,7 @@ describe("a condition", () => {
 // Both sides build by the same per-field rule, so they may differ only where
 // the visitor changed an answer.
 describe("a form nobody has touched", () => {
-  test("reads a hidden driver as the default the markup judged it by", () => {
+  test("reads a hidden driver as the default the markup judged it by", async () => {
     const billing = select("plan").options(["free", "pro"]).default("free");
     const invoice = toggle("invoice")
       .default(true)
@@ -95,17 +96,17 @@ describe("a form nobody has touched", () => {
 
     // `invoice` is itself hidden, but its default is what makes `vat`
     // visible — and that has to hold on both sides.
-    expect(renderedKeys(form)).toEqual(["plan", "vat"]);
+    expect(await renderedKeys(form)).toEqual(["plan", "vat"]);
     expect(keysOnSubmit(form)).toEqual(["plan", "vat"]);
   });
 
-  test("reads an unticked box the same way the markup did", () => {
+  test("reads an unticked box the same way the markup did", async () => {
     const optIn = toggle("optIn");
     const form = defineForm("survey", {
       fields: [optIn, text("why").visibleWhen(optIn.isOff())],
     });
 
-    expect(renderedKeys(form)).toEqual(["optIn", "why"]);
+    expect(await renderedKeys(form)).toEqual(["optIn", "why"]);
     expect(keysOnSubmit(form)).toEqual(["optIn", "why"]);
   });
 

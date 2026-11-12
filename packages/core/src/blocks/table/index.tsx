@@ -1,11 +1,6 @@
-import type { ReactNode } from "react";
-
 import type { BlockInput } from "../block-registry.js";
 import type { BlockNode } from "../render-block-tree.js";
 import { defineBlock } from "../block-registry.js";
-
-const ALIGNS = ["left", "center", "right"] as const;
-type Align = (typeof ALIGNS)[number];
 
 const COLUMN_COUNT = 3;
 
@@ -46,18 +41,6 @@ const ALIGN_INPUT: BlockInput = {
     },
   ],
 };
-
-/**
- * React 19 dedupes this in the editor, but the public string render emits one
- * identical copy per table, which is harmless.
- */
-const TABLE_THEME_CSS = [
-  "table{border-collapse:collapse;width:var(--plumix-table-width,100%)}",
-  "th,td{border:var(--plumix-table-border,1px solid #d0d7de);padding:var(--plumix-table-cell-padding,0.5rem 0.75rem);text-align:left;vertical-align:top}",
-  "th{background:var(--plumix-table-header-bg,#f6f8fa);font-weight:var(--plumix-table-header-weight,600)}",
-  "th[data-align=center],td[data-align=center]{text-align:center}",
-  "th[data-align=right],td[data-align=right]{text-align:right}",
-].join("");
 
 /**
  * Slot seeding doesn't recurse into a nested slot's defaultChildren, so each
@@ -107,12 +90,6 @@ const DEFAULT_ROWS: readonly BlockNode[] = [
   },
 ];
 
-function pickAlign(raw: unknown): Align | undefined {
-  return typeof raw === "string" && (ALIGNS as readonly string[]).includes(raw)
-    ? (raw as Align)
-    : undefined;
-}
-
 export const tableBlock = defineBlock({
   name: "core/table",
   title: { id: "block.core.table.title", message: "Table" },
@@ -129,21 +106,7 @@ export const tableBlock = defineBlock({
     },
   ],
   defaults: {},
-  render: ({ attrs }): ReactNode => {
-    const Rows = attrs.rows as (() => ReactNode) | undefined;
-    // Browsers inject a <tbody> anyway, so emitting it keeps the hydrated DOM
-    // valid. Header rows live here too; `scope="col"` marks them.
-    return (
-      <>
-        <style href="plumix-table-theme" precedence="default">
-          {TABLE_THEME_CSS}
-        </style>
-        <table>
-          <tbody>{Rows ? <Rows /> : null}</tbody>
-        </table>
-      </>
-    );
-  },
+  view: () => import("./table.view.js"),
 });
 
 export const tableHeaderRowBlock = defineBlock({
@@ -166,14 +129,7 @@ export const tableHeaderRowBlock = defineBlock({
     },
   ],
   defaults: {},
-  render: ({ attrs, blockProps }): ReactNode => {
-    const Cells = attrs.cells as (() => ReactNode) | undefined;
-    return (
-      <tr data-header="" {...blockProps}>
-        {Cells ? <Cells /> : null}
-      </tr>
-    );
-  },
+  view: () => import("./table.view.js"),
 });
 
 export const tableBodyRowBlock = defineBlock({
@@ -196,10 +152,7 @@ export const tableBodyRowBlock = defineBlock({
     },
   ],
   defaults: {},
-  render: ({ attrs, blockProps }): ReactNode => {
-    const Cells = attrs.cells as (() => ReactNode) | undefined;
-    return <tr {...blockProps}>{Cells ? <Cells /> : null}</tr>;
-  },
+  view: () => import("./table.view.js"),
 });
 
 export const tableHeaderCellBlock = defineBlock({
@@ -223,15 +176,7 @@ export const tableHeaderCellBlock = defineBlock({
   ],
   text: [{ name: "text" }],
   defaults: { text: "" },
-  render: ({ attrs, blockProps }): ReactNode => {
-    const { text = "" } = attrs as { readonly text?: string };
-    const align = pickAlign(attrs.align);
-    return (
-      <th scope="col" data-align={align} {...blockProps}>
-        {text}
-      </th>
-    );
-  },
+  view: () => import("./table.view.js"),
 });
 
 export const tableCellBlock = defineBlock({
@@ -252,13 +197,5 @@ export const tableCellBlock = defineBlock({
   ],
   text: [{ name: "text" }],
   defaults: { text: "" },
-  render: ({ attrs, blockProps }): ReactNode => {
-    const { text = "" } = attrs as { readonly text?: string };
-    const align = pickAlign(attrs.align);
-    return (
-      <td data-align={align} {...blockProps}>
-        {text}
-      </td>
-    );
-  },
+  view: () => import("./table.view.js"),
 });

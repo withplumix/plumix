@@ -57,7 +57,10 @@ const blog = definePlugin("test-blog", {
 const card = defineBlock({
   name: "site/card",
   title: "Card",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   inputs: [
     { name: "heading", type: "text" },
     {
@@ -75,7 +78,10 @@ const card = defineBlock({
 
 const hero = defineBlock({
   name: "site/hero",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   inputs: [
     {
       name: "align",

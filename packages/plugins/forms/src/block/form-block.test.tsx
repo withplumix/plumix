@@ -11,6 +11,7 @@ import {
   toggle,
   url,
 } from "plumix/fields";
+import { loadBlockViews } from "plumix/test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
@@ -30,55 +31,57 @@ function registryWith(form: FormDefinition) {
   return formRegistry;
 }
 
-function renderForm(form: FormDefinition): string {
-  return render(form.slug, "live", registryWith(form));
+async function renderForm(form: FormDefinition): Promise<string> {
+  return await render(form.slug, "live", registryWith(form));
 }
 
-function render(
+async function render(
   slug: string,
   mode: "edit" | "live",
   formRegistry = registryWith(contact),
-): string {
+): Promise<string> {
   const block = createFormBlock(formRegistry);
+  const registry = createBlockRegistry([block]);
+  await loadBlockViews(registry);
   const content: EntryContent = {
     version: "plumix.v2",
     blocks: [{ id: "n", name: block.name, attrs: { slug } }],
   };
   return renderToStaticMarkup(
-    <PlumixProvider value={{ registry: createBlockRegistry([block]), mode }}>
+    <PlumixProvider value={{ registry, mode }}>
       <BlockRenderer content={content} />
     </PlumixProvider>,
   );
 }
 
 describe("the form block's slug", () => {
-  test("says so in the editor when nothing is registered under it", () => {
-    const html = render("ghost", "edit");
+  test("says so in the editor when nothing is registered under it", async () => {
+    const html = await render("ghost", "edit");
 
     expect(html).toContain('data-plumix-form-missing="ghost"');
   });
 
-  test("renders nothing on a live page when nothing is registered under it", () => {
-    expect(render("ghost", "live")).not.toContain("plumix-form");
+  test("renders nothing on a live page when nothing is registered under it", async () => {
+    expect(await render("ghost", "live")).not.toContain("plumix-form");
   });
 });
 
 describe("the form block's markup", () => {
-  test("carries a required attribute only where the field declared one", () => {
-    const html = render("contact", "live");
+  test("carries a required attribute only where the field declared one", async () => {
+    const html = await render("contact", "live");
 
     expect(html).toMatch(/data-plumix-form-control="name"[^>]*required/);
     expect(html).not.toMatch(/data-plumix-form-control="email"[^>]*required/);
   });
 
-  test("keeps the honeypot out of the accessibility tree", () => {
-    const html = render("contact", "live");
+  test("keeps the honeypot out of the accessibility tree", async () => {
+    const html = await render("contact", "live");
 
     expect(html).toMatch(/data-plumix-form-honeypot[^>]*aria-hidden="true"/);
   });
 
-  test("gives every control a label that points at it", () => {
-    const html = render("contact", "live");
+  test("gives every control a label that points at it", async () => {
+    const html = await render("contact", "live");
 
     expect(html).toContain('for="plumix-form-n-name"');
     expect(html).toContain('id="plumix-form-n-name"');
@@ -103,8 +106,8 @@ describe("the form block's markup", () => {
 });
 
 describe("the control a field renders", () => {
-  test("gives each string-shaped field its own native input type", () => {
-    const html = renderForm(
+  test("gives each string-shaped field its own native input type", async () => {
+    const html = await renderForm(
       defineForm("roster", {
         fields: [text("name"), email("email"), url("website"), tel("phone")],
       }),
@@ -116,8 +119,8 @@ describe("the control a field renders", () => {
     expect(html).toMatch(/data-plumix-form-control="phone"[^>]*type="tel"/);
   });
 
-  test("carries a number field's bounds onto its input", () => {
-    const html = renderForm(
+  test("carries a number field's bounds onto its input", async () => {
+    const html = await renderForm(
       defineForm("booking", {
         fields: [number("guests").min(1).max(8)],
       }),
@@ -128,24 +131,24 @@ describe("the control a field renders", () => {
     expect(html).toMatch(/data-plumix-form-control="guests"[^>]*max="8"/);
   });
 
-  test("renders a date field as a date input", () => {
-    const html = renderForm(
+  test("renders a date field as a date input", async () => {
+    const html = await renderForm(
       defineForm("booking", { fields: [date("visitOn")] }),
     );
 
     expect(html).toMatch(/data-plumix-form-control="visitOn"[^>]*type="date"/);
   });
 
-  test("renders a textarea rather than an input for a long answer", () => {
-    const html = renderForm(
+  test("renders a textarea rather than an input for a long answer", async () => {
+    const html = await renderForm(
       defineForm("feedback", { fields: [textarea("message")] }),
     );
 
     expect(html).toMatch(/<textarea[^>]*data-plumix-form-control="message"/);
   });
 
-  test("renders a select with an option per choice, plus a blank one", () => {
-    const html = renderForm(
+  test("renders a select with an option per choice, plus a blank one", async () => {
+    const html = await renderForm(
       defineForm("signup", {
         fields: [select("plan").options(["basic", "pro"])],
       }),
@@ -157,8 +160,8 @@ describe("the control a field renders", () => {
     expect(html).toContain('<option value="" selected=""></option>');
   });
 
-  test("lets a multiple select take more than one answer", () => {
-    const html = renderForm(
+  test("lets a multiple select take more than one answer", async () => {
+    const html = await renderForm(
       defineForm("signup", {
         fields: [select("topics").options(["news", "events"]).multiple()],
       }),
@@ -168,8 +171,8 @@ describe("the control a field renders", () => {
     expect(html).toMatch(/data-plumix-form-control="topics"[^>]*multiple/);
   });
 
-  test("renders a toggle as a checkbox, checked from its default", () => {
-    const html = renderForm(
+  test("renders a toggle as a checkbox, checked from its default", async () => {
+    const html = await renderForm(
       defineForm("signup", {
         fields: [toggle("newsletter").default(true), toggle("sms")],
       }),
@@ -184,10 +187,10 @@ describe("the control a field renders", () => {
 
   // React only complains about a mismatched control at render — a single
   // select handed a list default, say — and complaining is all it does.
-  test("renders every roster type without React objecting to one", () => {
+  test("renders every roster type without React objecting to one", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    renderForm(
+    await renderForm(
       defineForm("roster", {
         fields: [
           text("name"),
@@ -208,8 +211,8 @@ describe("the control a field renders", () => {
     spy.mockRestore();
   });
 
-  test("seeds a field's declared default into its control", () => {
-    const html = renderForm(
+  test("seeds a field's declared default into its control", async () => {
+    const html = await renderForm(
       defineForm("signup", { fields: [text("source").default("web")] }),
     );
 
@@ -220,8 +223,8 @@ describe("the control a field renders", () => {
 describe("a field with a visibility condition", () => {
   const plan = select("plan").options(["basic", "pro"]).default("basic");
 
-  test("is rendered when the form's defaults satisfy it", () => {
-    const html = renderForm(
+  test("is rendered when the form's defaults satisfy it", async () => {
+    const html = await renderForm(
       defineForm("signup", {
         fields: [plan, text("seats").visibleWhen(plan.is("basic"))],
       }),
@@ -230,8 +233,8 @@ describe("a field with a visibility condition", () => {
     expect(html).toContain('data-plumix-form-control="seats"');
   });
 
-  test("is not rendered when the form's defaults do not", () => {
-    const html = renderForm(
+  test("is not rendered when the form's defaults do not", async () => {
+    const html = await renderForm(
       defineForm("signup", {
         fields: [plan, text("seats").visibleWhen(plan.is("pro"))],
       }),
@@ -242,8 +245,8 @@ describe("a field with a visibility condition", () => {
 });
 
 describe("the form block in the editor", () => {
-  test("renders the form as markup, so the editor arranges it rather than fills it in", () => {
-    const html = render("contact", "edit");
+  test("renders the form as markup, so the editor arranges it rather than fills it in", async () => {
+    const html = await render("contact", "edit");
 
     expect(html).toContain('data-plumix-form="contact"');
     expect(html).toContain('data-plumix-form-control="name"');

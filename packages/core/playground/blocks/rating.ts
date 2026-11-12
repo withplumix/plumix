@@ -1,8 +1,4 @@
-import type { ReactNode } from "react";
-import { createElement as h } from "react";
 import { defineBlock } from "plumix/blocks";
-
-const SYMBOLS = { star: "★", heart: "♥" } as const;
 
 /**
  * A number and a radio input, which no core block declares, and a label that
@@ -27,17 +23,5 @@ export const ratingBlock = defineBlock({
     { name: "label", type: "text", label: "Label" },
   ],
   defaults: { score: 3, symbol: "star", label: "" },
-  render: ({ attrs }): ReactNode => {
-    const { score, symbol, label } = attrs as {
-      readonly score?: number | null;
-      readonly symbol?: keyof typeof SYMBOLS;
-      readonly label?: string;
-    };
-    return h(
-      "p",
-      null,
-      SYMBOLS[symbol ?? "star"].repeat(score ?? 0),
-      label ? ` ${label}` : null,
-    );
-  },
+  view: () => import("./rating.view.js"),
 });

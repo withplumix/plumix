@@ -30,6 +30,7 @@ export function BlockInspector({
   const activeId = useEditorStore((s) => s.activeId);
   const tree = useEditorStore((s) => s.tree);
   const device = useEditorStore((s) => s.device);
+  const loaderBlocks = useEditorStore((s) => s.loaderBlocks);
   const updateBlockAttrs = useEditorStore((s) => s.updateBlockAttrs);
   const updateBlockStyle = useEditorStore((s) => s.updateBlockStyle);
   const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
@@ -49,10 +50,20 @@ export function BlockInspector({
         activeId,
         bucket,
         canRefresh,
+        loaderBlocks,
         allowedBlocks,
         layout,
       ),
-    [registry, tree, activeId, bucket, canRefresh, allowedBlocks, layout],
+    [
+      registry,
+      tree,
+      activeId,
+      bucket,
+      canRefresh,
+      loaderBlocks,
+      allowedBlocks,
+      layout,
+    ],
   );
   const block = view?.block;
   const tableId = view?.tableId ?? null;

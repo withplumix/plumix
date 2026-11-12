@@ -6,7 +6,14 @@ import { resolveBlockScopeVariations } from "./block-scope-variations.js";
 describe("resolveBlockScopeVariations", () => {
   test("returns an empty list when the block declares no variations", () => {
     const blocks = createBlockRegistry([
-      defineBlock({ name: "core/spacer", title: "Spacer", render: () => null }),
+      defineBlock({
+        name: "core/spacer",
+        title: "Spacer",
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
+      }),
     ]);
     expect(resolveBlockScopeVariations(blocks, "core/spacer")).toEqual([]);
   });
@@ -16,7 +23,10 @@ describe("resolveBlockScopeVariations", () => {
       defineBlock({
         name: "core/columns",
         title: "Columns",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         variations: [
           {
             slug: "two-up",
@@ -49,7 +59,10 @@ describe("resolveBlockScopeVariations", () => {
         name: "core/restricted",
         title: "Restricted",
         capability: "publish:posts",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         variations: [
           {
             slug: "restricted-variation",
