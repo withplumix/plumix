@@ -68,7 +68,9 @@ export function createTerminalForwarder(deps: TerminalForwardDeps): {
   async function emit(log: ForwardedLog): Promise<void> {
     // Resolve before touching collapse state, so the compare-and-print below
     // has no `await` and overlapping POSTs can't interleave.
-    const frames = log.stack ? await deps.resolveStack(log.stack) : [];
+    const frames = log.stack
+      ? (await deps.resolveStack(log.stack)).map(cleanFrame)
+      : [];
     // Retain every forwarded entry (the terminal's `(×N)` collapse is a display
     // concern; each failure is still a distinct entry the reader wants to see).
     ring.add(retain(log, frames));
@@ -176,14 +178,25 @@ function asForwardedLog(value: unknown): ForwardedLog | null {
 }
 
 /**
- * A raw ESC survives the JSON round-trip. Frame paths are server-derived, so
- * only `message`/`label` need this.
+ * A frame the module graph doesn't know keeps the path and name from the
+ * client's stack.
  */
+function cleanFrame(frame: DevErrorFrame): DevErrorFrame {
+  return {
+    ...frame,
+    file: stripControl(frame.file),
+    ...(frame.functionName !== undefined
+      ? { functionName: stripControl(frame.functionName) }
+      : {}),
+  };
+}
+
+/** A raw ESC survives the JSON round-trip. */
 function stripControl(value: string): string {
   let out = "";
   for (const ch of value) {
     const code = ch.codePointAt(0) ?? 0;
-    out += code < 0x20 || code === 0x7f ? " " : ch;
+    out += code < 0x20 || (code >= 0x7f && code <= 0x9f) ? " " : ch;
   }
   return out;
 }

@@ -150,3 +150,111 @@ describe("plumix's dev endpoints", () => {
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
   });
 });
+
+/**
+ * A request each endpoint serves with 200, as the dev client sends it. A new
+ * endpoint fails the tests below until it has a row here.
+ */
+const SERVED: Record<string, { query?: string; body?: string }> = {
+  "/@plumix-dev-error-source": {
+    query: `?file=${encodeURIComponent(join(site, "theme.ts"))}&line=1`,
+  },
+  "/@plumix-dev-error-stack": { body: JSON.stringify({ stack: "" }) },
+  "/@plumix-dev-error-terminal": { body: JSON.stringify({ logs: [] }) },
+  "/@plumix-dev-client-errors": {},
+};
+
+function send(
+  endpoint: { method: string; path: string },
+  headers: Record<string, string>,
+): Promise<Response> {
+  const served = SERVED[endpoint.path];
+  return request(`${endpoint.path}${served?.query ?? ""}`, {
+    method: endpoint.method,
+    headers: {
+      ...(endpoint.method === "POST"
+        ? { "content-type": "application/json" }
+        : {}),
+      ...headers,
+    },
+    body: served?.body,
+  });
+}
+
+/** The dev server's own origin, as the browser names it. */
+function ownOrigin(): string {
+  const { port } = http.address() as AddressInfo;
+  return `http://127.0.0.1:${String(port)}`;
+}
+
+describe("every registered dev endpoint", () => {
+  test.each(endpoints)(
+    "$method $path refuses a request from another origin",
+    async (endpoint) => {
+      const response = await send(endpoint, {
+        origin: "http://127.0.0.1:6312",
+      });
+
+      expect(response.status).toBe(403);
+    },
+  );
+
+  test.each(
+    endpoints.flatMap(({ method, path }) =>
+      ["cross-site", "same-site"].map((site) => ({ method, path, site })),
+    ),
+  )(
+    "$method $path refuses a $site request that names no origin",
+    async ({ site, ...endpoint }) => {
+      const response = await send(endpoint, { "sec-fetch-site": site });
+
+      expect(response.status).toBe(403);
+    },
+  );
+
+  test.each(endpoints.filter((endpoint) => endpoint.method === "POST"))(
+    "$method $path refuses a body that isn't JSON",
+    async (endpoint) => {
+      const response = await send(endpoint, {
+        origin: ownOrigin(),
+        "content-type": "text/plain;charset=UTF-8",
+      });
+
+      expect(response.status).toBe(415);
+    },
+  );
+
+  test.each(endpoints)(
+    "$method $path serves the dev client on the server's own origin",
+    async (endpoint) => {
+      const response = await send(endpoint, {
+        origin: ownOrigin(),
+        "sec-fetch-site": "same-origin",
+      });
+
+      expect(response.status).toBe(200);
+    },
+  );
+
+  test.each(
+    endpoints.flatMap(({ method, path }) =>
+      ["same-origin", "none"].map((site) => ({ method, path, site })),
+    ),
+  )(
+    "$method $path serves a $site request that names no origin",
+    async ({ site, ...endpoint }) => {
+      const response = await send(endpoint, { "sec-fetch-site": site });
+
+      expect(response.status).toBe(200);
+    },
+  );
+
+  test.each(endpoints)(
+    "$method $path serves a request from outside a browser",
+    async (endpoint) => {
+      const response = await send(endpoint, {});
+
+      expect(response.status).toBe(200);
+    },
+  );
+});
