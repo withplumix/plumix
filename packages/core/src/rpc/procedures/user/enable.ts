@@ -2,15 +2,15 @@ import { etagOf } from "../../../db/concurrency.js";
 import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
-import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
+import { assertCanActOnUser, userWrite } from "./helpers.js";
 import { userEnableInputSchema } from "./schemas.js";
 import { user } from "./subject.js";
 
 const CAPABILITY = "user:edit";
 
 /** No last-admin guard: re-enabling can never lock admins out. */
-export const enable = base
+export const enable = userWrite
   .use(authenticated)
   .use(requireCapability(CAPABILITY))
   .input(userEnableInputSchema)
@@ -23,6 +23,11 @@ export const enable = base
     if (!existing) {
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
+    assertCanActOnUser(context, existing, {
+      forbidden: (capability) => {
+        throw errors.FORBIDDEN({ data: { capability } });
+      },
+    });
     if (!existing.disabledAt) {
       const output = await context.filters.apply(user.enableOutput, existing);
       return { ...output, etag: etagOf(existing.updatedAt) };

@@ -6,7 +6,7 @@ import { eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { auth } from "../../../events-and-filters/auth.js";
 import { sessionAuthenticated } from "../../authenticated.js";
-import { base } from "../../base.js";
+import { assertCanActOnUser, userWrite } from "./helpers.js";
 import { userRequestEmailChangeInputSchema } from "./schemas.js";
 
 const EDIT_OWN_CAPABILITY = "user:edit_own";
@@ -17,7 +17,7 @@ const EDIT_CAPABILITY = "user:edit";
  * mailer config is CONFLICT `mailer_not_configured`; 503 belongs to the route
  * layer.
  */
-export const requestEmailChangeProc = base
+export const requestEmailChangeProc = userWrite
   .use(sessionAuthenticated)
   .input(userRequestEmailChangeInputSchema)
   .handler(async ({ input, context, errors }) => {
@@ -33,6 +33,11 @@ export const requestEmailChangeProc = base
     if (!target) {
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
+    assertCanActOnUser(context, target, {
+      forbidden: (capability) => {
+        throw errors.FORBIDDEN({ data: { capability } });
+      },
+    });
 
     // Email change reuses the magic-link mailer and site name; `plumix()` pins
     // the two configs together.

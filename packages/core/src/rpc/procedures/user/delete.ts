@@ -2,15 +2,18 @@ import { and, count, eq } from "../../../db/index.js";
 import { entries } from "../../../db/schema/entries.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
-import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
-import { otherActiveAdminExists } from "./helpers.js";
+import {
+  assertCanActOnUser,
+  otherActiveAdminExists,
+  userWrite,
+} from "./helpers.js";
 import { userDeleteInputSchema } from "./schemas.js";
 import { user } from "./subject.js";
 
 const CAPABILITY = "user:delete";
 
-export const del = base
+export const del = userWrite
   .use(authenticated)
   .use(requireCapability(CAPABILITY))
   .input(userDeleteInputSchema)
@@ -21,6 +24,11 @@ export const del = base
     if (!existing) {
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
+    assertCanActOnUser(context, existing, {
+      forbidden: (capability) => {
+        throw errors.FORBIDDEN({ data: { capability } });
+      },
+    });
 
     // entries.authorId FK is onDelete: restrict — reassign first or refuse.
     const [countRow] = await context.db
