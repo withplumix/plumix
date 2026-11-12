@@ -1,7 +1,15 @@
 import type { Db } from "../../context/app-context.js";
+import type { AuthTokenType } from "../../db/schema/auth_tokens.js";
 import type { User } from "../../db/schema/users.js";
 import { now } from "../../clock.js";
-import { and, eq, isNull, isUniqueConstraintError } from "../../db/index.js";
+import { runBatch } from "../../db/batch.js";
+import {
+  and,
+  eq,
+  inArray,
+  isNull,
+  isUniqueConstraintError,
+} from "../../db/index.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
 import { sessions } from "../../db/schema/sessions.js";
 import { users } from "../../db/schema/users.js";
@@ -15,9 +23,19 @@ export interface VerifyEmailChangeResult {
 }
 
 /**
- * Invalidates all the user's sessions, so a hijacked session that requested the
- * change loses access. Throws `EmailChangeError`; `email_taken` means the
- * address was claimed after the request.
+ * Token types that sign their holder in, or enrol a credential, as `userId`.
+ * They were issued while the user held the old address.
+ */
+const SIGN_IN_TOKEN_TYPES = [
+  "magic_link",
+  "invite",
+  "webauthn_challenge",
+] as const satisfies readonly AuthTokenType[];
+
+/**
+ * Revokes the user's sessions and sign-in tokens, so a hijacked session that
+ * requested the change loses access. Throws `EmailChangeError`; `email_taken`
+ * means the address was claimed after the request.
  */
 export async function verifyEmailChange(
   db: Db,
@@ -50,15 +68,34 @@ export async function verifyEmailChange(
   });
   if (!target) throw EmailChangeError.userNotFound();
 
+  // The revocations land only with the commit: each delete matches only once
+  // the user holds the new address.
+  const committed = db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.id, target.id), eq(users.email, tokenRow.email)));
+
   let updated: User;
   try {
     // `disabledAt IS NULL` in the WHERE, so a disable between the read and the
     // write can't slip a commit through.
-    const [row] = await db
-      .update(users)
-      .set({ email: tokenRow.email, emailVerifiedAt: now() })
-      .where(and(eq(users.id, target.id), isNull(users.disabledAt)))
-      .returning();
+    const [[row]] = await runBatch(db, [
+      db
+        .update(users)
+        .set({ email: tokenRow.email, emailVerifiedAt: now() })
+        .where(and(eq(users.id, target.id), isNull(users.disabledAt)))
+        .returning(),
+      // Every cached AuthenticatedUser carries the stale email.
+      db.delete(sessions).where(inArray(sessions.userId, committed)),
+      db
+        .delete(authTokens)
+        .where(
+          and(
+            inArray(authTokens.userId, committed),
+            inArray(authTokens.type, SIGN_IN_TOKEN_TYPES),
+          ),
+        ),
+    ]);
     if (!row) throw EmailChangeError.accountDisabled();
     updated = row;
   } catch (error) {
@@ -67,9 +104,6 @@ export async function verifyEmailChange(
     }
     throw error;
   }
-
-  // Every cached AuthenticatedUser carries the stale email.
-  await db.delete(sessions).where(eq(sessions.userId, target.id));
 
   return { user: updated, previousEmail: target.email };
 }
