@@ -80,15 +80,15 @@ const ADMIN_PREFIX = "/_plumix/admin";
 const AUTH_PREFIX = "/_plumix/auth/";
 const PLUMIX_PREFIX = "/_plumix/";
 const SIGNOUT_PATH = "/_plumix/auth/signout";
-const MCP_PATH = "/_plumix/mcp";
+export const MCP_PATH = "/_plumix/mcp";
 /** RFC 9728's well-known prefix, inlined so the eager graph skips the SDK. */
 const PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource";
 /** RFC 8414's, which takes the issuer's path, not the resource's. */
 const AUTHORIZATION_SERVER_PREFIX = "/.well-known/oauth-authorization-server";
-const API_PREFIX = "/_plumix/api";
+export const API_PREFIX = "/_plumix/api";
 /** Inlined, not imported, so the eager graph skips the routes. */
-const SYNC_PREFIX = "/_plumix/api/v1/system/sync/";
-const SYNC_SETTLE_PATH = `${SYNC_PREFIX}settle`;
+export const SYNC_PREFIX = "/_plumix/api/v1/system/sync/";
+export const SYNC_SETTLE_PATH = `${SYNC_PREFIX}settle`;
 /**
  * Core owns these ahead of plugin routes. The CSRF exemption must skip them
  * too, or a plugin id'd `rpc` could drop the header gate on RPC.

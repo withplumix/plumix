@@ -38,7 +38,7 @@ plumix sync pull|push [--scope <scope>...] [--url <origin>] [--token <token>] [-
 ```
 
 - `--url` is the deployed site's origin. One end of a sync is always the deployed site, so it is required; without it the command fails with `sync_remote_url_required`.
-- `--token` is the API token a runtime that calls the deployed site uses, as `plumix mail test --remote` does. Without it the token is `PLUMIX_API_TOKEN`, else, on a terminal, one the site's device flow mints: the command prints a link and a code to approve, and never stores the token. With neither and no terminal it fails with `sync_remote_token_missing`. The token's user must hold `settings:manage`. Cloudflare reaches D1 through wrangler instead and asks for one only for the settle after a sync (see [After a sync](#after-a-sync)), which reads `PLUMIX_API_TOKEN` or the device flow, not `--token`.
+- `--token` is the API token a runtime that calls the deployed site uses, as `plumix mail test --remote` does. Without it the token is `PLUMIX_API_TOKEN`, else, on a terminal, one the site's device flow mints: the command prints a link and a code to approve, and never stores the token. With neither and no terminal it fails with `sync_remote_token_missing`. The token's user must hold `settings:manage`, and the token must carry no scopes: one minted with a scope list or a preset is refused. Cloudflare reaches D1 through wrangler instead and asks for one only for the settle after a sync (see [After a sync](#after-a-sync)), which reads `PLUMIX_API_TOKEN` or the device flow, not `--token`.
 - `--scope` names a scope, once per scope. Without one, the sync moves `content`.
 - `--binding` picks the database on a runtime that can have more than one, as `plumix migrate --binding` does.
 - `--dry-run` prints what the sync would change and changes nothing.
@@ -65,7 +65,7 @@ A pull takes no snapshot and asks for no confirmation: it only ever overwrites y
 
 `@plumix/runtime-node` and `@plumix/runtime-bun` export `sync`. Their local end is the SQLite file `nodeSqlite()` or `bunSqlite()` names, resolved against the project root, and the site's `storage` slot. Its import is one transaction, so a failed one changes nothing.
 
-Their remote end calls the deployed site's sync routes with the API token. Every route answers `401` without a token and `403` when its user lacks `settings:manage`:
+Their remote end calls the deployed site's sync routes with the API token. Every route answers `401` without a token, and `403` when the token carries scopes or its user lacks `settings:manage`:
 
 - `GET /_plumix/api/v1/system/sync/heads` answers `{ heads }`, each tracking table's newest migration.
 - `GET /_plumix/api/v1/system/sync/export?scopes=content,media` streams the scopes' rows as NDJSON: each table, then the authors, then the objects, ending in `{"end":true}`.
@@ -123,7 +123,7 @@ The target settles once per sync, on a pull and a push alike. Core's `settleSync
 
 When a step fails, the command fails with `sync_settle_failed`, says the data was replaced, and lists every failed step. A CDN that cannot purge everything is not a failure: the command says that cached pages refresh as their `ttl` runs out.
 
-On the deployed site, the settle runs inside the site through `POST /_plumix/api/v1/system/sync/settle`, with a body of `{ scopes, direction }`. It needs an API token whose user holds `settings:manage`, answers `401` without a token and `403` without the capability, and answers with the report: `{ cdn, failures }`, where `cdn` is `purged`, `cannot-purge`, `failed` or `none`.
+On the deployed site, the settle runs inside the site through `POST /_plumix/api/v1/system/sync/settle`, with a body of `{ scopes, direction }`. It needs an API token with no scopes whose user holds `settings:manage`, answers `401` without a token and `403` for a scoped token or without the capability, and answers with the report: `{ cdn, failures }`, where `cdn` is `purged`, `cannot-purge`, `failed` or `none`.
 
 The CLI calls it with `PLUMIX_API_TOKEN`, or, on a terminal, with a token the site's device flow mints once you approve it in the browser. With neither, a push fails with `sync_remote_token_missing` after its import, and a refused call fails with `sync_settle_refused`. Both say the data was replaced; set the token and sync again to repeat the steps after it.
 
