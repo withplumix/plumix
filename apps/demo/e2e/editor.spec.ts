@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "plumix/test/playwright";
+
+import { expect, test } from "./fixtures.js";
 
 /** The richest seeded post, pinned to a fixed id by the seed. */
 const SHOWCASE = { type: "post", id: 200 } as const;
