@@ -8,7 +8,7 @@ export const { acquire, renew, release } = leaseProcedures(
   "user",
   async (context, id, errors) => {
     const user = await context.db.query.users.findFirst({
-      columns: { id: true },
+      columns: { id: true, role: true },
       where: eq(users.id, id),
     });
     if (!user) throw errors.NOT_FOUND({ data: { kind: "user", id } });

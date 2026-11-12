@@ -93,15 +93,15 @@ describe("assigning a role, whose capabilities the actor must hold", () => {
   });
 
   test("a role within the actor's capabilities is assigned", async () => {
-    const target = await site.factory.author.create();
+    const target = await site.factory.member.create();
 
     const updated = await site.actingAs("promoter").rpc.user.update({
       id: target.id,
       ifMatch: etagOf(target.updatedAt),
-      role: "member",
+      role: "designer",
     });
 
-    expect(updated.role).toBe("member");
+    expect(updated.role).toBe("designer");
   });
 
   test("an invite for a role with a capability the actor lacks is refused", async () => {

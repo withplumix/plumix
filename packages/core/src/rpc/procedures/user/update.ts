@@ -12,7 +12,6 @@ import {
 import { users } from "../../../db/schema/users.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
 import { authenticated } from "../../authenticated.js";
-import { base } from "../../base.js";
 import { assertLeaseAllows } from "../../concurrency.js";
 import { stripUndefined } from "../entry/helpers.js";
 import { userRows } from "./concurrency.js";
@@ -21,6 +20,7 @@ import {
   assertCanEditUser,
   assertDeclaredRole,
   otherActiveAdminExists,
+  userWrite,
 } from "./helpers.js";
 import {
   announceUserMetaChange,
@@ -85,7 +85,7 @@ async function writeGuarded(
   return guards.updateFailed();
 }
 
-export const update = base
+export const update = userWrite
   .use(authenticated)
   .input(userUpdateInputSchema)
   .handler(async ({ input, context, errors }) => {

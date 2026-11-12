@@ -4,15 +4,18 @@ import { etagOf } from "../../../db/concurrency.js";
 import { and, eq } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { authenticated } from "../../authenticated.js";
-import { base } from "../../base.js";
 import { requireCapability } from "../../require-capability.js";
-import { otherActiveAdminExists } from "./helpers.js";
+import {
+  assertCanActOnUser,
+  otherActiveAdminExists,
+  userWrite,
+} from "./helpers.js";
 import { userDisableInputSchema } from "./schemas.js";
 import { user } from "./subject.js";
 
 const CAPABILITY = "user:edit";
 
-export const disable = base
+export const disable = userWrite
   .use(authenticated)
   .use(requireCapability(CAPABILITY))
   .input(userDisableInputSchema)
@@ -25,6 +28,11 @@ export const disable = base
     if (!existing) {
       throw errors.NOT_FOUND({ data: { kind: "user", id: input.id } });
     }
+    assertCanActOnUser(context, existing, {
+      forbidden: (capability) => {
+        throw errors.FORBIDDEN({ data: { capability } });
+      },
+    });
     if (existing.disabledAt) {
       const output = await context.filters.apply(user.disableOutput, existing);
       return { ...output, etag: etagOf(existing.updatedAt) };

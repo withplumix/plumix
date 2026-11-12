@@ -9,6 +9,15 @@ import {
 } from "../../../auth/rbac.js";
 import { and, eq, exists, isNull, ne } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
+import { base } from "../../base.js";
+
+/**
+ * The builder for a procedure that changes a user. Its mark lets a test find
+ * every one; each calls `assertCanActOnUser` on the user it loads.
+ */
+export const userWrite = base
+  .$meta<{ readonly modifiesUser?: true }>({})
+  .meta({ modifiesUser: true });
 
 /**
  * Use as a WHERE predicate on the write itself, so two concurrent demotions
@@ -50,10 +59,7 @@ export function assertCanAssignRole(
   guards: AccessGuards,
 ): void {
   if (role === undefined) return;
-  const missing = capabilitiesForRole(role, context.plugins).find(
-    (capability) => !context.auth.can(capability),
-  );
-  if (missing !== undefined) guards.forbidden(missing);
+  assertHoldsRole(context, role, guards);
 }
 
 const EDIT_OWN_CAPABILITY = "user:edit_own";
@@ -63,12 +69,37 @@ export interface AccessGuards {
   readonly forbidden: (capability: string) => never;
 }
 
+/**
+ * Refuses acting on another user who holds a capability the actor lacks, so
+ * nobody acts past themselves. Acting on yourself is left to the caller.
+ */
+export function assertCanActOnUser(
+  context: AuthenticatedAppContext,
+  target: { readonly id: number; readonly role: string },
+  guards: AccessGuards,
+): void {
+  if (target.id === context.user.id) return;
+  assertHoldsRole(context, target.role, guards);
+}
+
+function assertHoldsRole(
+  context: AuthenticatedAppContext,
+  role: string,
+  guards: AccessGuards,
+): void {
+  const missing = capabilitiesForRole(role, context.plugins).find(
+    (capability) => !context.auth.can(capability),
+  );
+  if (missing !== undefined) guards.forbidden(missing);
+}
+
 export function assertCanEditUser(
   context: AuthenticatedAppContext,
-  existing: { readonly id: number },
+  existing: { readonly id: number; readonly role: string },
   guards: AccessGuards,
 ): void {
   const isSelf = existing.id === context.user.id;
   const capability = isSelf ? EDIT_OWN_CAPABILITY : EDIT_CAPABILITY;
   if (!context.auth.can(capability)) guards.forbidden(capability);
+  assertCanActOnUser(context, existing, guards);
 }
