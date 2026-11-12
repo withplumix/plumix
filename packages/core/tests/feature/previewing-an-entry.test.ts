@@ -5,7 +5,7 @@ import type { AppContext } from "../../src/context/app-context.js";
 import { ACCESS_POLICY_META_KEY } from "../../src/access/contract/meta-key.js";
 import {
   createPreviewToken,
-  verifyPreviewToken,
+  verifyPreviewGrant,
 } from "../../src/auth/preview-token.js";
 import { eq } from "../../src/db/index.js";
 import { entries } from "../../src/db/schema/entries.js";
@@ -327,9 +327,9 @@ describe("a preview link", () => {
       .rpc.entry.createPreviewLink({ id: draft.id });
 
     expect(result.url).toBe(`/post/secret-draft?preview=${result.token}`);
-    expect(await verifyPreviewToken(site.context.db, result.token)).toBe(
-      draft.id,
-    );
+    expect(
+      (await verifyPreviewGrant(site.context.db, result.token))?.entryId,
+    ).toBe(draft.id);
   });
 
   test("walks a nested page's ancestors into its url", async () => {
@@ -357,6 +357,16 @@ describe("a preview link", () => {
     const mint = site
       .actingAs("author")
       .rpc.entry.createPreviewLink({ id: draft.id });
+
+    await expect(mint).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("is not minted for a published entry the caller can read but not edit", async () => {
+    const published = await site.factory.published.create({ slug: "public" });
+
+    const mint = site
+      .actingAs("member")
+      .rpc.entry.createPreviewLink({ id: published.id });
 
     await expect(mint).rejects.toMatchObject({ code: "NOT_FOUND" });
   });

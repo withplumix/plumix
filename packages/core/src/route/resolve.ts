@@ -5,7 +5,6 @@ import type { SearchData, ViewData } from "./contract/resolved-entry.js";
 import type { RouteMatch } from "./match.js";
 import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
-import { verifyPreviewGrant } from "../auth/preview-token.js";
 import { withBasePath } from "../base-path.js";
 import { declarePageTags } from "../cdn/contract/page-tags.js";
 import { and, inArray } from "../db/index.js";
@@ -25,7 +24,7 @@ import { termSlugParam } from "./archive-entries.js";
 import { isPageOutcome } from "./contract/page-outcome.js";
 import { resolveEditMode } from "./edit-mode.js";
 import { buildTermArchiveUrl } from "./permalink.js";
-import { previewTokenGrantsEntry, readPreviewToken } from "./preview.js";
+import { previewGrantFor, previewTokenGrantsEntry } from "./preview.js";
 import { archiveTypePage } from "./render/archive-type-page.js";
 import {
   archiveData,
@@ -428,14 +427,11 @@ async function overlayPreviewAutosave(
   ctx: AppContext,
   entry: Entry,
 ): Promise<Entry | null> {
-  const token = readPreviewToken(ctx);
-  if (token === null) return null;
-  const grant = await verifyPreviewGrant(ctx.db, token);
+  const grant = await previewGrantFor(ctx, entry);
   if (grant === null) return null;
-  if (grant.entryId !== entry.id) return null;
   const autosave = await getAutosave(
     ctx.db,
-    { entryId: entry.id, authorId: grant.userId },
+    { entryId: entry.id, authorId: grant.minter.id },
     entry,
   );
   return autosave === undefined ? null : overlayAutosave(entry, autosave);
