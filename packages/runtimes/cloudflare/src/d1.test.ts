@@ -10,12 +10,23 @@ import type {
 import type { AppContext } from "plumix/plugin";
 import type { PlatformProxy } from "wrangler";
 import { sql } from "drizzle-orm";
-import { requestStore } from "plumix/plugin";
-import { createTestContext, createTestDb } from "plumix/test";
+import { plumix } from "plumix";
+import { auth as authConfig, SESSION_COOKIE_NAME } from "plumix/auth";
+import { definePlugin, requestStore } from "plumix/plugin";
+import { buildApp, createRuntimeHandler } from "plumix/runtime";
+import {
+  applyCoreTestSchema,
+  createTestContext,
+  createTestDb,
+  factoriesFor,
+  plumixRequest,
+} from "plumix/test";
 import { describeDatabaseContract } from "plumix/test/conformance";
+import { defineTheme } from "plumix/theme";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { getPlatformProxy } from "wrangler";
 
+import { cloudflare } from "./adapter.js";
 import { d1 } from "./d1.js";
 
 interface FakeSession {
@@ -538,5 +549,175 @@ describe("d1() adapter — connectRequest fallback", () => {
         isWrite: false,
       }),
     ).toThrow(/D1 binding "DB" missing/);
+  });
+});
+
+interface RecordedStatement {
+  /** The constraint of the session it ran on; `null` off the Sessions API. */
+  readonly constraint: string | null;
+  readonly sql: string;
+}
+
+/** The real binding, noting which session each statement was prepared on. */
+function recordingBinding(
+  binding: D1Database,
+  log: RecordedStatement[],
+): D1Database {
+  const target = (
+    on: Pick<D1Database, "prepare" | "batch">,
+    constraint: string | null,
+  ) => ({
+    prepare: (query: string) => {
+      log.push({ constraint, sql: query });
+      return on.prepare(query);
+    },
+    batch: <T>(statements: D1PreparedStatement[]) => on.batch<T>(statements),
+  });
+  return {
+    ...target(binding, null),
+    withSession: (constraint: string) => {
+      const session = binding.withSession(constraint);
+      return {
+        ...target(session, constraint),
+        getBookmark: () => session.getBookmark(),
+      };
+    },
+  } as unknown as D1Database;
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+const CREDENTIAL_TABLES = /"(sessions|api_tokens)"/;
+
+describe("d1() adapter — credential reads (session: 'auto')", () => {
+  const probe = definePlugin("probe", {
+    setup: (ctx) => {
+      ctx.registerEntryType("post", {
+        label: "Posts",
+        isPublic: true,
+        supports: ["title"],
+      });
+      ctx.registerRoute({
+        method: "GET",
+        path: "/whoami",
+        auth: "authenticated",
+        handler: (_request, appCtx) => new Response(appCtx.user?.email ?? ""),
+      });
+    },
+  });
+
+  type Site = Awaited<ReturnType<typeof seededSite>>;
+  let site: Site;
+
+  // Read-only cases share one seeded site. Seeding and the REST API's first
+  // request each take seconds, paid here rather than by the first case.
+  beforeAll(async () => {
+    site = await seededSite();
+    await site.fetchLogged(plumixRequest("/_plumix/api/v1/posts"));
+  }, 60_000);
+
+  async function seededSite() {
+    await wipe(proxy.env.DB);
+    const seed = d1({ binding: "DB" }).connect(
+      { DB: proxy.env.DB },
+      new Request("https://cms.example/"),
+      {},
+    ).db as Parameters<typeof factoriesFor>[0];
+    await applyCoreTestSchema(seed);
+    const factories = factoriesFor(seed);
+    const user = await factories.user.create({ email: "ada@example.test" });
+    const minted = await factories.apiToken.create({ userId: user.id });
+    const sessionToken = "session-token-for-ada";
+    await factories.session.create({
+      id: await sha256Hex(sessionToken),
+      userId: user.id,
+    });
+    const app = await buildApp(
+      plumix({
+        runtime: cloudflare(),
+        database: d1({ binding: "DB", session: "auto" }),
+        auth: authConfig({
+          passkey: {
+            rpName: "Plumix Test",
+            rpId: "cms.example",
+            origin: "https://cms.example",
+          },
+        }),
+        theme: defineTheme({ templates: () => null }),
+        plugins: [probe],
+        api: { enabled: true },
+      }),
+    );
+    const handler = createRuntimeHandler(app);
+    const fetchLogged = async (request: Request) => {
+      const log: RecordedStatement[] = [];
+      const deferred: Promise<unknown>[] = [];
+      const response = await handler.fetch(request, {
+        env: { DB: recordingBinding(proxy.env.DB, log) },
+        waitUntil: (promise) => void deferred.push(promise),
+      });
+      await Promise.all(deferred);
+      return { response, log };
+    };
+    return { fetchLogged, apiToken: minted.secret, sessionToken };
+  }
+
+  // Each credential the registered authenticators accept, on a safe method
+  // with no bookmark: the request a replica would otherwise serve.
+  const credentials = [
+    {
+      name: "a session cookie on a plugin route",
+      request: (seeded: Site) =>
+        plumixRequest("/_plumix/probe/whoami", {
+          headers: {
+            cookie: `${SESSION_COOKIE_NAME}=${seeded.sessionToken}`,
+          },
+        }),
+    },
+    {
+      name: "an API token on a plugin route",
+      request: (seeded: Site) =>
+        plumixRequest("/_plumix/probe/whoami", {
+          headers: { authorization: `Bearer ${seeded.apiToken}` },
+        }),
+    },
+    {
+      name: "an API token on the REST API",
+      request: (seeded: Site) =>
+        plumixRequest("/_plumix/api/v1/posts", {
+          headers: { authorization: `Bearer ${seeded.apiToken}` },
+        }),
+    },
+  ];
+
+  test.each(credentials)(
+    "$name is checked against the primary",
+    async ({ request }) => {
+      const { response, log } = await site.fetchLogged(request(site));
+
+      expect(response.status).toBe(200);
+      const lookups = log.filter((s) => CREDENTIAL_TABLES.test(s.sql));
+      expect(new Set(lookups.map((s) => s.constraint))).toEqual(
+        new Set(["first-primary"]),
+      );
+    },
+  );
+
+  test("an anonymous read stays on the nearest replica", async () => {
+    const { log } = await site.fetchLogged(
+      plumixRequest("/_plumix/api/v1/posts"),
+    );
+
+    expect(new Set(log.map((s) => s.constraint))).toEqual(
+      new Set(["first-unconstrained"]),
+    );
   });
 });

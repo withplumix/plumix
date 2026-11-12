@@ -338,6 +338,8 @@ Core assumes `env` is stable for the handler's life: object storage, kv, cdn and
 
 `connectRequest` has no release seam — unlike `connect`, whose `ConnectedDb.close` the handler calls on every response path including the error one. An adapter that answers through `connectRequest` must own its own pooling and hand out a borrowed handle rather than mint a connection per request; today's two adapters (D1 Sessions, the demo Durable Object proxy) both do.
 
+An adapter whose `db` may read a replica also returns `credentialDb` from `connectRequest`: a handle that sees every committed write. Core validates sessions and API tokens through it, and through `db` when it is absent.
+
 ```ts
 declare module "plumix" {
   interface PlumixEnv {

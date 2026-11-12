@@ -166,7 +166,7 @@ export function createPlumixHandler(
       options,
       invocation,
       request,
-      db: scoped.db,
+      scoped,
       defer: invocation.waitUntil ?? track,
       telemetryShutdown: invocation.waitUntil ? undefined : shutdown.signal,
       slots: bindOnce(invocation.env),
@@ -189,7 +189,7 @@ export function createPlumixHandler(
           options,
           invocation,
           request,
-          db: scoped.db,
+          scoped,
           defer: invocation.waitUntil ?? track,
           telemetryShutdown: invocation.waitUntil ? undefined : shutdown.signal,
           slots: bindOnce(invocation.env),
@@ -361,6 +361,7 @@ interface RequestContextInput {
   readonly request: Request;
   readonly clientAddress: string | undefined;
   readonly db: Db;
+  readonly credentialDb?: Db;
   readonly defer: DeferFn;
   readonly telemetryShutdown?: AbortSignal;
   readonly assets: AssetsBinding | undefined;
@@ -384,6 +385,7 @@ export function requestContextArgs({
   request,
   clientAddress,
   db,
+  credentialDb,
   defer,
   telemetryShutdown,
   assets,
@@ -392,6 +394,7 @@ export function requestContextArgs({
 }: RequestContextInput): RequestContextArgs {
   return {
     db,
+    credentialDb,
     env,
     request,
     config: app.config,
@@ -435,7 +438,7 @@ interface AppContextArgs {
   readonly options: PlumixHandlerOptions;
   readonly invocation: Invocation;
   readonly request: Request;
-  readonly db: unknown;
+  readonly scoped: RequestScopedDb;
   readonly defer: DeferFn;
   readonly telemetryShutdown: AbortSignal | undefined;
   readonly slots: BoundSlots;
@@ -446,7 +449,7 @@ function buildAppContext({
   options,
   invocation,
   request,
-  db,
+  scoped,
   defer,
   telemetryShutdown,
   slots,
@@ -458,7 +461,8 @@ function buildAppContext({
       env,
       request,
       clientAddress,
-      db: db as Db,
+      db: scoped.db as Db,
+      credentialDb: scoped.credentialDb as Db | undefined,
       defer,
       telemetryShutdown,
       assets: options.assets?.(env),

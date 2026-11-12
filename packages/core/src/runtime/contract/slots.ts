@@ -27,6 +27,12 @@ export interface RequestScopedDbArgs {
 export interface RequestScopedDb {
   readonly db: unknown;
   /**
+   * What credential checks read: a handle that sees every committed write, so
+   * a revoked credential stops working on the next request. Omitted, they read
+   * `db`.
+   */
+  readonly credentialDb?: unknown;
+  /**
    * Called exactly once after the dispatcher returns, to attach per-request
    * state such as a bookmark cookie.
    */

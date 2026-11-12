@@ -23,7 +23,8 @@ export interface D1Config {
   /**
    * `"disabled"` (default) always reads the primary. `"auto"` routes anonymous
    * reads to the nearest replica. `"primary-first"` wraps sessions but defaults
-   * to `first-primary`.
+   * to `first-primary`. Under either, credentials are checked against the
+   * primary.
    */
   readonly session?: D1SessionMode;
   /** Bookmark cookie name. Default: `__plumix_d1_bookmark`. */
@@ -96,20 +97,19 @@ function connectRequestScoped(
   }
 
   const session = binding.withSession(constraint);
-  // Safety: `D1DatabaseSession` carries `prepare` and `batch` with the same
-  // signatures `D1Database` declares, and those are the only members drizzle
-  // and the tracer call — `dump`/`exec`/`withSession` are never reached.
-  const sessionBinding = session as unknown as D1Database;
-  const sessionAsBinding = traceD1Client(d1Client(sessionBinding));
-  const db = drizzle(sessionAsBinding, {
-    schema: args.schema,
-    casing: "snake_case",
-  });
+  const db = sessionDb(session, args.schema);
+  // Credentials are validated against the primary whatever the request's
+  // method or bookmark; its own session keeps that lookup the session's first.
+  const credentialDb = sessionDb(
+    binding.withSession("first-primary"),
+    args.schema,
+  );
 
   const secure = isSecureRequest(args.request);
 
   return {
     db,
+    credentialDb,
     commit(response) {
       // Anonymous users can't resume a bookmark across requests, so don't
       // bother persisting one. Writes performed by anonymous users still
@@ -134,6 +134,20 @@ function connectRequestScoped(
 }
 
 type D1SessionConstraint = "first-primary" | "first-unconstrained";
+
+function sessionDb(
+  session: D1DatabaseSession,
+  schema: RequestScopedDbArgs["schema"],
+) {
+  // Safety: `D1DatabaseSession` carries `prepare` and `batch` with the same
+  // signatures `D1Database` declares, and those are the only members drizzle
+  // and the tracer call — `dump`/`exec`/`withSession` are never reached.
+  const sessionBinding = session as unknown as D1Database;
+  return drizzle(traceD1Client(d1Client(sessionBinding)), {
+    schema,
+    casing: "snake_case",
+  });
+}
 
 function getBinding(env: unknown, name: string): D1Database {
   const bindings = env as Record<string, D1Database | undefined>;

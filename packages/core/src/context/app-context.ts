@@ -176,6 +176,11 @@ export interface AppContextBase<
   TSchema extends Record<string, unknown> = CoreSchema,
 > {
   readonly db: Db<TSchema>;
+  /**
+   * What an authenticator reads a credential through: it sees every committed
+   * write, where `db` may read a replica. `db` itself on a single database.
+   */
+  readonly credentialDb: Db<TSchema>;
   readonly env: PlumixEnv;
   readonly request: Request;
   /** Never serialize it whole: it carries auth providers and mailer secrets. */
