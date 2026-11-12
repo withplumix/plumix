@@ -4,7 +4,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { APIRequestContext } from "@playwright/test";
-import { CONTENT_LIST_ROWS, expect, test } from "plumix/test/playwright";
+import { CONTENT_LIST_ROWS } from "plumix/test/playwright";
+
+import { expect, test } from "./fixtures.js";
 
 const POST_TITLE = "A post I made in the demo";
 
@@ -296,20 +298,21 @@ test("users and the profile offer only what the demo serves, and each of it succ
   await expect(page).not.toHaveURL(/auth\/device/);
 });
 
-test("the demo pill names what's off in the visitor's language", async ({
-  browser,
-}) => {
-  const context = await browser.newContext({ locale: "de-DE" });
-  const page = await context.newPage();
-  await page.goto("/");
-  await page.getByTestId("try-editor").click();
-  await page.waitForURL(/\/_plumix\/admin/);
+test.describe("a German visitor", () => {
+  test.use({ locale: "de-DE" });
 
-  await page.goto(`/posts/${SHOWCASE_SLUG}`);
-  await expect(page.getByTestId("demo-off")).toHaveText(
-    "Off in this demo: API-Tokens, Geräteanmeldung, Passkeys, OAuth-Anmeldung und E-Mail-Versand",
-  );
-  await context.close();
+  test("the demo pill names what's off in the visitor's language", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByTestId("try-editor").click();
+    await page.waitForURL(/\/_plumix\/admin/);
+
+    await page.goto(`/posts/${SHOWCASE_SLUG}`);
+    await expect(page.getByTestId("demo-off")).toHaveText(
+      "Off in this demo: API-Tokens, Geräteanmeldung, Passkeys, OAuth-Anmeldung und E-Mail-Versand",
+    );
+  });
 });
 
 /**
