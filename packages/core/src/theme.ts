@@ -244,7 +244,6 @@ const VIEWPORT_FIELD_BY_META_NAME: ReadonlyMap<string, string> = new Map([
   ["color-scheme", "viewport.colorScheme"],
 ]);
 
-/** Catches at boot what the renderer can't recover from. */
 export function validateDocumentManifest(manifest: DocumentManifest): void {
   validateMetaNames(manifest.meta);
   manifest.link?.forEach((entry, index) => {
