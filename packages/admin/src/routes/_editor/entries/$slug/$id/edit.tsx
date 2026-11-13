@@ -76,6 +76,7 @@ import {
 import { idPathParam } from "@plumix/core/validation";
 
 import {
+  compareEntry,
   ENTRY_COPY_FAILED,
   readSavedEntry,
   writeEntry,
@@ -263,6 +264,7 @@ function EditorRoute(): ReactNode {
     copy: ENTRY_EDITING_COPY,
     save: copy.save,
     readSaved: () => readSavedEntry(id),
+    compare: compareEntry,
     reload: copy.reload,
     onFailed: copy.onFailed,
     onBack: () => {
