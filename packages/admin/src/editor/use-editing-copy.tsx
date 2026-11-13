@@ -1,3 +1,4 @@
+import type { EditLeaseIds } from "@/editor/use-edit-lease.js";
 import type { ReactElement } from "react";
 import {
   useEffect,
@@ -14,15 +15,21 @@ import type {
   EditingCopy,
   EditingCopyController,
   EditingCopySnapshot,
-  EditLeaseKind,
 } from "@plumix/core/admin";
 import { createEditingCopy, LOADING_EDITING_COPY } from "@plumix/core/admin";
 
-export interface EditingCopyOptions<Work, Saved, Response> {
-  readonly kind: EditLeaseKind;
-  readonly id: number;
+export interface EditingCopyOptions<
+  Kind extends keyof EditLeaseIds,
+  Work,
+  Saved,
+  Response,
+> {
+  readonly kind: Kind;
+  readonly id: EditLeaseIds[Kind];
   /** The concurrency token the editor's copy came with. */
   readonly etag: string;
+  /** Whether the editor is engaged and holds the lease; true unless set. */
+  readonly active?: boolean;
   /** The signed-in user, whose own lease names no one else editing. */
   readonly userId: number;
   readonly copy: EditingCopy;
@@ -67,13 +74,15 @@ function loadingSnapshot(): EditingCopySnapshot<never, never> {
  * holds every rule, and a new one is made for each resource.
  */
 export function useEditingCopy<
+  Kind extends keyof EditLeaseIds,
   Work,
   Saved,
   Response extends { readonly etag: string },
 >(
-  options: EditingCopyOptions<Work, Saved, Response>,
+  options: EditingCopyOptions<Kind, Work, Saved, Response>,
 ): EditingCopyState<Work, Response> {
   const { kind, id } = options;
+  const active = options.active ?? true;
   const latest = useRef(options);
   useLayoutEffect(() => {
     latest.current = options;
@@ -84,23 +93,29 @@ export function useEditingCopy<
     Response
   > | null>(null);
   useEffect(() => {
-    const opened = createEditingCopy<number, Work, Saved, Response>({
-      id,
-      lease: EDIT_LEASE_APIS[kind],
-      etag: latest.current.etag,
-      userId: latest.current.userId,
-      save: (etag, work) => latest.current.save(etag, work),
-      readSaved: (etag) => latest.current.readSaved(etag),
-      reload: () => latest.current.reload(),
-      onFailed: (err) => {
-        latest.current.onFailed(err);
+    const opened = createEditingCopy<EditLeaseIds[Kind], Work, Saved, Response>(
+      {
+        id,
+        lease: EDIT_LEASE_APIS[kind],
+        etag: latest.current.etag,
+        active: latest.current.active ?? true,
+        userId: latest.current.userId,
+        save: (etag, work) => latest.current.save(etag, work),
+        readSaved: (etag) => latest.current.readSaved(etag),
+        reload: () => latest.current.reload(),
+        onFailed: (err) => {
+          latest.current.onFailed(err);
+        },
       },
-    });
+    );
     setController(opened);
     return () => {
       opened.dispose();
     };
   }, [kind, id]);
+  useEffect(() => {
+    controller?.setActive(active);
+  }, [controller, active]);
   const snapshot = useSyncExternalStore<EditingCopySnapshot<Work, Saved>>(
     controller?.subscribe ?? noSubscription,
     controller?.getSnapshot ?? loadingSnapshot,

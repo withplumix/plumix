@@ -2,6 +2,7 @@ import type { LeaseHolder } from "../db/edit-lease.js";
 import type {
   EditLeaseApi,
   EditLeaseNotice,
+  EditLeaseSession,
   EditLeaseState,
   EditorLeaseMode,
 } from "./edit-lease-session.js";
@@ -24,6 +25,8 @@ export interface EditingCopyOptions<
   readonly lease: EditLeaseApi<Id>;
   /** The concurrency token the editor's copy came with. */
   readonly etag: string;
+  /** Whether the editor is engaged and holds the lease; true unless set. */
+  readonly active?: boolean;
   /** The signed-in user, whose own lease names no one else editing. */
   readonly userId: number;
   /** Write `work` from the copy `etag` names. */
@@ -50,7 +53,8 @@ export interface EditingConflict<Work> {
 }
 
 export interface EditingCopySnapshot<Work, Saved> {
-  readonly mode: EditorLeaseMode["mode"];
+  /** `idle` while inactive: no lease is held or asked for. */
+  readonly mode: EditorLeaseMode["mode"] | "idle";
   /** Whether the editor's fields refuse input. */
   readonly readOnly: boolean;
   /** Why the editor is read-only: another user holds the lease, or took it. */
@@ -77,6 +81,8 @@ export interface EditingCopyController<Work, Saved, Response> {
   readonly loadTheirs: () => Promise<void>;
   /** Claim the lease another user holds, then reload what is saved now. */
   readonly takeOver: () => Promise<void>;
+  /** Engaged, the editor asks for the lease; disengaged, it gives it up. */
+  readonly setActive: (active: boolean) => void;
   readonly subscribe: (listener: () => void) => () => void;
   readonly getSnapshot: () => EditingCopySnapshot<Work, Saved>;
   readonly dispose: () => void;
@@ -114,6 +120,7 @@ export function createEditingCopy<
   let takingOver = false;
   let disposed = false;
   let etag = options.etag;
+  let active = options.active ?? true;
   const queue = createSaveQueue();
 
   const notify = (): void => {
@@ -122,13 +129,17 @@ export function createEditingCopy<
   const publish = (): void => {
     // Disposed: whatever answers now was about a copy no longer on screen.
     if (disposed) return;
-    const leaseMode = editorLeaseMode(lease);
+    const leaseMode = active
+      ? editorLeaseMode(lease)
+      : ({ mode: "idle" } as const);
+    // Idle holds no lease, and the server still guards each save.
+    const writable = leaseMode.mode === "editable" || leaseMode.mode === "idle";
     snapshot = {
       mode: leaseMode.mode,
-      readOnly: leaseMode.mode !== "editable" || conflict !== undefined,
+      readOnly: !writable || conflict !== undefined,
       banner: leaseMode.mode === "readOnly" ? leaseMode.notice : undefined,
       conflict,
-      canKeepMine: conflict !== undefined && leaseMode.mode === "editable",
+      canKeepMine: conflict !== undefined && writable,
       compare:
         conflict && saved?.etag === conflict.etag ? saved.value : undefined,
       takingOver,
@@ -136,15 +147,21 @@ export function createEditingCopy<
     notify();
   };
 
-  const session = createEditLeaseSession({
-    id: options.id,
-    api: options.lease,
-    onChange: (state) => {
-      lease = state;
-      publish();
-    },
-  });
-  session.start();
+  let session: EditLeaseSession | undefined;
+  const openSession = (): void => {
+    lease = { kind: "pending" };
+    session = createEditLeaseSession({
+      id: options.id,
+      api: options.lease,
+      onChange: (state) => {
+        lease = state;
+        publish();
+      },
+    });
+    session.start();
+  };
+  if (active) openSession();
+  else publish();
 
   const readSaved = (at: string): void => {
     if (readFor === at) return;
@@ -162,7 +179,7 @@ export function createEditingCopy<
   const refused = (err: unknown, work: Work): undefined => {
     const locked = lockedBy(err);
     if (locked) {
-      session.lose(locked);
+      session?.lose(locked);
       return undefined;
     }
     const stale = etagConflict(err);
@@ -224,7 +241,7 @@ export function createEditingCopy<
       takingOver = true;
       publish();
       try {
-        await session.takeOver();
+        await session?.takeOver();
       } catch (err) {
         options.onFailed(err);
         return;
@@ -233,6 +250,14 @@ export function createEditingCopy<
         publish();
       }
       await queue.run(reload);
+    },
+    setActive: (next) => {
+      if (next === active) return;
+      active = next;
+      session?.stop();
+      session = undefined;
+      if (next) openSession();
+      publish();
     },
     subscribe: (listener) => {
       listeners.add(listener);
@@ -243,7 +268,7 @@ export function createEditingCopy<
     getSnapshot: () => snapshot,
     dispose: () => {
       disposed = true;
-      session.stop();
+      session?.stop();
       snapshot = LOADING_EDITING_COPY;
       notify();
     },

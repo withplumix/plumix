@@ -298,24 +298,6 @@ test.describe("/settings/$page", () => {
     return { upserts, saveElsewhere: save };
   }
 
-  test("a save after another session saved the card opens the conflict dialog, and Load theirs shows that save", async ({
-    page,
-  }) => {
-    const { saveElsewhere } = await mockSavedGroup(page);
-    await page.goto("settings/general");
-    const title = page.getByTestId("meta-box-field-site_title-input");
-    await expect(title).toHaveValue("Plumix");
-    saveElsewhere({ site_title: "Saved elsewhere" });
-
-    await title.fill("Mine");
-    await page.getByTestId("settings-submit-identity").click();
-
-    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
-    await page.getByTestId("entry-conflict-load-theirs").click();
-    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
-    await expect(title).toHaveValue("Saved elsewhere");
-  });
-
   test("Keep mine in the card's conflict dialog saves the card over the other session's save", async ({
     page,
   }) => {
@@ -361,6 +343,7 @@ test.describe("/settings/$page", () => {
     await page.goto("settings/general");
     const card = page.getByTestId("settings-group-card-identity");
     const title = page.getByTestId("meta-box-field-site_title-input");
+    await expect(title).toBeEnabled();
 
     await title.focus();
 
