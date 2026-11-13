@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 
-import type { HtmlAllowlist } from "../../blocks/html/sanitize.js";
+import type { HtmlAllowlist } from "../../blocks/html/allowlist.js";
 import type { IslandRender } from "../../blocks/island-shim.js";
 import type { PlumixContextValue } from "../../blocks/renderer/index.js";
 import { HtmlAllowlistProvider } from "../../blocks/html/context.js";

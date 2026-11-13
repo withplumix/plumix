@@ -3,11 +3,11 @@ import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { HtmlAllowlist } from "../../blocks/html/sanitize.js";
+import type { HtmlAllowlist } from "../../blocks/html/allowlist.js";
 import type { PlumixContextValue } from "../../blocks/renderer/index.js";
 import { createBlockRegistry } from "../../blocks/block-registry.js";
+import { BASELINE_HTML_ALLOWLIST } from "../../blocks/html/allowlist.js";
 import { useHtmlAllowlist } from "../../blocks/html/context.js";
-import { BASELINE_HTML_ALLOWLIST } from "../../blocks/html/sanitize.js";
 import { IslandRenderContext, IslandShim } from "../../blocks/island-shim.js";
 import { Link } from "../../blocks/renderer/index.js";
 import { createIslandRender } from "./island-render.js";
