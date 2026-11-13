@@ -5,11 +5,11 @@ import type { AppContext } from "plumix/plugin";
 import { policyAdmits } from "plumix/auth";
 import {
   and,
-  eq,
+  compileEntryQuery,
+  entryQuery,
   publicEntryRows,
   sql,
   taxonomyTermRows,
-  typeTag,
 } from "plumix/db";
 import { buildEntryPermalinks, buildTermArchiveUrls } from "plumix/plugin";
 import { entries, terms } from "plumix/schema";
@@ -168,7 +168,7 @@ export interface SeoSitemapsOptions {
     false | SitemapScopePolicy | ScopePolicies | undefined;
 }
 
-/** `tags` lets a publish retire this scope and leave the rest alone. */
+/** Stored under what its readers read, so a publish retires only its own. */
 export interface SitemapScope {
   readonly ref: SitemapScopeRef;
   /**
@@ -180,7 +180,6 @@ export interface SitemapScope {
   readonly dropped: boolean;
   /** The policy a contributed scope's URLs answer to, when it names one. */
   readonly access?: AccessPolicy;
-  readonly tags: readonly string[];
   /**
    * One element per page the index lists, each with the newest `lastmod`
    * among that page's URLs where the scope knows it. Empty for a scope with
@@ -270,9 +269,10 @@ export async function listedEntriesOf(
   ctx: AppContext,
   type: string,
 ): Promise<SQL | null> {
+  const ofType = await compileEntryQuery(ctx, entryQuery().ofTypes(type));
   const listed = await publicEntryRows(ctx);
-  if (listed === null) return null;
-  return and(listed, eq(entries.type, type), entryIsIndexable) ?? null;
+  if (listed === null || ofType === null) return null;
+  return and(listed, ofType, entryIsIndexable) ?? null;
 }
 
 function listedTermsOf(ctx: AppContext, taxonomy: string) {
@@ -412,7 +412,6 @@ export function sitemapScopes(
   for (const type of publicTargets(plugins.entryTypes)) {
     add({
       ref: { kind: "entries", name: type.name },
-      tags: [typeTag(type.name)],
       pages: (ctx) => entryPages(ctx, type.name),
       urls: (ctx, page) => entryUrls(ctx, type.name, page),
     });
@@ -420,8 +419,6 @@ export function sitemapScopes(
   for (const taxonomy of publicTargets(plugins.termTaxonomies)) {
     add({
       ref: { kind: "terms", name: taxonomy.name },
-      // Its reads through `taxonomyTermRows` tag it.
-      tags: [],
       // A term stores no modification time, so its pages carry no lastmod.
       pages: async (ctx) => undatedPages(await termCount(ctx, taxonomy.name)),
       urls: (ctx, page) => termUrls(ctx, taxonomy.name, page),
@@ -430,7 +427,6 @@ export function sitemapScopes(
   for (const { name, source } of contributed) {
     add({
       ref: { kind: "contributed", name },
-      tags: source.tags ?? [],
       ...(source.access === undefined ? {} : { access: source.access }),
       pages: (ctx) => contributedPages(ctx, source),
       urls: source.urls,

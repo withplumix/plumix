@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
 import { authenticatedPolicy } from "../../src/access/policy.js";
+import { entries } from "../../src/db/schema/entries.js";
+import { compileEntryQuery, entryQuery } from "../../src/entries/query.js";
 import { render } from "../../src/events-and-filters/render.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { redirectTo } from "../../src/route/contract/page-outcome.js";
@@ -193,14 +195,25 @@ describe("a view with no forView template", () => {
 
 const cacheablePlugin = definePlugin("compare", {
   setup: (ctx) => {
+    ctx.registerEntryType("product", { label: "Products", isPublic: true });
     ctx.registerView("compareShare", {
       routes: ["/compare/:id"],
       cacheable: true,
-      resolve: () => ({
-        data: { products: ["kettle"] },
-        title: "Comparison",
-        tags: ["t:product"],
-      }),
+      resolve: async (appCtx) => {
+        const where = await compileEntryQuery(
+          appCtx,
+          entryQuery().ofTypes("product"),
+        );
+        if (where === null) return null;
+        const rows = await appCtx.db
+          .select({ title: entries.title })
+          .from(entries)
+          .where(where);
+        return {
+          data: { products: rows.map((row) => row.title) },
+          title: "Comparison",
+        };
+      },
     });
   },
 });
@@ -211,12 +224,18 @@ const cacheableSite = await testSite({
 });
 
 describe("a cacheable view", () => {
-  test("a cacheable view is stored under the tags its resolve returned", async () => {
-    const page = await cacheableSite.visit("/compare/abc");
-
+  test("is no longer stored after an entry of a type it lists is published", async () => {
+    (await cacheableSite.visit("/compare/abc")).assertOk();
     cacheableSite.cdn.assertStored("/compare/abc");
-    // The tags it was stored under, as the cdn decorates a miss with them.
-    page.assertHeader("cache-tag", "t:product,s:site");
+
+    await cacheableSite.actingAs("editor").rpc.entry.create({
+      type: "product",
+      title: "Kettle",
+      slug: "kettle",
+      status: "published",
+    });
+
+    cacheableSite.cdn.assertNotStored("/compare/abc");
   });
 });
 
@@ -244,5 +263,41 @@ describe("a view document declaring a canonical link", () => {
     const page = await canonicalSite.visit("/compare/abc");
 
     page.assertSee('<link rel="canonical" href="https://cms.example/c"/>');
+  });
+});
+
+const shortlistPlugin = definePlugin("shortlist", {
+  setup: (ctx) => {
+    ctx.registerView("compareShare", {
+      routes: ["/compare/:id"],
+      cacheable: true,
+      resolve: (appCtx) => {
+        appCtx.cache.reads("shortlist");
+        return { data: { products: [] }, title: "Comparison" };
+      },
+    });
+    ctx.registerPublicRoute({
+      path: "/shortlist/add",
+      handler: (_request, appCtx) => {
+        appCtx.cache.changed("shortlist");
+        return new Response(null, { status: 204 });
+      },
+    });
+  },
+});
+
+const shortlistSite = await testSite({
+  plugins: [shortlistPlugin],
+  config: { theme: compareTheme },
+});
+
+describe("a cacheable view reading its plugin's own data", () => {
+  test("is no longer stored after the plugin changes what it read", async () => {
+    (await shortlistSite.visit("/compare/abc")).assertOk();
+    shortlistSite.cdn.assertStored("/compare/abc");
+
+    await shortlistSite.visit("/shortlist/add");
+
+    shortlistSite.cdn.assertNotStored("/compare/abc");
   });
 });

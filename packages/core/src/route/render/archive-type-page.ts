@@ -10,9 +10,10 @@ import type {
   ListingArchiveData,
 } from "../contract/resolved-entry.js";
 import type { ResolvedNode } from "./rule-resolver.js";
+import { pluginStore } from "../../context/stores.js";
 import { archiveEntries } from "../archive-entries.js";
 import { isPageOutcome } from "../contract/page-outcome.js";
-import { listEntryPage, listingCdnTags } from "./entry-listing.js";
+import { listEntryPage } from "./entry-listing.js";
 import { DEFAULT_ARCHIVE_PER_PAGE } from "./page-data.js";
 
 /**
@@ -30,11 +31,6 @@ export interface ResolvedArchiveTypePage {
   readonly node: ResolvedNode;
   readonly data: ArchiveTypeData;
   readonly title: string;
-  /**
-   * What purges the page: core's tags for a listing archive, the resolver's
-   * own `tags` for an unlisted one.
-   */
-  readonly tags: readonly string[];
 }
 
 /**
@@ -70,13 +66,14 @@ export async function archiveTypePage(
   if (archive.entries !== undefined) {
     return listingArchivePage(ctx, archive, params);
   }
-  const result = await archive.resolve(ctx, params);
+  const result = await pluginStore.run(archive.registeredBy, () =>
+    archive.resolve(ctx, params),
+  );
   if (result === null) return { missing: "public-custom-archive-not-found" };
   return {
     node: { kind: "archiveType", name: archive.name },
     data: result.data,
     title: result.title,
-    tags: result.tags ?? [],
   };
 }
 
@@ -129,7 +126,6 @@ async function listingArchivePage(
     node: { kind: "archiveType", name: archive.name },
     data,
     title: resolution.title,
-    tags: listingCdnTags(ctx.plugins, query),
   };
 }
 
@@ -143,13 +139,20 @@ async function nameListingPage(
   params: Record<string, string>,
   listing: EntryListing,
 ): Promise<TitledListingArchiveResolution | null> {
-  if (archive.title === undefined) return archive.resolve(ctx, params, listing);
+  if (archive.title === undefined) {
+    return pluginStore.run(archive.registeredBy, () =>
+      archive.resolve(ctx, params, listing),
+    );
+  }
 
   const title =
     typeof archive.title === "function" ? archive.title(params) : archive.title;
+  const { resolve } = archive;
   const resolution =
-    archive.resolve === undefined
+    resolve === undefined
       ? {}
-      : await archive.resolve(ctx, params, listing);
+      : await pluginStore.run(archive.registeredBy, () =>
+          resolve(ctx, params, listing),
+        );
   return resolution === null ? null : { ...resolution, title };
 }

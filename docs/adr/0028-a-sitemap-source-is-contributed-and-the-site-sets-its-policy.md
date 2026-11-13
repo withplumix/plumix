@@ -36,6 +36,12 @@ type and a taxonomy sharing one silently lost the taxonomy's sub-sitemap.
 - **A source may name the access policy its URLs answer to.** Seo asks it for
   an anonymous visitor, whoever requests the sitemap, and leaves the scope out
   on refusal, as `false` does, without calling the source.
+- **A scope is stored under what it read.** Seo's entry scopes and `llms.txt`
+  read entries through `compileEntryQuery`, its term scopes through
+  `taxonomyTermRows`, and a contributed source is stored under whatever its
+  `count`, `urls` and `lastmod` read through core's read helpers. A source
+  names no tags of its own, so a publish retires exactly the scopes that
+  list what it wrote.
 - **Only seo-built sitemaps are listed.** The index names no outside XML; a
   sitemap seo did not build is not seo's to gate. A site advertises one with a
   `Sitemap:` line through `seo:robots-txt`.

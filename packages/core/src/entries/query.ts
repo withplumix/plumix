@@ -5,10 +5,13 @@ import type {
   EntryOrderDirection,
   EntryQuery,
 } from "./contract/query.js";
+import { declarePageTags } from "../cdn/contract/page-tags.js";
+import { typeTag } from "../cdn/contract/tags.js";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "../db/index.js";
 import { metaJsonPath } from "../db/meta-path.js";
 import { entries } from "../db/schema/entries.js";
 import { entryTerm } from "../db/schema/entry_term.js";
+import { publicEntryTypeNames } from "../plugin/registry.js";
 import { dateRange } from "./date-range.js";
 import { EntryQueryError } from "./errors.js";
 import { findAuthorBySlug, findTermBySlug } from "./slug-lookups.js";
@@ -242,13 +245,16 @@ export function entryQueryOrder(query: EntryQuery): readonly SQL[] {
 
 /**
  * `null` when the query names something no row could match, such as an unknown
- * term slug; route surfaces read it as a 404, not an empty result.
+ * term slug: a 404. Tags the response with every type the
+ * query can list.
  */
 export async function compileEntryQuery(
   ctx: AppContext,
   query: EntryQuery,
 ): Promise<SQL | null> {
   const { narrowings } = stateOf(query);
+  const types = entryQueryTypeNames(query) ?? publicEntryTypeNames(ctx.plugins);
+  declarePageTags(ctx, types.map(typeTag));
 
   // Lookups go out together; an unresolvable narrowing wasting the others is
   // cheap, since it happens on the 404 path.

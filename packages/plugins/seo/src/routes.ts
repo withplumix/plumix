@@ -4,15 +4,12 @@ import type {
   PluginSetupContext,
 } from "plumix/plugin";
 import { anonymousContext } from "plumix/auth";
-import { typeTag } from "plumix/db";
-import { tagCdnEntry } from "plumix/plugin";
 import { withBasePath } from "plumix/support";
 
 import type { ContributedSitemap } from "./contributed.js";
 import type { SeoSitemapsOptions, SitemapScope } from "./sitemap.js";
 import { LLMS_PATH, llmsTxtBody } from "./llms.js";
 import { handleRobotsTxt } from "./robots.js";
-import { publicTargets } from "./scope.js";
 import { loadSeoSettings } from "./settings.js";
 import {
   assertSitemapPolicyNamesScopes,
@@ -62,8 +59,8 @@ function xmlResponse(body: string): Response {
 }
 
 /**
- * A sitemap lists what anonymous visitors may list, whoever asks for it. The
- * tags go on the request's own `ctx`: the reader keeps a memo of its own.
+ * A sitemap lists what anonymous visitors may list, whoever asks for it, and
+ * what the reader reads tags the request's response.
  */
 async function handleSitemapIndex(
   ctx: AppContext,
@@ -71,11 +68,6 @@ async function handleSitemapIndex(
 ): Promise<Response> {
   const reader = anonymousContext(ctx);
   ctx.cache.reads(SITEMAP_CACHE_KEY);
-  // `tagCdnEntry` unions, so scopes sharing a type tag need no dedupe here.
-  tagCdnEntry(
-    ctx,
-    scopes.flatMap((scope) => scope.tags),
-  );
   // A site held out of the index is held out of search, and so is a scope its
   // own default holds out: either way the scope simply leaves the set.
   const settings = await loadSeoSettings(ctx);
@@ -99,7 +91,6 @@ async function handleSubSitemap(
 ): Promise<Response> {
   const reader = anonymousContext(ctx);
   ctx.cache.reads(SITEMAP_CACHE_KEY);
-  tagCdnEntry(ctx, scope.tags);
   const settings = await loadSeoSettings(ctx);
   const urls =
     scopeIsOffered(scope, settings) && (await scopeAdmitsReader(reader, scope))
@@ -108,16 +99,8 @@ async function handleSubSitemap(
   return xmlResponse(renderSubSitemap(urls, stylesheetHref(ctx)));
 }
 
-/**
- * Tagged with every public type, since any of them may list an entry here: a
- * write to one, an access choice included, retires the file.
- */
 async function handleLlmsTxt(ctx: AppContext): Promise<Response> {
   ctx.cache.reads(SITEMAP_CACHE_KEY);
-  tagCdnEntry(
-    ctx,
-    publicTargets(ctx.plugins.entryTypes).map((type) => typeTag(type.name)),
-  );
   return new Response(await llmsTxtBody(ctx), {
     headers: {
       "content-type": "text/markdown; charset=utf-8",

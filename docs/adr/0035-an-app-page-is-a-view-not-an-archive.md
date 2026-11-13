@@ -28,7 +28,7 @@ This amends ADR 0025's list of page kinds, which gains `view`.
   template data and the target matcher. It is named by its subject the way ADR
   0025 asks: the page is about the view the plugin registered.
 - **Core builds the envelope.** `resolve(ctx, params)` returns
-  `{ data, title, tags? }` or `null`. The template receives
+  `{ data, title }` or `null`. The template receives
   `{ kind: "view", name, params, data }`, so a plugin never restates its own
   name or the params its route captured. `ViewRegistry` types `data` for a
   declared name; any other name still registers, with `data` left `unknown`.
@@ -38,8 +38,11 @@ This amends ADR 0025's list of page kinds, which gains `view`.
 - **No generic tier.** A view without a `forView` rule renders through
   `fallback`, as an archive type does.
 - **Never stored by default.** The CDN skips a view unless it sets
-  `cacheable: true`. A cacheable view's `tags` drive its purge. A view with
-  `access` renders live whatever it sets, as a policied archive does.
+  `cacheable: true`. A cacheable view is stored under what its `resolve`
+  read: the type tags `compileEntryQuery` declares for the entries it lists,
+  what core's other read helpers declare, and its plugin's `ctx.cache.reads`.
+  A view never spells a tag. A view with `access` renders live whatever it
+  sets, as a policied archive does.
 - **No automatic canonical.** A view's document manifest defaults to
   `canonical: false` (#2830). A template whose page has one address declares
   the link in `document()`.

@@ -2,13 +2,11 @@ import type { AppContext } from "../../context/app-context.js";
 import type { EntryQuery } from "../../entries/contract/query.js";
 import type { PluginRegistry } from "../../plugin/manifest.js";
 import type { EntryListing } from "../contract/entry-listing.js";
-import { typeTag } from "../../cdn/contract/tags.js";
 import { sql } from "../../db/index.js";
 import {
   compileEntryQuery,
   entryQuery,
   entryQueryOrder,
-  entryQueryTypeNames,
 } from "../../entries/query.js";
 import { publicEntryRows } from "../../entries/visibility.js";
 import { publicEntryTypeNames } from "../../plugin/registry.js";
@@ -25,15 +23,6 @@ export function publicEntriesQuery(plugins: PluginRegistry): EntryQuery {
   return types.length === 0
     ? entryQuery().none()
     : entryQuery().ofTypes(...types);
-}
-
-/** The types the query can list, or every public type when it names none. */
-export function listingCdnTags(
-  plugins: PluginRegistry,
-  query: EntryQuery,
-): readonly string[] {
-  const types = entryQueryTypeNames(query) ?? publicEntryTypeNames(plugins);
-  return types.map(typeTag);
 }
 
 /**
