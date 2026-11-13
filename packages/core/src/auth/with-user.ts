@@ -15,7 +15,7 @@ import { getCapabilityResolver } from "./rbac.js";
 
 export function makeAuthCan(
   plugins: PluginRegistry,
-  user: AuthenticatedUser | null,
+  user: Pick<AuthenticatedUser, "role"> | null,
   tokenScopes: readonly string[] | null,
 ): (capability: Capability) => boolean {
   if (user === null) return () => false;

@@ -568,7 +568,9 @@ async function renderTree({
     // On demand: only an `authClient.useSession()` call makes the render personal.
     user: () => {
       const { user } = ctx;
-      return user === null ? null : sessionUserOf(user, ctx.plugins);
+      return user === null
+        ? null
+        : sessionUserOf(user, ctx.plugins, ctx.tokenScopes);
     },
   };
   const { rendered, session } = ctx.telemetry.span("render: react", () =>

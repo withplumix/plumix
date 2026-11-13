@@ -1,5 +1,8 @@
 import type { AuthSessionOutput } from "./schemas.js";
-import { authenticateTraced } from "../../../auth/authenticator.js";
+import {
+  authenticateTraced,
+  tokenScopesOf,
+} from "../../../auth/authenticator.js";
 import { sessionUserOf } from "../../../auth/session-user.js";
 import { users } from "../../../db/schema/users.js";
 import { base } from "../../base.js";
@@ -13,7 +16,11 @@ export const session = base.handler(
     const result = await authenticateTraced(context, context.authenticator);
     if (result) {
       return {
-        user: sessionUserOf(result.user, context.plugins),
+        user: sessionUserOf(
+          result.user,
+          context.plugins,
+          tokenScopesOf(result),
+        ),
         needsBootstrap: false,
       };
     }
