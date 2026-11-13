@@ -167,8 +167,6 @@ A view module can import CSS, islands and server code, and none of it reaches th
 
 The server imports every view when the site boots, so a page renders exactly as if the views were part of the definition. The editor canvas imports the views a document uses before it shows the document, the view of a block you hover in the catalog before you insert it, and every other view once it is idle, so a block never shows a loading state.
 
-In a site, write the `import()` without a file extension, as `import("./quote.view")`. The CLI evaluates your config outside Vite, and there a `.js` specifier doesn't find a `.tsx` file.
-
 A test that renders a block outside a running site loads its view first with `loadBlockViews(registry)` from `plumix/test`. `renderBlockSpecToHtml` and `renderBlockTreeToHtml` do it for you and return a promise.
 
 ## How the render walks the tree

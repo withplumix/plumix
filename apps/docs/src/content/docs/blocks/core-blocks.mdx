@@ -43,7 +43,7 @@ Category `text`. One input, `body`, of type `richtext`, holding an HTML string. 
 
 The body is authored HTML, so the renderer treats it as untrusted on the way out. Shortcodes in it expand first, then the renderer sanitizes the whole result against the same allowlist `core/html` uses, and that is what reaches the page.
 
-A shortcode is a bracketed text macro an author types into the body, and expanding one replaces the tag with escaped text. Core registers two, `[year]` and `[month]`. Expansion is a single left-to-right pass, so a shortcode that returns `[year]` stays literal. An unregistered tag passes through as typed, and `[[year]]` renders the literal `[year]`. The block declares `deps: { settings: ["site"] }`, so a shortcode reads the site settings group from its context.
+A shortcode is a bracketed text macro an author types into the body, and expanding one replaces the tag with escaped text. Core registers two, `[year]` and `[month]`. Expansion is a single left-to-right pass, so a shortcode that returns `[year]` stays literal. An unregistered tag passes through as typed, and `[[year]]` renders the literal `[year]`. Its view module declares `deps: { settings: ["site"] }`, so a shortcode reads the site settings group from its context.
 
 The block also declares the keywords `paragraph`, `text` and `body`. The inserter matches a query as a plain substring of a block's name, title or keywords, so typing `paragraph` finds it. No slash-command surface ships, so `/paragraph` matches nothing.
 
@@ -83,7 +83,7 @@ export const brineSnippet: BlockNode = {
 
 Category `text`. Two inputs: `text`, a `textarea`, and `language`, a `combobox` offering 26 common languages.
 
-The language field is a combobox rather than a select, so the stored value stays free text and content authored against an older list survives. Fourteen short forms map to a canonical id on the way in, `ts` to `typescript` and `py` to `python` among them. Highlighting runs synchronously inside the same render, which is why the server output and the editor canvas agree. A language the highlighter does not know keeps its `data-language` attribute and renders plain. The token colours ride along as one deduplicated stylesheet, themeable through the `--plumix-code-*` properties.
+The language field is a combobox rather than a select, so the stored value stays free text and content authored against an older list survives. Fourteen short forms map to a canonical id on the way in, `ts` to `typescript` and `py` to `python` among them. The highlighter loads with the block's view module, so the editor fetches it only once a document holds a code block or the editor is idle. Highlighting then runs synchronously inside the same render, which is why the server output and the editor canvas agree. A language the highlighter does not know keeps its `data-language` attribute and renders plain. The token colours ride along as one deduplicated stylesheet, themeable through the `--plumix-code-*` properties.
 
 ### `core/group`
 
