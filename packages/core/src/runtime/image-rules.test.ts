@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
   fetchRemoteImageSource,
@@ -211,6 +211,67 @@ describe("fetchRemoteImageSource", () => {
       ),
     ).toEqual({ ok: false, status: 400 });
     expect(stub.requested).toHaveLength(11);
+  });
+
+  describe("a permitted host that never answers", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    // Rejects with its signal's reason once it aborts, as the platform does.
+    const silentUpstream: typeof fetch = async (_input, init) => {
+      await new Promise((resolve) => {
+        init?.signal?.addEventListener("abort", resolve, { once: true });
+      });
+      init?.signal?.throwIfAborted();
+      return new Response("unreachable");
+    };
+
+    // Node's `AbortSignal.timeout` runs on an internal timer the fake clock
+    // can't reach, so the clock stub rebuilds it on the faked `setTimeout`.
+    function useFakeClock(): void {
+      vi.useFakeTimers();
+      vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+        const controller = new AbortController();
+        setTimeout(() => {
+          controller.abort(
+            new DOMException("The operation timed out.", "TimeoutError"),
+          );
+        }, ms);
+        return controller.signal;
+      });
+    }
+
+    test("is 502 after 15s", async () => {
+      useFakeClock();
+      let result: unknown;
+
+      void fetchRemoteImageSource(
+        "https://img.example/r.png",
+        options(silentUpstream),
+      ).then((answer) => {
+        result = answer;
+      });
+      await vi.advanceTimersByTimeAsync(15_000);
+
+      expect(result).toEqual({ ok: false, status: 502 });
+    });
+
+    test("is still pending 1ms before 15s", async () => {
+      useFakeClock();
+      let result: unknown;
+
+      void fetchRemoteImageSource(
+        "https://img.example/r.png",
+        options(silentUpstream),
+      ).then((answer) => {
+        result = answer;
+      });
+      await vi.advanceTimersByTimeAsync(14_999);
+
+      expect(result).toBeUndefined();
+    });
   });
 
   test("a permitted host that fails is 502", async () => {

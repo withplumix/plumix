@@ -2,6 +2,7 @@ import type { RemotePattern } from "../blocks/renderer/image-attrs.js";
 import type { TransformOpts } from "./contract/slots.js";
 import { withBasePath } from "../base-path.js";
 import { matchesRemotePattern } from "../blocks/renderer/image-attrs.js";
+import { boundedFetch } from "../context/traced-fetch.js";
 
 /**
  * Where a self-hosted runtime answers transforms, under the site's base path.
@@ -286,7 +287,7 @@ export async function fetchRemoteImageSource(
   src: string,
   options: RemoteImageSourceOptions,
 ): Promise<ImageSourceResult> {
-  const fetchSource = options.fetch ?? fetch;
+  const fetchSource = boundedFetch(new AbortController().signal, options.fetch);
   let url = URL.parse(src);
   for (let hop = 0; hop <= MAX_IMAGE_REDIRECTS; hop += 1) {
     if (url === null || !isPermittedUrl(url, options)) {
@@ -297,7 +298,7 @@ export async function fetchRemoteImageSource(
       response = await fetchSource(url, {
         redirect: "manual",
         headers: IMAGE_SOURCE_HEADERS,
-        signal: AbortSignal.timeout(REMOTE_TIMEOUT_MS),
+        timeout: REMOTE_TIMEOUT_MS,
       });
     } catch {
       return { ok: false, status: 502 };

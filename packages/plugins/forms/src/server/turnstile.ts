@@ -40,11 +40,11 @@ export async function verifyTurnstile(
   }
 
   try {
-    const answer = await fetch(VERIFY_URL, {
+    const answer = await ctx.fetch(VERIFY_URL, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ secret, response }).toString(),
-      signal: AbortSignal.timeout(VERIFY_TIMEOUT_MS),
+      timeout: VERIFY_TIMEOUT_MS,
     });
     const decoded = v.safeParse(SiteVerify, await answer.json());
     if (!decoded.success) {

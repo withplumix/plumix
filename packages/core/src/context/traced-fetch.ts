@@ -51,8 +51,14 @@ export function callerSignal(
   return init?.signal ?? (input instanceof Request ? input.signal : undefined);
 }
 
-/** The platform `fetch`, with a 10s deadline, following `contextSignal`. */
-function boundedFetch(contextSignal: AbortSignal): PlumixFetch {
+/**
+ * `send` (the platform `fetch` by default), with a 10s deadline, following
+ * `contextSignal`. The default is read per call so a stubbed global applies.
+ */
+export function boundedFetch(
+  contextSignal: AbortSignal,
+  send?: typeof fetch,
+): PlumixFetch {
   return async (input, init) => {
     const { timeout = DEFAULT_TIMEOUT_MS, ...platformInit } = init ?? {};
     const caller = callerSignal(input, platformInit);
@@ -64,7 +70,7 @@ function boundedFetch(contextSignal: AbortSignal): PlumixFetch {
       (signal) => signal !== undefined,
     );
     try {
-      return await globalThis.fetch(input, {
+      return await (send ?? globalThis.fetch)(input, {
         ...platformInit,
         signal: AbortSignal.any(signals),
       });
