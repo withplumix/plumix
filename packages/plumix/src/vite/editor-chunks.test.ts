@@ -51,7 +51,10 @@ const FIXTURE_FILES = {
 
 /** A module the editor entry must never load before it runs. */
 const MUST_STAY_OUT: readonly (readonly [string, RegExp])[] = [
-  ["the admin shell's editor", /admin-editor[\\/].*plumix-editor\.tsx?$/],
+  [
+    "the admin shell's editor, as source or as its published dist file",
+    /admin-editor[\\/].*plumix-editor\.(?:tsx?|js)$/,
+  ],
   ["@plumix/admin-ui", /[\\/]admin-ui[\\/]/],
   ["radix-ui", /[\\/]node_modules[\\/](?:radix-ui|@radix-ui)[\\/]/],
   ["highlight.js", /[\\/]node_modules[\\/]highlight\.js[\\/]/],
@@ -62,10 +65,29 @@ const MUST_STAY_OUT: readonly (readonly [string, RegExp])[] = [
   ["drizzle-orm", /[\\/]node_modules[\\/]drizzle-orm[\\/]/],
 ];
 
+/** One view module from each set of blocks the entry is built over. */
+const VIEW_MODULES: readonly string[] = [
+  "core/src/blocks/button/button.view.tsx",
+  "core/src/blocks/code/code.view.tsx",
+  "core/src/blocks/column/column.view.tsx",
+  "core/src/blocks/columns/columns.view.tsx",
+  "core/src/blocks/details/details.view.tsx",
+  "core/src/blocks/embed/embed.view.tsx",
+  "core/src/blocks/group/group.view.tsx",
+  "core/src/blocks/html/html.view.tsx",
+  "core/src/blocks/rich-text/rich-text.view.tsx",
+  "core/src/blocks/section/section.view.tsx",
+  "core/src/blocks/separator/separator.view.tsx",
+  "core/src/blocks/table/table.view.tsx",
+  "core/src/blocks/video/video.view.tsx",
+  "plugins/media/src/blocks/file/file.view.tsx",
+  "plugins/media/src/blocks/image/image.view.tsx",
+  "fixture.view.js",
+];
+
 describe("the editor entry's chunks", () => {
   let eager: readonly string[];
-  let viewChunks: readonly OutputChunk[];
-  let entryDynamicImports: ReadonlySet<string>;
+  let dynamicModules: readonly string[];
 
   beforeAll(async () => {
     // Inside the package, so the fixture's bare imports resolve from its
@@ -105,24 +127,24 @@ describe("the editor entry's chunks", () => {
 
     const eagerSet = eagerChunks(chunks, "plumix-editor");
     eager = [...eagerSet].flatMap((c) => c.moduleIds);
-    viewChunks = chunks.filter((c) =>
-      c.moduleIds.some((id) => /\.view\.[jt]sx?$/.test(id)),
-    );
-    entryDynamicImports = new Set(
+    const entryDynamicImports = new Set(
       [...eagerSet].flatMap((c) => c.dynamicImports),
     );
+    dynamicModules = chunks
+      .filter((c) => entryDynamicImports.has(c.fileName) && !eagerSet.has(c))
+      .flatMap((c) => c.moduleIds.map((id) => id.replaceAll("\\", "/")));
   });
 
   test.each(MUST_STAY_OUT)("loads no %s eagerly", (_, pattern) => {
     expect(eager.filter((id) => pattern.test(id))).toEqual([]);
   });
 
-  test("puts every view module in a chunk the entry imports dynamically", () => {
-    expect(viewChunks.length).toBeGreaterThan(0);
-    expect(
-      viewChunks
-        .filter((c) => !entryDynamicImports.has(c.fileName))
-        .map((c) => c.moduleIds.filter((id) => id.includes(".view."))),
-    ).toEqual([]);
-  });
+  test.each(VIEW_MODULES)(
+    "puts %s in a chunk the entry imports dynamically",
+    (view) => {
+      expect(
+        dynamicModules.filter((id) => id.endsWith(`/${view}`)),
+      ).toHaveLength(1);
+    },
+  );
 });
