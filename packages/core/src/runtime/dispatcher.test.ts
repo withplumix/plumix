@@ -21,6 +21,7 @@ import { authClient } from "../auth/client/index.js";
 import { readSessionCookie } from "../auth/cookies.js";
 import { withUser } from "../auth/with-user.js";
 import { defineBlock } from "../blocks/index.js";
+import { IslandShim } from "../blocks/island-shim.js";
 import { entryPurgeTags, termTag } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
@@ -1071,6 +1072,62 @@ describe("dispatcher — theme reads the auth client's render context", () => {
     );
 
     expect(await response.text()).toContain("edit_any:true");
+  });
+});
+
+describe("dispatcher — island id scopes", () => {
+  async function twoIslandSite(): Promise<DispatcherHarness> {
+    const blog = definePlugin("test-blog", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+      },
+    });
+    const Widget = (): ReturnType<typeof createElement> =>
+      createElement("span", null, "widget");
+    const islandOf = (exportName: string): ReturnType<typeof createElement> =>
+      createElement(IslandShim, {
+        Component: Widget,
+        exportName,
+        chunkUrl: `/${exportName}.js`,
+        props: {},
+      });
+    const theme = defineTheme({
+      templates: [
+        fallback(() =>
+          createElement("main", null, islandOf("First"), islandOf("Second")),
+        ),
+      ],
+    });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blog], theme },
+    });
+    await seedHelloWorldPost(h);
+    return h;
+  }
+
+  test("a page render numbers its islands i0-, i1- in order", async () => {
+    const h = await twoIslandSite();
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+
+    const html = await response.text();
+    expect(html).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
+    expect(html).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
+  });
+
+  test("a second page render numbers its islands from i0- again", async () => {
+    const h = await twoIslandSite();
+    await h.dispatch(new Request("https://cms.example/post/hello-world"));
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+
+    const html = await response.text();
+    expect(html).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
+    expect(html).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
   });
 });
 

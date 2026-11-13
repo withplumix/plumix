@@ -160,4 +160,68 @@ test.describe("islands", () => {
       0,
     );
   });
+
+  test("an island calling useId hydrates to the id the server rendered", async ({
+    page,
+  }) => {
+    await page.goto("/islands-ids");
+    const first = page.getByTestId("id-probe-first");
+    const second = page.getByTestId("id-probe-second");
+    await expect(first).toHaveAttribute("data-live");
+    await expect(second).toHaveAttribute("data-live");
+
+    const firstId = await page
+      .getByTestId("id-probe-first-input")
+      .getAttribute("id");
+    const secondId = await page
+      .getByTestId("id-probe-second-input")
+      .getAttribute("id");
+
+    expect(firstId).toMatch(/^_i0-R_/);
+    expect(secondId).toMatch(/^_i1-R_/);
+    await expect(page.getByTestId("id-probe-first-output")).toHaveText(
+      String(firstId),
+    );
+    await expect(page.getByTestId("id-probe-second-output")).toHaveText(
+      String(secondId),
+    );
+  });
+
+  test("two islands calling useId keep distinct ids", async ({ page }) => {
+    await page.goto("/islands-ids");
+    await expect(page.getByTestId("id-probe-first-output")).not.toBeEmpty();
+    await expect(page.getByTestId("id-probe-second-output")).not.toBeEmpty();
+
+    const firstId = await page
+      .getByTestId("id-probe-first-output")
+      .textContent();
+    const secondId = await page
+      .getByTestId("id-probe-second-output")
+      .textContent();
+
+    expect(firstId).not.toBe(secondId);
+  });
+
+  test("islands calling useId hydrate without a hydration error", async ({
+    page,
+  }) => {
+    const consoleMessages: string[] = [];
+    page.on("console", (message) => {
+      consoleMessages.push(`${message.type()}: ${message.text()}`);
+    });
+    await page.goto("/islands-ids");
+    await expect(page.getByTestId("id-probe-first")).toHaveAttribute(
+      "data-live",
+    );
+    await expect(page.getByTestId("id-probe-second")).toHaveAttribute(
+      "data-live",
+    );
+
+    expect(
+      consoleMessages.filter(
+        (message) => message.startsWith("error:") && message.includes("hydrat"),
+      ),
+    ).toEqual([]);
+    expect(await islandEvents(page)).toEqual([]);
+  });
 });

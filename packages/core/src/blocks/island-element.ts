@@ -238,6 +238,7 @@ export class PlumixIslandElement extends HTMLElement {
     // `createRoot` in production either way.
     this.root = renderer.mount(this, {
       hydrate: this.getAttribute("client") !== "only",
+      identifierPrefix: this.getAttribute("id-prefix") ?? undefined,
     });
     this.root.render(Component, readProps(this), readSlotHtml(this));
     // Releases nested islands waiting on this one.

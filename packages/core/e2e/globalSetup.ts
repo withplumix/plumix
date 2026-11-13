@@ -9,6 +9,7 @@ const FIXTURE_SLUGS = [
   "auth",
   "islands",
   "islands-nested",
+  "islands-ids",
   "islands-raw",
   "sanitizer",
   "strategies",

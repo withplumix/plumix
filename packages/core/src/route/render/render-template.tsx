@@ -43,6 +43,10 @@ import {
   pickDeps,
   resolveBlockLoaders,
 } from "../../blocks/index.js";
+import {
+  createIslandCounter,
+  IslandRenderContext,
+} from "../../blocks/island-shim.js";
 import { PlumixProvider } from "../../blocks/renderer/index.js";
 import { mergeDocumentManifest, mergeViewport } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
@@ -573,7 +577,11 @@ async function renderTree({
         createElement(
           HtmlAllowlistProvider,
           { value: htmlAllowlist },
-          templateTree,
+          createElement(
+            IslandRenderContext.Provider,
+            { value: createIslandCounter() },
+            templateTree,
+          ),
         ),
       ),
     ),
