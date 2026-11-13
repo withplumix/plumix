@@ -54,14 +54,6 @@ export function rpcLeaseBody(holder: LeaseHolder, since: Date): string {
   });
 }
 
-/** A renewal that finds `by` took the lease over at `at`. */
-export function rpcLeaseLostBody(by: LeaseHolder, at: Date): string {
-  return JSON.stringify({
-    json: { lost: { by, at } },
-    meta: [[1, "lost", "at"]],
-  });
-}
-
 /** A refusal because `holder` has held the entry's lease since `since`. */
 export function rpcLockedBody(holder: LeaseHolder, since: Date): string {
   return JSON.stringify({

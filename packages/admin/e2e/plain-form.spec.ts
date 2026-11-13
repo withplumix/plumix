@@ -2,7 +2,7 @@
 // publish/save envelope contracts, and capability gating across both
 // metabox and field levels.
 
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import { expectNoAxeViolations } from "./support/axe.js";
@@ -14,6 +14,8 @@ import {
   mockRpc,
   mockRpcWithCapture,
   rpcEtagConflictBody,
+  rpcLeaseBody,
+  rpcLockedBody,
   rpcOkBody,
   withCapabilities,
 } from "./support/rpc-mock.js";
@@ -372,24 +374,18 @@ test.describe("plain-form route for non-editor entry types", () => {
     return { updates };
   }
 
-  test("an edit made after another session saved opens the conflict dialog, and Load theirs shows that save", async ({
-    page,
-  }) => {
-    await openConflictDialog(page);
-
-    await page.getByTestId("entry-conflict-load-theirs").click();
-
-    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
-    await expect(page.getByTestId("plain-form-title-input")).toHaveValue(
-      "Saved elsewhere",
-    );
-  });
-
-  test("Keep mine in the conflict dialog saves the local edit over the other session's", async ({
+  test("Compare shows the other session's save beside mine, and Keep mine saves mine over it", async ({
     page,
   }) => {
     const { updates } = await openConflictDialog(page);
 
+    await page.getByTestId("entry-conflict-compare").click();
+    await expect(
+      page.getByTestId("entry-conflict-compare-panes"),
+    ).toContainText("My title");
+    await expect(
+      page.getByTestId("entry-conflict-compare-panes"),
+    ).toContainText("Saved elsewhere");
     await page.getByTestId("entry-conflict-keep-mine").click();
 
     await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
@@ -398,20 +394,103 @@ test.describe("plain-form route for non-editor entry types", () => {
       .toMatchObject({ ifMatch: "e1", title: "My title" });
     expect(updates).toHaveLength(2);
   });
+});
 
-  test("Compare in the conflict dialog shows the local edit beside the other session's save", async ({
+test.describe("plain-form edit lease", () => {
+  test.use({ timezoneId: "UTC" });
+
+  const ADA = { id: 1, name: "Ada" };
+  const BO = { id: 2, name: "Bo" };
+
+  interface LeaseServer {
+    holder: { readonly id: number; readonly name: string } | null;
+    since: Date;
+  }
+
+  async function openAs(
+    page: Page,
+    me: typeof ADA,
+    server: LeaseServer,
+  ): Promise<readonly Record<string, unknown>[]> {
+    const updates: Record<string, unknown>[] = [];
+    await mockManifest(page, MANIFEST_WITH_PLAIN_FORM_TYPE);
+    await mockRpc(page, {
+      "/auth/session": AUTHED_AUTHOR_EDITOR,
+      "/entry/get": authorEntry(1),
+      "/entry/lease/release": null,
+    });
+    const json = (body: string) => ({
+      status: 200,
+      contentType: "application/json",
+      body,
+    });
+    const locked = () => ({
+      status: 423,
+      contentType: "application/json",
+      body: rpcLockedBody(server.holder ?? me, server.since),
+    });
+    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      const heldByOther = server.holder !== null && server.holder.id !== me.id;
+      if (heldByOther && takeOver !== true) return route.fulfill(locked());
+      if (server.holder?.id !== me.id) {
+        server.holder = me;
+        server.since = new Date("2026-05-20T09:05:00Z");
+      }
+      return route.fulfill(json(rpcLeaseBody(me, server.since)));
+    });
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      updates.push(
+        (route.request().postDataJSON() as { json: Record<string, unknown> })
+          .json,
+      );
+      if (server.holder?.id !== me.id) return route.fulfill(locked());
+      return route.fulfill(json(rpcOkBody(authorEntry(1))));
+    });
+    await page.goto("entries/authors/1/edit");
+    return updates;
+  }
+
+  test("a second editor sees who holds the entry and takes it over; the first turns read-only with their work kept", async ({
     page,
+    browser,
   }) => {
-    await openConflictDialog(page);
+    const server: LeaseServer = {
+      holder: null,
+      since: new Date("2026-05-20T09:00:00Z"),
+    };
+    const adaUpdates = await openAs(page, ADA, server);
+    await expect(page.getByTestId("plain-form-title-input")).toBeEnabled();
+    const contextB: BrowserContext = await browser.newContext({
+      baseURL: test.info().project.use.baseURL,
+      timezoneId: "UTC",
+    });
+    const pageB = await contextB.newPage();
+    await openAs(pageB, BO, server);
 
-    await page.getByTestId("entry-conflict-compare").click();
+    await expect(pageB.getByTestId("edit-lease-held-by")).toHaveText(
+      "Ada is editing this entry (since May 20, 2026, 9:05 AM)",
+    );
+    await expect(pageB.getByTestId("plain-form-title-input")).toBeDisabled();
+    await pageB.getByTestId("edit-lease-take-over").click();
+    await expect(pageB.getByTestId("edit-lease-banner")).toBeHidden();
+    await expect(pageB.getByTestId("plain-form-title-input")).toBeEnabled();
 
-    await expect(
-      page.getByTestId("entry-conflict-compare-panes"),
-    ).toContainText("My title");
-    await expect(
-      page.getByTestId("entry-conflict-compare-panes"),
-    ).toContainText("Saved elsewhere");
+    await page
+      .getByTestId("plain-form-title-input")
+      .fill("Ada's unsaved title");
+
+    await expect(page.getByTestId("edit-lease-lost")).toContainText(
+      "Bo took over editing this entry at May 20, 2026, 9:05 AM.",
+    );
+    await expect(page.getByTestId("plain-form-title-input")).toHaveValue(
+      "Ada's unsaved title",
+    );
+    await expect(page.getByTestId("plain-form-title-input")).toBeDisabled();
+    expect(adaUpdates).toHaveLength(1);
+    await contextB.close();
   });
 });
 

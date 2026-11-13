@@ -1,21 +1,21 @@
-import type { AutosaveErrorOutcome, EntryConflict } from "@/editor/autosave.js";
-import {
-  AUTOSAVE_DEBOUNCE_MS,
-  classifyAutosaveError,
-} from "@/editor/autosave.js";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 
 import type { AppRouterClient } from "@plumix/core";
-import type { LeaseRefusal } from "@plumix/core/admin";
-import { createSaveQueue } from "@plumix/core/admin";
 
 type EntryUpdateInput = Parameters<AppRouterClient["entry"]["update"]>[0];
 type EntryRow = Awaited<ReturnType<AppRouterClient["entry"]["update"]>>;
 
-/** The `entry.update` call every group write goes through. */
-export type EntryUpdate = (input: EntryUpdateInput) => Promise<EntryRow>;
-
 type EntryUpdatePatch = Omit<EntryUpdateInput, "id" | "ifMatch">;
+
+/**
+ * One write from the editor's copy of an entry: a group's patch, publishing
+ * the entry, or publishing its pending draft.
+ */
+export type EntryWrite =
+  | { readonly kind: "update"; readonly patch: EntryUpdatePatch }
+  | { readonly kind: "publish" }
+  | { readonly kind: "publishDraft" };
 
 /**
  * The hook owns the last-saved `S`; the group only reads, diffs and confirms.
@@ -32,22 +32,15 @@ export interface AutosaveGroup<S> {
 }
 
 export interface EntryAutosaveOptions<G extends Record<string, unknown>> {
-  readonly id: number;
-  /** The `etag` the editor's copy came with. */
-  readonly etag: string;
+  /** The editing copy's save, which every write goes through. */
+  readonly write: (work: EntryWrite) => Promise<EntryRow | undefined>;
   readonly groups: { readonly [K in keyof G]: AutosaveGroup<G[K]> };
-  /** Called when autosave starts failing — not again until a write succeeds. */
+  /** Called when autosave starts failing — not again until a write lands. */
   readonly onError: (err: unknown) => void;
-  /** Called when a write finds the copy stale; autosave pauses until the
-   *  author keeps theirs or loads the other. */
-  readonly onConflict: (conflict: EntryConflict) => void;
-  /** Called when a write is refused by another user's edit lease; autosave
-   *  pauses for good, keeping the edits unsaved. */
-  readonly onLocked: (refusal: LeaseRefusal) => void;
   /** Whether a group write is in flight, reported as it changes. */
   readonly onSavingChange?: (saving: boolean) => void;
-  /** Whether an edit is waiting to be sent or in flight, reported as it
-   *  changes. */
+  /** Whether an edit is waiting to be sent, in flight or held back unsaved,
+   *  reported as it changes. */
   readonly onUnsavedChange?: (unsaved: boolean) => void;
 }
 
@@ -56,49 +49,46 @@ export interface EntryAutosave<G extends Record<string, unknown>> {
   readonly schedule: { readonly [K in keyof G]: () => void };
   /** Send every pending group now. */
   readonly flush: () => Promise<void>;
-  /** Drop every pending group without sending it. */
+  /** Drop every unsaved edit without sending it. */
   readonly cancel: () => void;
-  /** Take `etag` as the copy's token, e.g. after adopting the live row. */
-  readonly anchor: (etag: string) => void;
-  /** After a conflict: resend every unsaved edit over the entry as it is now,
-   *  from its current `etag`, and resume. */
-  readonly keepMine: (etag: string) => Promise<void>;
-  /** Flush, then run `task` in the save queue with the copy's token. */
-  readonly runExclusive: <T extends Pick<EntryRow, "etag">>(
-    task: (ifMatch: string) => Promise<T>,
-  ) => Promise<T>;
+  /** A write from the copy landed, Keep mine's included. */
+  readonly wrote: (work: EntryWrite, response: EntryRow) => void;
+  /** A write from the copy failed for a reason other than a conflict or the
+   *  lease. */
+  readonly failed: (err: unknown) => void;
 }
+
+type UpdateWrite = Extract<EntryWrite, { readonly kind: "update" }>;
 
 interface GroupRunner {
   readonly schedule: () => void;
   readonly flush: () => Promise<void>;
   readonly cancel: () => void;
   readonly pending: () => boolean;
+  /** Whether the group's last write went unanswered: refused or failed. */
+  readonly held: () => boolean;
+  /** Count `work` saved if this group sent it; whether it had gone unanswered,
+   *  so Keep mine is what landed it. */
+  readonly landed: (work: EntryWrite, response: EntryRow) => boolean;
   /** Send the group's unsaved edit now, debounced or not. */
   readonly save: () => Promise<void>;
 }
 
 /**
- * The protocol itself, outside React: `sync` hands it each render's groups and
- * callbacks, which it reads at write time.
+ * Sends each group's debounced edits through the editing copy, which owns the
+ * token and the queue. `sync` hands it each render's groups and callbacks.
  */
 export function createEntryAutosave<G extends Record<string, unknown>>(
   initial: EntryAutosaveOptions<G>,
-  update: EntryUpdate,
 ): {
   readonly autosave: EntryAutosave<G>;
   readonly sync: (options: EntryAutosaveOptions<G>) => void;
   readonly unsaved: () => boolean;
 } {
   let latest = initial;
-  const queue = createSaveQueue();
-  let etag = initial.etag;
-  // Set by a conflict: nothing is sent until the author resolves it, so their
-  // edits stay unsaved here rather than overwrite the other write.
-  let paused = false;
   // Latches on a genuine failure so the author is told once, not on every
   // debounce tick; any write that lands re-arms it.
-  let failed = false;
+  let failing = false;
   let inFlight = 0;
   let reportedUnsaved = false;
   const reportUnsaved = (): void => {
@@ -113,48 +103,25 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
     if (wasSaving !== inFlight > 0) latest.onSavingChange?.(inFlight > 0);
     reportUnsaved();
   };
-  // Every response carries the token the next write sends, a draft save's
-  // too, so the editor's own writes never conflict with each other.
-  const adopt = (response: Pick<EntryRow, "etag">): void => {
-    etag = response.etag;
-  };
-  // Whether the refusal paused autosave: a conflict or a lease.
-  const pauseOn = (outcome: AutosaveErrorOutcome): boolean => {
-    if (outcome.kind === "failed") return false;
-    paused = true;
-    if (outcome.kind === "conflict") latest.onConflict(outcome.conflict);
-    else latest.onLocked(outcome.locked);
-    reportUnsaved();
-    return true;
-  };
 
   function runner<K extends keyof G>(key: K, initialSaved: G[K]): GroupRunner {
     let saved = initialSaved;
+    let sent: { readonly work: UpdateWrite; readonly next: G[K] } | undefined;
+    let held = false;
     const save = async (): Promise<void> => {
-      if (paused) return;
-      const group = latest.groups[key];
-      const next = group.snapshot();
-      const patch = group.diff(saved, next);
+      const next = latest.groups[key].snapshot();
+      const patch = latest.groups[key].diff(saved, next);
       if (patch === null) {
         reportUnsaved();
         return;
       }
+      const work: UpdateWrite = { kind: "update", patch };
+      sent = { work, next };
+      held = false;
       track(1);
       try {
-        const response = await queue.run(async () => {
-          const res = await update({ id: latest.id, ...patch, ifMatch: etag });
-          adopt(res);
-          return res;
-        });
-        failed = false;
-        saved = group.commit(saved, next, response);
-        group.onSaved?.(patch, response);
-      } catch (err) {
-        if (pauseOn(classifyAutosaveError(err))) return;
-        if (!failed) {
-          failed = true;
-          latest.onError(err);
-        }
+        // Unanswered, the copy refused it or it failed: it stays unsaved.
+        held = (await latest.write(work)) === undefined;
       } finally {
         track(-1);
       }
@@ -166,8 +133,22 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
         reportUnsaved();
       },
       flush: debouncer.flush,
-      cancel: debouncer.cancel,
+      cancel: () => {
+        debouncer.cancel();
+        sent = undefined;
+        held = false;
+      },
       pending: debouncer.pending,
+      held: () => held,
+      landed: (work, response) => {
+        if (sent?.work !== work) return false;
+        const kept = held;
+        saved = latest.groups[key].commit(saved, sent.next, response);
+        latest.groups[key].onSaved?.(sent.work.patch, response);
+        sent = undefined;
+        held = false;
+        return kept;
+      },
       save: () => {
         debouncer.cancel();
         return save();
@@ -177,7 +158,7 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
 
   const runners: GroupRunner[] = [];
   const unsaved = (): boolean =>
-    paused || inFlight > 0 || runners.some((r) => r.pending());
+    inFlight > 0 || runners.some((r) => r.pending() || r.held());
   // Filled for every key of `groups` by the loop below.
   const schedule = {} as { [K in keyof G]: () => void };
   for (const key in initial.groups) {
@@ -186,40 +167,29 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
     schedule[key] = r.schedule;
   }
 
-  const flush = async (): Promise<void> => {
-    await Promise.all(runners.map((r) => r.flush()));
-  };
-
   return {
     autosave: {
       schedule,
-      flush,
+      flush: async () => {
+        await Promise.all(runners.map((r) => r.flush()));
+      },
       cancel: () => {
         for (const r of runners) r.cancel();
         reportUnsaved();
       },
-      anchor: (next) => {
-        etag = next;
-      },
-      keepMine: async (current) => {
-        etag = current;
-        paused = false;
-        await Promise.all(runners.map((r) => r.save()));
+      wrote: (work, response) => {
+        failing = false;
+        // Keep mine landed: the edits the conflict held back go out now, from
+        // the token it answered with.
+        if (runners.some((r) => r.landed(work, response))) {
+          for (const r of runners) if (r.held()) void r.save();
+        }
         reportUnsaved();
       },
-      runExclusive: async (task) => {
-        await flush();
-        return queue.run(async () => {
-          try {
-            const res = await task(etag);
-            adopt(res);
-            failed = false;
-            return res;
-          } catch (err) {
-            pauseOn(classifyAutosaveError(err));
-            throw err;
-          }
-        });
+      failed: (err) => {
+        if (failing) return;
+        failing = true;
+        latest.onError(err);
       },
     },
     sync: (options) => {
