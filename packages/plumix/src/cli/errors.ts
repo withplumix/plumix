@@ -673,16 +673,6 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     );
   }
 
-  /** Asked for only once the import has run, so it says the data is replaced. */
-  static syncSettleTokenMissing(): PlumixCliError {
-    return new PlumixCliError(
-      "sync_remote_token_missing",
-      "The deployed site's settle needs an API token, and there is no terminal to authorize one in",
-      "The data was replaced; on a push, the line above says how to restore it. Set `PLUMIX_API_TOKEN` to a token whose user may manage settings, then run the sync again to repeat the steps after it.",
-      undefined,
-    );
-  }
-
   static syncSettleRefused(ctx: {
     status: number;
     body: string;

@@ -318,7 +318,7 @@ function syncEnd(parts: EndParts): SyncEnd {
     },
     settle(event) {
       if (remote) {
-        return settleDeployedSite(options.url ?? "", event);
+        return settleDeployedSite(options.url ?? "", event, options.apiToken);
       }
       return settleInSite(options.config, parts.proxyEnv, event);
     },
