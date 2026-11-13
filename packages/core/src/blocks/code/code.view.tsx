@@ -15,7 +15,6 @@ export default function CodeView({
   const lang = normalizeLanguage(language);
   if (lang === undefined) return <pre {...blockProps}>{text}</pre>;
 
-  // An unsupported language keeps the semantic attribute but stays plain.
   const highlighted = highlightCode(text, lang);
   if (highlighted === null) {
     return (

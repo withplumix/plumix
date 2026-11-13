@@ -12,7 +12,6 @@ interface MediaValue {
   readonly height: number | null;
 }
 
-/** Tolerates a null or legacy value. */
 function normalizeMediaValue(raw: unknown): MediaValue | null {
   if (!raw || typeof raw !== "object") return null;
   const obj = raw as JsonObject;
@@ -75,9 +74,6 @@ export default function ImageView({
   return (
     <figure style={{ margin: 0 }}>
       {media?.width != null && media.height != null ? (
-        // Managed image with intrinsic dimensions: the shared renderer builds
-        // a responsive srcset (via the image-delivery transform) and emits
-        // width/height to reserve layout space — no CLS.
         <Image
           src={src}
           alt={alt}
@@ -88,8 +84,6 @@ export default function ImageView({
           style={style}
         />
       ) : (
-        // Unmanaged/dimensionless source (external URL or SVG): render a
-        // plain img — no srcset, no intrinsic dimensions to assume.
         <img
           src={src}
           alt={alt}

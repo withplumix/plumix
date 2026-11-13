@@ -50,7 +50,6 @@ export default function FileView({
   attrs,
   context,
 }: BlockViewProps): ReactElement | null {
-  // A picked asset's url wins over the raw href escape hatch.
   const media = normalizeFileMedia(attrs.media);
   const href = sanitizeHref(media?.url ?? attrs.href);
   if (!href) {

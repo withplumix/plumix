@@ -18,10 +18,6 @@ import { FormRender } from "./form-render.js";
 const slugOf = (attrs: MaterializedAttrs): string =>
   typeof attrs.slug === "string" ? attrs.slug : "";
 
-/**
- * The form block's view module over the site's forms. An unregistered slug
- * renders nothing on a live page and says so in the editor.
- */
 export function formBlockView(registry: FormRegistry): BlockViewModule {
   // A loader because signing is async and the view isn't. The result depends
   // on the page, not the visitor, so the page stays edge-cacheable.

@@ -46,8 +46,7 @@ export default function ColumnsView({
         breakpoints ?? DEFAULT_BREAKPOINTS,
       )
     : "";
-  // A dedicated scoping class the stacking `<style>` targets — always present
-  // (unlike the style-slot class, which a user could clear).
+  // The stacking `<style>` can't target the style-slot class: a user can clear it.
   const className =
     [blockProps.className, nodeId ? `plumix-cols-${nodeId}` : null]
       .filter(Boolean)
