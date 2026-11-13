@@ -35,7 +35,14 @@ exchange, author code) relied on the upstream answering (#3266).
   reword the body read that follows. Whether that read honours the deadline is
   the platform's behaviour, not one core tests or promises.
 - **Global `fetch` stays the platform's.** The bound applies to `ctx.fetch`
-  only; code that calls `fetch` directly gets no timeout.
+  and to core's image route; code that calls `fetch` directly gets no timeout.
+- **Core's image route uses the same bound without an `AppContext`.** The Node
+  and Bun image layers fetch a remote source outside any request context, so
+  `fetchRemoteImageSource` wraps its fetch in `boundedFetch`, the bound
+  `ctx.fetch` is built on, and passes its own `timeout`. `boundedFetch` is
+  exported inside core for that reuse and is not part of the published
+  surface. That fetch has no span, because the image layers have no telemetry
+  collector to record one.
 
 ## Considered options
 
