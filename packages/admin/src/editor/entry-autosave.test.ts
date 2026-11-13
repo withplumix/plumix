@@ -334,6 +334,29 @@ describe("createEntryAutosave", () => {
     ]);
   });
 
+  test("a write that lands while a later edit to its group is in flight still counts as saved", async () => {
+    const title = titleField();
+    const saved: unknown[] = [];
+    const group = {
+      ...title.group,
+      onSaved: (patch: unknown) => saved.push(patch),
+    };
+    const { autosave } = openAutosave({ title: group }, [
+      row({ etag: "e1" }),
+      row({ etag: "e2" }),
+    ]);
+    title.value = "b";
+    autosave.schedule.title();
+    vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+    title.value = "c";
+    autosave.schedule.title();
+
+    await autosave.flush();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(saved).toEqual([{ title: "b" }, { title: "c" }]);
+  });
+
   test("after Keep mine lands, an edit to the same group made while the refused write was in flight is sent", async () => {
     const title = titleField();
     const { autosave, copy, sent, unsaved } = openAutosave(
