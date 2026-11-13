@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, onTestFinished, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import type { BlockViewModule } from "./block-registry.js";
 import { createBlockRegistry, defineBlock } from "./block-registry.js";
@@ -228,26 +228,29 @@ function deferred<T>(): {
 }
 
 describe("a view module that fails to import", () => {
-  test("rejects only once the other views have loaded", async () => {
+  test("rejects with its own error, once the other views have loaded", async () => {
     const flakyImport = deferred<BlockViewModule>();
     const slowImport = deferred<BlockViewModule>();
+    const slow = defineBlock({
+      name: "site/slow",
+      view: () => slowImport.promise,
+    });
     const registry = createBlockRegistry([
       defineBlock({ name: "site/flaky", view: () => flakyImport.promise }),
-      defineBlock({ name: "site/slow", view: () => slowImport.promise }),
+      slow,
     ]);
-    let settled = false;
-    const load = loadBlockViews(registry).finally(() => {
-      settled = true;
-    });
-    onTestFinished(async () => {
-      slowImport.resolve({ default: () => "slow" });
-      await load.catch(() => undefined);
-    });
+    const chunk404 = new Error("chunk 404");
+    const SlowView = (): string => "slow";
+    const atRejection = loadBlockViews(registry).then(
+      () => null,
+      (error: unknown) => [error, blockViewModule(slow).default],
+    );
 
-    flakyImport.reject(new Error("chunk 404"));
+    flakyImport.reject(chunk404);
     await loadBlockViews(registry, ["site/flaky"]).catch(() => undefined);
+    slowImport.resolve({ default: SlowView });
 
-    expect(settled).toBe(false);
+    expect(await atRejection).toEqual([chunk404, SlowView]);
   });
 
   test("a later call retries a failed import", async () => {
