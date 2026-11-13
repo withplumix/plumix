@@ -1,15 +1,16 @@
+import type { EntryRow, EntryWrite } from "@/editor/entry-autosave.js";
+import type { EntryCopyEvents } from "@/editor/entry-copy.js";
+import type { EditingCopyState } from "@/editor/use-editing-copy.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DocumentSettingsPanel } from "@/components/editor/document-settings.js";
 import { ErrorPlaceholder } from "@/components/error-placeholder.js";
-import { classifyAutosaveError } from "@/editor/autosave.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
-import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
 import { ENTRY_EDITING_COPY } from "@/editor/editing-copy.js";
-import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
+import { entryCopy } from "@/editor/entry-copy.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import {
   resolveEditorMode,
@@ -20,8 +21,7 @@ import { resolvePluginFieldType } from "@/editor/resolve-plugin-field-type.js";
 import { PreviewBanner } from "@/editor/revisions/PreviewBanner.js";
 import { useRevisionsTrigger } from "@/editor/revisions/use-revisions-trigger.js";
 import { StaleDraftDialog } from "@/editor/StaleDraftDialog.js";
-import { useEditGuards } from "@/editor/use-edit-guards.js";
-import { useEditLease } from "@/editor/use-edit-lease.js";
+import { useEditingCopy } from "@/editor/use-editing-copy.js";
 import { useEntryAutosave } from "@/editor/use-entry-autosave.js";
 import { ENTRIES_LIST_DEFAULT_SEARCH } from "@/lib/entries.js";
 import {
@@ -57,11 +57,9 @@ import * as v from "valibot";
 
 import type { PublishActions } from "@plumix/admin-editor";
 import type { ResolvedMeta } from "@plumix/core";
-import type { EditLease, EditorLeaseMode } from "@plumix/core/admin";
 import type { BlockNode, EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
-import { editorLeaseMode } from "@plumix/core/admin";
 import {
   coreBlocks,
   createBlockRegistry,
@@ -76,6 +74,12 @@ import {
 } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
+import {
+  compareEntry,
+  failureNotice,
+  readSavedEntry,
+  writeEntry,
+} from "./-entry-copy.js";
 import { PlainFormRouteInner } from "./-plain-form-route.js";
 import { restoreErrorDescriptor } from "./-restore-error.js";
 
@@ -83,10 +87,6 @@ const M = {
   published: defineMessage({
     id: "editor.toast.published",
     message: "Published.",
-  }),
-  publishFailed: defineMessage({
-    id: "editor.toast.publishFailed",
-    message: "Couldn't publish — try again.",
   }),
   autosaveFailed: defineMessage({
     id: "editor.toast.autosaveFailed",
@@ -220,6 +220,8 @@ function EditorRoute(): ReactNode {
   const { slug, id } = Route.useParams();
   const { user } = Route.useRouteContext();
   const { revision } = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const queryClient = useQueryClient();
   const { data: entry } = useSuspenseQuery(
     orpc.entry.get.queryOptions({ input: { id, preview: true } }),
   );
@@ -227,9 +229,46 @@ function EditorRoute(): ReactNode {
   // leaves the source at "live", so this nonce forces it.
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
+  const copy = useMemo(
+    () =>
+      entryCopy({
+        write: (ifMatch, work) => writeEntry(id, ifMatch, work),
+        reload: async () => {
+          const [saved] = await Promise.all([
+            queryClient.query({
+              ...orpc.entry.get.queryOptions({ input: { id, preview: true } }),
+              staleTime: 0,
+            }),
+            queryClient.invalidateQueries({
+              queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+            }),
+          ]);
+          reseed();
+          return saved.etag;
+        },
+      }),
+    [id, queryClient, reseed],
+  );
   // Held across reseeds, so remounting the editor never gives the lease up.
-  const lease = useEditLease("entry", id);
-  const leaseMode = editorLeaseMode(lease.state);
+  const editing = useEditingCopy({
+    kind: "entry",
+    id,
+    etag: entry.etag,
+    userId: user.id,
+    copy: ENTRY_EDITING_COPY,
+    save: copy.save,
+    readSaved: () => readSavedEntry(id),
+    compare: compareEntry,
+    reload: copy.reload,
+    onFailed: copy.onFailed,
+    onBack: () => {
+      void navigate({
+        to: "/entries/$slug",
+        params: { slug },
+        search: ENTRIES_LIST_DEFAULT_SEARCH,
+      });
+    },
+  });
 
   // A `?revision=<id>` request opens that revision read-only with a restore
   // banner — keyed so leaving/entering preview re-seeds the canvas.
@@ -240,10 +279,12 @@ function EditorRoute(): ReactNode {
         id={id}
         revisionId={revision}
         capabilities={user.capabilities}
+        editing={editing}
+        listen={copy.listen}
       />
     );
   }
-  if (leaseMode.mode === "loading") return <PendingScreen />;
+  if (editing.mode === "loading") return <PendingScreen />;
   const entryType = findEntryTypeBySlug(slug);
   // Non-editor entry types (structured records like authors, products, events)
   // get the plain-form Cards layout instead of the visual canvas, driven by the
@@ -256,10 +297,8 @@ function EditorRoute(): ReactNode {
         id={id}
         supportsRevisions={supportsRevisions(entryType)}
         capabilities={user.capabilities}
-        onReseed={reseed}
-        userId={user.id}
-        lease={lease}
-        leaseMode={leaseMode}
+        editing={editing}
+        listen={copy.listen}
       />
     );
   }
@@ -274,8 +313,8 @@ function EditorRoute(): ReactNode {
       entryType={entryType}
       userId={user.id}
       onReseed={reseed}
-      lease={lease}
-      leaseMode={leaseMode}
+      editing={editing}
+      listen={copy.listen}
     />
   );
 }
@@ -285,8 +324,8 @@ interface EntryEditorProps {
   readonly entryType: EntryTypeManifestEntry | undefined;
   readonly userId: number;
   readonly onReseed: () => void;
-  readonly lease: EditLease;
-  readonly leaseMode: EditorLeaseMode;
+  readonly editing: EditingCopyState<EntryWrite, EntryRow>;
+  readonly listen: (events: EntryCopyEvents | null) => void;
 }
 
 /** Content + excerpt + meta + template + access, as one autosave-row write. */
@@ -344,8 +383,8 @@ function EntryEditor({
   entryType,
   userId,
   onReseed,
-  lease,
-  leaseMode,
+  editing,
+  listen,
 }: EntryEditorProps): ReactNode {
   const { slug, id } = Route.useParams();
   // Route-scoped so the `?revision=<id>` search updater is typed against this
@@ -449,17 +488,7 @@ function EntryEditor({
   useEffect(() => () => refreshPreview.cancel(), [refreshPreview]);
 
   const autosave = useEntryAutosave({
-    id,
-    etag: entry.etag,
-    onConflict: (next) => {
-      // The author's copy as it stood when the save was refused.
-      guards.reportConflict(next, {
-        title: titleRef.current,
-        content: contentRef.current,
-        excerpt: excerptRef.current,
-      });
-    },
-    onLocked: lease.lose,
+    write: editing.save,
     onUnsavedChange: setHasUnsavedEdits,
     onError: (err) => {
       setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
@@ -861,8 +890,6 @@ function EntryEditor({
     : "none";
   const [staleResolved, setStaleResolved] = useState(false);
   const showStaleDialog = staleState === "stale" && !staleResolved;
-  // A preview read carries the live row's `etag`, the token a draft save sends.
-  const liveAnchorAfterResolve = entry.etag;
 
   const invalidateEntry = useCallback(
     () =>
@@ -891,49 +918,49 @@ function EntryEditor({
       ]),
     [id, entryTypeName, queryClient],
   );
-  // Publish is stricter than a draft save, rejecting values a draft tolerated.
-  // A stale copy opens the conflict dialog, and a lease turns the editor
-  // read-only, instead.
-  const handlePublishError = useCallback(
-    (err: unknown): void => {
-      if (classifyAutosaveError(err).kind !== "failed") return;
-      setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
-      toastError(renderLabel(M.publishFailed));
-    },
-    [renderLabel],
-  );
-  // Publishing flushes pending edits first and waits its turn in the save
-  // queue, so it neither publishes without the last edit nor races an autosave
-  // for the token.
+  // Flushing first, then queueing behind autosave, means a publish neither
+  // drops the last edit nor races it for the token.
   const publish = useMutation({
-    mutationFn: () =>
-      autosave.runExclusive((ifMatch) =>
-        orpc.entry.update.call({ id, status: "published", ifMatch }),
-      ),
-    onSuccess: () => {
-      // The promoted bag passed the strict gate, so clear any field pins a
-      // prior failed publish left behind.
-      setMetaFieldErrors(null);
-      toastSuccess(renderLabel(M.published));
-      return invalidateEntry();
+    mutationFn: async () => {
+      await autosave.flush();
+      return editing.save({ kind: "publish" });
     },
-    onError: handlePublishError,
   });
   const publishDraft = useMutation({
-    mutationFn: () =>
-      autosave.runExclusive((ifMatch) =>
-        orpc.entry.publish.call({ id, ifMatch }),
-      ),
-    onSuccess: async () => {
-      // The promoted bag passed the strict gate, so clear any field pins a
-      // prior failed publish left behind.
-      setMetaFieldErrors(null);
-      toastSuccess(renderLabel(M.published));
-      setHasLocalDraft(false);
-      await invalidateEntry();
+    mutationFn: async () => {
+      await autosave.flush();
+      return editing.save({ kind: "publishDraft" });
     },
-    onError: handlePublishError,
   });
+  useEffect(() => {
+    listen({
+      wrote: (work, response) => {
+        autosave.wrote(work, response);
+        if (work.kind !== "publish" && work.kind !== "publishDraft") return;
+        // The promoted bag passed the strict gate, so clear any field pins a
+        // prior failed publish left behind.
+        setMetaFieldErrors(null);
+        toastSuccess(renderLabel(M.published));
+        if (work.kind === "publishDraft") setHasLocalDraft(false);
+        void invalidateEntry();
+      },
+      failed: (err, cause) => {
+        const notice = failureNotice(cause);
+        if (notice.kind === "write") {
+          autosave.failed(err, notice.work);
+          return;
+        }
+        // Publish is stricter than a draft save, rejecting values a draft
+        // tolerated.
+        if (notice.kind === "publish") {
+          setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
+        }
+        toastError(renderLabel(notice.message));
+      },
+      discard: autosave.cancel,
+    });
+    return () => listen(null);
+  }, [listen, autosave, renderLabel, invalidateEntry]);
   const discardDraft = useMutation({
     mutationFn: () => orpc.entry.discardDraft.call({ id }),
     onSuccess: async () => {
@@ -958,10 +985,9 @@ function EntryEditor({
     () => discardDraft.mutate(),
     [discardDraft],
   );
-  const handleUseMine = useCallback(() => {
-    autosave.anchor(liveAnchorAfterResolve);
-    setStaleResolved(true);
-  }, [autosave, liveAnchorAfterResolve]);
+  // The copy already saves from the live row's token, which a preview read
+  // carries.
+  const handleUseMine = useCallback(() => setStaleResolved(true), []);
   const handleUseTheirs = useCallback(() => {
     discardDraft.mutate(undefined, {
       onSuccess: () => setStaleResolved(true),
@@ -1019,23 +1045,9 @@ function EntryEditor({
     row
       ? { title: row.title, content: row.content, excerpt: row.excerpt }
       : { title: renderLabel(M.staleLoading), content: null, excerpt: null };
-  const guards = useEditGuards({
-    copy: ENTRY_EDITING_COPY,
-    userId,
-    lease,
-    theirs: {
-      queryKey: ["entry.conflict", id],
-      fetch: () => orpc.entry.get.call({ id }),
-      snapshot: snapshotOf,
-    },
-    keepMine: (etag) => void autosave.keepMine(etag),
-    discard: autosave.cancel,
-    reload: () => invalidateEntry().then(onReseed),
-    onBack: () => void handleBack(),
-  });
   const overlay = (
     <>
-      <EditConflictDialog {...guards.conflictDialog} />
+      {editing.dialog}
       <StaleDraftDialog
         open={showStaleDialog}
         autosaveSnapshot={{
@@ -1064,13 +1076,13 @@ function EntryEditor({
   liveTarget.search = "";
   const liveUrl = isPublished ? liveTarget.toString() : undefined;
 
-  if (leaseMode.mode === "readOnly") {
+  if (editing.mode === "readOnly") {
     return (
       <LeaseReadOnlyEditor
         previewUrl={target}
         content={() => contentRef.current}
         capabilities={capabilitySet}
-        banner={<EditLeaseBanner {...guards.leaseBanner(leaseMode.notice)} />}
+        banner={editing.banner}
       />
     );
   }
@@ -1144,10 +1156,14 @@ function RevisionPreview({
   id,
   revisionId,
   capabilities,
+  editing,
+  listen,
 }: {
   readonly id: number;
   readonly revisionId: number;
   readonly capabilities: readonly string[];
+  readonly editing: EditingCopyState<EntryWrite, EntryRow>;
+  readonly listen: (events: EntryCopyEvents | null) => void;
 }): ReactNode {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -1158,7 +1174,9 @@ function RevisionPreview({
   const revisionQuery = useQuery(
     orpc.entry.revisions.get.queryOptions({ input: { revisionId } }),
   );
-  const liveQuery = useQuery(orpc.entry.get.queryOptions({ input: { id } }));
+  const [restoreError, setRestoreError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const handleBackToLive = useCallback(
     () =>
@@ -1166,38 +1184,49 @@ function RevisionPreview({
     [navigate],
   );
 
+  // Through the entry's copy, so the editor this returns to saves from the
+  // token the restore answered with.
   const restore = useMutation({
-    // The live row's `etag`: restoring is an edit from the copy this preview
-    // loaded.
-    mutationFn: (ifMatch: string) =>
-      orpc.entry.revisions.restore.call({ revisionId, ifMatch }),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: orpc.entry.get.queryOptions({
-            input: { id, preview: true },
-          }).queryKey,
-        }),
-      ]);
-      handleBackToLive();
+    mutationFn: () => {
+      setRestoreError(null);
+      return editing.save({ kind: "restore", revisionId });
     },
   });
+  useEffect(() => {
+    listen({
+      wrote: (work) => {
+        if (work.kind !== "restore") return;
+        void Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: orpc.entry.get.queryOptions({
+              input: { id, preview: true },
+            }).queryKey,
+          }),
+        ]).then(handleBackToLive);
+      },
+      failed: (err, cause) => {
+        const notice = failureNotice(cause);
+        if (notice.kind !== "write") {
+          toastError(renderLabel(notice.message));
+          return;
+        }
+        const message = restoreErrorDescriptor(err, notice.work);
+        if (message) setRestoreError(message);
+      },
+      discard: () => undefined,
+    });
+    return () => listen(null);
+  }, [listen, queryClient, id, handleBackToLive, renderLabel]);
 
   const revision = revisionQuery.data;
-  // The restore sends the live row's `etag`, so wait for it.
-  if (!revision || !liveQuery.data) return <PendingScreen />;
-  const liveEtag = liveQuery.data.etag;
+  if (!revision) return <PendingScreen />;
 
   const target = new URL(previewLink.url, window.location.origin);
   target.searchParams.set("plumix.edit", "");
 
-  const restoreError =
-    restore.error === null
-      ? null
-      : renderLabel(restoreErrorDescriptor(restore.error));
   const revisionAuthor =
     revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
 
@@ -1213,16 +1242,22 @@ function RevisionPreview({
       breakpoints={breakpoints}
       readOnly
       previewBanner={
-        <PreviewBanner
-          revisionUpdatedAt={revision.updatedAt}
-          revisionAuthor={revisionAuthor}
-          relativeTime={formatRelative}
-          onBackToLive={handleBackToLive}
-          onRestore={() => restore.mutate(liveEtag)}
-          isRestoring={restore.isPending}
-          restoreError={restoreError}
-        />
+        <>
+          {editing.banner}
+          <PreviewBanner
+            revisionUpdatedAt={revision.updatedAt}
+            revisionAuthor={revisionAuthor}
+            relativeTime={formatRelative}
+            onBackToLive={handleBackToLive}
+            onRestore={
+              editing.mode === "editable" ? () => restore.mutate() : undefined
+            }
+            isRestoring={restore.isPending}
+            restoreError={restoreError ? renderLabel(restoreError) : null}
+          />
+        </>
       }
+      overlay={editing.dialog}
     />
   );
 }

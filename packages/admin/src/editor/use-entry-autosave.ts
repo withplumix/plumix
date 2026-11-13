@@ -4,14 +4,13 @@ import type {
 } from "@/editor/entry-autosave.js";
 import { useEffect, useState } from "react";
 import { createEntryAutosave } from "@/editor/entry-autosave.js";
-import { orpc } from "@/lib/orpc.js";
 
 /** Pending writes are also sent on document unload, which runs no unmount. */
 export function useEntryAutosave<G extends Record<string, unknown>>(
   options: EntryAutosaveOptions<G>,
 ): EntryAutosave<G> {
   const [{ autosave, sync, unsaved }] = useState(() =>
-    createEntryAutosave(options, (input) => orpc.entry.update.call(input)),
+    createEntryAutosave(options),
   );
   useEffect(() => sync(options));
   useEffect(() => () => void autosave.flush(), [autosave]);

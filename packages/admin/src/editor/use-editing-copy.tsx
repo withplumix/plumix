@@ -30,6 +30,12 @@ export interface EditingCopyOptions<Work, Saved, Response> {
   readonly save: (etag: string, work: Work) => Promise<Response>;
   /** What is saved at `etag`, shaped like the work, for Compare. */
   readonly readSaved: (etag: string) => Promise<Saved>;
+  /** For work that isn't shaped like what is saved: both sides of Compare in
+   *  one shape. Without it, Compare shows the held work and `readSaved`. */
+  readonly compare?: (
+    mine: Work,
+    saved: Saved | undefined,
+  ) => { readonly mine: unknown; readonly theirs: unknown };
   /** Show what is saved now, and resolve with its concurrency token. */
   readonly reload: () => Promise<string>;
   /** A save refused for another reason, or a reload that failed. */
@@ -100,6 +106,10 @@ export function useEditingCopy<
     controller?.getSnapshot ?? loadingSnapshot,
   );
   const { conflict } = snapshot;
+  const sides =
+    conflict && options.compare
+      ? options.compare(conflict.mine, snapshot.compare)
+      : { mine: conflict?.mine ?? null, theirs: snapshot.compare ?? null };
 
   return {
     mode: snapshot.mode,
@@ -120,8 +130,8 @@ export function useEditingCopy<
         open={conflict !== undefined}
         changedAt={conflict?.changedAt ?? null}
         editingElsewhere={conflict?.editingElsewhere}
-        mineSnapshot={conflict?.mine ?? null}
-        theirsSnapshot={snapshot.compare ?? null}
+        mineSnapshot={sides.mine}
+        theirsSnapshot={sides.theirs}
         keepMineDisabled={!snapshot.canKeepMine}
         onKeepMine={() => void controller?.keepMine()}
         onLoadTheirs={() => void controller?.loadTheirs()}

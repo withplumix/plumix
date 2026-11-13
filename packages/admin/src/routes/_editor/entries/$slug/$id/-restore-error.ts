@@ -1,3 +1,4 @@
+import type { EntryCopyCause } from "@/editor/entry-copy.js";
 import type { MessageDescriptor } from "@lingui/core";
 import { defineMessage } from "@lingui/core/macro";
 
@@ -15,10 +16,14 @@ const M = {
 } satisfies Record<string, MessageDescriptor>;
 
 /**
- * Every restore conflict means the live row moved, so it keys on the code, not
- * the reason.
+ * The preview also hears the writes its editor sent as it left. A restore
+ * conflict always means the live row moved, so it keys on the code.
  */
-export function restoreErrorDescriptor(error: unknown): MessageDescriptor {
+export function restoreErrorDescriptor(
+  error: unknown,
+  cause: EntryCopyCause,
+): MessageDescriptor | undefined {
+  if (typeof cause === "string" || cause.kind !== "restore") return undefined;
   if (rpcErrorCode(error) === "CONFLICT") return M.revisionConflict;
   return describeRpcError(error, {}, M.restoreFailed);
 }

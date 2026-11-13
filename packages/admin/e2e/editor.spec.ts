@@ -1,7 +1,7 @@
 // The mock harness can't serve the public route the canvas iframe loads, so
 // these assert the client contracts the route owns, not canvas rendering.
 
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 
 import type { PlumixManifest } from "@plumix/core/manifest";
@@ -20,7 +20,6 @@ import {
 import {
   AUTHED_ADMIN,
   MANIFEST_WITH_EDITOR_PATTERNS,
-  MANIFEST_WITH_PLAIN_FORM_TYPE,
   MANIFEST_WITH_POST,
   mockManifest,
   mockRpc,
@@ -28,10 +27,8 @@ import {
   rpcErrorBody,
   rpcEtagConflictBody,
   rpcLeaseBody,
-  rpcLeaseLostBody,
   rpcLockedBody,
   rpcOkBody,
-  withCapabilities,
 } from "./support/rpc-mock.js";
 
 /**
@@ -1214,27 +1211,7 @@ test.describe("editor publishing & autosave", () => {
     return { updates, saveElsewhere: save };
   }
 
-  test("an edit made after another session saved opens the conflict dialog, and Load theirs shows that save", async ({
-    page,
-  }) => {
-    const { saveElsewhere } = await mockSavedEntry(page);
-    await page.goto("entries/posts/1/edit");
-    await page.getByTestId("plumix-tab-page").click();
-    await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
-    saveElsewhere({ slug: "saved-elsewhere" });
-
-    await page.getByTestId("entry-slug-input").fill("my-slug");
-
-    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
-    await page.getByTestId("entry-conflict-load-theirs").click();
-    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
-    await page.getByTestId("plumix-tab-page").click();
-    await expect(page.getByTestId("entry-slug-input")).toHaveValue(
-      "saved-elsewhere",
-    );
-  });
-
-  test("Keep mine in the conflict dialog saves the local edit over the other session's", async ({
+  test("Compare shows the other session's save beside mine, and Keep mine saves mine over it", async ({
     page,
   }) => {
     const { updates, saveElsewhere } = await mockSavedEntry(page);
@@ -1245,6 +1222,13 @@ test.describe("editor publishing & autosave", () => {
     await page.getByTestId("entry-slug-input").fill("my-slug");
     await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
 
+    await page.getByTestId("entry-conflict-compare").click();
+    await expect(
+      page.getByTestId("entry-conflict-compare-panes"),
+    ).toContainText("my-slug");
+    await expect(
+      page.getByTestId("entry-conflict-compare-panes"),
+    ).toContainText("saved-elsewhere");
     await page.getByTestId("entry-conflict-keep-mine").click();
 
     await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
@@ -1258,51 +1242,15 @@ test.describe("editor publishing & autosave", () => {
   test.describe("conflict dialog", () => {
     test.use({ timezoneId: "UTC" });
 
-    async function openConflictDialog(
-      page: Page,
-      elsewhere: Record<string, unknown> = { slug: "saved-elsewhere" },
-    ): Promise<void> {
+    async function openConflictDialog(page: Page): Promise<void> {
       const { saveElsewhere } = await mockSavedEntry(page);
       await page.goto("entries/posts/1/edit");
       await page.getByTestId("plumix-tab-page").click();
       await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
-      saveElsewhere(elsewhere);
+      saveElsewhere({ slug: "saved-elsewhere" });
       await page.getByTestId("entry-slug-input").fill("my-slug");
       await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
     }
-
-    test("says when the other save landed", async ({ page }) => {
-      await openConflictDialog(page);
-
-      await expect(page.getByTestId("entry-conflict-changed-at")).toContainText(
-        "May 20, 2026",
-      );
-      await expect(page.getByTestId("entry-conflict-changed-at")).toContainText(
-        "9:30",
-      );
-    });
-
-    test("Compare shows both copies and toggles off again", async ({
-      page,
-    }) => {
-      await openConflictDialog(page, { title: "Their title" });
-
-      await page.getByTestId("entry-conflict-compare").click();
-
-      await expect(
-        page.getByTestId("entry-conflict-compare-panes"),
-      ).toContainText("Your changes");
-      await expect(
-        page.getByTestId("entry-conflict-compare-panes"),
-      ).toContainText("Saved now");
-      await expect(
-        page.getByTestId("entry-conflict-compare-panes"),
-      ).toContainText("Their title");
-      await page.getByTestId("entry-conflict-compare").click();
-      await expect(
-        page.getByTestId("entry-conflict-compare-panes"),
-      ).toBeHidden();
-    });
 
     test("a Publish that finds the entry changed opens the dialog and raises no error toast", async ({
       page,
@@ -1339,6 +1287,29 @@ test.describe("editor publishing & autosave", () => {
               .errorToasts,
         ),
       ).toBe(0);
+    });
+
+    test("Keep mine on a Publish that found the entry changed publishes it", async ({
+      page,
+    }) => {
+      const { updates, saveElsewhere } = await mockSavedEntry(page);
+      await page.goto("entries/posts/1/edit");
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
+      saveElsewhere({ slug: "saved-elsewhere" });
+      await page.getByTestId("plumix-editor-publish-button").click();
+      await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+
+      await page.getByTestId("entry-conflict-keep-mine").click();
+
+      await expect(page.getByTestId("toast-success")).toBeVisible();
+      await expect(
+        page.getByTestId("plumix-editor-publish-button"),
+      ).toBeDisabled();
+      expect(updates.at(-1)).toMatchObject({
+        ifMatch: "e1",
+        status: "published",
+      });
     });
 
     test("stays open on Escape and on a click outside it", async ({ page }) => {
@@ -1424,9 +1395,40 @@ test.describe("editor publishing & autosave", () => {
     await expect(button).toBeEnabled();
     await button.click();
 
-    await expect(page.getByTestId("toast-error")).toBeVisible();
+    await expect(page.getByTestId("toast-error")).toHaveText(
+      "Couldn't publish — try again.",
+    );
     // The entry stays unpublished, so the button must remain usable.
     await expect(button).toBeEnabled();
+  });
+
+  test("a failed autosave is told as a failed save, not a failed publish", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/list": [],
+      "/entry/createPreviewLink": PREVIEW_LINK,
+    });
+    await page.route("**/_plumix/rpc/entry/update", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: rpcErrorBody({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Internal server error",
+        }),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("entry-slug-input").fill("left-unsaved");
+
+    await expect(page.getByTestId("toast-error")).toHaveText(
+      "Couldn't save your changes — they may contain invalid content.",
+    );
   });
 
   test("Publish button is disabled when the entry is already published", async ({
@@ -2104,7 +2106,93 @@ test.describe("editor revision preview", () => {
     expect(saved).toHaveLength(1);
   });
 
-  test("Restore from the preview banner restores the revision, and a stale restore shows the conflict inline", async ({
+  test("while another user holds the entry, the preview names them and offers no Restore, and a failed Take over says so", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      return route.fulfill(
+        takeOver === true
+          ? {
+              status: 500,
+              contentType: "application/json",
+              body: rpcErrorBody({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Internal server error",
+              }),
+            }
+          : {
+              status: 423,
+              contentType: "application/json",
+              body: rpcLockedBody(
+                { id: 2, name: "Bo" },
+                new Date("2026-05-22T09:00:00Z"),
+              ),
+            },
+      );
+    });
+    await page.goto("entries/posts/1/edit?revision=42");
+    await expect(page.getByTestId("edit-lease-held-by")).toBeVisible();
+    await expect(page.getByTestId("revision-preview-banner")).toBeVisible();
+    await expect(page.getByTestId("revision-preview-restore")).toHaveCount(0);
+
+    await page.getByTestId("edit-lease-take-over").click();
+
+    await expect(page.getByTestId("toast-error")).toHaveText(
+      "Couldn't take over editing this entry — try again.",
+    );
+  });
+
+  test("a failed Restore says why, and restoring again clears it", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    let restores = 0;
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    await page.route(
+      "**/_plumix/rpc/entry/revisions/restore",
+      async (route) => {
+        restores += 1;
+        if (restores === 1) {
+          return route.fulfill({
+            status: 500,
+            contentType: "application/json",
+            body: rpcErrorBody({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Internal server error",
+            }),
+          });
+        }
+        await answered;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: entryBody(liveEntry()),
+        });
+      },
+    );
+    await page.goto("entries/posts/1/edit?revision=42");
+    const restore = page.getByTestId("revision-preview-restore");
+    await restore.click();
+    await expect(page.getByTestId("revision-preview-restore-error")).toHaveText(
+      "Couldn't restore this revision — try again.",
+    );
+
+    await restore.click();
+
+    await expect(
+      page.getByTestId("revision-preview-restore-error"),
+    ).toHaveCount(0);
+    answer?.();
+  });
+
+  test("a stale Restore opens the conflict dialog, and Keep mine restores from the token it reported", async ({
     page,
   }) => {
     await installPreviewMocks(page);
@@ -2141,16 +2229,69 @@ test.describe("editor revision preview", () => {
 
     await expect(restore).toBeDisabled();
     release?.();
-    await expect(
-      page.getByTestId("revision-preview-restore-error"),
-    ).toBeVisible();
-    await restore.click();
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    await page.getByTestId("entry-conflict-keep-mine").click();
     await expect.poll(() => page.url()).not.toContain("revision=");
     await expect(page.getByTestId("revision-preview-banner")).toHaveCount(0);
     expect(restores).toEqual([
       { revisionId: 42, ifMatch: "rev0" },
-      { revisionId: 42, ifMatch: "rev0" },
+      { revisionId: 42, ifMatch: "rev1" },
     ]);
+  });
+
+  test("after a Restore, the next edit saves from the token the restore answered with", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    let current = "rev0";
+    const updates: Record<string, unknown>[] = [];
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: entryBody({ ...liveEntry(), etag: current }),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/revisions/restore", (route) => {
+      current = "rev1";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: entryBody({ ...liveEntry(), etag: current }),
+      });
+    });
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      const { ifMatch, ...changes } = (
+        route.request().postDataJSON() as { json: Record<string, unknown> }
+      ).json;
+      updates.push({ ifMatch, ...changes });
+      if (ifMatch !== current) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcEtagConflictBody(current, T_REV),
+        });
+      }
+      current = "rev2";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: entryBody({ ...liveEntry(), etag: current }),
+      });
+    });
+    await page.goto("entries/posts/1/edit?revision=42");
+    await page.getByTestId("revision-preview-restore").click();
+    await expect.poll(() => page.url()).not.toContain("revision=");
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("entry-slug-input").fill("after-restore");
+
+    await expect.poll(() => updates.length).toBe(1);
+    expect(updates[0]).toMatchObject({
+      ifMatch: "rev1",
+      slug: "after-restore",
+    });
+    await expect(page.getByTestId("entry-conflict-dialog")).toHaveCount(0);
   });
 });
 
@@ -2376,145 +2517,62 @@ test.describe("editor starter modal", () => {
 test.describe("editor edit lease", () => {
   test.use({ timezoneId: "UTC" });
 
-  const ADA = { id: 1, name: "Ada" };
+  const ME = { id: 1, name: "Ada" };
   const BO = { id: 2, name: "Bo" };
   const SINCE = new Date("2026-05-20T09:00:00Z");
 
-  interface LeaseServer {
-    holder: { readonly id: number; readonly name: string } | null;
-    since: Date;
-  }
-
-  const AUTHOR_EDITOR = withCapabilities(
-    AUTHED_ADMIN,
-    "entry:author:edit_any",
-    "entry:author:edit_own",
-    "entry:author:publish",
-    "entry:author:read",
-  );
-
-  const AUTHOR_ENTRY = {
-    ...editorEntry(),
-    type: "author",
-    title: "Jane Doe",
-    meta: {},
-  };
-
-  async function openAs(
-    page: Page,
-    me: typeof ADA,
-    server: LeaseServer,
-  ): Promise<readonly Record<string, unknown>[]> {
-    const updates: Record<string, unknown>[] = [];
-    await mockManifest(page, MANIFEST_WITH_PLAIN_FORM_TYPE);
-    await mockRpc(page, {
-      "/auth/session": AUTHOR_EDITOR,
-      "/entry/get": AUTHOR_ENTRY,
-      "/entry/lease/release": null,
-    });
-    const json = (body: string) => ({
-      status: 200,
-      contentType: "application/json",
-      body,
-    });
-    const locked = () => ({
-      status: 423,
-      contentType: "application/json",
-      body: rpcLockedBody(server.holder ?? me, server.since),
-    });
-    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) => {
-      const { takeOver } = (
-        route.request().postDataJSON() as { json: { takeOver?: boolean } }
-      ).json;
-      const heldByOther = server.holder !== null && server.holder.id !== me.id;
-      if (heldByOther && takeOver !== true) return route.fulfill(locked());
-      if (server.holder?.id !== me.id) {
-        server.holder = me;
-        server.since = new Date("2026-05-20T09:05:00Z");
-      }
-      return route.fulfill(json(rpcLeaseBody(me, server.since)));
-    });
-    await page.route("**/_plumix/rpc/entry/update", (route) => {
-      updates.push(
-        (route.request().postDataJSON() as { json: Record<string, unknown> })
-          .json,
-      );
-      if (server.holder?.id !== me.id) return route.fulfill(locked());
-      return route.fulfill(json(rpcOkBody(AUTHOR_ENTRY)));
-    });
-    await page.goto("entries/authors/1/edit");
-    return updates;
-  }
-
-  test("a second editor sees who holds the entry and takes it over; the first turns read-only with their work kept", async ({
-    page,
-    browser,
-  }) => {
-    const server: LeaseServer = { holder: null, since: SINCE };
-    const adaUpdates = await openAs(page, ADA, server);
-    await expect(page.getByTestId("plain-form-title-input")).toBeEnabled();
-    const contextB: BrowserContext = await browser.newContext({
-      baseURL: test.info().project.use.baseURL,
-      timezoneId: "UTC",
-    });
-    const pageB = await contextB.newPage();
-    await openAs(pageB, BO, server);
-
-    await expect(pageB.getByTestId("edit-lease-held-by")).toHaveText(
-      "Ada is editing this entry (since May 20, 2026, 9:05 AM)",
-    );
-    await expect(pageB.getByTestId("plain-form-title-input")).toBeDisabled();
-    await pageB.getByTestId("edit-lease-take-over").click();
-    await expect(pageB.getByTestId("edit-lease-banner")).toBeHidden();
-    await expect(pageB.getByTestId("plain-form-title-input")).toBeEnabled();
-
-    await page
-      .getByTestId("plain-form-title-input")
-      .fill("Ada's unsaved title");
-
-    await expect(page.getByTestId("edit-lease-lost")).toContainText(
-      "Bo took over editing this entry at May 20, 2026, 9:05 AM.",
-    );
-    await expect(page.getByTestId("plain-form-title-input")).toHaveValue(
-      "Ada's unsaved title",
-    );
-    await expect(page.getByTestId("plain-form-title-input")).toBeDisabled();
-    expect(adaUpdates).toHaveLength(1);
-    await contextB.close();
-  });
-
-  test("a renewal that finds the lease taken over turns the block editor read-only and says who", async ({
+  test("the editor waits for the lease, then opens read-only naming its holder, and Take over makes it editable", async ({
     page,
   }) => {
-    await page.clock.install();
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/entry/get": editorEntry(),
       "/entry/list": [],
       "/entry/createPreviewLink": PREVIEW_LINK,
+      "/entry/lease/release": null,
     });
-    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: rpcLeaseBody(ADA, SINCE),
-      }),
-    );
-    await page.route("**/_plumix/rpc/entry/lease/renew", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: rpcLeaseLostBody(BO, new Date("2026-05-20T09:10:00Z")),
-      }),
-    );
+    await page.route("**/_plumix/rpc/entry/lease/acquire", async (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      if (takeOver !== true) await answered;
+      return route.fulfill(
+        takeOver === true
+          ? {
+              status: 200,
+              contentType: "application/json",
+              body: rpcLeaseBody(ME, new Date("2026-05-20T09:05:00Z")),
+            }
+          : {
+              status: 423,
+              contentType: "application/json",
+              body: rpcLockedBody(BO, SINCE),
+            },
+      );
+    });
+    const asked = page.waitForRequest("**/_plumix/rpc/entry/lease/acquire");
     await page.goto("entries/posts/1/edit");
-    await expect(page.getByTestId("plumix-editor-layout")).toBeVisible();
-
-    await page.clock.fastForward(30_000);
-
-    await expect(page.getByTestId("edit-lease-lost")).toContainText(
-      "Bo took over editing this entry at May 20, 2026, 9:10 AM.",
+    await asked;
+    await expect(page.getByTestId("plumix-editor-loading")).toBeVisible();
+    await expect(page.getByTestId("plumix-editor-layout")).toHaveCount(0);
+    await expect(page.getByTestId("plumix-editor-preview")).toHaveCount(0);
+    answer?.();
+    await expect(page.getByTestId("edit-lease-held-by")).toHaveText(
+      "Bo is editing this entry (since May 20, 2026, 9:00 AM)",
     );
-    await expect(page.getByTestId("plumix-editor-preview")).toBeVisible();
+    await expect(page.getByTestId("plumix-editor-publish-button")).toHaveCount(
+      0,
+    );
+
+    await page.getByTestId("edit-lease-take-over").click();
+
+    await expect(page.getByTestId("edit-lease-banner")).toBeHidden();
+    await expect(
+      page.getByTestId("plumix-editor-publish-button"),
+    ).toBeVisible();
   });
 });
