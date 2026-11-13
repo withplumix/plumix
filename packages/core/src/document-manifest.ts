@@ -42,9 +42,9 @@ export interface DocumentThemeColor {
 }
 
 /**
- * Default `width=device-width, initial-scale=1`. `viewportFit: "cover"` lays
- * the page under a notch, so `env(safe-area-inset-*)` has values. The renderer
- * alone writes these tags, so `meta[]` may not name them.
+ * `viewportFit: "cover"` lays the page under a notch, so
+ * `env(safe-area-inset-*)` has values. The renderer alone writes these tags,
+ * so `meta[]` may not name them.
  */
 export interface DocumentViewport {
   readonly width?: number | "device-width";

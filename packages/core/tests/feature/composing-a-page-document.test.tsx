@@ -4,7 +4,6 @@ import type {
   DocumentManifest,
   DocumentViewport,
 } from "../../src/document-manifest.js";
-import type { LoggedLine } from "../../src/test/logger-fake.js";
 import { render } from "../../src/events-and-filters/render.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { entry, fallback } from "../../src/route/render/template-builders.js";
@@ -528,16 +527,6 @@ function countViewportTags(body: string): number {
   return body.match(/<meta name="viewport"/g)?.length ?? 0;
 }
 
-function assertReservedMetaLogged(
-  lines: readonly LoggedLine[],
-  field: string,
-): void {
-  const errors = lines.flatMap(({ level, meta }) =>
-    level === "error" && typeof meta?.err === "string" ? [meta.err] : [],
-  );
-  expect(errors.join("\n")).toContain(`Set \`${field}\` instead.`);
-}
-
 const viewportSite = await testSite({
   plugins: [blogPlugin],
   config: {
@@ -816,7 +805,13 @@ describe("the document's viewport", () => {
     const page = await reservedFragmentSite.visit(post);
 
     page.assertStatus(500);
-    assertReservedMetaLogged(reservedFragmentSite.logger.lines, "viewport");
+    expect(
+      reservedFragmentSite.logger.lines.map((line) => line.meta?.err),
+    ).toContain(
+      'The document manifest has a `meta[0]` entry named "viewport". The ' +
+        "renderer writes that tag itself, once per page, so a second one " +
+        "would leave browsers to pick between them. Set `viewport` instead.",
+    );
   });
 
   test("a render.document filter's `meta` entry named theme-color fails the render", async () => {
@@ -829,9 +824,13 @@ describe("the document's viewport", () => {
     const page = await reservedFilterSite.visit(post);
 
     page.assertStatus(500);
-    assertReservedMetaLogged(
-      reservedFilterSite.logger.lines,
-      "viewport.themeColor",
+    expect(
+      reservedFilterSite.logger.lines.map((line) => line.meta?.err),
+    ).toContain(
+      'The document manifest has a `meta[0]` entry named "Theme-Color". The ' +
+        "renderer writes that tag itself, once per page, so a second one " +
+        "would leave browsers to pick between them. Set " +
+        "`viewport.themeColor` instead.",
     );
   });
 });

@@ -238,8 +238,7 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
   return descriptor;
 }
 
-/** The `meta` names the renderer writes from `viewport`, and the field for each. */
-const RESERVED_META_FIELDS: ReadonlyMap<string, string> = new Map([
+const VIEWPORT_FIELD_BY_META_NAME: ReadonlyMap<string, string> = new Map([
   ["viewport", "viewport"],
   ["theme-color", "viewport.themeColor"],
   ["color-scheme", "viewport.colorScheme"],
@@ -269,11 +268,10 @@ export function validateDocumentManifest(manifest: DocumentManifest): void {
   });
 }
 
-/** Also run on a `render.document` filter's result, which nothing else checks. */
 export function validateMetaNames(meta: DocumentManifest["meta"]): void {
   meta?.forEach((entry, index) => {
     if (typeof entry.name !== "string") return;
-    const field = RESERVED_META_FIELDS.get(entry.name.toLowerCase());
+    const field = VIEWPORT_FIELD_BY_META_NAME.get(entry.name.toLowerCase());
     if (field === undefined) return;
     throw DocumentManifestError.reservedMetaName({
       index,

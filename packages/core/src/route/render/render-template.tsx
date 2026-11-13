@@ -729,10 +729,6 @@ const VIEWPORT_KEYS = [
   ["interactiveWidget", "interactive-widget"],
 ] as const;
 
-/**
- * The only writer of the viewport and theme-color tags, so a page carries
- * exactly one viewport tag.
- */
 function viewportTagsToHtml(viewport: DocumentViewport | undefined): string {
   const fields = mergeViewport(VIEWPORT_DEFAULT, viewport);
   const content = VIEWPORT_KEYS.flatMap(([key, name]) => {
