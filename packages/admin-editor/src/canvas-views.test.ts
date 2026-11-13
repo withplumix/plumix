@@ -192,43 +192,63 @@ function failsOnceBlock(name: string) {
   });
 }
 
+const HERO_AND_FEED: readonly BlockNode[] = [
+  { id: "a", name: "site/hero" },
+  { id: "b", name: "site/feed" },
+];
+
+/**
+ * A canvas whose `site/hero` view fails its first import and whose `site/feed`
+ * view loads and declares loaders.
+ */
+function canvasWithFailingView() {
+  const feed = defineBlock({
+    name: "site/feed",
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+        loaders: { posts: () => Promise.resolve([]) },
+      }),
+  });
+  const registry = createBlockRegistry([failsOnceBlock("site/hero"), feed]);
+  const committed: (readonly BlockNode[])[] = [];
+  const reports: (readonly string[])[] = [];
+  const reporter = createLoaderBlocksReporter(registry, (names) =>
+    reports.push(names),
+  );
+  const offer = createTreeCommitter(registry, (names) =>
+    loadBlockViews(registry, names),
+  );
+  return { offer, reporter, committed, reports };
+}
+
 describe("a view that fails to load in the canvas", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  test("keeps the previous tree and still reports the views that loaded", async () => {
+  test("keeps the previous tree when one of its views fails to load", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const feed = defineBlock({
-      name: "site/feed",
-      view: () =>
-        Promise.resolve({
-          default: () => null,
-          loaders: { posts: () => Promise.resolve([]) },
-        }),
-    });
-    const registry = createBlockRegistry([failsOnceBlock("site/hero"), feed]);
-    const committed: (readonly BlockNode[])[] = [];
-    const reports: (readonly string[])[] = [];
-    const reporter = createLoaderBlocksReporter(registry, (names) =>
-      reports.push(names),
-    );
-    const offer = createTreeCommitter(registry, (names) =>
-      loadBlockViews(registry, names),
-    );
+    const { offer, reporter, committed } = canvasWithFailingView();
 
     await settleViewLoad(
-      offer(
-        [
-          { id: "a", name: "site/hero" },
-          { id: "b", name: "site/feed" },
-        ],
-        (next) => committed.push(next),
-      ),
+      offer(HERO_AND_FEED, (next) => committed.push(next)),
       reporter.update,
     );
 
-    expect([committed, reports]).toEqual([[], [["site/feed"]]]);
+    expect(committed).toEqual([]);
+  });
+
+  test("still reports the loader blocks whose views loaded", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { offer, reporter, committed, reports } = canvasWithFailingView();
+
+    await settleViewLoad(
+      offer(HERO_AND_FEED, (next) => committed.push(next)),
+      reporter.update,
+    );
+
+    expect(reports).toEqual([["site/feed"]]);
   });
 
   test("offering the tree again retries the import and commits it", async () => {
