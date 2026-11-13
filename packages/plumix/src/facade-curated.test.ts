@@ -594,7 +594,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
         reason:
           "the renderer's own root and slot decisions, exported for core's " +
           "unit tests; a site mounts islands only through `mount`",
-        names: ["islandRootKind", "mergeSlotProps"],
+        names: ["islandRootKind", "mergeSlotProps", "mountWith"],
       },
     ],
   },
