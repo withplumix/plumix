@@ -56,6 +56,15 @@ describe("compareEntry", () => {
     });
   });
 
+  test("a restore shows what is saved now, naming the revision it restores", () => {
+    const sides = compareEntry({ kind: "restore", revisionId: 42 }, SAVED);
+
+    expect(sides.mine).toMatchObject({
+      slug: "saved-elsewhere",
+      revisionId: 42,
+    });
+  });
+
   test("until what is saved now is read, mine is my edit alone and theirs is empty", () => {
     const sides = compareEntry(
       { kind: "update", patch: { title: "My title" } },
