@@ -73,6 +73,20 @@ export type CdnBypassReason =
 export const SEGMENT_KEY_PARAM = "__plumix_segment";
 
 /**
+ * The build that rendered a stored page, so a deploy never serves the previous
+ * build's documents and their dead asset URLs.
+ */
+export const BUILD_KEY_PARAM = "__plumix_build";
+
+function setBuildAxis(url: URL): void {
+  // The server fully owns this axis too.
+  url.searchParams.delete(BUILD_KEY_PARAM);
+  // Vite-substituted, so a Worker with an empty `process.env` still gets it.
+  const build = process.env.PLUMIX_BUILD_ID;
+  if (build) url.searchParams.set(BUILD_KEY_PARAM, build);
+}
+
+/**
  * `anonymous` keys under the plain URL. The cookie is dropped so a segment's
  * visitors share one entry; the stored `Vary: Cookie` still protects downstream
  * caches.
@@ -84,6 +98,7 @@ export function segmentCdnKey(request: Request, segment: Segment): Request {
   if (segment !== "anonymous") {
     url.searchParams.set(SEGMENT_KEY_PARAM, segment);
   }
+  setBuildAxis(url);
   const keyed = new Request(url, request);
   keyed.headers.delete("cookie");
   return keyed;
@@ -95,7 +110,9 @@ export function segmentCdnKey(request: Request, segment: Segment): Request {
  * collapses onto one entry.
  */
 export function routeCdnKey(request: Request): Request {
-  const keyed = new Request(request);
+  const url = new URL(request.url);
+  setBuildAxis(url);
+  const keyed = new Request(url, request);
   keyed.headers.delete("cookie");
   return keyed;
 }

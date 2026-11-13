@@ -188,6 +188,60 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     });
   });
 
+  describe("build id", () => {
+    const UUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+    function sitePlugin(): ReturnType<typeof plumix> {
+      const configPath = join(dir, "plumix.config.mjs");
+      writeFileSync(
+        configPath,
+        `export default {
+          runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+          database: { kind: 'x' },
+          auth: { passkey: {} },
+        };`,
+        "utf8",
+      );
+      return plumix({ configFile: configPath });
+    }
+
+    async function buildId(
+      plugin: ReturnType<typeof plumix>,
+      command: "build" | "serve",
+    ): Promise<unknown> {
+      const result = await (
+        plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
+      )({ root: dir }, { command, mode: "production" });
+      const define = (result as { define?: Record<string, string> }).define;
+      const raw = define?.["process.env.PLUMIX_BUILD_ID"];
+      return raw === undefined ? undefined : JSON.parse(raw);
+    }
+
+    test("defines one UUID per build, read alike by every environment it resolves", async () => {
+      const plugin = sitePlugin();
+
+      const first = await buildId(plugin, "build");
+      const second = await buildId(plugin, "build");
+
+      expect(first).toMatch(UUID);
+      expect(second).toBe(first);
+    });
+
+    test("gives two builds different ids, so a deploy never reads the last one's pages", async () => {
+      const a = await buildId(sitePlugin(), "build");
+      const b = await buildId(sitePlugin(), "build");
+
+      expect(a).toMatch(UUID);
+      expect(b).toMatch(UUID);
+      expect(a).not.toBe(b);
+    });
+
+    test('defines "dev" under the dev server', async () => {
+      expect(await buildId(sitePlugin(), "serve")).toBe("dev");
+    });
+  });
+
   // Builds `entry.js` with the `build` options the plugin's `config()` returns
   // and collects every warning that reaches Vite's logger.
   async function buildWarnings(
