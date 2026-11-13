@@ -17,7 +17,7 @@ interface MountEditorOptions {
 
 /**
  * Resolves to null when the page has no `[data-plumix-content-root]`. The seed
- * tree's views load before the first render, so the canvas never shows a
+ * tree's view modules load before the first render, so the canvas never shows a
  * loading state.
  */
 export async function mountEditorRuntime({

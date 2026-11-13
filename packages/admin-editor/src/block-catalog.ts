@@ -218,7 +218,7 @@ function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
 
 /**
  * Every block inserting the card would place, a variation's seeded children
- * included, so their views can load before the insert lands.
+ * included, so their view modules can load before the insert lands.
  */
 export function catalogCardBlockNames(
   registry: BlockRegistry,

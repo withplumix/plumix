@@ -51,7 +51,7 @@ async function recordPrefetches(page: Page): Promise<() => Promise<unknown>> {
 
 for (const [gesture, act] of PREFETCH_GESTURES) {
   for (const [item, testId, names] of PREFETCH_ITEMS) {
-    test(`${gesture} ${item} in the catalog prefetches its blocks' views`, async ({
+    test(`${gesture} ${item} in the catalog prefetches its blocks' view modules`, async ({
       editor,
       page,
       seed,

@@ -55,7 +55,7 @@ describe("treeBlockNames", () => {
 });
 
 describe("createTreeCommitter", () => {
-  test("commits nothing while a tree's views load", () => {
+  test("commits nothing while a tree's view modules load", () => {
     const hero = deferredBlock("site/hero", blank);
     const registry = createBlockRegistry([hero.spec]);
     const committed: (readonly BlockNode[])[] = [];
@@ -70,7 +70,7 @@ describe("createTreeCommitter", () => {
     expect(committed).toEqual([]);
   });
 
-  test("commits a tree once its blocks' views have loaded", async () => {
+  test("commits a tree once its blocks' view modules have loaded", async () => {
     const hero = deferredBlock("site/hero", blank);
     const registry = createBlockRegistry([hero.spec]);
     const committed: (readonly BlockNode[])[] = [];
@@ -200,8 +200,8 @@ const HERO_AND_FEED: readonly BlockNode[] = [
 ];
 
 /**
- * A canvas whose `site/hero` view fails its first import and whose `site/feed`
- * view loads and declares loaders.
+ * A canvas whose `site/hero` view module fails its first import and whose `site/feed`
+ * view module loads and declares loaders.
  */
 function canvasWithFailingView() {
   const feed = defineBlock({
@@ -224,12 +224,12 @@ function canvasWithFailingView() {
   return { offer, reporter, committed, reports };
 }
 
-describe("a view that fails to load in the canvas", () => {
+describe("a view module that fails to load in the canvas", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  test("keeps the previous tree when one of its views fails to load", async () => {
+  test("keeps the previous tree when one of its view modules fails to load", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { offer, reporter, committed } = canvasWithFailingView();
 
@@ -241,7 +241,7 @@ describe("a view that fails to load in the canvas", () => {
     expect(committed).toEqual([]);
   });
 
-  test("still reports the loader blocks whose views loaded", async () => {
+  test("still reports the loader blocks whose view modules loaded", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { offer, reporter, committed, reports } = canvasWithFailingView();
 
@@ -288,7 +288,7 @@ describe("a view that fails to load in the canvas", () => {
     );
   });
 
-  test("mounts an empty seed when its views fail, so the host's tree push retries them", async () => {
+  test("mounts an empty seed when its view modules fail, so the host's tree push retries them", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const registry = createBlockRegistry([failsOnceBlock("site/hero")]);
 
@@ -297,7 +297,7 @@ describe("a view that fails to load in the canvas", () => {
     expect(seed).toEqual([]);
   });
 
-  test("mounts the seed itself once its views load", async () => {
+  test("mounts the seed itself once its view modules load", async () => {
     const registry = createBlockRegistry([
       defineBlock({ name: "site/hero", view: () => Promise.resolve(blank) }),
     ]);
@@ -309,7 +309,7 @@ describe("a view that fails to load in the canvas", () => {
   });
 });
 
-/** Two blocks whose view imports the test can count. */
+/** Two blocks whose view module imports the test can count. */
 function countedRegistry() {
   const hero = vi.fn(() => Promise.resolve(blank));
   const feed = vi.fn(() => Promise.resolve(blank));
@@ -346,7 +346,7 @@ describe("scheduleViewModuleLoads", () => {
     vi.useRealTimers();
   });
 
-  test("imports no view before the browser is idle", () => {
+  test("imports no view module before the browser is idle", () => {
     stubIdleCallback();
     const { registry, hero, feed } = countedRegistry();
 
@@ -355,7 +355,7 @@ describe("scheduleViewModuleLoads", () => {
     expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 0]);
   });
 
-  test("imports every view once the browser is idle", () => {
+  test("imports every view module once the browser is idle", () => {
     const idle = stubIdleCallback();
     const { registry, hero, feed } = countedRegistry();
     scheduleViewModuleLoads(registry, () => undefined);
@@ -399,7 +399,7 @@ describe("scheduleViewModuleLoads", () => {
     expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 0]);
   });
 
-  test("a prefetch imports exactly the named views", () => {
+  test("a prefetch imports exactly the named view modules", () => {
     stubIdleCallback();
     const { registry, hero, feed } = countedRegistry();
     const loads = scheduleViewModuleLoads(registry, () => undefined);
@@ -409,7 +409,7 @@ describe("scheduleViewModuleLoads", () => {
     expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 1]);
   });
 
-  test("calls back once a prefetch's views have loaded", async () => {
+  test("calls back once a prefetch's view modules have loaded", async () => {
     stubIdleCallback();
     const registry = loaderRegistry();
     let settled!: (names: readonly string[]) => void;

@@ -2,7 +2,8 @@
 
 Amended by [ADR 0071](0071-a-blocks-definition-is-editor-metadata-and-its-view-module-holds-what-renders.md):
 a block's `render` is now the default export of its view module, its block
-view, which runs in the same three hosts.
+view, which runs in the same three hosts and types its props as
+`BlockViewProps`.
 
 A block's `render` runs in three hosts: the public route's SSR, edit-mode SSR,
 and the editor canvas's client re-render inside an iframe. Before #2482 none of

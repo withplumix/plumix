@@ -61,7 +61,7 @@ export function settleViewModuleLoad(
     .finally(afterLoad);
 }
 
-/** An empty seed when its views fail lets the host's first tree push retry them. */
+/** An empty seed when its view modules fail lets the host's first tree push retry them. */
 export async function seedTree(
   registry: BlockRegistry,
   tree: readonly BlockNode[],
