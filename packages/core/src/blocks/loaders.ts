@@ -2,6 +2,7 @@ import type { JsonObject } from "../json.js";
 import type { BlockRegistry, BlockSpec } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { blockSlotKeys } from "./block-slots.js";
+import { blockViewModule } from "./block-views.js";
 import { isBlockNodeArray } from "./render-block-tree.js";
 
 /**
@@ -41,7 +42,7 @@ export type BlockLoaderFn = (args: BlockLoaderArgs) => Promise<unknown>;
 export type BlockLoaderRecord = Readonly<Record<string, BlockLoaderFn>>;
 
 /**
- * Maps a loader record to the shape `render` sees after SSR resolution
+ * Maps a loader record to the shape the view sees after SSR resolution
  * (one loader fn → its awaited return type, keyed the same way). Same
  * pattern as TanStack Router's `ResolveLoaderData`.
  */
@@ -90,7 +91,9 @@ function collectInto(
 ): void {
   for (const node of nodes) {
     const spec = registry.get(node.name);
-    if (spec?.loaders) out.push({ nodeId: node.id, node, spec });
+    if (spec && blockViewModule(spec).loaders) {
+      out.push({ nodeId: node.id, node, spec });
+    }
     for (const key of blockSlotKeys(node, spec)) {
       const value = node.attrs?.[key];
       if (isBlockNodeArray(value)) collectInto(value, registry, out);
@@ -165,7 +168,7 @@ async function resolveEntry(
   // `Promise.resolve().then` turns a sync throw into a rejection so it can't
   // escape `Promise.all` and break per-block isolation.
   const settled = await Promise.all(
-    Object.entries(entry.spec.loaders ?? {}).map(([key, fn]) =>
+    Object.entries(blockViewModule(entry.spec).loaders ?? {}).map(([key, fn]) =>
       Promise.resolve()
         .then(() => fn({ ctx, attrs: entry.node.attrs ?? {} }))
         .then(

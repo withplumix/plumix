@@ -2042,7 +2042,14 @@ const duplicateCases: readonly DuplicateCase[] = [
     scope: "global",
     register: (ctx, variant) => {
       ctx.registerBlock(
-        defineBlock({ name: "acme/hero", title: variant, render: () => null }),
+        defineBlock({
+          name: "acme/hero",
+          title: variant,
+          view: () =>
+            Promise.resolve({
+              default: () => null,
+            }),
+        }),
       );
     },
     read: (registry) =>
@@ -2352,12 +2359,18 @@ describe("duplicate registration", () => {
           defineBlock({
             name: "acme/hero",
             title: "first",
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
           defineBlock({
             name: "acme/hero",
             title: "second",
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
           }),
         ]);
       },

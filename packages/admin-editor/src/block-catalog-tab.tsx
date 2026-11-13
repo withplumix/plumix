@@ -13,6 +13,7 @@ import { resolveLabel } from "@plumix/core/i18n";
 
 import type { InserterPattern } from "./block-catalog.js";
 import {
+  catalogCardBlockNames,
   catalogIsEmpty,
   createNodeFromEntry,
   entryKey,
@@ -23,7 +24,7 @@ import {
 import { BlockIcon } from "./block-icon.js";
 import { topLevelIndexAfter } from "./block-tree-ops.js";
 import { useEditorConfig } from "./editor-config-context.js";
-import { useEditorStore } from "./provider.js";
+import { useBlockPrefetchRef, useEditorStore } from "./provider.js";
 
 interface BlockCatalogProps {
   readonly patterns?: readonly InserterPattern[];
@@ -55,6 +56,9 @@ export function BlockCatalog({
   const insertBlockInto = useEditorStore((s) => s.insertBlockInto);
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
   const startBlockDrag = useEditorStore((s) => s.startBlockDrag);
+  const prefetchRef = useBlockPrefetchRef();
+  const prefetchViews = (names: Iterable<string>): void =>
+    prefetchRef?.current?.([...names]);
   const insertAt = useEditorStore((s) =>
     topLevelIndexAfter(s.tree, s.activeId, registry),
   );
@@ -153,6 +157,9 @@ export function BlockCatalog({
               // The slot inserter floats over the canvas, where a drag
               // started here would drop a second copy on release.
               onPointerDown={target ? undefined : () => startBlockDrag(entry)}
+              onIntent={() =>
+                prefetchViews(catalogCardBlockNames(registry, entry))
+              }
               onClick={() => insertEntry(createNodeFromEntry(registry, entry))}
             />
           ))}
@@ -172,6 +179,9 @@ export function BlockCatalog({
               key={pattern.name}
               testId={`block-catalog-pattern-${pattern.name}`}
               label={resolveLabel(pattern.title, i18n)}
+              onIntent={() =>
+                prefetchViews(catalogCardBlockNames(registry, pattern))
+              }
               onClick={() => insertPattern(expandPattern(pattern, registry))}
             />
           ))}
@@ -206,12 +216,14 @@ function CatalogCard({
   label,
   onClick,
   onPointerDown,
+  onIntent,
 }: {
   readonly testId: string;
   readonly icon?: string;
   readonly label: string;
   readonly onClick: () => void;
   readonly onPointerDown?: () => void;
+  readonly onIntent?: () => void;
 }): ReactElement {
   return (
     <button
@@ -219,6 +231,8 @@ function CatalogCard({
       data-testid={testId}
       onClick={onClick}
       onPointerDown={onPointerDown}
+      onPointerEnter={onIntent}
+      onFocus={onIntent}
       title={label}
       className="border-border hover:bg-accent hover:border-accent-foreground/20 flex aspect-square flex-col items-center justify-center gap-1.5 rounded-md border p-2 text-center"
     >

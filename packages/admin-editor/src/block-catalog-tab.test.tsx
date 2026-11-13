@@ -12,7 +12,14 @@ import { EditorProvider } from "./provider.js";
 
 const i18n = setupI18n({ locale: "en", messages: { en: {} } });
 const registry = createBlockRegistry([
-  { name: "core/heading", render: () => null, title: "Heading" },
+  {
+    name: "core/heading",
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
+    title: "Heading",
+  },
 ]);
 
 function markup(patterns?: readonly BlockPattern[]): string {

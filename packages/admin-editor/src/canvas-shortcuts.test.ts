@@ -34,7 +34,10 @@ describe("runCanvasShortcut", () => {
     const blocks = createBlockRegistry([
       {
         name: "acme/text",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         inputs: [{ name: "body", type: "text", content: true }],
       },
     ]);

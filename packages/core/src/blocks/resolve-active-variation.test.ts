@@ -18,7 +18,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "x-test/leaf",
       title: "Leaf",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
     });
     expect(resolveActiveVariation(spec, { text: "x" })).toBeUndefined();
   });
@@ -27,7 +30,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/list",
       title: "List",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "bullet",
@@ -45,7 +51,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/list",
       title: "List",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "bullet",
@@ -64,7 +73,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/columns",
       title: "Columns",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "two-up",
@@ -91,7 +103,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/badge",
       title: "Badge",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "rounded-primary",
@@ -118,7 +133,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/quote",
       title: "Quote",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "long",
@@ -144,7 +162,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/columns",
       title: "Columns",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "split",
@@ -164,7 +185,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/list",
       title: "List",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "tight",
@@ -191,7 +215,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/badge",
       title: "Badge",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "permissive-fn",
@@ -214,7 +241,10 @@ describe("resolveActiveVariation", () => {
     const spec = defineBlock({
       name: "core/quote",
       title: "Quote",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "boom",

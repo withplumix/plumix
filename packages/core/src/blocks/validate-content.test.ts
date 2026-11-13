@@ -15,7 +15,13 @@ import {
 } from "./table/index.js";
 import { validateEntryContent } from "./validate-content.js";
 
-const leaf = (name: string): BlockSpec => ({ name, render: () => null });
+const leaf = (name: string): BlockSpec => ({
+  name,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
+});
 const registry = {
   get(name: string): BlockSpec | undefined {
     if (name === "core/rich-text") return leaf(name);
@@ -23,7 +29,10 @@ const registry = {
     if (name === "core/group")
       return {
         name,
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         inputs: [{ name: "content", type: "slot" }],
       };
     return undefined;
@@ -193,17 +202,26 @@ describe("validateEntryContent", () => {
       richTextBlock,
       {
         name: "core/group",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         inputs: [{ name: "content", type: "slot" }],
       },
       {
         name: "core/buttons",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         inputs: [{ name: "items", type: "slot" }],
       },
       {
         name: "core/button",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         requiresParent: ["core/buttons"],
       },
     ]);
@@ -551,7 +569,10 @@ describe("validateEntryContent — the theme's style policy", () => {
         name === "acme/card"
           ? {
               name,
-              render: () => null,
+              view: () =>
+                Promise.resolve({
+                  default: () => null,
+                }),
               defaultStyles: { large: { padding: "24px" } },
             }
           : undefined,

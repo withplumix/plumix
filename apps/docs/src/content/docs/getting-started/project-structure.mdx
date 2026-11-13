@@ -407,7 +407,7 @@ export const cookTime = defineBlock({
   title: "Cook time",
   inputs: [{ name: "minutes", type: "number", label: "Minutes" }],
   defaults: { minutes: 30 },
-  render: ({ attrs }) => `${String(attrs.minutes)} minutes`,
+  view: () => import("./cook-time.view"),
 });
 ```
 

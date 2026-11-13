@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import { defineBlock } from "../block-registry.js";
 
 export const separatorBlock = defineBlock({
@@ -20,5 +18,5 @@ export const separatorBlock = defineBlock({
       marginBottom: "var(--plumix-separator-margin-y, 1.5rem)",
     },
   },
-  render: ({ blockProps }): ReactNode => <hr {...blockProps} />,
+  view: () => import("./separator.view.js"),
 });

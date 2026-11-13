@@ -1,0 +1,73 @@
+import type { ReactElement } from "react";
+
+import type { BlockViewProps } from "../render-block-tree.js";
+import { EmbedFacade } from "./EmbedFacade.js";
+import { resolveEmbed } from "./resolve.js";
+
+const PLACEHOLDER = {
+  id: "blocks.embed.placeholder",
+  message: "Add a YouTube, Vimeo, Loom, Spotify, or CodePen URL to embed.",
+};
+const TITLE_FALLBACK = {
+  id: "blocks.embed.titleFallback",
+  message: "Embedded content",
+};
+const LOAD = { id: "blocks.embed.load", message: "Load embed: {title}" };
+
+export default function EmbedView({
+  attrs,
+  context,
+}: BlockViewProps): ReactElement | null {
+  const url = typeof attrs.url === "string" ? attrs.url : "";
+  const resolved = resolveEmbed(url);
+  if (!resolved) {
+    // An empty embed is an unfinished draft; the editor placeholder keeps it
+    // selectable instead of collapsing to zero height.
+    if (!context.editing) return null;
+    return (
+      <div
+        data-plumix-embed-placeholder=""
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "8rem",
+          padding: "1rem",
+          border: "1px dashed #d0d7de",
+          borderRadius: "6px",
+          background: "#f6f8fa",
+          color: "#57606a",
+          fontSize: "0.875rem",
+          textAlign: "center",
+        }}
+      >
+        {context.t(PLACEHOLDER)}
+      </div>
+    );
+  }
+
+  const title =
+    typeof attrs.title === "string" && attrs.title.length > 0
+      ? attrs.title
+      : context.t(TITLE_FALLBACK);
+  const caption = typeof attrs.caption === "string" ? attrs.caption : "";
+
+  // An author-chosen host gets no connection until the visitor opts in.
+  return (
+    <EmbedFacade
+      client="interaction"
+      prefetch="visible"
+      src={resolved.src}
+      title={title}
+      // Resolved here: the island hydrates from its props alone, with no
+      // render context on the client to resolve a descriptor against.
+      loadLabel={context.t(LOAD, { title })}
+      caption={caption}
+      provider={resolved.provider}
+      sandboxed={resolved.sandboxed}
+      {...(resolved.aspect && { aspect: resolved.aspect })}
+      {...(resolved.height && { height: resolved.height })}
+      {...(resolved.allowFullscreen && { allowFullscreen: true })}
+    />
+  );
+}

@@ -22,10 +22,10 @@ async function settleLocally(
   path: string,
   event: Parameters<SyncEnd["settle"]>[0],
 ): ReturnType<SyncEnd["settle"]> {
-  const app = await buildApp({
-    ...options.config,
-    database: nodeSqlite({ path }),
-  });
+  const app = await buildApp(
+    { ...options.config, database: nodeSqlite({ path }) },
+    { skipBlockViews: true },
+  );
   const handler = createRuntimeHandler(app);
   const { run } = handler;
   if (run === undefined) throw SyncError.settleUnreachable();

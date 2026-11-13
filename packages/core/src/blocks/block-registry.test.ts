@@ -1,13 +1,20 @@
 import { describe, expect, test } from "vitest";
 
 import type { BlockSpec } from "./block-registry.js";
+import type { BlockView } from "./render-block-tree.js";
 import { createBlockRegistry, defineBlock } from "./block-registry.js";
 
-function makeSpec(name: string, render: BlockSpec["render"]): BlockSpec {
-  return { name, render };
+function makeSpec(name: string, render: BlockView): BlockSpec {
+  return {
+    name,
+    view: () =>
+      Promise.resolve({
+        default: render,
+      }),
+  };
 }
 
-const noopRender: BlockSpec["render"] = () => null;
+const noopRender: BlockView = () => null;
 
 describe("createBlockRegistry", () => {
   test("looks up a registered spec by name", () => {
@@ -61,7 +68,10 @@ describe("defineBlock", () => {
     const spec = defineBlock({
       name: "core/heading",
       title: "Heading",
-      render: noopRender,
+      view: () =>
+        Promise.resolve({
+          default: noopRender,
+        }),
     });
 
     expect(spec.name).toBe("core/heading");
@@ -73,7 +83,10 @@ describe("defineBlock", () => {
     const spec = defineBlock({
       name: "core/heading",
       defaults: { level: 2, text: "Untitled" },
-      render: noopRender,
+      view: () =>
+        Promise.resolve({
+          default: noopRender,
+        }),
     });
 
     expect(spec.defaults).toEqual({ level: 2, text: "Untitled" });
@@ -88,7 +101,10 @@ describe("defineBlock", () => {
         "banner",
         { id: "block.hero.kw.cta", message: "call to action" },
       ],
-      render: noopRender,
+      view: () =>
+        Promise.resolve({
+          default: noopRender,
+        }),
       variations: [
         {
           slug: "split",

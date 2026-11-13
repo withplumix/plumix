@@ -71,6 +71,14 @@ export type HostMessage =
     }
   | {
       /**
+       * The canvas loads these blocks' view modules ahead of an insert, so the
+       * inserted block renders at once.
+       */
+      readonly type: "host:prefetch-blocks";
+      readonly names: readonly string[];
+    }
+  | {
+      /**
        * X-ray view toggle — the canvas outlines every block while on. Pushed on
        * change and once the canvas is ready (initial sync).
        */
@@ -139,6 +147,10 @@ export type CanvasMessage =
        */
       readonly type: "canvas:requestDeps";
       readonly tree: readonly BlockNode[];
+    }
+  | {
+      readonly type: "canvas:loader-blocks";
+      readonly names: readonly string[];
     }
   | {
       /**

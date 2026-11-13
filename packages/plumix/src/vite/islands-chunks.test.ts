@@ -7,37 +7,11 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
 
+import { eagerModules } from "./test-support.js";
+
 const REACT_MODULE = /[\\/]node_modules[\\/](?:react|react-dom)[\\/]/;
 
 type OutputChunk = Rolldown.OutputChunk;
-
-/**
- * The entry chunk named `name` and every chunk it imports statically: what the
- * browser fetches before the entry runs.
- */
-function eagerModules(
-  chunks: readonly OutputChunk[],
-  name: string,
-): readonly string[] {
-  const byFile = new Map(chunks.map((c) => [c.fileName, c]));
-  const entry = chunks.find((c) => c.isEntry && c.name === name);
-  if (!entry) {
-    throw new Error(
-      `no ${name} entry chunk; chunks: ${chunks.map((c) => c.name).join(", ")}`,
-    );
-  }
-  const seen = new Set<OutputChunk>();
-  const queue = [entry];
-  for (let chunk = queue.pop(); chunk; chunk = queue.pop()) {
-    if (seen.has(chunk)) continue;
-    seen.add(chunk);
-    for (const file of chunk.imports) {
-      const imported = byFile.get(file);
-      if (imported) queue.push(imported);
-    }
-  }
-  return [...seen].flatMap((c) => c.moduleIds);
-}
 
 describe("the islands chunks", () => {
   let element: readonly string[];

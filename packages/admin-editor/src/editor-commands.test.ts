@@ -12,7 +12,7 @@ import { layoutGate } from "./layout-gate.js";
 import { createEditorStore } from "./store.js";
 
 const spec = (over: Partial<BlockSpec> & { name: string }): BlockSpec => ({
-  render: () => null,
+  view: () => Promise.resolve({ default: () => null }),
   ...over,
 });
 

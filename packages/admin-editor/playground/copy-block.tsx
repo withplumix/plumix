@@ -7,17 +7,7 @@ import type { BlockNode, BlockSpec, LoadedDeps } from "@plumix/core/blocks";
 export const copySpec: BlockSpec = {
   name: "playground/copy",
   inputs: [{ name: "group", type: "text", label: "Group" }],
-  deps: (attrs) => ({ settings: [String(attrs.group)] }),
-  render: ({ attrs, deps }) => {
-    const bag = (deps as LoadedDeps).settings?.[String(attrs.group)];
-    const title = (bag as { readonly title?: string } | null | undefined)
-      ?.title;
-    return (
-      <p data-testid="copy-text" className="rounded border p-4">
-        {title ?? "no copy"}
-      </p>
-    );
-  },
+  view: () => import("./copy-block.view.js"),
 };
 
 /** The host's stand-in for `entry.resolveBlockDeps`: copy for every group. */

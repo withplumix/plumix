@@ -20,6 +20,7 @@
     "plumix",
     "cms"
   ],
+  "sideEffects": true,
   "exports": {
     "./package.json": "./package.json"
   },

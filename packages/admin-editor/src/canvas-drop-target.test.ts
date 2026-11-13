@@ -12,7 +12,7 @@ import {
 } from "./canvas-drop-target.js";
 
 const spec = (over: Partial<BlockSpec> & { name: string }): BlockSpec => ({
-  render: () => null,
+  view: () => Promise.resolve({ default: () => null }),
   ...over,
 });
 const node = (id: string, name: string): BlockNode => ({ id, name });

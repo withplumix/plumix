@@ -78,6 +78,7 @@ export type { PluginRpcCall, PluginRpcStub } from "./plugin-rpc.js";
 // Rendering a block, or a tree of them, to HTML.
 export {
   EMPTY_CONTEXT,
+  loadBlockViews,
   mockRegistry,
   renderBlockSpecToHtml,
   renderBlockTreeToHtml,

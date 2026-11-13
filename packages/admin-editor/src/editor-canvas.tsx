@@ -30,12 +30,19 @@ import {
   DEFAULT_BLOCK_CONTEXT,
   editAppender,
   HtmlAllowlistProvider,
+  loadBlockViews,
 } from "@plumix/core/blocks";
 import { BlockTree, PlumixProvider } from "@plumix/core/blocks/renderer";
 
 import type { RuntimeConnection } from "./connect-runtime.js";
 import { mergeDeps, unresolvedDeps } from "./block-deps.js";
 import { canvasContextValue } from "./canvas-context.js";
+import {
+  createLoaderBlocksReporter,
+  createTreeCommitter,
+  scheduleViewModuleLoads,
+  settleViewModuleLoad,
+} from "./canvas-views.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
 import { mergeLoaderData } from "./merge-loader-data.js";
@@ -111,22 +118,42 @@ export function EditorCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let disposed = false;
+    const offerTree = createTreeCommitter(registry, (names) =>
+      loadBlockViews(registry, names),
+    );
+    const commitTree = (next: readonly BlockNode[]): void => {
+      if (!disposed) setTree(next);
+    };
+    const reporter = createLoaderBlocksReporter(registry, (names) =>
+      connectionRef.current?.reportLoaderBlocks(names),
+    );
+    const loaded = (): void => {
+      if (!disposed) reporter.update();
+    };
+    const viewModuleLoads = scheduleViewModuleLoads(registry, loaded);
     const connection = connectRuntime({
       parentWindow: window.parent,
       origin,
-      onTree: setTree,
+      onTree: (next) =>
+        void settleViewModuleLoad(offerTree(next, commitTree), loaded),
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
       onDeps: (resolved) => setDeps((prior) => mergeDeps(prior, resolved)),
       onConfig: setConfig,
       onXray: setXray,
+      onPrefetchBlocks: viewModuleLoads.prefetch,
+      onConnect: () => reporter.resend(),
     });
     connectionRef.current = connection;
+    reporter.update();
     return () => {
+      disposed = true;
+      viewModuleLoads.cancel();
       connection.dispose();
       connectionRef.current = null;
     };
-  }, [origin]);
+  }, [origin, registry]);
 
   // An attribute a declaration reads, or an inserted block, can name a key
   // the SSR render never loaded; the host resolves it on the server.

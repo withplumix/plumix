@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type {
+  BlockViewProps,
+  MaterializedAttrs,
+} from "../../src/blocks/index.js";
 import type { AppContext } from "../../src/context/app-context.js";
 import type { ArchiveTypeData } from "../../src/route/contract/resolved-entry.js";
 import { createPreviewToken } from "../../src/auth/preview-token.js";
@@ -161,23 +165,36 @@ const sharePlugin = definePlugin("share", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/share",
-        loaders: {
-          share: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
-            if (attrs.share === "unknown") throw pageNotFound();
-            if (attrs.share === "spent") throw redirectTo("/elsewhere");
-            if (attrs.share === "broken") throw new Error("share store down");
-            if (attrs.share === "mixed") throw new Error("share store down");
-            return Promise.resolve(`share ${String(attrs.share)}`);
-          },
-          // Declared after `share`, so a block's first rejection is not its
-          // outcome.
-          audit: ({ attrs }: { readonly attrs: Record<string, unknown> }) => {
-            if (attrs.share === "mixed") throw pageNotFound();
-            return Promise.resolve("audited");
-          },
-        },
-        errorFallback: () => <p>share unavailable</p>,
-        render: ({ loaders }) => <p>{loaders.share}</p>,
+        view: () =>
+          Promise.resolve({
+            default: ({ loaders }) => <p>{loaders.share}</p>,
+            loaders: {
+              share: ({
+                attrs,
+              }: {
+                readonly attrs: Record<string, unknown>;
+              }) => {
+                if (attrs.share === "unknown") throw pageNotFound();
+                if (attrs.share === "spent") throw redirectTo("/elsewhere");
+                if (attrs.share === "broken")
+                  throw new Error("share store down");
+                if (attrs.share === "mixed")
+                  throw new Error("share store down");
+                return Promise.resolve(`share ${String(attrs.share)}`);
+              },
+              // Declared after `share`, so a block's first rejection is not its
+              // outcome.
+              audit: ({
+                attrs,
+              }: {
+                readonly attrs: Record<string, unknown>;
+              }) => {
+                if (attrs.share === "mixed") throw pageNotFound();
+                return Promise.resolve("audited");
+              },
+            },
+            errorFallback: () => <p>share unavailable</p>,
+          }),
       }),
     );
   },
@@ -413,14 +430,22 @@ const findShare = (ctx: AppContext) => {
   const token = new URL(ctx.request.url).searchParams.get("token") ?? "";
   return ctx.memo(`share:${token}`, () => lookup(token));
 };
+const shareLoaders = { share: () => findShare(getContext()) };
 const tokenPlugin = definePlugin("token", {
   setup: (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     ctx.registerBlock(
       defineBlock({
         name: "acme/share",
-        loaders: { share: () => findShare(getContext()) },
-        render: ({ loaders }) => <p>{loaders.share.title}</p>,
+        view: () =>
+          Promise.resolve({
+            default: ({
+              loaders,
+            }: BlockViewProps<MaterializedAttrs, typeof shareLoaders>) => (
+              <p>{loaders.share.title}</p>
+            ),
+            loaders: shareLoaders,
+          }),
       }),
     );
   },

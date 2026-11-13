@@ -6,15 +6,15 @@ import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { detailsBlock } from "./index.js";
 
 describe("core/details", () => {
-  test("falls back to 'Details' summary when summary is empty", () => {
-    const html = renderBlockSpecToHtml(detailsBlock, {});
+  test("falls back to 'Details' summary when summary is empty", async () => {
+    const html = await renderBlockSpecToHtml(detailsBlock, {});
 
     expect(html).toContain("<summary>Details</summary>");
     expect(html).not.toContain("open=");
   });
 
-  test("renders the declared summary and opens when open=true", () => {
-    const html = renderBlockSpecToHtml(detailsBlock, {
+  test("renders the declared summary and opens when open=true", async () => {
+    const html = await renderBlockSpecToHtml(detailsBlock, {
       summary: "Long version",
       open: true,
     });
@@ -23,7 +23,7 @@ describe("core/details", () => {
     expect(html).toContain('<details open=""');
   });
 
-  test("renders nested blocks from the content slot", () => {
+  test("renders nested blocks from the content slot", async () => {
     const tree: readonly BlockNode[] = [
       {
         id: "d1",
@@ -41,7 +41,10 @@ describe("core/details", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml([detailsBlock, richTextBlock], tree);
+    const html = await renderBlockTreeToHtml(
+      [detailsBlock, richTextBlock],
+      tree,
+    );
 
     expect(html).toContain("<p>Hidden</p>");
   });

@@ -6,7 +6,10 @@ import { blockExcerpt } from "./block-excerpt.js";
 
 const prose: BlockSpec = {
   name: "core/prose",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   title: "Text",
   text: [{ name: "body", html: true }],
 };

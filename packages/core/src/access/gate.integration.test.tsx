@@ -1069,25 +1069,31 @@ function memberArticles(blocks: readonly BlockSpec[]) {
  */
 const whoamiBlock = defineBlock({
   name: "acme/whoami",
-  loaders: {
-    email: ({ ctx }: { readonly ctx: unknown }) => {
-      const { user } = ctx as Pick<AppContext, "user">;
-      return Promise.resolve(user?.email ?? "nobody");
-    },
-  },
-  render: ({ loaders }) => <p data-testid="whoami">{loaders.email}</p>,
+  view: () =>
+    Promise.resolve({
+      default: ({ loaders }) => <p data-testid="whoami">{loaders.email}</p>,
+      loaders: {
+        email: ({ ctx }: { readonly ctx: unknown }) => {
+          const { user } = ctx as Pick<AppContext, "user">;
+          return Promise.resolve(user?.email ?? "nobody");
+        },
+      },
+    }),
 });
 
 /** A loader that reads the request but never the principal. */
 const plainBlock = defineBlock({
   name: "acme/plain",
-  loaders: {
-    path: ({ ctx }: { readonly ctx: unknown }) => {
-      const { request } = ctx as Pick<AppContext, "request">;
-      return Promise.resolve(new URL(request.url).pathname);
-    },
-  },
-  render: ({ loaders }) => <p data-testid="plain">{loaders.path}</p>,
+  view: () =>
+    Promise.resolve({
+      default: ({ loaders }) => <p data-testid="plain">{loaders.path}</p>,
+      loaders: {
+        path: ({ ctx }: { readonly ctx: unknown }) => {
+          const { request } = ctx as Pick<AppContext, "request">;
+          return Promise.resolve(new URL(request.url).pathname);
+        },
+      },
+    }),
 });
 
 const blocksTheme = defineTheme({

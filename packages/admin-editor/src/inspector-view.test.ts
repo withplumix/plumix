@@ -9,16 +9,28 @@ import { layoutGate } from "./layout-gate.js";
 const registry: BlockRegistry = createBlockRegistry([
   {
     name: "core/heading",
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
     inputs: [
       { name: "text", type: "text", label: "Text", content: true },
       { name: "level", type: "select", label: "Level", options: [] },
     ],
   },
-  { name: "core/spacer", render: () => null },
+  {
+    name: "core/spacer",
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
+  },
   {
     name: "core/group",
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
     inputs: [
       { name: "content", type: "slot" },
       { name: "tag", type: "text", label: "Tag" },
@@ -26,29 +38,44 @@ const registry: BlockRegistry = createBlockRegistry([
   },
   {
     name: "core/latest-posts",
-    render: () => null,
-    loaders: { posts: () => Promise.resolve([]) },
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+        loaders: { posts: () => Promise.resolve([]) },
+      }),
   },
   {
     name: "core/box",
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
     inputs: [
       { name: "width", type: "text", label: "Width", styleProperty: "width" },
     ],
   },
   {
     name: "core/columns",
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
     inputs: [{ name: "columns", type: "slot", allowedBlocks: ["core/column"] }],
   },
   {
     name: "core/table",
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
     inputs: [{ name: "rows", type: "slot" }],
   },
   {
     name: "core/table-header-row",
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
     inputs: [{ name: "cells", type: "slot" }],
   },
 ]);
@@ -160,29 +187,49 @@ describe("inspectorView", () => {
     expect(view?.nothingToSet).toBe(false);
   });
 
+  // The shell never loads a view module, so which blocks declare loaders is
+  // what the canvas reported, not the definition.
   test.each([
     [
-      "a loader-backed block with a refresh wired",
+      "a block the canvas reported loaders for",
       "core/latest-posts",
       true,
+      ["core/latest-posts"],
       true,
     ],
-    ["a block without loaders", "core/heading", true, false],
     [
-      "a loader-backed block with no refresh wired",
+      "a block the canvas hasn't reported loaders for",
+      "core/latest-posts",
+      true,
+      [],
+      false,
+    ],
+    [
+      "a block without loaders",
+      "core/heading",
+      true,
+      ["core/latest-posts"],
+      false,
+    ],
+    [
+      "a reported block with no refresh wired",
       "core/latest-posts",
       false,
+      ["core/latest-posts"],
       false,
     ],
   ])(
     "whether the refresh control shows for %s",
-    (_, name, canRefresh, shown) => {
+    (_, name, canRefresh, loaderBlocks, shown) => {
       const view = inspectorView(
         registry,
         [{ id: "b1", name }],
         "b1",
         "large",
         canRefresh,
+        undefined,
+        undefined,
+        new Set(loaderBlocks),
       );
 
       expect(view?.showRefresh).toBe(shown);

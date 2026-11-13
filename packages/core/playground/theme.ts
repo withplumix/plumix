@@ -6,6 +6,7 @@ import { BlockRenderer } from "plumix/blocks/renderer";
 import { defineTemplate, defineTheme, entry, fallback } from "plumix/theme";
 
 import { ratingBlock } from "./blocks/rating.js";
+import { showcaseBlock } from "./blocks/showcase.js";
 import { AuthProbe } from "./islands/auth-probe.js";
 import { Clicker, Counter } from "./islands/counter.js";
 import {
@@ -223,7 +224,7 @@ const page = defineTemplate<EntryData>({
 });
 
 export const theme = defineTheme({
-  blocks: [ratingBlock],
+  blocks: [ratingBlock, showcaseBlock],
   templates: [fallback(() => null), entry(page), ...signInTemplates],
   // One token, so the editor specs can pick a style from the theme.
   tokens: { color: { accent: { value: "#b5472d", label: "Accent" } } },

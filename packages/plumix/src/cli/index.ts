@@ -231,7 +231,8 @@ export async function runCommand(
       runtimeMigrations,
       plugins: async () => {
         const { buildApp } = await loadCore();
-        return (await buildApp(loaded.config)).plugins;
+        return (await buildApp(loaded.config, { skipBlockViews: true }))
+          .plugins;
       },
     });
   }
@@ -263,7 +264,7 @@ export async function resolveCommandApp(
     );
   }
   const { buildApp } = await loadCore();
-  return buildApp(config);
+  return buildApp(config, { skipBlockViews: true });
 }
 
 /**

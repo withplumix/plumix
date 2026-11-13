@@ -20,7 +20,13 @@ const stubAuth = auth({
 
 describe("buildApp — block aggregation", () => {
   test("registers theme-contributed blocks", async () => {
-    const chart = defineBlock({ name: "eduscope/chart", render: () => null });
+    const chart = defineBlock({
+      name: "eduscope/chart",
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
+    });
     const app = await buildApp(
       plumix({
         runtime: stubAdapter,
@@ -38,11 +44,17 @@ describe("buildApp — block aggregation", () => {
   test("a theme block wins precedence over a plugin block of the same name", async () => {
     const themeVersion = defineBlock({
       name: "shared/card",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
     });
     const pluginVersion = defineBlock({
       name: "shared/card",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
     });
     const plugin = definePlugin("provider", {
       setup: (ctx) => {
@@ -78,10 +90,19 @@ describe("buildApp — block aggregation", () => {
   });
 
   test("registers multiple theme blocks", async () => {
-    const chart = defineBlock({ name: "eduscope/chart", render: () => null });
+    const chart = defineBlock({
+      name: "eduscope/chart",
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
+    });
     const callout = defineBlock({
       name: "eduscope/callout",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
     });
     const app = await buildApp(
       plumix({
@@ -102,7 +123,15 @@ describe("buildApp — block aggregation", () => {
     expect(() =>
       defineTheme({
         templates: [fallback(() => null)],
-        blocks: [defineBlock({ name: "core/rich-text", render: () => null })],
+        blocks: [
+          defineBlock({
+            name: "core/rich-text",
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
+          }),
+        ],
       }),
     ).toThrow(/core\//);
   });
@@ -111,7 +140,13 @@ describe("buildApp — block aggregation", () => {
     const plugin = definePlugin("squatter", {
       setup: (ctx) => {
         ctx.registerBlock(
-          defineBlock({ name: "core/button", render: () => null }),
+          defineBlock({
+            name: "core/button",
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
+          }),
         );
       },
     });
@@ -131,12 +166,28 @@ describe("buildApp — block aggregation", () => {
   test("rejects two plugins registering the same block name", async () => {
     const a = definePlugin("a", {
       setup: (ctx) => {
-        ctx.registerBlock(defineBlock({ name: "dup/x", render: () => null }));
+        ctx.registerBlock(
+          defineBlock({
+            name: "dup/x",
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
+          }),
+        );
       },
     });
     const b = definePlugin("b", {
       setup: (ctx) => {
-        ctx.registerBlock(defineBlock({ name: "dup/x", render: () => null }));
+        ctx.registerBlock(
+          defineBlock({
+            name: "dup/x",
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
+          }),
+        );
       },
     });
     await expect(

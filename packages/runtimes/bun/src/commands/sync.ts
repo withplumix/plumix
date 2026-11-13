@@ -26,7 +26,7 @@ async function settleLocally(
   options: OpenSyncEndOptions,
   event: Parameters<SyncEnd["settle"]>[0],
 ): ReturnType<SyncEnd["settle"]> {
-  const app = await buildApp(options.config);
+  const app = await buildApp(options.config, { skipBlockViews: true });
   const handler = createRuntimeHandler(app);
   const { run } = handler;
   if (run === undefined) throw SyncError.settleUnreachable();

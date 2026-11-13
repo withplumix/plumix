@@ -2999,8 +2999,11 @@ describe("dispatcher — telemetry consumers", () => {
         ctx.registerBlock(
           defineBlock({
             name: "acme/probe",
-            loaders: { marker: () => Promise.resolve("loaded") },
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+                loaders: { marker: () => Promise.resolve("loaded") },
+              }),
           }),
         );
       },

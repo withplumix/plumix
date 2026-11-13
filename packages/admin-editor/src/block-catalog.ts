@@ -15,6 +15,7 @@ import {
 import { labelSourceText } from "@plumix/core/i18n";
 
 import { holdsBlockOutside, holdsForbiddenStyle } from "./block-tree-ops.js";
+import { treeBlockNames } from "./canvas-views.js";
 
 const CONTENT_SLOT = "content";
 
@@ -213,6 +214,18 @@ function seedNodeDefaults(node: BlockNode, registry: BlockRegistry): BlockNode {
     attrs: Object.keys(attrs).length > 0 ? attrs : undefined,
     ...(style ? { style } : {}),
   };
+}
+
+/**
+ * Every block inserting the card would place, a variation's seeded children
+ * included, so their view modules can load before the insert lands.
+ */
+export function catalogCardBlockNames(
+  registry: BlockRegistry,
+  card: InsertableBlockEntry | InserterPattern,
+): readonly string[] {
+  if ("content" in card) return [...treeBlockNames(card.content, registry)];
+  return [...treeBlockNames([createNodeFromEntry(registry, card)], registry)];
 }
 
 /** Ids are re-minted so inserting the same pattern twice cannot collide. */

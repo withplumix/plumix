@@ -28,7 +28,10 @@ describe("buildApp — block variation boot validation", () => {
             name: "x-test/group",
             title: "Test Group",
             inputs: [{ name: "content", type: "slot" }],
-            render: () => null,
+            view: () =>
+              Promise.resolve({
+                default: () => null,
+              }),
             variations: [
               {
                 slug: "with-ghost",

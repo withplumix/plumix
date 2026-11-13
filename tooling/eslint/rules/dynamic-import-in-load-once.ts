@@ -32,7 +32,10 @@ function loaderName({ callee }: CallExpressionNode): string | undefined {
  * The nearest enclosing function must be the factory itself: one nested inside
  * it runs per call again.
  */
-function insideLoader(node: Rule.Node): boolean {
+function insideLoader(
+  node: Rule.Node,
+  blockViews: ReadonlySet<Rule.Node>,
+): boolean {
   let fn: Rule.Node | null = node.parent;
   while (
     fn !== null &&
@@ -43,6 +46,7 @@ function insideLoader(node: Rule.Node): boolean {
     fn = fn.parent;
   }
   if (fn === null || fn.type === "FunctionDeclaration") return false;
+  if (blockViews.has(fn)) return true;
   const call = fn.parent;
   if (call.type !== "CallExpression" || !call.arguments.includes(fn)) {
     return false;
@@ -56,18 +60,26 @@ export const dynamicImportInLoadOnce: Rule.RuleModule = {
     type: "problem",
     docs: {
       description:
-        "Require every dynamic `import()` to sit in a `loadOnce` factory.",
+        "Require every dynamic `import()` to sit in a `loadOnce` factory, `lazy`, or `defineBlock`'s `view` function.",
     },
     messages: {
       outsideLoadOnce:
-        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried.",
+        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, or as `defineBlock`'s `view: () => import(…)`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried.",
     },
     schema: [],
   },
   create(context) {
+    // `loadBlockViews` imports `defineBlock`'s `view` once per spec and retries
+    // a failed import, so the view needs no `loadOnce` of its own.
+    const blockViews = new Set<Rule.Node>();
     return {
+      "CallExpression[callee.name='defineBlock'] > ObjectExpression > Property[computed=false][key.name='view'] > :function"(
+        node: Rule.Node,
+      ) {
+        blockViews.add(node);
+      },
       ImportExpression(node: Rule.Node) {
-        if (!insideLoader(node)) {
+        if (!insideLoader(node, blockViews)) {
           context.report({ node, messageId: "outsideLoadOnce" });
         }
       },

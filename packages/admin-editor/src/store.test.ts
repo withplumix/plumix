@@ -25,10 +25,19 @@ describe("editor store", () => {
     const blocks = createBlockRegistry([
       {
         name: "acme/text",
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
         inputs: [{ name: "body", type: "text", content: true }],
       },
-      { name: "acme/rule", render: () => null },
+      {
+        name: "acme/rule",
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+          }),
+      },
     ]);
     const store = createEditorStore(blocks, {
       tree: [

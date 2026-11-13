@@ -4,15 +4,15 @@ import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { buttonBlock } from "./index.js";
 
 describe("core/button", () => {
-  test("renders a <button> when no href is provided", () => {
-    const html = renderBlockSpecToHtml(buttonBlock, { label: "Save" });
+  test("renders a <button> when no href is provided", async () => {
+    const html = await renderBlockSpecToHtml(buttonBlock, { label: "Save" });
 
     expect(html).toContain("<button");
     expect(html).toContain("Save");
   });
 
-  test("is selfSeam — the button is the block, with no wrapper div", () => {
-    const html = renderBlockTreeToHtml(
+  test("is selfSeam — the button is the block, with no wrapper div", async () => {
+    const html = await renderBlockTreeToHtml(
       [buttonBlock],
       [
         {
@@ -30,8 +30,8 @@ describe("core/button", () => {
     expect(html).not.toContain("<div");
   });
 
-  test("renders an <a> for a safe href", () => {
-    const html = renderBlockSpecToHtml(buttonBlock, {
+  test("renders an <a> for a safe href", async () => {
+    const html = await renderBlockSpecToHtml(buttonBlock, {
       label: "Go",
       href: "https://example.com",
     });
@@ -39,8 +39,8 @@ describe("core/button", () => {
     expect(html).toContain('<a href="https://example.com"');
   });
 
-  test("renders an <a> for an sms: href", () => {
-    const html = renderBlockSpecToHtml(buttonBlock, {
+  test("renders an <a> for an sms: href", async () => {
+    const html = await renderBlockSpecToHtml(buttonBlock, {
       label: "Text us",
       href: "sms:+15551234",
     });
@@ -48,8 +48,8 @@ describe("core/button", () => {
     expect(html).toContain('<a href="sms:+15551234"');
   });
 
-  test("rejects unsafe href schemes (javascript:) and falls back to <button>", () => {
-    const html = renderBlockSpecToHtml(buttonBlock, {
+  test("rejects unsafe href schemes (javascript:) and falls back to <button>", async () => {
+    const html = await renderBlockSpecToHtml(buttonBlock, {
       label: "Click",
       href: "javascript:alert(1)",
     });
@@ -58,8 +58,8 @@ describe("core/button", () => {
     expect(html).not.toContain("javascript:");
   });
 
-  test("adds target + rel='noopener noreferrer' when openInNewTab on a safe href", () => {
-    const html = renderBlockSpecToHtml(buttonBlock, {
+  test("adds target + rel='noopener noreferrer' when openInNewTab on a safe href", async () => {
+    const html = await renderBlockSpecToHtml(buttonBlock, {
       label: "Open",
       href: "https://example.com",
       openInNewTab: true,
@@ -69,8 +69,8 @@ describe("core/button", () => {
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
-  test("omits target + rel by default (same tab)", () => {
-    const html = renderBlockSpecToHtml(buttonBlock, {
+  test("omits target + rel by default (same tab)", async () => {
+    const html = await renderBlockSpecToHtml(buttonBlock, {
       label: "Same",
       href: "https://example.com",
     });

@@ -19,6 +19,7 @@
     "cms",
     "admin"
   ],
+  "sideEffects": true,
   "files": [
     "dist",
     "README.md",

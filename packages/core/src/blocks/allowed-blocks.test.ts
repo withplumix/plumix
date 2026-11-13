@@ -5,8 +5,20 @@ import { resolveAllowedBlocks } from "./allowed-blocks.js";
 import { createBlockRegistry } from "./block-registry.js";
 import { coreBlocks } from "./core-blocks.js";
 
-const formBlock: BlockSpec = { name: "forms/form", render: () => null };
-const heroBlock: BlockSpec = { name: "acme/hero", render: () => null };
+const formBlock: BlockSpec = {
+  name: "forms/form",
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
+};
+const heroBlock: BlockSpec = {
+  name: "acme/hero",
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
+};
 const registry = createBlockRegistry([...coreBlocks, formBlock, heroBlock]);
 const themeBlocks = [heroBlock];
 

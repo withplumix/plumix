@@ -790,12 +790,15 @@ const greetingBlock = definePlugin("greeting-block", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/greeting",
-        render: ({ context }) =>
-          createElement(
-            "p",
-            null,
-            context.t({ id: "acme.greeting", message: "Hello" }),
-          ),
+        view: () =>
+          Promise.resolve({
+            default: ({ context }) =>
+              createElement(
+                "p",
+                null,
+                context.t({ id: "acme.greeting", message: "Hello" }),
+              ),
+          }),
       }),
     );
   },

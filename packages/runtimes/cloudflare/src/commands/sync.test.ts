@@ -24,6 +24,7 @@ import type {
 import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { drizzle } from "drizzle-orm/d1";
 import { migrate } from "drizzle-orm/d1/migrator";
+import { defineBlock } from "plumix/blocks";
 import { definePlugin, sync as syncEvents } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
@@ -540,6 +541,34 @@ describe(
       await end.close();
 
       expect([settled.failures, seen]).toEqual([[], [1, false]]);
+    });
+
+    test("builds the site without importing a block view, which only a render needs", async () => {
+      const { source } = await twoProjects();
+      const imported: string[] = [];
+      const blocks = definePlugin("blocks", {
+        setup: (ctx) => {
+          ctx.registerBlock(
+            defineBlock({
+              name: "probe/chart",
+              view: () => {
+                imported.push("probe/chart");
+                return Promise.resolve({ default: () => null });
+              },
+            }),
+          );
+        },
+      });
+      const settling = settlingConfig(() => Promise.resolve());
+      const end = await sync.open({
+        ...openOptions(source.dir, "local", {}),
+        config: { ...settling, plugins: [...settling.plugins, blocks] },
+      });
+
+      await end.settle({ scopes: ["content"], direction: "pull" });
+      await end.close();
+
+      expect(imported).toEqual([]);
     });
 
     test("stops with sync_site_unreachable when the site cannot reach its D1", async () => {

@@ -5,8 +5,8 @@ import { describe, expect, test } from "vitest";
 import { fileBlock } from "./index.js";
 
 describe("media/file v2", () => {
-  test("renders as download anchor with filename + size + mime label", () => {
-    const html = renderBlockSpecToHtml(fileBlock, {
+  test("renders as download anchor with filename + size + mime label", async () => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
       href: "/_plumix/media/abc/report.pdf",
       filename: "report.pdf",
       size: 2_048_576,
@@ -19,20 +19,20 @@ describe("media/file v2", () => {
     expect(html).toContain("application/pdf");
   });
 
-  test("strips dangerous javascript: hrefs", () => {
-    const html = renderBlockSpecToHtml(fileBlock, {
+  test("strips dangerous javascript: hrefs", async () => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
       href: "javascript:alert(1)",
       filename: "x",
     });
     expect(html).not.toContain("javascript:");
   });
 
-  test("accepts mailto: and tel: hrefs (contact-card flows)", () => {
-    const mailtoHtml = renderBlockSpecToHtml(fileBlock, {
+  test("accepts mailto: and tel: hrefs (contact-card flows)", async () => {
+    const mailtoHtml = await renderBlockSpecToHtml(fileBlock, {
       href: "mailto:author@example.com",
       filename: "Contact",
     });
-    const telHtml = renderBlockSpecToHtml(fileBlock, {
+    const telHtml = await renderBlockSpecToHtml(fileBlock, {
       href: "tel:+15551234",
       filename: "Phone",
     });
@@ -40,20 +40,23 @@ describe("media/file v2", () => {
     expect(telHtml).toContain('href="tel:+15551234"');
   });
 
-  test.each(["#x", "?q"])("accepts the relative href %s", (href) => {
-    const html = renderBlockSpecToHtml(fileBlock, { href, filename: "x" });
+  test.each(["#x", "?q"])("accepts the relative href %s", async (href) => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
+      href,
+      filename: "x",
+    });
     expect(html).toContain(`href="${href}"`);
   });
 
-  test("falls back to 'Download' label when filename is absent", () => {
-    const html = renderBlockSpecToHtml(fileBlock, {
+  test("falls back to 'Download' label when filename is absent", async () => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
       href: "/_plumix/media/x/y.zip",
     });
     expect(html).toContain("Download");
   });
 
-  test("prefers the picked media snapshot over the raw fields", () => {
-    const html = renderBlockSpecToHtml(fileBlock, {
+  test("prefers the picked media snapshot over the raw fields", async () => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
       media: {
         url: "/_plumix/media/z/report.pdf",
         filename: "report.pdf",
@@ -66,8 +69,8 @@ describe("media/file v2", () => {
     expect(html).toContain("application/pdf");
   });
 
-  test("renders the manual filename when the picked asset has none", () => {
-    const html = renderBlockSpecToHtml(fileBlock, {
+  test("renders the manual filename when the picked asset has none", async () => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
       media: { url: "/_plumix/media/z/blob" },
       filename: "annual-report.pdf",
     });
@@ -75,8 +78,8 @@ describe("media/file v2", () => {
     expect(html).toContain(">annual-report.pdf</span>");
   });
 
-  test("renders the manual mime when the picked asset has none", () => {
-    const html = renderBlockSpecToHtml(fileBlock, {
+  test("renders the manual mime when the picked asset has none", async () => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
       media: { url: "/_plumix/media/z/blob" },
       mime: "application/pdf",
     });
@@ -90,8 +93,8 @@ describe("media/file v2", () => {
     expect(names).not.toContain("thumbnail");
   });
 
-  test("shows no '0 B' for an unset size", () => {
-    const html = renderBlockSpecToHtml(fileBlock, {
+  test("shows no '0 B' for an unset size", async () => {
+    const html = await renderBlockSpecToHtml(fileBlock, {
       href: "/x/y.zip",
       filename: "y.zip",
       size: 0,
@@ -99,9 +102,11 @@ describe("media/file v2", () => {
     expect(html).not.toContain("0 B");
   });
 
-  test("empty file renders nothing on the page but a placeholder in the editor", () => {
-    expect(renderBlockSpecToHtml(fileBlock, { href: "" })).not.toContain("<a");
-    const editing = renderBlockSpecToHtml(
+  test("empty file renders nothing on the page but a placeholder in the editor", async () => {
+    expect(await renderBlockSpecToHtml(fileBlock, { href: "" })).not.toContain(
+      "<a",
+    );
+    const editing = await renderBlockSpecToHtml(
       fileBlock,
       { href: "" },
       { editing: true },
@@ -116,8 +121,8 @@ describe("media/file localized render strings", () => {
     "plugin.media.block.file.downloadFallback": ["Herunterladen"],
   };
 
-  test("resolves the editor placeholder through the catalog", () => {
-    const html = renderBlockSpecToHtml(
+  test("resolves the editor placeholder through the catalog", async () => {
+    const html = await renderBlockSpecToHtml(
       fileBlock,
       { href: "" },
       { editing: true, locale: "de", catalog },
@@ -125,8 +130,8 @@ describe("media/file localized render strings", () => {
     expect(html).toContain("Datei auswählen oder hochladen.");
   });
 
-  test("resolves the unnamed-file fallback into the link text and download name", () => {
-    const html = renderBlockSpecToHtml(
+  test("resolves the unnamed-file fallback into the link text and download name", async () => {
+    const html = await renderBlockSpecToHtml(
       fileBlock,
       { href: "/_plumix/media/x/y.zip" },
       { locale: "de", catalog },

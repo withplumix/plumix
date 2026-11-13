@@ -1,5 +1,9 @@
 # A block declares its deps like a template
 
+Amended by [ADR 0071](0071-a-blocks-definition-is-editor-metadata-and-its-view-module-holds-what-renders.md):
+a block exports `deps` from its view module rather than declaring it on the
+definition.
+
 A template declares the template deps it reads (`{ settings: ["site"], menus:
 [...] }`), and the page loads them once per request. A block could read only
 the `site` settings group, through `BlockContext.siteSettings`. A block whose

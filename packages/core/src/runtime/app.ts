@@ -52,6 +52,7 @@ import { resolvePasskeyConfig } from "../auth/passkey/config.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { resolveAllowedBlocks } from "../blocks/allowed-blocks.js";
+import { loadBlockViews } from "../blocks/block-views.js";
 import {
   buildHtmlAllowlist,
   commitBlockVariations,
@@ -260,6 +261,11 @@ export interface RuntimeContext {
    * by that exact code.
    */
   readonly catalogLocales?: CoreCatalogLocales;
+  /**
+   * Skips importing block view modules, for an app that never renders a block
+   * and runs outside Vite, where a view module's CSS or asset import can't load.
+   */
+  readonly skipBlockViews?: boolean;
 }
 
 export async function buildApp(
@@ -404,6 +410,7 @@ export async function buildApp(
   // the committed registry. Unknown block names and undeclared attrs
   // throw structured errors here rather than producing render junk later.
   commitBlockVariations(blocks);
+  if (!runtime.skipBlockViews) await loadBlockViews(blocks);
   const allowedBlocks: ReadonlySet<string> = new Set(
     resolveAllowedBlocks(blocks, {
       themeBlocks: config.theme.blocks ?? [],

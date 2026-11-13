@@ -24,15 +24,16 @@ const throwingLoaderPlugin = definePlugin("acme-throwing-loader", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/throwing-loader",
-        loaders: {
-          marker: () => Promise.reject(new Error("loader kaboom")),
-        },
-        // In prod the rejected loader routes here (per-block isolation); in dev
-        // the failure escalates before render, so this never runs.
-        errorFallback: () => <div data-testid="probe">degraded</div>,
-        render: ({ loaders }) => (
-          <div data-testid="probe">{String(loaders.marker)}</div>
-        ),
+        view: () =>
+          Promise.resolve({
+            default: ({ loaders }) => (
+              <div data-testid="probe">{String(loaders.marker)}</div>
+            ),
+            loaders: {
+              marker: () => Promise.reject(new Error("loader kaboom")),
+            },
+            errorFallback: () => <div data-testid="probe">degraded</div>,
+          }),
       }),
     );
   },
@@ -47,14 +48,17 @@ const failingQueryPlugin = definePlugin("acme-failing-query", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/failing-query",
-        loaders: {
-          rows: () =>
-            getContext().telemetry.span("db: query", (s) => {
-              s.set("db.sql", "select * from broken");
-              return Promise.reject(new Error("no such table: broken"));
-            }),
-        },
-        render: () => null,
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            loaders: {
+              rows: () =>
+                getContext().telemetry.span("db: query", (s) => {
+                  s.set("db.sql", "select * from broken");
+                  return Promise.reject(new Error("no such table: broken"));
+                }),
+            },
+          }),
       }),
     );
   },

@@ -194,10 +194,13 @@ const probePlugin = definePlugin("acme-probe", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/probe",
-        loaders: {
-          marker: () => Promise.resolve("loaded-on-server"),
-        },
-        render: ({ loaders }) => <div data-loaded>{loaders.marker}</div>,
+        view: () =>
+          Promise.resolve({
+            default: ({ loaders }) => <div data-loaded>{loaders.marker}</div>,
+            loaders: {
+              marker: () => Promise.resolve("loaded-on-server"),
+            },
+          }),
       }),
     );
   },
@@ -388,11 +391,14 @@ const greetingPlugin = definePlugin("acme-greeting", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/greeting",
-        render: ({ context }) => (
-          <p data-testid="greeting">
-            {context.t({ id: "acme.greeting", message: "Hello" })}
-          </p>
-        ),
+        view: () =>
+          Promise.resolve({
+            default: ({ context }) => (
+              <p data-testid="greeting">
+                {context.t({ id: "acme.greeting", message: "Hello" })}
+              </p>
+            ),
+          }),
       }),
     );
   },

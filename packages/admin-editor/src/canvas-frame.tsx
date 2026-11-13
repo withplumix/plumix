@@ -31,6 +31,7 @@ import { useEditorConfig, useLayoutGate } from "./editor-config-context.js";
 import { deviceLabel } from "./editor-toolbar.js";
 import { overlayBox, px } from "./overlay.js";
 import {
+  useBlockPrefetchRef,
   useCameraStore,
   useCameraStoreApi,
   useEditorStore,
@@ -92,6 +93,7 @@ export function CanvasFrame({
     [store, registry, allowedBlocks],
   );
   const loaderPushRef = useLoaderPushRef();
+  const prefetchRef = useBlockPrefetchRef();
   const frameRequest = useEditorStore((s) => s.frameRequest);
   const device = useEditorStore((s) => s.device);
   const zoom = useCameraStore((s) => s.zoom);
@@ -174,6 +176,7 @@ export function CanvasFrame({
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
+    if (prefetchRef) prefetchRef.current = connection.prefetchBlocks;
     void connection.whenReady.then(() => {
       if (!disposed) setCanvasReady(true);
     });
@@ -181,6 +184,7 @@ export function CanvasFrame({
       disposed = true;
       setCanvasReady(false);
       if (loaderPushRef) loaderPushRef.current = null;
+      if (prefetchRef) prefetchRef.current = null;
       connection.dispose();
     };
   }, [
@@ -189,6 +193,7 @@ export function CanvasFrame({
     origin,
     applyReport,
     loaderPushRef,
+    prefetchRef,
     handleWheel,
     keyHandlerRef,
     requestAdd,

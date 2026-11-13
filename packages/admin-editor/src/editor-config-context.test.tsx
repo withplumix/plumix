@@ -11,7 +11,13 @@ import {
 } from "./editor-config-context.js";
 
 const registry: BlockRegistry = createBlockRegistry([
-  { name: "core/heading", render: () => null },
+  {
+    name: "core/heading",
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
+  },
 ]);
 
 function ConfigProbe({

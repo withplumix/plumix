@@ -45,6 +45,7 @@ export function inspectorView(
   canRefresh: boolean,
   allowed?: ReadonlySet<string>,
   layout: LayoutGate = layoutGate(true),
+  loaderBlocks: ReadonlySet<string> = new Set(),
 ): InspectorView | null {
   const block = activeId ? findBlock(tree, activeId, registry) : undefined;
   if (!block) return null;
@@ -66,7 +67,7 @@ export function inspectorView(
   const tableId = layout.editsLayout
     ? enclosingTableId(tree, block.id, registry)
     : null;
-  const showRefresh = canRefresh && Boolean(spec?.loaders);
+  const showRefresh = canRefresh && loaderBlocks.has(block.name);
   const showAddColumn = layout.editsLayout && block.name === "core/columns";
 
   return {

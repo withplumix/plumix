@@ -1,7 +1,4 @@
-import type { ReactNode } from "react";
-
 import { defineBlock } from "../block-registry.js";
-import { sanitizeHref } from "../marks/safe-href.js";
 
 export const buttonBlock = defineBlock({
   name: "core/button",
@@ -53,26 +50,5 @@ export const buttonBlock = defineBlock({
       color: "var(--plumix-button-fg, #f9fafb)",
     },
   },
-  render: ({ attrs, blockProps }): ReactNode => {
-    const label = typeof attrs.label === "string" ? attrs.label : "";
-    const href = sanitizeHref(attrs.href);
-    const newTab = attrs.openInNewTab === true;
-    if (href) {
-      return (
-        <a
-          href={href}
-          target={newTab ? "_blank" : undefined}
-          rel={newTab ? "noopener noreferrer" : undefined}
-          {...blockProps}
-        >
-          {label}
-        </a>
-      );
-    }
-    return (
-      <button type="button" {...blockProps}>
-        {label}
-      </button>
-    );
-  },
+  view: () => import("./button.view.js"),
 });

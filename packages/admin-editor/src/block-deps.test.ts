@@ -1,20 +1,22 @@
 import { describe, expect, test } from "vitest";
 
-import { createBlockRegistry } from "@plumix/core/blocks";
+import { createBlockRegistry, loadBlockViews } from "@plumix/core/blocks";
 
 import { mergeDeps, unresolvedDeps } from "./block-deps.js";
 
-/**
- * A plain spec, not `defineBlock`: this package's program loads no site's dep
- * kinds for `defineBlock` to check a declaration against.
- */
 const registry = createBlockRegistry([
   {
     name: "acme/copy",
-    deps: (attrs) => ({ settings: [String(attrs.group)] }),
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+        deps: (attrs: { readonly group?: unknown }) => ({
+          settings: [String(attrs.group)],
+        }),
+      }),
   },
 ]);
+await loadBlockViews(registry);
 
 const copy = (id: string, group: string) => ({
   id,

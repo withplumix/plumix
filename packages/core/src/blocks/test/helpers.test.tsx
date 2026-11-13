@@ -9,19 +9,22 @@ const sampleHeading: BlockSpec = defineBlock({
   name: "sample/heading",
   title: "Sample Heading",
   defaults: { level: 2, text: "" },
-  render: ({ attrs }): ReactNode => {
-    const { level = 2, text = "" } = attrs as {
-      readonly level?: number;
-      readonly text?: string;
-    };
-    const tag = `h${level}`;
-    return <span data-test-tag={tag}>{text}</span>;
-  },
+  view: () =>
+    Promise.resolve({
+      default: ({ attrs }): ReactNode => {
+        const { level = 2, text = "" } = attrs as {
+          readonly level?: number;
+          readonly text?: string;
+        };
+        const tag = `h${level}`;
+        return <span data-test-tag={tag}>{text}</span>;
+      },
+    }),
 });
 
 describe("renderBlockSpecToHtml", () => {
-  test("renders the spec's component wrapped in the walker div", () => {
-    const html = renderBlockSpecToHtml(sampleHeading, {
+  test("renders the spec's component wrapped in the walker div", async () => {
+    const html = await renderBlockSpecToHtml(sampleHeading, {
       level: 2,
       text: "Hello",
     });
@@ -33,7 +36,7 @@ describe("renderBlockSpecToHtml", () => {
 });
 
 describe("renderBlockTreeToHtml", () => {
-  test("renders multiple blocks against a multi-spec registry", () => {
+  test("renders multiple blocks against a multi-spec registry", async () => {
     const tree: readonly BlockNode[] = [
       {
         id: "1",
@@ -47,7 +50,7 @@ describe("renderBlockTreeToHtml", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml([sampleHeading], tree);
+    const html = await renderBlockTreeToHtml([sampleHeading], tree);
 
     expect(html).toContain('data-test-tag="h2">First');
     expect(html).toContain('data-test-tag="h3">Second');

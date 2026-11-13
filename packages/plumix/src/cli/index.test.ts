@@ -10,6 +10,7 @@ import type {
   RuntimeMigrations,
 } from "@plumix/core";
 import { auth, definePlugin, plumix } from "@plumix/core";
+import { defineBlock } from "@plumix/core/blocks";
 
 import { resolveCommandApp, run, runCommand } from "./index.js";
 import { report } from "./report.js";
@@ -43,8 +44,17 @@ function testConfig(): PlumixConfig {
     }),
     plugins: [
       definePlugin("probe", {
-        setup: () => {
+        setup: (ctx) => {
           registrations.push("probe");
+          ctx.registerBlock(
+            defineBlock({
+              name: "probe/chart",
+              view: () => {
+                registrations.push("probe/chart view");
+                return Promise.resolve({ default: () => null });
+              },
+            }),
+          );
         },
       }),
     ],
@@ -63,6 +73,12 @@ describe("resolveCommandApp", () => {
 
     expect(resolved.config).toBe(config);
     expect(registrations).toEqual(["probe"]);
+  });
+
+  test("a command's app imports no block view, which only a render needs", async () => {
+    await resolveCommandApp(command({}), testConfig(), "build");
+
+    expect(registrations).not.toContain("probe/chart view");
   });
 
   test("skips the eager build when the command defers the app to its runtime", async () => {
@@ -142,6 +158,38 @@ describe("runCommand", () => {
       "close",
       "run dev",
     ]);
+  });
+
+  test("dev's migration builds the app without importing a block view", async () => {
+    const withContributor: RuntimeMigrations = {
+      ...recordingRuntime([]),
+      open: async (options) => {
+        const db = await recordingRuntime([]).open(options);
+        // A contributor and no `contributor` role: the check builds the app
+        // to name the role's plugin capabilities.
+        return {
+          ...db,
+          all: (sql: string) =>
+            Promise.resolve(
+              sql.includes("sqlite_master") ? [{ name: "users" }] : [{ n: 1 }],
+            ),
+        };
+      },
+    };
+
+    const dev = runCommand("dev", command({ deferApp: true }), {
+      cwd: process.cwd(),
+      argv: [],
+      loaded: { config: testConfig(), configPath: "/site/plumix.config.ts" },
+      runtimeMigrations: withContributor,
+      runtimeDiagnose: undefined,
+      runtimeSync: undefined,
+    });
+
+    await expect(dev).rejects.toMatchObject({
+      code: "migrate_contributor_role_missing",
+    });
+    expect(registrations).toEqual(["probe"]);
   });
 
   test("another command runs without migrating", async () => {

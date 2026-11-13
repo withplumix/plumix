@@ -461,6 +461,13 @@ const CURATED: Readonly<Record<string, Curated>> = {
       },
       {
         reason:
+          "the view-module loader: `buildApp` loads every view at boot, so " +
+          "only a test renders outside it, and the test kit publishes it",
+        names: ["loadBlockViews"],
+        publishedBy: "./test",
+      },
+      {
+        reason:
           "the core block specs, which reach a site through `coreBlocks` " +
           "rather than one at a time",
         names: [
@@ -522,6 +529,7 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "parseRenderEnv",
           "collectBlockDepKeys",
           "pickDeps",
+          "loadedBlocksWithLoaders",
           "findBlockNode",
           "isContentInput",
           "isAllowedHtmlAttr",

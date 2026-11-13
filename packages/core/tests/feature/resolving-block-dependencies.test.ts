@@ -38,15 +38,23 @@ const navigation = definePlugin("test", {
     ctx.registerBlock(
       defineBlock({
         name: "test/nav",
-        render: () => null,
-        deps: (attrs) => ({ menus: [String(attrs.location)] }),
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            deps: (attrs: { readonly location?: unknown }) => ({
+              menus: [String(attrs.location)],
+            }),
+          }),
       }),
     );
     ctx.registerBlock(
       defineBlock({
         name: "test/share",
-        render: () => null,
-        deps: () => ({ shares: ["spent"] }),
+        view: () =>
+          Promise.resolve({
+            default: () => null,
+            deps: () => ({ shares: ["spent"] }),
+          }),
       }),
     );
   },

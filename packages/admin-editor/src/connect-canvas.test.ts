@@ -294,6 +294,48 @@ describe("connectCanvas", () => {
     conn.dispose();
   });
 
+  test("a canvas:loader-blocks message replaces the store's loader blocks", () => {
+    const store = createEditorStore(treeBlocks);
+    const { win } = fakeFrame();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
+    fromCanvas({ type: "canvas:loader-blocks", names: ["acme/feed"] });
+
+    fromCanvas({
+      type: "canvas:loader-blocks",
+      names: ["acme/search", "acme/nav"],
+    });
+
+    expect([...store.getState().loaderBlocks]).toEqual([
+      "acme/search",
+      "acme/nav",
+    ]);
+    conn.dispose();
+  });
+
+  test("prefetchBlocks posts host:prefetch-blocks to the canvas", () => {
+    const store = createEditorStore(treeBlocks);
+    const { win, posted } = fakeFrame();
+    const conn = connectCanvas({
+      store,
+      frameWindow: win,
+      origin: ORIGIN,
+      messageTarget: bus,
+    });
+
+    conn.prefetchBlocks(["acme/feed"]);
+
+    expect(hostMessages(posted)).toContainEqual({
+      type: "host:prefetch-blocks",
+      names: ["acme/feed"],
+    });
+    conn.dispose();
+  });
+
   test("ignores messages from a foreign origin", () => {
     const store = createEditorStore(treeBlocks);
     const { win } = fakeFrame();

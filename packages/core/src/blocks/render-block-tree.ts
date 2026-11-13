@@ -24,6 +24,7 @@ import type {
   VisibilityFlags,
 } from "./styles/style-emitter.js";
 import { blockSlotKeys } from "./block-slots.js";
+import { blockViewModule } from "./block-views.js";
 import { blockDepKeys, pickDeps } from "./deps.js";
 import { isDevMode } from "./dev-mode.js";
 import { editAppender } from "./edit-appender.js";
@@ -162,12 +163,14 @@ interface BlockSeamProps {
  */
 type BlockProps = Readonly<Record<string, string | undefined>> & BlockSeamProps;
 
-export interface BlockNodeRenderProps<
+export interface BlockViewProps<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Deps extends TemplateDepDeclarations = {},
 > {
+  /** The block's name, so one view module can serve several blocks. */
+  readonly name: string;
   readonly attrs: Attrs;
   readonly context: BlockContext;
   readonly loaders: ResolvedLoaders<Loaders>;
@@ -190,12 +193,12 @@ export interface BlockNodeRenderProps<
   readonly breakpoints?: ThemeBreakpoints;
 }
 
-export type BlockNodeComponent<
+export type BlockView<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Deps extends TemplateDepDeclarations = {},
-> = (props: BlockNodeRenderProps<Attrs, Loaders, Deps>) => ReactNode;
+> = (props: BlockViewProps<Attrs, Loaders, Deps>) => ReactNode;
 
 /** A `BlockContext.t` over `catalog`. */
 export function createMessageResolver(
@@ -264,6 +267,7 @@ function unregisteredPlaceholder(
       "data-plumix-block": node.name,
       "data-plumix-id": safeId,
       "data-plumix-unregistered": "",
+      "data-testid": "block-unregistered",
       style: {
         padding: "0.75rem 1rem",
         border: "1px dashed rgba(127,127,127,0.45)",
@@ -436,16 +440,20 @@ function renderNode(
   // read it via render props; the default wrapper uses it below.
   const tagName = resolveRootTag(node.tagName);
 
+  const view = blockViewModule(spec);
   let rendered: ReactNode;
   if (data && data.error !== null) {
     // Same shape as the unknown-block path: emit nothing when the block
     // didn't declare a fallback. Observability flows through the
     // `block.loaderFailed` event, not a console warn here.
-    if (!spec.errorFallback) return createElement(Fragment, { key: node.id });
-    rendered = spec.errorFallback({ attrs, error: data.error });
+    if (!view.errorFallback) return createElement(Fragment, { key: node.id });
+    rendered = view.errorFallback({ attrs, error: data.error });
   } else {
     const loaders = data?.loaders ?? EMPTY_LOADERS;
-    rendered = createElement(spec.render, {
+    // Safety: a module's view is typed against its own loaders and deps, which
+    // the walker resolved from that same module; erased here to one shape.
+    rendered = createElement(view.default as BlockView, {
+      name: node.name,
       attrs,
       context,
       loaders,

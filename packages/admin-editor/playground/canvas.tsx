@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import { coreBlocks, createBlockRegistry } from "@plumix/core/blocks";
 
+import { seedTree } from "../src/canvas-views.js";
 import { EditorCanvas } from "../src/editor-canvas.js";
 import { copySpec } from "./copy-block.js";
 import { feedSpec } from "./feed-block.js";
@@ -22,6 +23,8 @@ const registry = createBlockRegistry([
   searchSpec,
 ]);
 
+const initialTree = await seedTree(registry, SEED_BLOCKS);
+
 const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(
@@ -29,7 +32,7 @@ if (root) {
       <EditorCanvas
         registry={registry}
         origin={window.location.origin}
-        initialTree={SEED_BLOCKS}
+        initialTree={initialTree}
       />
     </StrictMode>,
   );

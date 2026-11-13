@@ -5,6 +5,7 @@ import { afterEach, describe, expect, onTestFinished, test, vi } from "vitest";
 import type { ResolvedBlockLoaders } from "./loaders.js";
 import type { BlockContext, BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
+import { loadBlockViews } from "./block-views.js";
 import { groupBlock } from "./group/index.js";
 import { DEFAULT_BLOCK_CONTEXT, renderBlockTree } from "./render-block-tree.js";
 
@@ -25,24 +26,32 @@ function withProductionEnv<T>(fn: () => T): T {
 const headingRegistry = createBlockRegistry([
   {
     name: "core/heading",
-    render: ({ attrs }) => {
-      const { text, level } = attrs as {
-        readonly text: string;
-        readonly level: 1 | 2 | 3 | 4 | 5 | 6;
-      };
-      const Tag = `h${level}` as const;
-      return <Tag>{text}</Tag>;
-    },
+    view: () =>
+      Promise.resolve({
+        default: ({ attrs }) => {
+          const { text, level } = attrs as {
+            readonly text: string;
+            readonly level: 1 | 2 | 3 | 4 | 5 | 6;
+          };
+          const Tag = `h${level}` as const;
+          return <Tag>{text}</Tag>;
+        },
+      }),
   },
 ]);
+await loadBlockViews(headingRegistry);
 
 const selfSeamRegistry = createBlockRegistry([
   {
     name: "core/box",
     selfSeam: true,
-    render: ({ blockProps }) => <section {...blockProps}>box</section>,
+    view: () =>
+      Promise.resolve({
+        default: ({ blockProps }) => <section {...blockProps}>box</section>,
+      }),
   },
 ]);
+await loadBlockViews(selfSeamRegistry);
 
 describe("renderBlockTree — htmlAttrs", () => {
   test("spreads allowlisted attributes onto the wrapper, dropping unsafe keys", () => {
@@ -112,15 +121,19 @@ describe("renderBlockTree — htmlAttrs", () => {
     expect(html).not.toContain("<script");
   });
 
-  test("threads the resolved tagName to a selfSeam block's render", () => {
+  test("threads the resolved tagName to a selfSeam block's render", async () => {
     const registry = createBlockRegistry([
       {
         name: "core/box2",
         selfSeam: true,
-        render: ({ tagName, blockProps }) =>
-          createElement(tagName ?? "div", blockProps, "box"),
+        view: () =>
+          Promise.resolve({
+            default: ({ tagName, blockProps }) =>
+              createElement(tagName ?? "div", blockProps, "box"),
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const node: BlockNode = {
       id: "abc",
       name: "core/box2",
@@ -246,29 +259,36 @@ describe("renderBlockTree", () => {
     );
   });
 
-  test("threads BlockContext through slot recursion with parent name and depth", () => {
+  test("threads BlockContext through slot recursion with parent name and depth", async () => {
     const captured: BlockContext[] = [];
     const registry = createBlockRegistry([
       {
         name: "acme/probe",
-        render: ({ context }) => {
-          captured.push(context);
-          return null;
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ context }) => {
+              captured.push(context);
+              return null;
+            },
+          }),
       },
       {
         name: "core/section",
         inputs: [{ name: "content", type: "slot" }],
-        render: ({ attrs }) => {
-          const Content = attrs.content as () => React.ReactNode;
-          return (
-            <section>
-              <Content />
-            </section>
-          );
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ attrs }) => {
+              const Content = attrs.content as () => React.ReactNode;
+              return (
+                <section>
+                  <Content />
+                </section>
+              );
+            },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
 
     const tree: readonly BlockNode[] = [
       { id: "1", name: "acme/probe", attrs: {} },
@@ -290,32 +310,39 @@ describe("renderBlockTree", () => {
     expect(captured[1]?.depth).toBe(1);
   });
 
-  test("materializes a slot field in attrs as a Component the block invokes", () => {
+  test("materializes a slot field in attrs as a Component the block invokes", async () => {
     const registry = createBlockRegistry([
       {
         name: "core/heading",
-        render: ({ attrs }) => {
-          const { text, level } = attrs as {
-            readonly text: string;
-            readonly level: 1 | 2 | 3 | 4 | 5 | 6;
-          };
-          const Tag = `h${level}` as const;
-          return <Tag>{text}</Tag>;
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ attrs }) => {
+              const { text, level } = attrs as {
+                readonly text: string;
+                readonly level: 1 | 2 | 3 | 4 | 5 | 6;
+              };
+              const Tag = `h${level}` as const;
+              return <Tag>{text}</Tag>;
+            },
+          }),
       },
       {
         name: "core/section",
         inputs: [{ name: "content", type: "slot" }],
-        render: ({ attrs }) => {
-          const Content = attrs.content as () => React.ReactNode;
-          return (
-            <section>
-              <Content />
-            </section>
-          );
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ attrs }) => {
+              const Content = attrs.content as () => React.ReactNode;
+              return (
+                <section>
+                  <Content />
+                </section>
+              );
+            },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
 
     const tree: readonly BlockNode[] = [
       {
@@ -340,16 +367,20 @@ describe("renderBlockTree", () => {
     );
   });
 
-  test("passes an empty data array through to the block as an array", () => {
+  test("passes an empty data array through to the block as an array", async () => {
     const registry = createBlockRegistry([
       {
         name: "acme/address",
-        render: ({ attrs }) => {
-          const lines = attrs.lines as readonly string[];
-          return <p>{[...lines, "UK"].join(", ")}</p>;
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ attrs }) => {
+              const lines = attrs.lines as readonly string[];
+              return <p>{[...lines, "UK"].join(", ")}</p>;
+            },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       { id: "1", name: "acme/address", attrs: { lines: [] } },
     ];
@@ -359,17 +390,21 @@ describe("renderBlockTree", () => {
     expect(html).toBe("<div><p>UK</p></div>");
   });
 
-  test("passes a data array of id/name objects through unchanged", () => {
+  test("passes a data array of id/name objects through unchanged", async () => {
     const received: unknown[] = [];
     const registry = createBlockRegistry([
       {
         name: "acme/team",
-        render: ({ attrs }) => {
-          received.push(attrs.people);
-          return null;
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ attrs }) => {
+              received.push(attrs.people);
+              return null;
+            },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const people = [{ id: "1", name: "Alice" }];
     const tree: readonly BlockNode[] = [
       { id: "1", name: "acme/team", attrs: { people } },
@@ -383,17 +418,20 @@ describe("renderBlockTree", () => {
   test.each([
     ["emptied", { content: [] }],
     ["missing", {}],
-  ])("renders core/group with its slot %s and no children", (_, attrs) => {
-    const tree: readonly BlockNode[] = [
-      { id: "g1", name: "core/group", attrs },
-    ];
+  ])(
+    "renders core/group with its slot %s and no children",
+    async (_, attrs) => {
+      const tree: readonly BlockNode[] = [
+        { id: "g1", name: "core/group", attrs },
+      ];
+      const registry = createBlockRegistry([groupBlock]);
+      await loadBlockViews(registry);
 
-    const html = renderToStaticMarkup(
-      renderBlockTree(tree, createBlockRegistry([groupBlock])),
-    );
+      const html = renderToStaticMarkup(renderBlockTree(tree, registry));
 
-    expect(html).toBe("<div></div>");
-  });
+      expect(html).toBe("<div></div>");
+    },
+  );
 
   test("never walks into an unregistered block's children", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -422,16 +460,20 @@ describe("renderBlockTree", () => {
     );
   });
 
-  test("emits per-instance <style> + class when BlockNode has a style slot", () => {
+  test("emits per-instance <style> + class when BlockNode has a style slot", async () => {
     const registry = createBlockRegistry([
       {
         name: "core/paragraph",
-        render: ({ attrs }) => {
-          const { text } = attrs as { readonly text?: string };
-          return <p>{text}</p>;
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ attrs }) => {
+              const { text } = attrs as { readonly text?: string };
+              return <p>{text}</p>;
+            },
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       {
         id: "p1",
@@ -450,10 +492,17 @@ describe("renderBlockTree", () => {
     expect(html).toContain("<p>Hello</p>");
   });
 
-  test("a node hidden on mobile emits a media-query display:none and keeps its flex", () => {
+  test("a node hidden on mobile emits a media-query display:none and keeps its flex", async () => {
     const registry = createBlockRegistry([
-      { name: "core/paragraph", render: () => <p>x</p> },
+      {
+        name: "core/paragraph",
+        view: () =>
+          Promise.resolve({
+            default: () => <p>x</p>,
+          }),
+      },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       {
         id: "p1",
@@ -475,13 +524,17 @@ describe("renderBlockTree", () => {
     );
   });
 
-  test("emits a literal style value with no token resolution needed", () => {
+  test("emits a literal style value with no token resolution needed", async () => {
     const registry = createBlockRegistry([
       {
         name: "core/paragraph",
-        render: () => <p>x</p>,
+        view: () =>
+          Promise.resolve({
+            default: () => <p>x</p>,
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       {
         id: "p1",
@@ -499,13 +552,17 @@ describe("renderBlockTree", () => {
     );
   });
 
-  test("skips style emission when node.id contains unsafe characters", () => {
+  test("skips style emission when node.id contains unsafe characters", async () => {
     const registry = createBlockRegistry([
       {
         name: "core/paragraph",
-        render: () => <p>x</p>,
+        view: () =>
+          Promise.resolve({
+            default: () => <p>x</p>,
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       {
         id: "p1</style><script>alert(1)</script>",
@@ -535,14 +592,18 @@ describe("renderBlockTree", () => {
     expect(html).toBe("<div><h2>No style</h2></div>");
   });
 
-  test("keeps the style rules of a block that skips the wrapper", () => {
+  test("keeps the style rules of a block that skips the wrapper", async () => {
     const registry = createBlockRegistry([
       {
         name: "acme/carousel",
         selfSeam: true,
-        render: ({ blockProps }) => <div {...blockProps}>slides</div>,
+        view: () =>
+          Promise.resolve({
+            default: ({ blockProps }) => <div {...blockProps}>slides</div>,
+          }),
       },
     ]);
+    await loadBlockViews(registry);
     const tree: readonly BlockNode[] = [
       {
         id: "c1",
@@ -575,24 +636,28 @@ describe("renderBlockTree", () => {
       expect(html).not.toContain("<script");
     });
 
-    test("blocks whose render() returns plumix-island markup pass it through unchanged", () => {
+    test("blocks whose render() returns plumix-island markup pass it through unchanged", async () => {
       const registry = createBlockRegistry([
         {
           name: "acme/widget",
-          render: () =>
-            createElement(
-              "plumix-island",
-              {
-                "chunk-url": "/w.js",
-                "component-export": "Widget",
-                client: "load",
-                props: "{}",
-                ssr: "",
-              },
-              createElement("span", { className: "ssr-fallback" }),
-            ),
+          view: () =>
+            Promise.resolve({
+              default: () =>
+                createElement(
+                  "plumix-island",
+                  {
+                    "chunk-url": "/w.js",
+                    "component-export": "Widget",
+                    client: "load",
+                    props: "{}",
+                    ssr: "",
+                  },
+                  createElement("span", { className: "ssr-fallback" }),
+                ),
+            }),
         },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         { id: "w1", name: "acme/widget", attrs: {} },
       ];
@@ -649,34 +714,41 @@ describe("renderBlockTree", () => {
       expect(events).toEqual(["before:acme/missing", "after:acme/missing"]);
     });
 
-    test("threads the parent's context into hooks for slot children", () => {
+    test("threads the parent's context into hooks for slot children", async () => {
       const captured: { name: string; parent: string | null; depth: number }[] =
         [];
       const registry = createBlockRegistry([
         {
           name: "core/section",
           inputs: [{ name: "content", type: "slot" }],
-          render: ({ attrs }) => {
-            const Content = attrs.content as () => React.ReactNode;
-            return (
-              <section>
-                <Content />
-              </section>
-            );
-          },
+          view: () =>
+            Promise.resolve({
+              default: ({ attrs }) => {
+                const Content = attrs.content as () => React.ReactNode;
+                return (
+                  <section>
+                    <Content />
+                  </section>
+                );
+              },
+            }),
         },
         {
           name: "core/heading",
-          render: ({ attrs }) => {
-            const { text, level } = attrs as {
-              readonly text: string;
-              readonly level: 1 | 2 | 3 | 4 | 5 | 6;
-            };
-            const Tag = `h${level}` as const;
-            return <Tag>{text}</Tag>;
-          },
+          view: () =>
+            Promise.resolve({
+              default: ({ attrs }) => {
+                const { text, level } = attrs as {
+                  readonly text: string;
+                  readonly level: 1 | 2 | 3 | 4 | 5 | 6;
+                };
+                const Tag = `h${level}` as const;
+                return <Tag>{text}</Tag>;
+              },
+            }),
         },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         {
           id: "1",
@@ -799,7 +871,7 @@ describe("renderBlockTree", () => {
       vi.restoreAllMocks();
     });
 
-    test("emits an unknown-block template marker and warns once per name", () => {
+    test("emits an unknown-block template marker and warns once per name", async () => {
       const warn = vi
         .spyOn(console, "warn")
         .mockImplementation(() => undefined);
@@ -809,6 +881,7 @@ describe("renderBlockTree", () => {
         { id: "3", name: "acme/other", attrs: {} },
       ];
       const registry = createBlockRegistry();
+      await loadBlockViews(registry);
 
       const html = renderToStaticMarkup(renderBlockTree(blocks, registry));
 
@@ -819,18 +892,22 @@ describe("renderBlockTree", () => {
   });
 
   describe("loader data", () => {
-    test("passes resolved loader data into the block's render fn", () => {
+    test("passes resolved loader data into the block's render fn", async () => {
       let seen: unknown;
       const registry = createBlockRegistry([
         {
           name: "acme/needs-data",
-          render: ({ loaders }) => {
-            seen = loaders;
-            return null;
-          },
-          loaders: { posts: () => Promise.resolve([]) },
+          view: () =>
+            Promise.resolve({
+              default: ({ loaders }) => {
+                seen = loaders;
+                return null;
+              },
+              loaders: { posts: () => Promise.resolve([]) },
+            }),
         },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         { id: "n1", name: "acme/needs-data", attrs: {} },
       ];
@@ -843,17 +920,21 @@ describe("renderBlockTree", () => {
       expect(seen).toEqual({ posts: ["a", "b"] });
     });
 
-    test("passes an empty record when the resolver has no entry for the node", () => {
+    test("passes an empty record when the resolver has no entry for the node", async () => {
       let seen: unknown;
       const registry = createBlockRegistry([
         {
           name: "acme/loaderless",
-          render: ({ loaders }) => {
-            seen = loaders;
-            return null;
-          },
+          view: () =>
+            Promise.resolve({
+              default: ({ loaders }) => {
+                seen = loaders;
+                return null;
+              },
+            }),
         },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         { id: "l1", name: "acme/loaderless", attrs: {} },
       ];
@@ -863,15 +944,19 @@ describe("renderBlockTree", () => {
       expect(seen).toEqual({});
     });
 
-    test("invokes errorFallback when the node's loader rejected", () => {
+    test("invokes errorFallback when the node's loader rejected", async () => {
       const registry = createBlockRegistry([
         {
           name: "acme/risky",
-          render: () => "should-not-render",
-          errorFallback: ({ error }) => `oops: ${(error as Error).message}`,
-          loaders: { v: () => Promise.resolve(null) },
+          view: () =>
+            Promise.resolve({
+              default: () => "should-not-render",
+              loaders: { v: () => Promise.resolve(null) },
+              errorFallback: ({ error }) => `oops: ${(error as Error).message}`,
+            }),
         },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         { id: "r1", name: "acme/risky", attrs: {} },
       ];
@@ -887,17 +972,21 @@ describe("renderBlockTree", () => {
       expect(html).not.toContain("should-not-render");
     });
 
-    test("renders nothing in production when a loader rejected and no errorFallback is declared", () => {
+    test("renders nothing in production when a loader rejected and no errorFallback is declared", async () => {
       const warn = vi
         .spyOn(console, "warn")
         .mockImplementation(() => undefined);
       const registry = createBlockRegistry([
         {
           name: "acme/risky-silent",
-          render: () => "should-not-render",
-          loaders: { v: () => Promise.resolve(null) },
+          view: () =>
+            Promise.resolve({
+              default: () => "should-not-render",
+              loaders: { v: () => Promise.resolve(null) },
+            }),
         },
       ]);
+      await loadBlockViews(registry);
       const tree: readonly BlockNode[] = [
         { id: "r2", name: "acme/risky-silent", attrs: {} },
       ];
@@ -915,19 +1004,23 @@ describe("renderBlockTree", () => {
   });
 });
 
-describe("renderBlockTree — message descriptors", () => {
+describe("renderBlockTree — message descriptors", async () => {
   const greeting = { id: "test.greeting", message: "Hello" };
   const loadEmbed = { id: "test.loadEmbed", message: "Load {title}" };
   const i18nRegistry = createBlockRegistry([
     {
       name: "test/greeting",
-      render: ({ context }) => (
-        <p>
-          {context.t(greeting)}|{context.t(loadEmbed, { title: "Clip" })}
-        </p>
-      ),
+      view: () =>
+        Promise.resolve({
+          default: ({ context }) => (
+            <p>
+              {context.t(greeting)}|{context.t(loadEmbed, { title: "Clip" })}
+            </p>
+          ),
+        }),
     },
   ]);
+  await loadBlockViews(i18nRegistry);
   const nodes: readonly BlockNode[] = [{ id: "g1", name: "test/greeting" }];
 
   test("resolves a descriptor through the supplied compiled catalog", () => {

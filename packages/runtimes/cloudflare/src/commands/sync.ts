@@ -211,7 +211,9 @@ async function settleInSite(
   env: PlumixEnv,
   event: SyncAfterEvent,
 ): Promise<SyncSettleReport> {
-  const handler = createRuntimeHandler(await buildApp(config));
+  const handler = createRuntimeHandler(
+    await buildApp(config, { skipBlockViews: true }),
+  );
   try {
     const { run } = handler;
     if (run === undefined) throw CloudflareCliError.syncSiteCannotRun();

@@ -2,15 +2,11 @@ import type { ReactNode } from "react";
 
 import type { Label } from "../i18n/label.js";
 import type { JsonObject } from "../json.js";
-import type {
-  BlockDeps,
-  KnownBlockDepKinds,
-  TemplateDepDeclarations,
-} from "./deps.js";
+import type { BlockDeps } from "./deps.js";
 import type { BlockLoaderRecord } from "./loaders.js";
 import type {
   BlockNode,
-  BlockNodeComponent,
+  BlockView,
   MaterializedAttrs,
 } from "./render-block-tree.js";
 import type { ResponsiveStyleSlot } from "./styles/style-emitter.js";
@@ -141,11 +137,32 @@ export interface BlockTransforms {
   readonly from?: readonly BlockTransformFrom[];
 }
 
+/**
+ * What a block's lazily imported view module exports: everything that renders
+ * or runs on the server, which the editor bundle must not load eagerly.
+ */
+export interface BlockViewModule<Attrs = MaterializedAttrs> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a module's own loaders and deps types are checked where it declares them
+  readonly default: BlockView<Attrs, any, any>;
+  readonly loaders?: BlockLoaderRecord;
+  /**
+   * The template deps the block reads, keyed by kind like a template's. The
+   * page loads every block's keys once, and the view reads them as `deps`.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a module's own deps type is checked where it declares them
+  readonly deps?: BlockDeps<Attrs, any>;
+  /**
+   * Renders in place of the view when a loader rejects. Without one, the
+   * walker emits nothing (same shape as the unknown-block path).
+   */
+  readonly errorFallback?: (args: {
+    readonly attrs: Attrs;
+    readonly error: unknown;
+  }) => ReactNode;
+}
+
 export interface BlockSpec<
   Attrs extends MaterializedAttrs = MaterializedAttrs,
-  Loaders extends BlockLoaderRecord = BlockLoaderRecord,
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Deps extends TemplateDepDeclarations = {},
 > {
   readonly name: string;
   readonly title?: Label;
@@ -160,21 +177,11 @@ export interface BlockSpec<
    * version, with no version integer for an author to keep true.
    */
   readonly text?: readonly BlockTextInput[];
-  readonly render: BlockNodeComponent<Attrs, Loaders, Deps>;
-  readonly loaders?: Loaders;
   /**
-   * The template deps the block reads, keyed by kind like a template's. The
-   * page loads every block's keys once, and `render` reads them as `deps`.
+   * A dynamic `import()` of the module holding what renders or runs on the
+   * server, so the editor bundle carries the definition alone.
    */
-  readonly deps?: BlockDeps<Attrs, Deps>;
-  /**
-   * Renders in place of `render` when a loader rejects. Without one,
-   * the walker emits nothing (same shape as the unknown-block path).
-   */
-  readonly errorFallback?: (args: {
-    readonly attrs: Attrs;
-    readonly error: unknown;
-  }) => ReactNode;
+  readonly view: () => Promise<BlockViewModule<Attrs>>;
   /**
    * For elements a div can't wrap (`<td>`, `<tr>`) and to beat the theme's
    * element styles. Must spread `blockProps` onto a single host element; a
@@ -241,18 +248,12 @@ export function createBlockRegistry(
 
 /**
  * Returns plain `BlockSpec` because the registry stores homogenized rows and
- * `BlockSpec` is invariant in both generics. `Attrs` defaults wide so
+ * `BlockSpec` is invariant in `Attrs`. `Attrs` defaults wide so
  * `defaults` doesn't narrow it.
  */
 export function defineBlock<
   Attrs extends MaterializedAttrs = MaterializedAttrs,
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Loaders extends BlockLoaderRecord = {},
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  const Deps extends TemplateDepDeclarations = {},
->(
-  spec: BlockSpec<Attrs, Loaders, Deps> & KnownBlockDepKinds<Attrs, Deps>,
-): BlockSpec {
+>(spec: BlockSpec<Attrs>): BlockSpec {
   // Safety: the registry is keyed by name, so a widened spec only meets nodes
   // carrying its own name; the erasure buys a homogeneous map, not
   // interchangeable specs.

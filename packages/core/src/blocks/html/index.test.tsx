@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { HtmlAllowlist } from "./sanitize.js";
+import type { HtmlAllowlist } from "./allowlist.js";
 import { createBlockRegistry } from "../block-registry.js";
 import { renderBlockTree } from "../render-block-tree.js";
 import { renderBlockSpecToHtml } from "../test/index.js";
@@ -9,16 +9,16 @@ import { HtmlAllowlistProvider } from "./context.js";
 import { htmlBlock } from "./index.js";
 
 describe("core/html", () => {
-  test("renders the sanitized HTML inside a wrapper div", () => {
-    const html = renderBlockSpecToHtml(htmlBlock, {
+  test("renders the sanitized HTML inside a wrapper div", async () => {
+    const html = await renderBlockSpecToHtml(htmlBlock, {
       html: "<p>Hello <strong>world</strong></p>",
     });
 
     expect(html).toContain("<p>Hello <strong>world</strong></p>");
   });
 
-  test("strips disallowed tags via DOMPurify baseline allowlist", () => {
-    const html = renderBlockSpecToHtml(htmlBlock, {
+  test("strips disallowed tags via DOMPurify baseline allowlist", async () => {
+    const html = await renderBlockSpecToHtml(htmlBlock, {
       html: "<p>Safe</p><script>alert(1)</script>",
     });
 
@@ -26,14 +26,14 @@ describe("core/html", () => {
     expect(html).toContain("<p>Safe</p>");
   });
 
-  test("renders an empty wrapper when html is explicitly empty", () => {
-    const html = renderBlockSpecToHtml(htmlBlock, { html: "" });
+  test("renders an empty wrapper when html is explicitly empty", async () => {
+    const html = await renderBlockSpecToHtml(htmlBlock, { html: "" });
 
-    expect(html).toContain("<div><div></div></div>");
+    expect(html).toContain('<div><div data-testid="html-block"></div></div>');
   });
 
-  test("a freshly inserted block carries visible default markup", () => {
-    const html = renderBlockSpecToHtml(htmlBlock, htmlBlock.defaults);
+  test("a freshly inserted block carries visible default markup", async () => {
+    const html = await renderBlockSpecToHtml(htmlBlock, htmlBlock.defaults);
 
     expect(html).toContain("Custom HTML");
   });

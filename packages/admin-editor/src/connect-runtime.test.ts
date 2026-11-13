@@ -56,6 +56,25 @@ describe("connectRuntime (canvas/iframe side)", () => {
     conn.dispose();
   });
 
+  test("calls onConnect when the host says hello", () => {
+    let connects = 0;
+    const { win } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      messageTarget: bus,
+      origin: ORIGIN,
+      onTree: () => undefined,
+      onConnect: () => {
+        connects += 1;
+      },
+    });
+
+    fromHost({ kind: "hello" });
+
+    expect(connects).toBe(1);
+    conn.dispose();
+  });
+
   test("delivers a pushed tree to onTree", () => {
     const seen: (readonly BlockNode[])[] = [];
     const { win } = fakeParent();
@@ -124,6 +143,41 @@ describe("connectRuntime (canvas/iframe side)", () => {
     expect(messages(posted)).toContainEqual({
       type: "canvas:requestDeps",
       tree,
+    });
+    conn.dispose();
+  });
+
+  test("delivers a host:prefetch-blocks message's names to onPrefetchBlocks", () => {
+    const seen: (readonly string[])[] = [];
+    const { win } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      messageTarget: bus,
+      origin: ORIGIN,
+      onTree: () => undefined,
+      onPrefetchBlocks: (names) => seen.push(names),
+    });
+
+    fromHost({ type: "host:prefetch-blocks", names: ["acme/feed"] });
+
+    expect(seen).toEqual([["acme/feed"]]);
+    conn.dispose();
+  });
+
+  test("reportLoaderBlocks posts canvas:loader-blocks with the names", () => {
+    const { win, posted } = fakeParent();
+    const conn = connectRuntime({
+      parentWindow: win,
+      messageTarget: bus,
+      origin: ORIGIN,
+      onTree: () => undefined,
+    });
+
+    conn.reportLoaderBlocks(["acme/feed"]);
+
+    expect(messages(posted)).toContainEqual({
+      type: "canvas:loader-blocks",
+      names: ["acme/feed"],
     });
     conn.dispose();
   });

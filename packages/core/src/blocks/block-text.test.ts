@@ -12,19 +12,28 @@ const noRender = () => null;
 
 const proseBlock = defineBlock({
   name: "test/prose",
-  render: noRender,
+  view: () =>
+    Promise.resolve({
+      default: noRender,
+    }),
   text: [{ name: "body", html: true }],
 });
 
 const labelBlock = defineBlock({
   name: "test/label",
-  render: noRender,
+  view: () =>
+    Promise.resolve({
+      default: noRender,
+    }),
   text: [{ name: "label", prose: false }],
 });
 
 const wrapperBlock = defineBlock({
   name: "test/wrapper",
-  render: noRender,
+  view: () =>
+    Promise.resolve({
+      default: noRender,
+    }),
   inputs: [{ name: "content", type: "slot" }],
 });
 
@@ -173,7 +182,13 @@ describe("extractBlockText", () => {
 
 describe("blockTextVersion", () => {
   test("a re-registered block that declares nothing drops the old roster", () => {
-    const silenced = defineBlock({ name: "test/prose", render: noRender });
+    const silenced = defineBlock({
+      name: "test/prose",
+      view: () =>
+        Promise.resolve({
+          default: noRender,
+        }),
+    });
     expect(blockTextRoster([proseBlock, silenced]).text.has("test/prose")).toBe(
       false,
     );
@@ -188,7 +203,10 @@ describe("blockTextVersion", () => {
   test("changes when a block adds a text input", () => {
     const widened = defineBlock({
       name: "test/prose",
-      render: noRender,
+      view: () =>
+        Promise.resolve({
+          default: noRender,
+        }),
       text: [
         { name: "body", html: true },
         { name: "caption", prose: false },
@@ -202,7 +220,10 @@ describe("blockTextVersion", () => {
   test("changes when an input's encoding changes", () => {
     const plain = defineBlock({
       name: "test/prose",
-      render: noRender,
+      view: () =>
+        Promise.resolve({
+          default: noRender,
+        }),
       text: [{ name: "body" }],
     });
     expect(blockTextVersion(blockTextRoster([plain]))).not.toBe(
@@ -213,7 +234,10 @@ describe("blockTextVersion", () => {
   test("changes when an input stops being body copy", () => {
     const ancillary = defineBlock({
       name: "test/prose",
-      render: noRender,
+      view: () =>
+        Promise.resolve({
+          default: noRender,
+        }),
       text: [{ name: "body", html: true, prose: false }],
     });
     expect(blockTextVersion(blockTextRoster([ancillary]))).not.toBe(
@@ -224,7 +248,10 @@ describe("blockTextVersion", () => {
   test("ignores declarations that only spell out a default", () => {
     const explicit = defineBlock({
       name: "test/prose",
-      render: noRender,
+      view: () =>
+        Promise.resolve({
+          default: noRender,
+        }),
       text: [{ name: "body", html: true, prose: true }],
     });
     expect(blockTextVersion(blockTextRoster([explicit]))).toBe(
@@ -239,7 +266,10 @@ describe("blockTextVersion", () => {
           blockTextRoster([
             defineBlock({
               name: `test/block-${String(i)}`,
-              render: noRender,
+              view: () =>
+                Promise.resolve({
+                  default: noRender,
+                }),
               text: [{ name: "body", html: true }],
             }),
           ]),

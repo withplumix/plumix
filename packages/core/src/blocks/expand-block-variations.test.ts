@@ -7,7 +7,7 @@ import {
 } from "./expand-block-variations.js";
 
 function block(spec: Partial<BlockSpec> & { name: string }): BlockSpec {
-  return { render: () => null, ...spec };
+  return { view: () => Promise.resolve({ default: () => null }), ...spec };
 }
 
 describe("expandBlockVariations", () => {

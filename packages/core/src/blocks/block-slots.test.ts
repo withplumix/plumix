@@ -5,7 +5,10 @@ import { blockSlotKeys, defineBlock } from "./index.js";
 
 const tabs = defineBlock({
   name: "acme/tabs",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   inputs: [
     { name: "labels", type: "json" },
     { name: "panels", type: "slot" },

@@ -10,7 +10,10 @@ const scripts = definePlugin("scripts", {
     // Inserting it takes `settings:manage`, an admin's.
     ctx.registerBlock({
       name: "test/script",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       capability: "settings:manage",
     });
   },

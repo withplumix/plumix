@@ -8,12 +8,14 @@ import type {
   RenderBlockTreeOptions,
 } from "../render-block-tree.js";
 import { createBlockRegistry } from "../block-registry.js";
+import { loadBlockViews } from "../block-views.js";
 import {
   DEFAULT_BLOCK_CONTEXT,
   renderBlockTree,
 } from "../render-block-tree.js";
 
 export { validateEntryContent as validateContent } from "../validate-content.js";
+export { loadBlockViews } from "../block-views.js";
 
 const EMPTY_CONTEXT: BlockContext = {
   entry: null,
@@ -42,14 +44,14 @@ export function mockRegistry(input: MockRegistryInput = {}) {
 
 /**
  * Render a single block spec in isolation and return its HTML output.
- * Useful for asserting `defineBlock.render` output against attrs fixtures.
  */
-export function renderBlockSpecToHtml(
+export async function renderBlockSpecToHtml(
   spec: BlockSpec,
   attrs?: JsonObject,
   options?: RenderBlockTreeOptions,
-): string {
+): Promise<string> {
   const registry = createBlockRegistry([spec]);
+  await loadBlockViews(registry);
   const node: BlockNode = {
     id: "test-block",
     name: spec.name,
@@ -62,11 +64,12 @@ export function renderBlockSpecToHtml(
  * Render a tree of BlockNodes against a list of specs and return the HTML.
  * Use for testing multi-block compositions (slots, ordering, context).
  */
-export function renderBlockTreeToHtml(
+export async function renderBlockTreeToHtml(
   specs: readonly BlockSpec[],
   tree: readonly BlockNode[],
   options?: RenderBlockTreeOptions,
-): string {
+): Promise<string> {
   const registry = createBlockRegistry(specs);
+  await loadBlockViews(registry);
   return renderToStaticMarkup(renderBlockTree(tree, registry, options));
 }

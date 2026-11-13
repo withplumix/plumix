@@ -1,7 +1,7 @@
 import type { BlockRegistry } from "../block-registry.js";
-import type { HtmlAllowlist } from "./sanitize.js";
+import type { HtmlAllowlist } from "./allowlist.js";
+import { BASELINE_HTML_ALLOWLIST } from "./allowlist.js";
 import { enforceHtmlFloors } from "./floors.js";
-import { BASELINE_HTML_ALLOWLIST } from "./sanitize.js";
 
 /**
  * Tag and attribute fields add to the baseline; `schemes` and

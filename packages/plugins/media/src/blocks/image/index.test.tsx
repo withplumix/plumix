@@ -57,8 +57,8 @@ describe("media/image v2", () => {
     expect(content).toEqual(["media", "alt", "caption"]);
   });
 
-  test("renders <figure><img></figure> with src + alt", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("renders <figure><img></figure> with src + alt", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       src: "/_plumix/media/x/photo.jpg",
       alt: "A cat",
     });
@@ -67,16 +67,16 @@ describe("media/image v2", () => {
     expect(html).toContain('loading="lazy"');
   });
 
-  test("renders from a picked media value's url", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("renders from a picked media value's url", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       media: { id: "42", url: "/_plumix/media/serve/42", alt: "A dog" },
     });
     expect(html).toContain('src="/_plumix/media/serve/42"');
     expect(html).toContain('alt="A dog"');
   });
 
-  test("the picked media alt is the default; the block alt overrides it", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("the picked media alt is the default; the block alt overrides it", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       media: { id: "42", url: "/x.jpg", alt: "asset alt" },
       alt: "override alt",
     });
@@ -84,16 +84,16 @@ describe("media/image v2", () => {
     expect(html).not.toContain("asset alt");
   });
 
-  test("a raw src is the escape hatch when no media is picked", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("a raw src is the escape hatch when no media is picked", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       src: "https://cdn.example/e.jpg",
       alt: "external",
     });
     expect(html).toContain('src="https://cdn.example/e.jpg"');
   });
 
-  test("a picked media url wins over a stale raw src", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("a picked media url wins over a stale raw src", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       media: { id: "42", url: "/managed.jpg", alt: "" },
       src: "https://cdn.example/old.jpg",
     });
@@ -117,8 +117,8 @@ describe("media/image v2", () => {
     expect(html.toLowerCase()).toContain("srcset=");
   });
 
-  test("adds figcaption when caption is provided", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("adds figcaption when caption is provided", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       caption: "Sunset over the bay",
@@ -126,8 +126,8 @@ describe("media/image v2", () => {
     expect(html).toContain("<figcaption>Sunset over the bay</figcaption>");
   });
 
-  test("encodes focal-point as object-position style on the img", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("encodes focal-point as object-position style on the img", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       focalPoint: { x: 0.25, y: 0.75 },
@@ -135,8 +135,8 @@ describe("media/image v2", () => {
     expect(html).toMatch(/object-position:\s?25% 75%/);
   });
 
-  test("clamps out-of-range focal-point coordinates to [0, 1]", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("clamps out-of-range focal-point coordinates to [0, 1]", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       focalPoint: { x: -0.5, y: 1.5 },
@@ -144,8 +144,8 @@ describe("media/image v2", () => {
     expect(html).toMatch(/object-position:\s?0% 100%/);
   });
 
-  test("renders a placeholder (no <img>) for an empty src in the editor", () => {
-    const html = renderBlockSpecToHtml(
+  test("renders a placeholder (no <img>) for an empty src in the editor", async () => {
+    const html = await renderBlockSpecToHtml(
       imageBlock,
       { src: "" },
       { editing: true },
@@ -166,8 +166,8 @@ describe("media/image v2", () => {
     expect(html).toContain("<span>Kein Bild</span>");
   });
 
-  test("renders no placeholder on the public page for an empty src", () => {
-    const html = renderBlockSpecToHtml(imageBlock, { src: "" });
+  test("renders no placeholder on the public page for an empty src", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, { src: "" });
     expect(html).not.toContain("data-plumix-image-placeholder");
     expect(html).not.toContain("No image");
   });
@@ -183,8 +183,8 @@ describe("media/image v2", () => {
     expect(html).toContain('sizes="(max-width: 600px) 100vw, 50vw"');
   });
 
-  test("high priority loads eagerly with fetchpriority=high", () => {
-    const html = renderBlockSpecToHtml(imageBlock, {
+  test("high priority loads eagerly with fetchpriority=high", async () => {
+    const html = await renderBlockSpecToHtml(imageBlock, {
       src: "/x.jpg",
       alt: "",
       priority: true,

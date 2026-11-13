@@ -9,6 +9,7 @@ import {
   coreShortcodes,
   createBlockRegistry,
   defineShortcode,
+  loadBlockViews,
 } from "@plumix/core/blocks";
 import { BlockRenderer, PlumixProvider } from "@plumix/core/blocks/renderer";
 
@@ -16,6 +17,7 @@ import { parseCanvasSeed } from "./canvas-seed.js";
 import { EditorCanvas } from "./editor-canvas.js";
 
 const registry = createBlockRegistry(coreBlocks);
+await loadBlockViews(registry);
 const ORIGIN = "http://localhost:3000";
 
 const treeEmbed = (blocks: readonly unknown[]): string =>

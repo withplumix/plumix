@@ -9,17 +9,23 @@ const feeds = definePlugin("test", {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
     ctx.registerBlock({
       name: "test/feed",
-      render: () => null,
-      loaders: {
-        // Echoes an attr, so the data proves the loader re-ran against the
-        // block's current attrs.
-        items: ({ attrs }) => Promise.resolve({ count: attrs.count }),
-      },
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+          loaders: {
+            // Echoes an attr, so the data proves the loader re-ran against the
+            // block's current attrs.
+            items: ({ attrs }) => Promise.resolve({ count: attrs.count }),
+          },
+        }),
     });
     ctx.registerBlock({
       name: "test/share",
-      render: () => null,
-      loaders: { share: () => Promise.reject(pageNotFound()) },
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+          loaders: { share: () => Promise.reject(pageNotFound()) },
+        }),
     });
   },
 });

@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from "../json.js";
 import type { LoadedDeps } from "./deps.js";
-import type { HtmlAllowlist } from "./html/sanitize.js";
+import type { HtmlAllowlist } from "./html/allowlist.js";
 import type { PlumixContextValue } from "./renderer/context.js";
 import type { ThemeBreakpoints } from "./styles/style-emitter.js";
 import type { ThemeTokens } from "./styles/types.js";

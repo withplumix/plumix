@@ -102,6 +102,11 @@ export interface EditorState {
   /** X-ray view: when on, the canvas outlines every block. Transient view
    *  state, not persisted to the document. */
   readonly xray: boolean;
+  /**
+   * The blocks whose view module declares loaders. The shell loads no view
+   * module, so it can't read them off the definition.
+   */
+  readonly loaderBlocks: ReadonlySet<string>;
   /** Theme breakpoints driving the device canvas widths. */
   readonly breakpoints: ThemeBreakpoints;
   /** The catalog entry (block or variation) being dragged toward the canvas. */
@@ -197,6 +202,7 @@ interface EditorActions {
   setHover: (id: string | null) => void;
   setDevice: (device: EditorDevice) => void;
   toggleXray: () => void;
+  setLoaderBlocks: (names: readonly string[]) => void;
   setRightPanel: (panel: RightPanel) => void;
   setJsonOpen: (open: boolean) => void;
   setStarterOpen: (open: boolean) => void;
@@ -460,6 +466,7 @@ export function createEditorStore(
     hoverId: null,
     device: initial?.device ?? "desktop",
     xray: false,
+    loaderBlocks: new Set<string>(),
     breakpoints: initial?.breakpoints ?? DEFAULT_BREAKPOINTS,
     dragSpec: null,
     movingId: null,
@@ -750,6 +757,7 @@ export function createEditorStore(
     setHover: (hoverId) => set({ hoverId }),
     setDevice: (device) => set({ device }),
     toggleXray: () => set((s) => ({ xray: !s.xray })),
+    setLoaderBlocks: (names) => set({ loaderBlocks: new Set(names) }),
     setRightPanel: (rightPanel) => set({ rightPanel }),
     setJsonOpen: (jsonOpen) => set({ jsonOpen }),
     setStarterOpen: (starterOpen) => set({ starterOpen }),

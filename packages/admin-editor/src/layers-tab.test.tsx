@@ -14,7 +14,10 @@ const i18n = setupI18n({ locale: "en", messages: { en: {} } });
 const registry = createBlockRegistry([
   {
     name: "core/group",
-    render: () => null,
+    view: () =>
+      Promise.resolve({
+        default: () => null,
+      }),
     title: "Group",
     inputs: [{ name: "content", type: "slot" }],
   },

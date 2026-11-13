@@ -3,7 +3,10 @@ import { createBlockRegistry } from "@plumix/core/blocks";
 
 const slotted = (name: string, slots: readonly string[]): BlockSpec => ({
   name,
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   inputs: slots.map((slot) => ({ name: slot, type: "slot" })),
 });
 

@@ -1,8 +1,5 @@
-import type { ReactNode } from "react";
-
 import { defineBlock } from "../block-registry.js";
-import { CODE_THEME_CSS, highlightCode } from "./highlight.js";
-import { CODE_LANGUAGES, normalizeLanguage } from "./languages.js";
+import { CODE_LANGUAGES } from "./languages.js";
 
 /**
  * A combobox, not a select, so a stored alias or unknown language is kept and
@@ -57,38 +54,5 @@ export const codeBlock = defineBlock({
   ],
   text: [{ name: "text", prose: false }],
   defaults: { text: "// Your code here", language: "" },
-  render: ({ attrs, blockProps }): ReactNode => {
-    const { text = "", language = "" } = attrs as {
-      readonly text?: string;
-      readonly language?: string;
-    };
-    const lang = normalizeLanguage(language);
-    if (lang === undefined) return <pre {...blockProps}>{text}</pre>;
-
-    // An unsupported language keeps the semantic attribute but stays plain.
-    const highlighted = highlightCode(text, lang);
-    if (highlighted === null) {
-      return (
-        <pre {...blockProps} data-language={lang}>
-          <code data-language={lang}>{text}</code>
-        </pre>
-      );
-    }
-    return (
-      <>
-        {/* href + precedence lets React 19 hoist and dedupe the theme, so N
-            code blocks emit one stylesheet, not N inline copies. */}
-        <style href="plumix-code-theme" precedence="default">
-          {CODE_THEME_CSS}
-        </style>
-        <pre {...blockProps} data-language={lang}>
-          <code
-            className="hljs"
-            data-language={lang}
-            dangerouslySetInnerHTML={{ __html: highlighted }}
-          />
-        </pre>
-      </>
-    );
-  },
+  view: () => import("./code.view.js"),
 });

@@ -4,8 +4,8 @@ import { renderBlockSpecToHtml, renderBlockTreeToHtml } from "../test/index.js";
 import { videoBlock } from "./index.js";
 
 describe("core/video", () => {
-  test("renders <video> with src + poster + controls by default", () => {
-    const html = renderBlockSpecToHtml(videoBlock, {
+  test("renders <video> with src + poster + controls by default", async () => {
+    const html = await renderBlockSpecToHtml(videoBlock, {
       src: "/_plumix/media/x/clip.mp4",
       poster: "/_plumix/media/x/poster.jpg",
     });
@@ -14,13 +14,13 @@ describe("core/video", () => {
     expect(html).toContain("controls=");
   });
 
-  test("playsinline default is true and respected by the render", () => {
-    const html = renderBlockSpecToHtml(videoBlock, { src: "/x.mp4" });
+  test("playsinline default is true and respected by the render", async () => {
+    const html = await renderBlockSpecToHtml(videoBlock, { src: "/x.mp4" });
     expect(html).toMatch(/playsinline/i);
   });
 
-  test("muted + loop + autoplay map to native attrs", () => {
-    const html = renderBlockSpecToHtml(videoBlock, {
+  test("muted + loop + autoplay map to native attrs", async () => {
+    const html = await renderBlockSpecToHtml(videoBlock, {
       src: "/x.mp4",
       muted: true,
       loop: true,
@@ -31,8 +31,8 @@ describe("core/video", () => {
     expect(html).toMatch(/autoplay/i);
   });
 
-  test("omits src entirely when empty (no broken <video src='' >)", () => {
-    const html = renderBlockSpecToHtml(videoBlock, { src: "" });
+  test("omits src entirely when empty (no broken <video src='' >)", async () => {
+    const html = await renderBlockSpecToHtml(videoBlock, { src: "" });
     expect(html).toContain("<video");
     expect(html).not.toContain("src=");
   });
@@ -45,8 +45,8 @@ describe("core/video", () => {
     );
   });
 
-  test("seeded default styles emit sizing CSS onto the <video>", () => {
-    const html = renderBlockTreeToHtml(
+  test("seeded default styles emit sizing CSS onto the <video>", async () => {
+    const html = await renderBlockTreeToHtml(
       [videoBlock],
       [
         {

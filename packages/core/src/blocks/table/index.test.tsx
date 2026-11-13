@@ -11,8 +11,8 @@ import {
 } from "./index.js";
 
 describe("core/table family", () => {
-  test("renders a <table> with a <tbody> and theme-overridable cell CSS", () => {
-    const html = renderBlockSpecToHtml(tableBlock, {});
+  test("renders a <table> with a <tbody> and theme-overridable cell CSS", async () => {
+    const html = await renderBlockSpecToHtml(tableBlock, {});
 
     expect(html).toContain("<table>");
     expect(html).toContain("<tbody>");
@@ -50,8 +50,8 @@ describe("core/table family", () => {
     }
   });
 
-  test("renders <th scope=col> for header-cell, seam on the <th> (selfSeam)", () => {
-    const html = renderBlockSpecToHtml(tableHeaderCellBlock, {
+  test("renders <th scope=col> for header-cell, seam on the <th> (selfSeam)", async () => {
+    const html = await renderBlockSpecToHtml(tableHeaderCellBlock, {
       text: "Name",
       align: "center",
     });
@@ -59,8 +59,8 @@ describe("core/table family", () => {
     expect(html).toBe('<th scope="col" data-align="center">Name</th>');
   });
 
-  test("renders <td> for body cells, seam on the <td> (selfSeam)", () => {
-    const html = renderBlockSpecToHtml(tableCellBlock, { text: "v1" });
+  test("renders <td> for body cells, seam on the <td> (selfSeam)", async () => {
+    const html = await renderBlockSpecToHtml(tableCellBlock, { text: "v1" });
 
     expect(html).toBe("<td>v1</td>");
   });
@@ -91,7 +91,7 @@ describe("core/table family", () => {
     ]);
   });
 
-  test("th/td nest as direct children of <tr>, rows inside a <tbody> (valid HTML content model)", () => {
+  test("th/td nest as direct children of <tr>, rows inside a <tbody> (valid HTML content model)", async () => {
     const tree: readonly BlockNode[] = [
       {
         id: "t1",
@@ -129,7 +129,7 @@ describe("core/table family", () => {
       },
     ];
 
-    const html = renderBlockTreeToHtml(
+    const html = await renderBlockTreeToHtml(
       [
         tableBlock,
         tableHeaderRowBlock,

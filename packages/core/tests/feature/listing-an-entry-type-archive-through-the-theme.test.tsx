@@ -132,14 +132,17 @@ const listingProbePlugin = definePlugin("acme-listing-probe", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/listing-probe",
-        loaders: {
-          marker: (args: { readonly attrs: Record<string, unknown> }) => {
-            const tag =
-              typeof args.attrs.tag === "string" ? args.attrs.tag : "?";
-            return Promise.resolve(`loaded-${tag}`);
-          },
-        },
-        render: ({ loaders }) => <span>{loaders.marker}</span>,
+        view: () =>
+          Promise.resolve({
+            default: ({ loaders }) => <span>{loaders.marker}</span>,
+            loaders: {
+              marker: (args: { readonly attrs: Record<string, unknown> }) => {
+                const tag =
+                  typeof args.attrs.tag === "string" ? args.attrs.tag : "?";
+                return Promise.resolve(`loaded-${tag}`);
+              },
+            },
+          }),
       }),
     );
   },
@@ -177,10 +180,13 @@ const listingProbeOffPlugin = definePlugin("acme-listing-probe-off", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/listing-probe-off",
-        loaders: { marker: () => Promise.resolve("loader-fired") },
-        render: ({ loaders }) => (
-          <span data-testid="probe">{loaders.marker}</span>
-        ),
+        view: () =>
+          Promise.resolve({
+            default: ({ loaders }) => (
+              <span data-testid="probe">{loaders.marker}</span>
+            ),
+            loaders: { marker: () => Promise.resolve("loader-fired") },
+          }),
       }),
     );
   },

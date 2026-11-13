@@ -42,6 +42,7 @@ export interface RuntimeConnection {
   readonly reportClipboard: (op: "copy" | "cut" | "paste") => void;
   /** Ask the host to resolve deps the tree declares and the canvas lacks. */
   readonly reportRequestDeps: (tree: readonly BlockNode[]) => void;
+  readonly reportLoaderBlocks: (names: readonly string[]) => void;
   readonly dispose: () => void;
 }
 
@@ -56,6 +57,8 @@ interface ConnectRuntimeOptions {
   readonly onDeps?: (deps: LoadedDeps) => void;
   readonly onConfig?: (config: CanvasConfig) => void;
   readonly onXray?: (enabled: boolean) => void;
+  readonly onPrefetchBlocks?: (names: readonly string[]) => void;
+  readonly onConnect?: () => void;
 }
 
 /**
@@ -71,6 +74,8 @@ export function connectRuntime({
   onDeps,
   onConfig,
   onXray,
+  onPrefetchBlocks,
+  onConnect,
 }: ConnectRuntimeOptions): RuntimeConnection {
   const post = (message: CanvasMessage | HandshakeMessage): void => {
     parentWindow.postMessage(encode(EDITOR_BRIDGE_CHANNEL, message), origin);
@@ -94,7 +99,10 @@ export function connectRuntime({
       handshake.onMessage(message);
       // A hello means the host (re)connected and is listening — re-announce
       // so it pushes the tree even if it missed our first announce.
-      if (message.kind === "hello") announce();
+      if (message.kind === "hello") {
+        announce();
+        onConnect?.();
+      }
       return;
     }
     switch (message.type) {
@@ -116,6 +124,9 @@ export function connectRuntime({
         break;
       case "host:xray":
         onXray?.(message.enabled);
+        break;
+      case "host:prefetch-blocks":
+        onPrefetchBlocks?.(message.names);
         break;
     }
   };
@@ -157,6 +168,8 @@ export function connectRuntime({
       }),
     reportClipboard: (op) => post({ type: "canvas:clipboard", op }),
     reportRequestDeps: (tree) => post({ type: "canvas:requestDeps", tree }),
+    reportLoaderBlocks: (names) =>
+      post({ type: "canvas:loader-blocks", names }),
     dispose: () => messageTarget.removeEventListener("message", onMessage),
   };
 }

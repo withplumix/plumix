@@ -15,7 +15,10 @@ describe("commitBlockVariations", () => {
       name: "core/group-test",
       title: "Group",
       inputs: [{ name: "content", type: "slot" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "with-ghost",
@@ -35,7 +38,10 @@ describe("commitBlockVariations", () => {
       name: "core/group-test",
       title: "Group",
       inputs: [{ name: "content", type: "slot" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "bad-attr",
@@ -61,7 +67,10 @@ describe("commitBlockVariations", () => {
       name: "x-test/leaf",
       title: "Leaf",
       inputs: [{ name: "text", type: "text" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "with-children",
@@ -81,7 +90,10 @@ describe("commitBlockVariations", () => {
       name: "x-test/group",
       title: "Group",
       inputs: [{ name: "content", type: "slot" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "rogue-attr",
@@ -100,7 +112,10 @@ describe("commitBlockVariations", () => {
     const block = defineBlock({
       name: "x-test/scoped",
       title: "Scoped",
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "rogue-scope",
@@ -120,7 +135,10 @@ describe("commitBlockVariations", () => {
       name: "x-test/group",
       title: "Group",
       inputs: [{ name: "content", type: "slot" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "rogue-example-attr",
@@ -140,7 +158,10 @@ describe("commitBlockVariations", () => {
       name: "x-test/leaf",
       title: "Leaf",
       inputs: [{ name: "text", type: "text" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "with-example-children",
@@ -162,7 +183,10 @@ describe("commitBlockVariations", () => {
       name: "x-test/empty-transform",
       title: "Empty Transform",
       inputs: [{ name: "layout", type: "text" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "no-attrs",
@@ -182,7 +206,10 @@ describe("commitBlockVariations", () => {
       name: "x-test/empty-transform",
       title: "Empty Transform",
       inputs: [{ name: "layout", type: "text" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "empty-attrs",
@@ -203,7 +230,10 @@ describe("commitBlockVariations", () => {
       name: "x-test/group",
       title: "Group",
       inputs: [{ name: "content", type: "slot" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "with-example",
@@ -225,7 +255,10 @@ describe("commitBlockVariations", () => {
       name: "core/group-test",
       title: "Group",
       inputs: [{ name: "content", type: "slot" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "nested-ghost",
@@ -256,13 +289,19 @@ describe("commitBlockVariations", () => {
       name: "x-test/team",
       title: "Team",
       inputs: [{ name: "people", type: "json" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
     });
     const group = defineBlock({
       name: "core/group-test",
       title: "Group",
       inputs: [{ name: "content", type: "slot" }],
-      render: () => null,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+        }),
       variations: [
         {
           slug: "with-team",

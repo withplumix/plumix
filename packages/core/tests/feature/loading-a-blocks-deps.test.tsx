@@ -1,5 +1,9 @@
 import { afterEach, assert, describe, expect, test, vi } from "vitest";
 
+import type {
+  BlockLoaderRecord,
+  BlockViewProps,
+} from "../../src/blocks/index.js";
 import { defineBlock } from "../../src/blocks/index.js";
 import { BlockRenderer } from "../../src/blocks/renderer/index.js";
 import { definePlugin } from "../../src/plugin/define.js";
@@ -23,11 +27,14 @@ afterEach(() => {
 
 const ks2Block = defineBlock({
   name: "eduscope/ks2",
-  deps: { settings: ["school_ks2"] },
-  render: ({ deps }) => {
-    const title = deps.settings.school_ks2?.title;
-    return <h2>{typeof title === "string" ? title : "no copy"}</h2>;
-  },
+  view: () =>
+    Promise.resolve({
+      default: ({ deps }) => {
+        const title = deps.settings.school_ks2?.title;
+        return <h2>{typeof title === "string" ? title : "no copy"}</h2>;
+      },
+      deps: { settings: ["school_ks2"] },
+    }),
 });
 
 const schoolPlugin = definePlugin("school", {
@@ -46,11 +53,16 @@ const composedPlugin = definePlugin("composed", {
     ctx.registerBlock(
       defineBlock({
         name: "eduscope/composed",
-        deps: { settings: (prev) => [...prev, "school_ks2"] },
-        render: ({ deps }) => {
-          const title = deps.settings.school_ks2?.title;
-          return <h3>{typeof title === "string" ? title : "no copy"}</h3>;
-        },
+        view: () =>
+          Promise.resolve({
+            default: ({ deps }) => {
+              const title = deps.settings.school_ks2?.title;
+              return <h3>{typeof title === "string" ? title : "no copy"}</h3>;
+            },
+            deps: {
+              settings: (prev: readonly string[]) => [...prev, "school_ks2"],
+            },
+          }),
       }),
     );
   },
@@ -68,12 +80,20 @@ const menuPlugin = definePlugin("menus", {
     ctx.registerBlock(
       defineBlock({
         name: "acme/nav",
-        deps: (attrs: { readonly location?: string }) => ({
-          "block-menus": [attrs.location ?? "primary"],
-        }),
-        render: ({ attrs, deps }) => (
-          <nav>{deps["block-menus"][attrs.location ?? "primary"]}</nav>
-        ),
+        view: () =>
+          Promise.resolve({
+            default: ({
+              attrs,
+              deps,
+            }: BlockViewProps<
+              { readonly location?: string },
+              BlockLoaderRecord,
+              { "block-menus": readonly string[] }
+            >) => <nav>{deps["block-menus"][attrs.location ?? "primary"]}</nav>,
+            deps: (attrs: { readonly location?: string }) => ({
+              "block-menus": [attrs.location ?? "primary"],
+            }),
+          }),
       }),
     );
   },

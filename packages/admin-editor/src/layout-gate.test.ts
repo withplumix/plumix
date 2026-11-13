@@ -15,7 +15,10 @@ const width: BlockInput = {
 };
 const spec = (inputs: readonly BlockInput[]): BlockSpec => ({
   name: "acme/x",
-  render: () => null,
+  view: () =>
+    Promise.resolve({
+      default: () => null,
+    }),
   inputs,
 });
 

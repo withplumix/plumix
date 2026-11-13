@@ -28,7 +28,13 @@ export type {
   BlockTransformTo,
   BlockTransforms,
   BlockVariation,
+  BlockViewModule,
 } from "./block-registry.js";
+export {
+  BlockViewNotLoadedError,
+  loadBlockViews,
+  loadedBlocksWithLoaders,
+} from "./block-views.js";
 
 // ─── Walker + render contract ───────────────────────────────────────────────
 export {
@@ -57,10 +63,10 @@ export type { DepKeys, LoadedDeps } from "./deps.js";
 export type {
   BlockContext,
   BlockNode,
-  BlockNodeComponent,
-  BlockNodeRenderProps,
   BlockRenderFilters,
   BlockRenderHooks,
+  BlockView,
+  BlockViewProps,
   MaterializedAttrs,
   RenderBlockTreeOptions,
 } from "./render-block-tree.js";
@@ -191,8 +197,9 @@ export { LINK_SCHEMES, sanitizeHref } from "./marks/safe-href.js";
 export { isAllowedHtmlAttr, safeHtmlAttrs } from "./html/attrs.js";
 export { ROOT_TAGS, resolveRootTag } from "./html/root-tag.js";
 export type { RootTag } from "./html/root-tag.js";
-export { BASELINE_HTML_ALLOWLIST, sanitizeHtml } from "./html/sanitize.js";
-export type { HtmlAllowlist } from "./html/sanitize.js";
+export { BASELINE_HTML_ALLOWLIST } from "./html/allowlist.js";
+export { sanitizeHtml } from "./html/sanitize.js";
+export type { HtmlAllowlist } from "./html/allowlist.js";
 export { buildHtmlAllowlist } from "./html/build-allowlist.js";
 export type { HtmlAllowlistOverride } from "./html/build-allowlist.js";
 export { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";

@@ -243,7 +243,10 @@ describe("a theme block of the same name", () => {
   const themeForm = defineBlock({
     name: FORM_BLOCK_NAME,
     title: "Form",
-    render: () => h("div", { "data-theme-form": "" }),
+    view: () =>
+      Promise.resolve({
+        default: () => h("div", { "data-theme-form": "" }),
+      }),
   });
 
   test("replaces the plugin's render", async () => {
