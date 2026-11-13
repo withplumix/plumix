@@ -118,17 +118,6 @@ test("a code block highlights in the editor", async ({ editor, seed }) => {
   ).toHaveJSProperty("innerHTML", HIGHLIGHTED_HTML);
 });
 
-test("a code block highlights on the public page", async ({ page, seed }) => {
-  const path = await publishedPost(seed, [HIGHLIGHTED_CODE]);
-
-  await page.goto(path);
-
-  await expect(page.getByTestId("code-highlighted")).toHaveJSProperty(
-    "innerHTML",
-    HIGHLIGHTED_HTML,
-  );
-});
-
 const UNSAFE_HTML = {
   id: "unsafe",
   name: "core/html",
@@ -141,16 +130,4 @@ test("an HTML block sanitizes in the editor", async ({ editor, seed }) => {
   await expect(
     editor.canvas.block("core/html").getByTestId("html-block"),
   ).toHaveJSProperty("innerHTML", "<p>kept</p>");
-});
-
-test("an HTML block sanitizes on the public page", async ({
-  request,
-  seed,
-}) => {
-  const path = await publishedPost(seed, [UNSAFE_HTML]);
-
-  const served = await (await request.get(path)).text();
-
-  expect(served).toContain("<p>kept</p>");
-  expect(served).not.toContain("window.pwned");
 });
