@@ -2075,6 +2075,28 @@ test.describe("editor revision preview", () => {
     expect(saved).toHaveLength(1);
   });
 
+  test("while another user holds the entry, the preview names them and offers no Restore", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) =>
+      route.fulfill({
+        status: 423,
+        contentType: "application/json",
+        body: rpcLockedBody(
+          { id: 2, name: "Bo" },
+          new Date("2026-05-22T09:00:00Z"),
+        ),
+      }),
+    );
+
+    await page.goto("entries/posts/1/edit?revision=42");
+
+    await expect(page.getByTestId("edit-lease-held-by")).toBeVisible();
+    await expect(page.getByTestId("revision-preview-banner")).toBeVisible();
+    await expect(page.getByTestId("revision-preview-restore")).toHaveCount(0);
+  });
+
   test("a stale Restore opens the conflict dialog, and Keep mine restores from the token it reported", async ({
     page,
   }) => {

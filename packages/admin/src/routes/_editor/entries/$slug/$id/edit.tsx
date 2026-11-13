@@ -60,7 +60,6 @@ import type { ResolvedMeta } from "@plumix/core";
 import type { BlockNode, EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
-import { describeRpcError } from "@plumix/core/admin";
 import {
   coreBlocks,
   createBlockRegistry,
@@ -1214,16 +1213,17 @@ function RevisionPreview({
         ]).then(handleBackToLive);
       },
       failed: (err, cause) => {
-        setRestoreError(
-          cause === "reload" || cause === "takeOver"
-            ? describeRpcError(err, {}, ENTRY_COPY_FAILED[cause])
-            : restoreErrorDescriptor(err),
-        );
+        if (cause === "reload" || cause === "takeOver") {
+          toastError(renderLabel(ENTRY_COPY_FAILED[cause]));
+          return;
+        }
+        const message = restoreErrorDescriptor(err, cause);
+        if (message) setRestoreError(message);
       },
       discard: () => undefined,
     });
     return () => listen(null);
-  }, [listen, queryClient, id, handleBackToLive]);
+  }, [listen, queryClient, id, handleBackToLive, renderLabel]);
 
   const revision = revisionQuery.data;
   if (!revision) return <PendingScreen />;
@@ -1253,7 +1253,9 @@ function RevisionPreview({
             revisionAuthor={revisionAuthor}
             relativeTime={formatRelative}
             onBackToLive={handleBackToLive}
-            onRestore={() => restore.mutate()}
+            onRestore={
+              editing.mode === "editable" ? () => restore.mutate() : undefined
+            }
             isRestoring={restore.isPending}
             restoreError={restoreError ? renderLabel(restoreError) : null}
           />

@@ -22,7 +22,8 @@ interface PreviewBannerProps {
   readonly revisionAuthor: string;
   readonly relativeTime: (date: Date) => string;
   readonly onBackToLive: () => void;
-  readonly onRestore: () => void;
+  /** Unset while the entry can't be written, so Restore isn't offered. */
+  readonly onRestore?: () => void;
   readonly isRestoring: boolean;
   readonly restoreError?: string | null;
 }
@@ -72,15 +73,17 @@ export function PreviewBanner({
             message="← Back to live"
           />
         </Button>
-        <Button
-          variant="default"
-          size="sm"
-          data-testid="revision-preview-restore"
-          onClick={onRestore}
-          disabled={isRestoring}
-        >
-          {isRestoring ? renderLabel(M.restoring) : renderLabel(M.restore)}
-        </Button>
+        {onRestore ? (
+          <Button
+            variant="default"
+            size="sm"
+            data-testid="revision-preview-restore"
+            onClick={onRestore}
+            disabled={isRestoring}
+          >
+            {isRestoring ? renderLabel(M.restoring) : renderLabel(M.restore)}
+          </Button>
+        ) : null}
       </div>
       {restoreError !== null ? (
         <div
