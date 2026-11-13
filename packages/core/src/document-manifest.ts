@@ -40,11 +40,6 @@ export interface DocumentThemeColor {
   readonly media?: string;
 }
 
-/**
- * `viewportFit: "cover"` lays the page under a notch, so
- * `env(safe-area-inset-*)` has values. The renderer alone writes these tags,
- * so `meta[]` may not name them.
- */
 export interface DocumentViewport {
   readonly width?: number | "device-width";
   readonly height?: number | "device-height";
@@ -55,6 +50,7 @@ export interface DocumentViewport {
   readonly viewportFit?: "auto" | "contain" | "cover";
   readonly interactiveWidget?:
     "resizes-visual" | "resizes-content" | "overlays-content";
+  /** A later list replaces an earlier one whole; the lists never concatenate. */
   readonly themeColor?: string | readonly DocumentThemeColor[];
   readonly colorScheme?:
     | "normal"
@@ -85,6 +81,5 @@ export interface DocumentManifest {
    * in `link` still renders.
    */
   readonly canonical?: false;
-  /** Merges field by field, last wins; `themeColor` is replaced whole. */
   readonly viewport?: DocumentViewport;
 }

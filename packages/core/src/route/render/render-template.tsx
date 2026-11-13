@@ -717,7 +717,6 @@ const VIEWPORT_DEFAULT: DocumentViewport = {
   initialScale: 1,
 };
 
-/** Fixed order, so the same viewport always serializes to the same tag. */
 const VIEWPORT_KEYS = [
   ["width", "width"],
   ["height", "height"],
