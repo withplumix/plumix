@@ -74,6 +74,45 @@ describe("compareEntry", () => {
     });
   });
 
+  test("my template pick shows in mine's meta, where the server keeps it", () => {
+    const sides = compareEntry(
+      { kind: "update", patch: { template: "landing" } },
+      SAVED,
+    );
+
+    expect(sides.mine).toEqual({
+      title: "Saved title",
+      slug: "saved-elsewhere",
+      status: "draft",
+      parentId: null,
+      content: null,
+      excerpt: null,
+      meta: { headline: "Staff writer", __plumix_template: "landing" },
+      terms: {},
+    });
+  });
+
+  test("clearing the access policy removes it from mine's meta", () => {
+    const sides = compareEntry(
+      { kind: "update", patch: { access: null } },
+      {
+        ...SAVED,
+        meta: { headline: "Staff writer", __plumix_access: "members" },
+      },
+    );
+
+    expect(sides.mine).toEqual({
+      title: "Saved title",
+      slug: "saved-elsewhere",
+      status: "draft",
+      parentId: null,
+      content: null,
+      excerpt: null,
+      meta: { headline: "Staff writer" },
+      terms: {},
+    });
+  });
+
   test("a publish shows what is saved now, published", () => {
     const sides = compareEntry({ kind: "publish" }, SAVED);
 

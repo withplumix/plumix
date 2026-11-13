@@ -4,6 +4,10 @@ import { orpc } from "@/lib/orpc.js";
 import { defineMessage } from "@lingui/core/macro";
 
 import type { AppRouterClient } from "@plumix/core";
+import {
+  ACCESS_POLICY_META_KEY,
+  NAMED_TEMPLATE_META_KEY,
+} from "@plumix/core/manifest";
 
 export const ENTRY_COPY_FAILED = {
   reload: defineMessage({
@@ -81,7 +85,7 @@ export function compareEntry(
 type EntryPatch = Extract<EntryWrite, { readonly kind: "update" }>["patch"];
 
 type KeptOver =
-  | (Omit<EntryPatch, "saveAs" | "terms"> & {
+  | (Omit<EntryPatch, "saveAs" | "terms" | "template" | "access"> & {
       readonly terms?: SavedEntry["terms"];
     })
   | { readonly revisionId: number };
@@ -89,12 +93,27 @@ type KeptOver =
 function keptOver(work: EntryWrite, saved: SavedEntry | undefined): KeptOver {
   if (work.kind === "restore") return { revisionId: work.revisionId };
   if (work.kind !== "update") return { status: "published" };
-  const { saveAs: _saveAs, meta, terms, ...fields } = work.patch;
+  const {
+    saveAs: _saveAs,
+    meta,
+    terms,
+    template,
+    access,
+    ...fields
+  } = work.patch;
+  // The server keeps the template and access picks under reserved meta keys.
+  const metaChanges = {
+    ...meta,
+    ...(template === undefined ? {} : { [NAMED_TEMPLATE_META_KEY]: template }),
+    ...(access === undefined ? {} : { [ACCESS_POLICY_META_KEY]: access }),
+  };
   return {
     ...fields,
     // A patch names only the taxonomies it changed.
     ...(terms === undefined ? {} : { terms: { ...saved?.terms, ...terms } }),
-    ...(meta === undefined ? {} : { meta: keptMeta(saved?.meta, meta) }),
+    ...(Object.keys(metaChanges).length === 0
+      ? {}
+      : { meta: keptMeta(saved?.meta, metaChanges) }),
   };
 }
 
