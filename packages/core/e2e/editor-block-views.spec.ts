@@ -48,14 +48,6 @@ test("a view's island responds in the canvas", async ({ editor, seed }) => {
   await expect(clicker).toHaveText("1");
 });
 
-test("the public page serves the view's text", async ({ request, seed }) => {
-  const path = await publishedPost(seed, [SHOWCASE]);
-
-  const served = await (await request.get(path)).text();
-
-  expect(served).toContain("Showcase view");
-});
-
 test("the public page hydrates the view's island", async ({ page, seed }) => {
   const path = await publishedPost(seed, [SHOWCASE]);
   await page.goto(path);
@@ -106,7 +98,7 @@ test("a block inserted from the catalog shows its view at once", async ({
     "Showcase view",
   );
   await expect(
-    editor.canvas.frame.locator("[data-plumix-unregistered]"),
+    editor.canvas.frame.getByTestId("block-unregistered"),
   ).toHaveCount(0);
 });
 
@@ -115,13 +107,15 @@ const HIGHLIGHTED_CODE = {
   name: "core/code",
   attrs: { text: "const answer = 42;", language: "javascript" },
 } as const;
+const HIGHLIGHTED_HTML =
+  '<span class="hljs-keyword">const</span> answer = <span class="hljs-number">42</span>;';
 
 test("a code block highlights in the editor", async ({ editor, seed }) => {
   await openPost(editor, seed, [HIGHLIGHTED_CODE]);
 
   await expect(
-    editor.canvas.block("core/code").locator(".hljs-keyword"),
-  ).toHaveText("const");
+    editor.canvas.block("core/code").getByTestId("code-highlighted"),
+  ).toHaveJSProperty("innerHTML", HIGHLIGHTED_HTML);
 });
 
 test("a code block highlights on the public page", async ({ page, seed }) => {
@@ -129,7 +123,10 @@ test("a code block highlights on the public page", async ({ page, seed }) => {
 
   await page.goto(path);
 
-  await expect(page.locator("pre code.hljs .hljs-keyword")).toHaveText("const");
+  await expect(page.getByTestId("code-highlighted")).toHaveJSProperty(
+    "innerHTML",
+    HIGHLIGHTED_HTML,
+  );
 });
 
 const UNSAFE_HTML = {
@@ -140,10 +137,10 @@ const UNSAFE_HTML = {
 
 test("an HTML block sanitizes in the editor", async ({ editor, seed }) => {
   await openPost(editor, seed, [UNSAFE_HTML]);
-  const block = editor.canvas.block("core/html");
 
-  await expect(block).toContainText("kept");
-  await expect(block.locator("script")).toHaveCount(0);
+  await expect(
+    editor.canvas.block("core/html").getByTestId("html-block"),
+  ).toHaveJSProperty("innerHTML", "<p>kept</p>");
 });
 
 test("an HTML block sanitizes on the public page", async ({

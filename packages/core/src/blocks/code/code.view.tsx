@@ -35,6 +35,7 @@ export default function CodeView({
         <code
           className="hljs"
           data-language={lang}
+          data-testid="code-highlighted"
           dangerouslySetInnerHTML={{ __html: highlighted }}
         />
       </pre>

@@ -29,7 +29,7 @@ describe("core/html", () => {
   test("renders an empty wrapper when html is explicitly empty", async () => {
     const html = await renderBlockSpecToHtml(htmlBlock, { html: "" });
 
-    expect(html).toContain("<div><div></div></div>");
+    expect(html).toContain('<div><div data-testid="html-block"></div></div>');
   });
 
   test("a freshly inserted block carries visible default markup", async () => {

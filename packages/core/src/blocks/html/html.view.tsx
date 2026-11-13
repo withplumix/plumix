@@ -8,6 +8,9 @@ export default function HtmlView({ attrs }: BlockViewProps): ReactNode {
   const allowlist = useHtmlAllowlist();
   const raw = (attrs.html as string | undefined) ?? "";
   return (
-    <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(raw, allowlist) }} />
+    <div
+      data-testid="html-block"
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(raw, allowlist) }}
+    />
   );
 }

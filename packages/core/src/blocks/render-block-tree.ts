@@ -268,6 +268,7 @@ function unregisteredPlaceholder(
       "data-plumix-block": node.name,
       "data-plumix-id": safeId,
       "data-plumix-unregistered": "",
+      "data-testid": "block-unregistered",
       style: {
         padding: "0.75rem 1rem",
         border: "1px dashed rgba(127,127,127,0.45)",
