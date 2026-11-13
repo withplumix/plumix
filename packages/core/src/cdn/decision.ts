@@ -73,13 +73,13 @@ export type CdnBypassReason =
 export const SEGMENT_KEY_PARAM = "__plumix_segment";
 
 /**
- * The build that rendered a stored page, so a deploy never serves the previous
- * build's documents and their dead asset URLs.
+ * The build that rendered a stored page; a deploy never reads another build's
+ * entry, whose asset URLs it no longer serves.
  */
 export const BUILD_KEY_PARAM = "__plumix_build";
 
 function setBuildAxis(url: URL): void {
-  // The server fully owns this axis too.
+  // A crafted `?__plumix_build=` must not select another build's entry.
   url.searchParams.delete(BUILD_KEY_PARAM);
   // Vite-substituted, so a Worker with an empty `process.env` still gets it.
   const build = process.env.PLUMIX_BUILD_ID;

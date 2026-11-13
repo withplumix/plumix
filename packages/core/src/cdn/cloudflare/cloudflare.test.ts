@@ -383,8 +383,7 @@ describe("an origin store across builds", () => {
     vi.unstubAllEnvs();
   });
 
-  // Resolves only once the deferred store write has landed.
-  async function serveFront(body: string): Promise<string> {
+  async function serveFrontAfterStoreWrite(body: string): Promise<string> {
     const writes: Promise<unknown>[] = [];
     const response = await readThrough({
       request: new Request("https://site.test/"),
@@ -406,24 +405,35 @@ describe("an origin store across builds", () => {
     return response.text();
   }
 
-  it("renders afresh under a new build and finds each build's own page again", async () => {
+  it("a new build renders afresh instead of reading the previous build's page", async () => {
     vi.stubEnv("PLUMIX_BUILD_ID", "a");
-    expect(await serveFront("from a")).toBe("from a");
-
+    await serveFrontAfterStoreWrite("from a");
     vi.stubEnv("PLUMIX_BUILD_ID", "b");
-    expect(await serveFront("from b")).toBe("from b");
 
+    const body = await serveFrontAfterStoreWrite("from b");
+
+    expect(body).toBe("from b");
+  });
+
+  it("the first build finds its own page again", async () => {
     vi.stubEnv("PLUMIX_BUILD_ID", "a");
-    expect(await serveFront("from a, again")).toBe("from a");
+    await serveFrontAfterStoreWrite("from a");
+    vi.stubEnv("PLUMIX_BUILD_ID", "b");
+    await serveFrontAfterStoreWrite("from b");
+    vi.stubEnv("PLUMIX_BUILD_ID", "a");
+
+    const body = await serveFrontAfterStoreWrite("from a, again");
+
+    expect(body).toBe("from a");
   });
 
   it("still lets a tag purge remove a build's page", async () => {
     vi.stubEnv("PLUMIX_BUILD_ID", "a");
-    await serveFront("before");
+    await serveFrontAfterStoreWrite("before");
 
     await purgeTags(["e:1"]);
 
-    expect(await serveFront("after")).toBe("after");
+    expect(await serveFrontAfterStoreWrite("after")).toBe("after");
   });
 });
 

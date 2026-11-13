@@ -347,37 +347,52 @@ describe("the build axis of a CDN key", () => {
     vi.unstubAllEnvs();
   });
 
-  const keys = (url: string): Request[] => [
-    segmentCdnKey(new Request(url), "anonymous"),
-    segmentCdnKey(new Request(url), "authenticated"),
-    routeCdnKey(new Request(url)),
+  const keyFunctions = [
+    {
+      name: "segmentCdnKey, anonymous",
+      key: (request: Request) => segmentCdnKey(request, "anonymous"),
+    },
+    {
+      name: "segmentCdnKey, authenticated",
+      key: (request: Request) => segmentCdnKey(request, "authenticated"),
+    },
+    { name: "routeCdnKey", key: routeCdnKey },
   ];
 
-  it("folds the build that renders the page into every key", () => {
-    vi.stubEnv("PLUMIX_BUILD_ID", "a");
+  it.each(keyFunctions)(
+    "$name folds the build that renders the page into the key",
+    ({ key }) => {
+      vi.stubEnv("PLUMIX_BUILD_ID", "a");
 
-    for (const key of keys("https://site.test/post")) {
-      expect(new URL(key.url).searchParams.get(BUILD_KEY_PARAM)).toBe("a");
-    }
-  });
+      const keyed = key(new Request("https://site.test/post"));
 
-  it("replaces a client-sent build so a crafted query can't reach another build's entry", () => {
-    vi.stubEnv("PLUMIX_BUILD_ID", "a");
+      expect(new URL(keyed.url).searchParams.get(BUILD_KEY_PARAM)).toBe("a");
+    },
+  );
 
-    for (const key of keys(`https://site.test/post?${BUILD_KEY_PARAM}=b`)) {
-      expect(new URL(key.url).searchParams.getAll(BUILD_KEY_PARAM)).toEqual([
+  it.each(keyFunctions)(
+    "$name replaces a client-sent build so a crafted query can't reach another build's entry",
+    ({ key }) => {
+      vi.stubEnv("PLUMIX_BUILD_ID", "a");
+
+      const keyed = key(new Request("https://site.test/post?__plumix_build=b"));
+
+      expect(new URL(keyed.url).searchParams.getAll(BUILD_KEY_PARAM)).toEqual([
         "a",
       ]);
-    }
-  });
+    },
+  );
 
-  it("drops a client-sent build when no build id is defined", () => {
-    vi.stubEnv("PLUMIX_BUILD_ID", "");
+  it.each(keyFunctions)(
+    "$name drops a client-sent build when no build id is defined",
+    ({ key }) => {
+      vi.stubEnv("PLUMIX_BUILD_ID", "");
 
-    for (const key of keys(`https://site.test/post?${BUILD_KEY_PARAM}=b`)) {
-      expect(new URL(key.url).searchParams.has(BUILD_KEY_PARAM)).toBe(false);
-    }
-  });
+      const keyed = key(new Request("https://site.test/post?__plumix_build=b"));
+
+      expect(new URL(keyed.url).searchParams.has(BUILD_KEY_PARAM)).toBe(false);
+    },
+  );
 });
 
 describe("responseAllowsSharedStorage", () => {

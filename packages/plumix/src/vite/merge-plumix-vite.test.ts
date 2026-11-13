@@ -218,7 +218,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       return raw === undefined ? undefined : JSON.parse(raw);
     }
 
-    test("defines one UUID per build, read alike by every environment it resolves", async () => {
+    test("returns the same UUID from repeated config() calls on one plugin instance", async () => {
       const plugin = sitePlugin();
 
       const first = await buildId(plugin, "build");

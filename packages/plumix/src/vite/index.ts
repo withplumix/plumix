@@ -197,8 +197,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
             ? ""
             : (process.env.PLUMIX_EDITOR_PATH_MAP ?? ""),
         ),
-        // Keys every CDN store entry, so a deploy never serves a page the
-        // previous build rendered with its now-missing asset URLs.
+        // `BUILD_KEY_PARAM` in core's CDN keys.
         "process.env.PLUMIX_BUILD_ID": JSON.stringify(
           env.command === "build" ? buildId : "dev",
         ),
