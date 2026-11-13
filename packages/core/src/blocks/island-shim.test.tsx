@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import { createIslandRender } from "../route/render/island-render.js";
+import { createBlockRegistry } from "./block-registry.js";
 import { BASELINE_HTML_ALLOWLIST } from "./html/sanitize.js";
 import {
   InsideIslandContext,
@@ -189,7 +190,12 @@ function renderPage(tree: ReactNode): string {
   return renderToStaticMarkup(
     h(
       IslandRenderContext.Provider,
-      { value: createIslandRender(BASELINE_HTML_ALLOWLIST) },
+      {
+        value: createIslandRender({
+          htmlAllowlist: BASELINE_HTML_ALLOWLIST,
+          plumix: { registry: createBlockRegistry([]) },
+        }),
+      },
       tree,
     ),
   );

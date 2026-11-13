@@ -13,6 +13,7 @@ import type {
   ThemeBreakpoints,
   ThemeTokens,
 } from "../../blocks/index.js";
+import type { PlumixContextValue } from "../../blocks/renderer/index.js";
 import type { AppContext } from "../../context/app-context.js";
 import type {
   DocumentAttrs,
@@ -517,40 +518,40 @@ async function renderTree({
         context: blockContext,
       }),
   };
+  // One object: an island's own render provides it again, `user` getter intact.
+  const plumix: PlumixContextValue = {
+    registry: ctx.blocks,
+    mode: editMode.mode,
+    tokens,
+    breakpoints,
+    loaderData,
+    // Read on demand: `useUser()` is a principal read, and reading it here
+    // would mark every render personal (ADR 0030).
+    get user() {
+      return ctx.user;
+    },
+    queriedEntry: ctx.resolvedEntity,
+    locale: ctx.locale.code,
+    catalog,
+    shortcodes: ctx.shortcodes,
+    entry,
+    deps: blockDeps,
+    basePath: ctx.config.basePath,
+    imageResolver: imageDelivery
+      ? (src, opts) =>
+          imageDelivery.url(src, {
+            width: opts?.width,
+            quality: opts?.quality,
+            // blocks' resolver types `format` loosely as string.
+            format: opts?.format as TransformOpts["format"],
+          })
+      : undefined,
+    imageRemotePatterns: ctx.config.images?.remotePatterns,
+    renderFilters,
+  };
   const templateTree: ReactNode = createElement(
     PlumixProvider,
-    {
-      value: {
-        registry: ctx.blocks,
-        mode: editMode.mode,
-        tokens,
-        breakpoints,
-        loaderData,
-        // Read on demand: `useUser()` is a principal read, and reading it here
-        // would mark every render personal (ADR 0030).
-        get user() {
-          return ctx.user;
-        },
-        queriedEntry: ctx.resolvedEntity,
-        locale: ctx.locale.code,
-        catalog,
-        shortcodes: ctx.shortcodes,
-        entry,
-        deps: blockDeps,
-        basePath: ctx.config.basePath,
-        imageResolver: imageDelivery
-          ? (src, opts) =>
-              imageDelivery.url(src, {
-                width: opts?.width,
-                quality: opts?.quality,
-                // blocks' resolver types `format` loosely as string.
-                format: opts?.format as TransformOpts["format"],
-              })
-          : undefined,
-        imageRemotePatterns: ctx.config.images?.remotePatterns,
-        renderFilters,
-      },
-    },
+    { value: plumix },
     adminBar,
     process.env.PLUMIX_DEV &&
       chrome.debugBar !== undefined &&
@@ -577,7 +578,7 @@ async function renderTree({
           { value: htmlAllowlist },
           createElement(
             IslandRenderContext.Provider,
-            { value: createIslandRender(htmlAllowlist) },
+            { value: createIslandRender({ htmlAllowlist, plumix }) },
             templateTree,
           ),
         ),

@@ -54,7 +54,8 @@ export function mount(
       const kind = islandRootKind(Boolean(process.env.PLUMIX_DEV), hydrate);
       // The last moment the SSR HTML exists: on a mismatch React re-renders
       // the subtree in place.
-      const server = kind === "hydrate" ? element.innerHTML : "";
+      const server =
+        process.env.PLUMIX_DEV && kind === "hydrate" ? element.innerHTML : "";
       const rootOptions = islandRootOptions(
         kind,
         identifierPrefix,
