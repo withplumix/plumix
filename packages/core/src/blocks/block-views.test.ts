@@ -74,13 +74,21 @@ describe("blockViewModule", () => {
     expect(blockViewModule(spec).default).toBe(view);
   });
 
-  test("throws naming the block when its view module isn't loaded", () => {
+  test("throws a BlockViewNotLoadedError when its view module isn't loaded", () => {
     const spec = defineBlock({
       name: "site/hero",
       view: () => Promise.resolve({ default: () => "hero" }),
     });
 
     expect(() => blockViewModule(spec)).toThrow(BlockViewNotLoadedError);
+  });
+
+  test("names the block that isn't loaded in its error", () => {
+    const spec = defineBlock({
+      name: "site/hero",
+      view: () => Promise.resolve({ default: () => "hero" }),
+    });
+
     expect(() => blockViewModule(spec)).toThrow(
       'The view of block "site/hero" isn\'t loaded. Call loadBlockViews(registry) before rendering it.',
     );
@@ -228,7 +236,24 @@ function deferred<T>(): {
 }
 
 describe("a view module that fails to import", () => {
-  test("rejects with its own error, once the other views have loaded", async () => {
+  test("rejects with the failed import's own error", async () => {
+    const flakyImport = deferred<BlockViewModule>();
+    const registry = createBlockRegistry([
+      defineBlock({ name: "site/flaky", view: () => flakyImport.promise }),
+      defineBlock({
+        name: "site/hero",
+        view: () => Promise.resolve({ default: () => "hero" }),
+      }),
+    ]);
+    const chunk404 = new Error("chunk 404");
+    flakyImport.reject(chunk404);
+
+    const loading = loadBlockViews(registry);
+
+    await expect(loading).rejects.toBe(chunk404);
+  });
+
+  test("the other views are loaded by the time it rejects", async () => {
     const flakyImport = deferred<BlockViewModule>();
     const slowImport = deferred<BlockViewModule>();
     const slow = defineBlock({
@@ -239,18 +264,19 @@ describe("a view module that fails to import", () => {
       defineBlock({ name: "site/flaky", view: () => flakyImport.promise }),
       slow,
     ]);
-    const chunk404 = new Error("chunk 404");
     const SlowView = (): string => "slow";
-    const atRejection = loadBlockViews(registry).then(
-      () => null,
-      (error: unknown) => [error, blockViewModule(slow).default],
+    const slowViewAtRejection = loadBlockViews(registry).catch(
+      () => blockViewModule(slow).default,
     );
-
-    flakyImport.reject(chunk404);
+    flakyImport.reject(new Error("chunk 404"));
+    // Shares the in-flight import, so it settles as late as a load that
+    // rejected on the first failure would: the slow import is still pending.
     await loadBlockViews(registry, ["site/flaky"]).catch(() => undefined);
     slowImport.resolve({ default: SlowView });
 
-    expect(await atRejection).toEqual([chunk404, SlowView]);
+    const view = await slowViewAtRejection;
+
+    expect(view).toBe(SlowView);
   });
 
   test("a later call retries a failed import", async () => {

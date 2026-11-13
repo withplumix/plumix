@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import type { BlockNode } from "@plumix/core/blocks";
 import { test as base, expect } from "@plumix/core/test/playwright";
@@ -9,6 +9,48 @@ import { openPost, seedFixture } from "./support/seed.js";
 const test = base.extend(seedFixture);
 
 const SHOWCASE = { id: "showcase", name: "playground/showcase" } as const;
+
+const PREFETCH_GESTURES = [
+  ["hovering", (item: Locator) => item.hover()],
+  ["focusing", (item: Locator) => item.focus()],
+] as const;
+
+/** Records the block names each `host:prefetch-blocks` message names. */
+async function recordPrefetches(page: Page): Promise<() => Promise<unknown>> {
+  const handle = await page.getByTestId("plumix-canvas-iframe").elementHandle();
+  const frame = await handle.contentFrame();
+  if (!frame) throw new Error("The canvas iframe has no frame.");
+  await frame.evaluate(() => {
+    const seen: unknown[] = [];
+    Object.assign(window, { prefetched: seen });
+    window.addEventListener("message", (event: MessageEvent) => {
+      const { message } = event.data as {
+        message?: { type?: string; names?: unknown };
+      };
+      if (message?.type === "host:prefetch-blocks") seen.push(message.names);
+    });
+  });
+  return () =>
+    frame.evaluate(
+      () => (window as unknown as { prefetched: unknown[] }).prefetched,
+    );
+}
+
+for (const [gesture, act] of PREFETCH_GESTURES) {
+  test(`${gesture} a catalog item prefetches its block's view`, async ({
+    editor,
+    page,
+    seed,
+  }) => {
+    await openPost(editor, seed, [{ id: "code", name: "core/code" }]);
+    const prefetched = await recordPrefetches(page);
+    await page.getByTestId("plumix-tab-blocks").click();
+
+    await act(page.getByTestId("block-catalog-item-playground/showcase"));
+
+    await expect.poll(prefetched).toEqual([["playground/showcase"]]);
+  });
+}
 
 /** A published post of `blocks`, and the path its public page serves at. */
 async function publishedPost(
@@ -24,19 +66,20 @@ async function publishedPost(
   return `/posts/${post.slug}`;
 }
 
-test("a view's stylesheet and island render in the canvas", async ({
-  editor,
-  seed,
-}) => {
+test("a block renders its view in the canvas", async ({ editor, seed }) => {
   await openPost(editor, seed, [SHOWCASE]);
-  const block = editor.canvas.block("playground/showcase");
 
-  await expect(block.getByTestId("showcase-text")).toHaveText("Showcase view");
-  await expect(block.getByTestId("showcase")).toHaveCSS(
-    "border-top-color",
-    "rgb(255, 0, 0)",
-  );
-  await expect(block.getByTestId("showcase-clicker")).toHaveText("0");
+  await expect(
+    editor.canvas.block("playground/showcase").getByTestId("showcase-text"),
+  ).toHaveText("Showcase view");
+});
+
+test("a view's stylesheet applies in the canvas", async ({ editor, seed }) => {
+  await openPost(editor, seed, [SHOWCASE]);
+
+  await expect(
+    editor.canvas.block("playground/showcase").getByTestId("showcase"),
+  ).toHaveCSS("border-top-color", "rgb(255, 0, 0)");
 });
 
 test("a view's island responds in the canvas", async ({ editor, seed }) => {
@@ -102,55 +145,6 @@ test("a block inserted from the catalog shows its view at once", async ({
   await expect(
     editor.canvas.frame.getByTestId("block-unregistered"),
   ).toHaveCount(0);
-});
-
-/** Records the block names each `host:prefetch-blocks` message names. */
-async function recordPrefetches(page: Page): Promise<() => Promise<unknown>> {
-  const handle = await page.getByTestId("plumix-canvas-iframe").elementHandle();
-  const frame = await handle.contentFrame();
-  if (!frame) throw new Error("The canvas iframe has no frame.");
-  await frame.evaluate(() => {
-    const seen: unknown[] = [];
-    Object.assign(window, { prefetched: seen });
-    window.addEventListener("message", (event: MessageEvent) => {
-      const { message } = event.data as {
-        message?: { type?: string; names?: unknown };
-      };
-      if (message?.type === "host:prefetch-blocks") seen.push(message.names);
-    });
-  });
-  return () =>
-    frame.evaluate(
-      () => (window as unknown as { prefetched: unknown[] }).prefetched,
-    );
-}
-
-test("hovering a catalog item prefetches its block's view", async ({
-  editor,
-  page,
-  seed,
-}) => {
-  await openPost(editor, seed, [{ id: "code", name: "core/code" }]);
-  const prefetched = await recordPrefetches(page);
-  await page.getByTestId("plumix-tab-blocks").click();
-
-  await page.getByTestId("block-catalog-item-playground/showcase").hover();
-
-  await expect.poll(prefetched).toEqual([["playground/showcase"]]);
-});
-
-test("focusing a catalog item prefetches its block's view", async ({
-  editor,
-  page,
-  seed,
-}) => {
-  await openPost(editor, seed, [{ id: "code", name: "core/code" }]);
-  const prefetched = await recordPrefetches(page);
-  await page.getByTestId("plumix-tab-blocks").click();
-
-  await page.getByTestId("block-catalog-item-playground/showcase").focus();
-
-  await expect.poll(prefetched).toEqual([["playground/showcase"]]);
 });
 
 const HIGHLIGHTED_CODE = {
