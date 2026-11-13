@@ -53,7 +53,22 @@ describe("treeBlockNames", () => {
 });
 
 describe("createTreeCommitter", () => {
-  test("commits a tree only once its blocks' views have loaded", async () => {
+  test("commits nothing while a tree's views load", () => {
+    const hero = deferredBlock("site/hero", blank);
+    const registry = createBlockRegistry([hero.spec]);
+    const committed: (readonly BlockNode[])[] = [];
+    const offer = createTreeCommitter(registry, (names) =>
+      loadBlockViews(registry, names),
+    );
+
+    void offer([{ id: "a", name: "site/hero" }], (next) =>
+      committed.push(next),
+    );
+
+    expect(committed).toEqual([]);
+  });
+
+  test("commits a tree once its blocks' views have loaded", async () => {
     const hero = deferredBlock("site/hero", blank);
     const registry = createBlockRegistry([hero.spec]);
     const committed: (readonly BlockNode[])[] = [];
@@ -61,13 +76,12 @@ describe("createTreeCommitter", () => {
       loadBlockViews(registry, names),
     );
     const tree = [{ id: "a", name: "site/hero" }];
-
     const landing = offer(tree, (next) => committed.push(next));
-    const beforeLoad = committed.length;
+
     hero.release();
     await landing;
 
-    expect([beforeLoad, committed]).toEqual([0, [tree]]);
+    expect(committed).toEqual([tree]);
   });
 
   test("of two trees offered while the first loads, only the newer commits", async () => {
@@ -89,28 +103,62 @@ describe("createTreeCommitter", () => {
   });
 });
 
+/** A registry of two blocks with loaders and one without, all loadable. */
+function loaderRegistry() {
+  const withLoaders = (name: string) =>
+    defineBlock({
+      name,
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+          loaders: { rows: () => Promise.resolve([]) },
+        }),
+    });
+  return createBlockRegistry([
+    withLoaders("site/feed"),
+    withLoaders("site/search"),
+    defineBlock({ name: "site/hero", view: () => Promise.resolve(blank) }),
+  ]);
+}
+
 describe("createLoaderBlocksReporter", () => {
-  test("reports the loaded blocks that declare loaders, and again when more load", async () => {
-    const feed = deferredBlock("site/feed", {
-      default: () => null,
-      loaders: { posts: () => Promise.resolve([]) },
-    });
-    const search = deferredBlock("site/search", {
-      default: () => null,
-      loaders: { hits: () => Promise.resolve([]) },
-    });
-    const registry = createBlockRegistry([feed.spec, search.spec]);
+  test("reports the loaded blocks that declare loaders", async () => {
+    const registry = loaderRegistry();
     const reports: (readonly string[])[] = [];
     const reporter = createLoaderBlocksReporter(registry, (names) =>
       reports.push(names),
     );
+    await loadBlockViews(registry, ["site/feed", "site/hero"]);
 
-    feed.release();
+    reporter.update();
+
+    expect(reports).toEqual([["site/feed"]]);
+  });
+
+  test("reports nothing when the set hasn't changed", async () => {
+    const registry = loaderRegistry();
+    const reports: (readonly string[])[] = [];
+    const reporter = createLoaderBlocksReporter(registry, (names) =>
+      reports.push(names),
+    );
     await loadBlockViews(registry, ["site/feed"]);
     reporter.update();
+
     reporter.update();
-    search.release();
+
+    expect(reports).toEqual([["site/feed"]]);
+  });
+
+  test("reports again once more blocks with loaders load", async () => {
+    const registry = loaderRegistry();
+    const reports: (readonly string[])[] = [];
+    const reporter = createLoaderBlocksReporter(registry, (names) =>
+      reports.push(names),
+    );
+    await loadBlockViews(registry, ["site/feed"]);
+    reporter.update();
     await loadBlockViews(registry, ["site/search"]);
+
     reporter.update();
 
     expect(reports).toEqual([["site/feed"], ["site/feed", "site/search"]]);
