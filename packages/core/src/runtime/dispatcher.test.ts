@@ -1103,14 +1103,19 @@ describe("dispatcher — island id scopes", () => {
     });
     await seedHelloWorldPost(h);
 
-    for (let render = 0; render < 2; render++) {
-      const response = await h.dispatch(
-        new Request("https://cms.example/post/hello-world"),
-      );
-      const html = await response.text();
-      expect(html).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
-      expect(html).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
-    }
+    const first = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+    const firstHtml = await first.text();
+    const second = await h.dispatch(
+      new Request("https://cms.example/post/hello-world"),
+    );
+    const secondHtml = await second.text();
+
+    expect(firstHtml).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
+    expect(firstHtml).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
+    expect(secondHtml).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
+    expect(secondHtml).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
   });
 });
 

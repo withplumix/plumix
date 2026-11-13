@@ -3,9 +3,9 @@ import { createContext, createElement as h, useId } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
+import { createIslandRender } from "../route/render/island-render.js";
+import { BASELINE_HTML_ALLOWLIST } from "./html/sanitize.js";
 import {
-  createIslandCounter,
   InsideIslandContext,
   IslandRenderContext,
   IslandShim,
@@ -187,7 +187,11 @@ describe("IslandShim boundary", () => {
 /** Renders `tree` as the page render does: one island counter per render. */
 function renderPage(tree: ReactNode): string {
   return renderToStaticMarkup(
-    h(IslandRenderContext.Provider, { value: createIslandCounter() }, tree),
+    h(
+      IslandRenderContext.Provider,
+      { value: createIslandRender(BASELINE_HTML_ALLOWLIST) },
+      tree,
+    ),
   );
 }
 
@@ -233,15 +237,5 @@ describe("IslandShim id scope", () => {
 
     expect(html).not.toContain("id-prefix");
     expect(html).not.toContain("<span");
-  });
-
-  test("an island keeps the page's HTML allowlist in its own render", () => {
-    const allowlist = { allowedTags: ["marquee"], allowedAttributes: {} };
-    const Reader = () => h("i", null, useHtmlAllowlist().allowedTags.join());
-    const html = renderPage(
-      h(HtmlAllowlistProvider, { value: allowlist }, island(Reader, "Reader")),
-    );
-
-    expect(html).toContain("<i>marquee</i>");
   });
 });

@@ -161,28 +161,57 @@ test.describe("islands", () => {
     );
   });
 
-  test("islands calling useId hydrate without a mismatch and keep distinct ids", async ({
+  test("an island calling useId hydrates to the id the server rendered", async ({
     page,
   }) => {
-    const hydrationErrors: string[] = [];
+    await page.goto("/islands-ids");
+    const first = page.getByTestId("id-probe-first");
+    const second = page.getByTestId("id-probe-second");
+    await expect(first).toHaveAttribute("data-live");
+    await expect(second).toHaveAttribute("data-live");
+
+    const firstId = await first.locator("input").getAttribute("id");
+    const secondId = await second.locator("input").getAttribute("id");
+
+    expect(firstId).toMatch(/^_i0-R_/);
+    expect(secondId).toMatch(/^_i1-R_/);
+    await expect(first.locator("output")).toHaveText(String(firstId));
+    await expect(second.locator("output")).toHaveText(String(secondId));
+  });
+
+  test("two islands calling useId keep distinct ids", async ({ page }) => {
+    await page.goto("/islands-ids");
+    const first = page.getByTestId("id-probe-first");
+    const second = page.getByTestId("id-probe-second");
+    await expect(first.locator("output")).not.toBeEmpty();
+    await expect(second.locator("output")).not.toBeEmpty();
+
+    const firstId = await first.locator("output").textContent();
+    const secondId = await second.locator("output").textContent();
+
+    expect(firstId).not.toBe(secondId);
+  });
+
+  test("islands calling useId hydrate without a hydration error", async ({
+    page,
+  }) => {
+    const consoleMessages: string[] = [];
     page.on("console", (message) => {
-      if (message.type() === "error" && message.text().includes("hydrat")) {
-        hydrationErrors.push(message.text());
-      }
+      consoleMessages.push(`${message.type()}: ${message.text()}`);
     });
     await page.goto("/islands-ids");
+    await expect(page.getByTestId("id-probe-first")).toHaveAttribute(
+      "data-live",
+    );
+    await expect(page.getByTestId("id-probe-second")).toHaveAttribute(
+      "data-live",
+    );
 
-    const ids: string[] = [];
-    for (const testId of ["id-probe-first", "id-probe-second"]) {
-      const probe = page.getByTestId(testId);
-      await expect(probe).toHaveAttribute("data-live");
-      const server = await probe.locator("input").getAttribute("id");
-      await expect(probe.locator("output")).toHaveText(server ?? "");
-      ids.push(server ?? "");
-    }
-
-    expect(ids[0]).not.toBe(ids[1]);
-    expect(hydrationErrors).toEqual([]);
+    expect(
+      consoleMessages.filter(
+        (message) => message.startsWith("error:") && message.includes("hydrat"),
+      ),
+    ).toEqual([]);
     expect(await islandEvents(page)).toEqual([]);
   });
 });

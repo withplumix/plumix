@@ -43,10 +43,7 @@ import {
   pickDeps,
   resolveBlockLoaders,
 } from "../../blocks/index.js";
-import {
-  createIslandCounter,
-  IslandRenderContext,
-} from "../../blocks/island-shim.js";
+import { IslandRenderContext } from "../../blocks/island-shim.js";
 import { PlumixProvider } from "../../blocks/renderer/index.js";
 import { mergeDocumentManifest, mergeViewport } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
@@ -76,6 +73,7 @@ import {
 } from "./asset-manifest.js";
 import { injectEditorBootstrap } from "./inject-editor-bootstrap.js";
 import { injectIslandsBootstrap } from "./inject-islands-bootstrap.js";
+import { createIslandRender } from "./island-render.js";
 import { ruleLabel } from "./rule-resolver.js";
 import { templateRules } from "./template-builders.js";
 import {
@@ -577,10 +575,9 @@ async function renderTree({
         createElement(
           HtmlAllowlistProvider,
           { value: htmlAllowlist },
-          // Per render, so every page numbers its islands from `i0-`.
           createElement(
             IslandRenderContext.Provider,
-            { value: createIslandCounter() },
+            { value: createIslandRender(htmlAllowlist) },
             templateTree,
           ),
         ),
