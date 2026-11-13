@@ -104,7 +104,6 @@ describe("inspectorView", () => {
       null,
       "large",
       false,
-      new Set(),
     );
 
     expect(view).toBeNull();
@@ -117,7 +116,6 @@ describe("inspectorView", () => {
       "h1",
       "large",
       false,
-      new Set(),
     );
 
     expect(view?.inputs.map(({ input, value }) => [input.name, value])).toEqual(
@@ -141,7 +139,6 @@ describe("inspectorView", () => {
       "g1",
       "large",
       false,
-      new Set(),
     );
 
     expect(view?.inputs.map(({ input }) => input.name)).toEqual(["tag"]);
@@ -161,7 +158,6 @@ describe("inspectorView", () => {
       "b1",
       "small",
       false,
-      new Set(),
     );
 
     expect(view?.inputs[0]?.value).toBe("100%");
@@ -174,7 +170,6 @@ describe("inspectorView", () => {
       "s1",
       "large",
       false,
-      new Set(),
     );
 
     expect(view?.nothingToSet).toBe(true);
@@ -187,7 +182,6 @@ describe("inspectorView", () => {
       "h1",
       "large",
       false,
-      new Set(),
     );
 
     expect(view?.nothingToSet).toBe(false);
@@ -233,6 +227,8 @@ describe("inspectorView", () => {
         "b1",
         "large",
         canRefresh,
+        undefined,
+        undefined,
         new Set(loaderBlocks),
       );
 
@@ -250,7 +246,6 @@ describe("inspectorView", () => {
       "b1",
       "large",
       false,
-      new Set(),
     );
 
     expect(view?.showAddColumn).toBe(shown);
@@ -263,7 +258,6 @@ describe("inspectorView", () => {
       "h1",
       "large",
       false,
-      new Set(),
       undefined,
       layoutGate(false),
     );
@@ -283,7 +277,6 @@ describe("inspectorView", () => {
         id,
         "large",
         false,
-        new Set(),
         undefined,
         layoutGate(false),
       );
@@ -293,14 +286,7 @@ describe("inspectorView", () => {
   );
 
   test("a selected table cell keeps its table's controls in reach", () => {
-    const view = inspectorView(
-      registry,
-      tableTree,
-      "c0",
-      "large",
-      false,
-      new Set(),
-    );
+    const view = inspectorView(registry, tableTree, "c0", "large", false);
 
     expect(view?.tableId).toBe("tbl");
   });
@@ -312,7 +298,6 @@ describe("inspectorView", () => {
       "h1",
       "large",
       false,
-      new Set(),
     );
 
     expect(view?.tableId).toBeNull();
@@ -325,7 +310,6 @@ describe("inspectorView", () => {
       "o",
       "large",
       true,
-      new Set(),
     );
 
     expect(view).toMatchObject({
@@ -339,15 +323,7 @@ describe("inspectorView", () => {
     const tree = [{ id: "o", name: "core/group", attrs: {} }];
 
     expect(
-      inspectorView(
-        registry,
-        tree,
-        "o",
-        "large",
-        true,
-        new Set(),
-        new Set(["x/other"]),
-      ),
+      inspectorView(registry, tree, "o", "large", true, new Set(["x/other"])),
     ).toMatchObject({ unregistered: false, notAllowed: true });
     expect(
       inspectorView(
@@ -356,13 +332,10 @@ describe("inspectorView", () => {
         "o",
         "large",
         true,
-        new Set(),
         new Set(["core/group"]),
       ),
     ).toMatchObject({ notAllowed: false });
-    expect(
-      inspectorView(registry, tree, "o", "large", true, new Set()),
-    ).toMatchObject({
+    expect(inspectorView(registry, tree, "o", "large", true)).toMatchObject({
       notAllowed: false,
     });
   });

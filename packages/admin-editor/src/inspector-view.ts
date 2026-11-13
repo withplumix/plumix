@@ -43,9 +43,9 @@ export function inspectorView(
   activeId: string | null,
   bucket: StyleBucket,
   canRefresh: boolean,
-  loaderBlocks: ReadonlySet<string>,
   allowed?: ReadonlySet<string>,
   layout: LayoutGate = layoutGate(true),
+  loaderBlocks: ReadonlySet<string> = new Set(),
 ): InspectorView | null {
   const block = activeId ? findBlock(tree, activeId, registry) : undefined;
   if (!block) return null;

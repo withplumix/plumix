@@ -50,9 +50,9 @@ export function BlockInspector({
         activeId,
         bucket,
         canRefresh,
-        loaderBlocks,
         allowedBlocks,
         layout,
+        loaderBlocks,
       ),
     [
       registry,
