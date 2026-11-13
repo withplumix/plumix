@@ -519,7 +519,7 @@ describe(
       };
     }
 
-    test("runs inside the site on the platform proxy's env alone, reaching the local D1", async () => {
+    test("runs inside the site on the platform proxy's env alone, reaching the local D1 with no API token", async () => {
       const { source } = await twoProjects();
       await run(source, [ANN, post(1, "hello")].join("\n"));
       vi.stubEnv("PLUMIX_SYNC_PROBE", "from the shell");
@@ -528,9 +528,11 @@ describe(
         const rows = await ctx.db.select().from(entries);
         seen.push(rows.length, "PLUMIX_SYNC_PROBE" in ctx.env);
       });
+      const apiToken = vi.fn(() => Promise.resolve("pat_cli"));
       const end = await sync.open({
         ...openOptions(source.dir, "local", {}),
         config,
+        apiToken,
       });
 
       const settled = await end.settle({
@@ -540,6 +542,7 @@ describe(
       await end.close();
 
       expect([settled.failures, seen]).toEqual([[], [1, false]]);
+      expect(apiToken).not.toHaveBeenCalled();
     });
 
     test("stops with sync_site_unreachable when the site cannot reach its D1", async () => {
@@ -864,17 +867,19 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
     );
   });
 
-  test("its settle runs inside the deployed site at --url", async () => {
+  test("its settle runs inside the deployed site at --url with the token the CLI resolved", async () => {
     captureReport();
     const { project } = await deployedEnds();
-    vi.stubEnv("PLUMIX_API_TOKEN", "pat_site");
+    vi.stubEnv("PLUMIX_API_TOKEN", "");
     const fetched = vi
       .fn<typeof fetch>()
       .mockResolvedValue(Response.json({ cdn: "purged", failures: [] }));
     vi.stubGlobal("fetch", fetched);
-    const remote = await sync.open(
-      openOptions(project.dir, "remote", { production: true }),
-    );
+    const apiToken = vi.fn(() => Promise.resolve("pat_cli"));
+    const remote = await sync.open({
+      ...openOptions(project.dir, "remote", { production: true }),
+      apiToken,
+    });
 
     const settled = await remote.settle({
       scopes: ["content"],
@@ -888,7 +893,7 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          authorization: "Bearer pat_site",
+          authorization: "Bearer pat_cli",
         }) as unknown,
         body: JSON.stringify({ scopes: ["content"], direction: "push" }),
       }),

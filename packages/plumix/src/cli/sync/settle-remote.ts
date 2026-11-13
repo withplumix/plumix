@@ -1,23 +1,20 @@
 import type { SyncAfterEvent, SyncSettleReport } from "@plumix/core";
 
-import { remoteDeps, resolveApiToken, urlUnder } from "../api-token.js";
+import { remoteDeps, urlUnder } from "../api-token.js";
 import { PlumixCliError } from "../errors.js";
 
 const SETTLE_PATH = "_plumix/api/v1/system/sync/settle";
 
 /**
  * A remote end's settle: core's `settleSync` run inside the deployed site at
- * `url`, with the API token `PLUMIX_API_TOKEN` or the site's device flow gives.
+ * `url`, with the token the CLI resolved for `--url`, so `--token` reaches it.
  */
 export async function settleDeployedSite(
   url: string,
   event: SyncAfterEvent,
+  apiToken: () => Promise<string>,
 ): Promise<SyncSettleReport> {
-  const token = await resolveApiToken({
-    url,
-    token: undefined,
-    missing: () => PlumixCliError.syncSettleTokenMissing(),
-  });
+  const token = await apiToken();
   const response = await remoteDeps.fetch(urlUnder(url, SETTLE_PATH), {
     method: "POST",
     headers: {
