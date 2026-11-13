@@ -37,10 +37,10 @@ const ROBOTS_PATH = "/robots.txt";
 const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
- * On every sitemap response and on `llms.txt`, so a `seo.sitemap.urls`
- * subscriber can retire the whole set.
+ * The key every sitemap response and `llms.txt` reads under, so one
+ * `ctx.cache.changed` retires the whole set.
  */
-export const SITEMAP_TAG = "seo:sitemap";
+const SITEMAP_CACHE_KEY = "sitemap";
 
 /**
  * Anything but a 1-based page number goes unclaimed and 404s through the
@@ -70,8 +70,12 @@ async function handleSitemapIndex(
   scopes: readonly SitemapScope[],
 ): Promise<Response> {
   const reader = anonymousContext(ctx);
+  ctx.cache.reads(SITEMAP_CACHE_KEY);
   // `tagCdnEntry` unions, so scopes sharing a type tag need no dedupe here.
-  tagCdnEntry(ctx, [SITEMAP_TAG, ...scopes.flatMap((scope) => scope.tags)]);
+  tagCdnEntry(
+    ctx,
+    scopes.flatMap((scope) => scope.tags),
+  );
   // A site held out of the index is held out of search, and so is a scope its
   // own default holds out: either way the scope simply leaves the set.
   const settings = await loadSeoSettings(ctx);
@@ -94,7 +98,8 @@ async function handleSubSitemap(
   page: number,
 ): Promise<Response> {
   const reader = anonymousContext(ctx);
-  tagCdnEntry(ctx, [SITEMAP_TAG, ...scope.tags]);
+  ctx.cache.reads(SITEMAP_CACHE_KEY);
+  tagCdnEntry(ctx, scope.tags);
   const settings = await loadSeoSettings(ctx);
   const urls =
     scopeIsOffered(scope, settings) && (await scopeAdmitsReader(reader, scope))
@@ -108,10 +113,11 @@ async function handleSubSitemap(
  * write to one, an access choice included, retires the file.
  */
 async function handleLlmsTxt(ctx: AppContext): Promise<Response> {
-  tagCdnEntry(ctx, [
-    SITEMAP_TAG,
-    ...publicTargets(ctx.plugins.entryTypes).map((type) => typeTag(type.name)),
-  ]);
+  ctx.cache.reads(SITEMAP_CACHE_KEY);
+  tagCdnEntry(
+    ctx,
+    publicTargets(ctx.plugins.entryTypes).map((type) => typeTag(type.name)),
+  );
   return new Response(await llmsTxtBody(ctx), {
     headers: {
       "content-type": "text/markdown; charset=utf-8",

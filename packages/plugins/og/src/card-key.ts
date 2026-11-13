@@ -1,10 +1,10 @@
-import { entryTag } from "plumix/db";
-
-/** Build it with the {@link cardKey} helpers so `id` and `tag` cannot drift. */
+/**
+ * Build it with the {@link cardKey} helpers. A changed input is a changed id,
+ * so a card is never purged: its edit lands on a new URL.
+ */
 export interface CardKey {
   /** Folded into the URL's digest, not the URL itself. */
   readonly id: string;
-  readonly tag: string;
 }
 
 interface KeyedEntry {
@@ -17,12 +17,10 @@ interface KeyedEntry {
  * it actually reads; `entry` is the one-liner for a card keyed on one entry.
  */
 export const cardKey = {
-  /** `cardKey.of("front-page", siteTitle)`. Core purges never sweep its tag. */
-  of: (...parts: readonly (string | number)[]): CardKey => {
-    const slug = joinParts(parts);
-    // Core purges can't know what this reads; a changed input is a changed URL.
-    return { id: slug, tag: `og:${slug}` };
-  },
+  /** `cardKey.of("front-page", siteTitle)`. */
+  of: (...parts: readonly (string | number)[]): CardKey => ({
+    id: joinParts(parts),
+  }),
 
   /**
    * `updatedAt` holds whole seconds, so also pass the content the card renders:
@@ -37,7 +35,6 @@ export const cardKey = {
       entry.updatedAt.getTime(),
       ...parts,
     ]),
-    tag: entryTag(entry.id),
   }),
 };
 

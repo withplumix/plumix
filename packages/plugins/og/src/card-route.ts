@@ -121,7 +121,8 @@ export function createCardRoute(
     if (asked.digest !== identity.digest) {
       return redirect(cardUrl(ctx, asked.target, identity.digest, extension));
     }
-    tagCdnEntry(ctx, [identity.key.tag, ...page.tags]);
+    ctx.cache.reads(identity.key.id);
+    tagCdnEntry(ctx, page.tags);
 
     let response: Response;
     try {

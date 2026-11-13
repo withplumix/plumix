@@ -1481,6 +1481,57 @@ describe("a sitemap at the edge", () => {
     },
   });
 
+  // Lists rows of its own, read under its namespace, and reports a change to
+  // them the way any plugin does.
+  const rowsPlugin = definePlugin("rows", {
+    setup: (ctx) => {
+      ctx.filters.add(seo.sitemap.urls, (urls, _input, appCtx) => {
+        appCtx.cache.reads("listed");
+        return [...urls, { loc: `${appCtx.origin}/rows/listed` }];
+      });
+      ctx.registerRoute({
+        method: "POST",
+        path: "/change",
+        auth: "public",
+        handler: (request, appCtx) => {
+          appCtx.cache.changed(
+            new URL(request.url).searchParams.get("key") ?? "",
+          );
+          return new Response(null, { status: 204 });
+        },
+      });
+    },
+  });
+
+  async function changeRows(h: DispatcherHarness, key: string): Promise<void> {
+    (
+      await h.fetch(`/_plumix/rows/change?key=${key}`, { method: "POST" })
+    ).assertStatus(204);
+    await h.drainDeferred();
+  }
+
+  test("a sitemap.urls subscriber's change retires the sitemap its rows joined", async () => {
+    const cdn = fakeCdn();
+    const h = await createHarness([blogPlugin, rowsPlugin], { cdn });
+    await seedPost(h);
+    await render(h, cdn, "/sitemap-entries-post-1.xml");
+
+    await changeRows(h, "listed");
+
+    cdn.assertNotStored("/sitemap-entries-post-1.xml");
+  });
+
+  test("a sitemap.urls subscriber's change to data it never listed keeps the sitemap", async () => {
+    const cdn = fakeCdn();
+    const h = await createHarness([blogPlugin, rowsPlugin], { cdn });
+    await seedPost(h);
+    await render(h, cdn, "/sitemap-entries-post-1.xml");
+
+    await changeRows(h, "elsewhere");
+
+    cdn.assertStored("/sitemap-entries-post-1.xml");
+  });
+
   test("publishing an entry retires its type's scope and only that", async () => {
     const cdn = fakeCdn();
     const h = await createHarness([postsAndPages], { cdn });

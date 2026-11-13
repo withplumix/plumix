@@ -34,6 +34,14 @@ function keyedPlugin(id: string, listensForFired = false) {
           return new Response(key);
         },
       });
+      ctx.registerPublicRoute({
+        path: `/${id}-public/:key`,
+        cacheable: true,
+        handler: (_request, appCtx, params) => {
+          appCtx.cache.reads(params.key);
+          return new Response(params.key);
+        },
+      });
       ctx.registerRoute({
         method: "GET",
         path: "/all",
@@ -222,6 +230,17 @@ describe("ctx.cache", () => {
     s.cdn.assertNotStored("/_plumix/alpha/all");
     s.cdn.assertStored("/_plumix/alpha/page/y");
     s.cdn.assertStored("/_plumix/beta/all");
+  });
+
+  test("a change purges what the plugin's public route read under that key", async () => {
+    const s = await site();
+    await render(s, "/alpha-public/x");
+    await render(s, "/beta-public/x");
+
+    await change(s, "alpha", "x");
+
+    s.cdn.assertNotStored("/alpha-public/x");
+    s.cdn.assertStored("/beta-public/x");
   });
 
   test("a change drops what the request memo holds under that key at once", async () => {
