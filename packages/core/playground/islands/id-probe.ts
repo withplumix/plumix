@@ -19,7 +19,7 @@ export function IdProbe({
     "div",
     { "data-testid": testId, "data-live": live ? "" : undefined },
     h("label", { htmlFor: id }, testId),
-    h("input", { id }),
-    h("output", null, live ? id : ""),
+    h("input", { id, "data-testid": `${testId}-input` }),
+    h("output", { "data-testid": `${testId}-output` }, live ? id : ""),
   );
 }

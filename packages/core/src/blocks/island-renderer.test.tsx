@@ -1,7 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { islandRootKind, mergeSlotProps } from "./island-renderer.js";
+import {
+  islandRootKind,
+  islandRootOptions,
+  mergeSlotProps,
+} from "./island-renderer.js";
 
 function Card(props: Readonly<Record<string, unknown>>) {
   return (
@@ -48,4 +52,46 @@ describe("islandRootKind", () => {
       expect(islandRootKind(false, hydrate)).toBe("create");
     },
   );
+});
+
+describe("islandRootOptions", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // The reporters only close over the element; nothing here touches it.
+  const element = {} as HTMLElement;
+
+  test("a hydrated root takes the island's id prefix and reports errors and mismatches in dev", () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+
+    const options = islandRootOptions("hydrate", "i0-", element, "");
+
+    expect(options.identifierPrefix).toBe("i0-");
+    expect(Object.keys(options)).toEqual([
+      "identifierPrefix",
+      "onUncaughtError",
+      "onRecoverableError",
+    ]);
+  });
+
+  test("a client-only root in dev takes the id prefix and reports errors", () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+
+    const options = islandRootOptions("create-reporting", "i1-", element, "");
+
+    expect(options.identifierPrefix).toBe("i1-");
+    expect(Object.keys(options)).toEqual([
+      "identifierPrefix",
+      "onUncaughtError",
+    ]);
+  });
+
+  test("a production root takes the id prefix and no reporter", () => {
+    vi.stubEnv("PLUMIX_DEV", "");
+
+    const options = islandRootOptions("create", "i2-", element, "");
+
+    expect(options).toEqual({ identifierPrefix: "i2-" });
+  });
 });

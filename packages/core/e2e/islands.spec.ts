@@ -170,24 +170,34 @@ test.describe("islands", () => {
     await expect(first).toHaveAttribute("data-live");
     await expect(second).toHaveAttribute("data-live");
 
-    const firstId = await first.locator("input").getAttribute("id");
-    const secondId = await second.locator("input").getAttribute("id");
+    const firstId = await page
+      .getByTestId("id-probe-first-input")
+      .getAttribute("id");
+    const secondId = await page
+      .getByTestId("id-probe-second-input")
+      .getAttribute("id");
 
     expect(firstId).toMatch(/^_i0-R_/);
     expect(secondId).toMatch(/^_i1-R_/);
-    await expect(first.locator("output")).toHaveText(String(firstId));
-    await expect(second.locator("output")).toHaveText(String(secondId));
+    await expect(page.getByTestId("id-probe-first-output")).toHaveText(
+      String(firstId),
+    );
+    await expect(page.getByTestId("id-probe-second-output")).toHaveText(
+      String(secondId),
+    );
   });
 
   test("two islands calling useId keep distinct ids", async ({ page }) => {
     await page.goto("/islands-ids");
-    const first = page.getByTestId("id-probe-first");
-    const second = page.getByTestId("id-probe-second");
-    await expect(first.locator("output")).not.toBeEmpty();
-    await expect(second.locator("output")).not.toBeEmpty();
+    await expect(page.getByTestId("id-probe-first-output")).not.toBeEmpty();
+    await expect(page.getByTestId("id-probe-second-output")).not.toBeEmpty();
 
-    const firstId = await first.locator("output").textContent();
-    const secondId = await second.locator("output").textContent();
+    const firstId = await page
+      .getByTestId("id-probe-first-output")
+      .textContent();
+    const secondId = await page
+      .getByTestId("id-probe-second-output")
+      .textContent();
 
     expect(firstId).not.toBe(secondId);
   });

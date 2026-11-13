@@ -52,28 +52,22 @@ export function mount(
         return;
       }
       const kind = islandRootKind(Boolean(process.env.PLUMIX_DEV), hydrate);
-      // The inline `PLUMIX_DEV` at each branch is what folds: a function's
-      // result does not, and the dev handlers would ship to production.
+      // The last moment the SSR HTML exists: on a mismatch React re-renders
+      // the subtree in place.
+      const server = kind === "hydrate" ? element.innerHTML : "";
+      const rootOptions = islandRootOptions(
+        kind,
+        identifierPrefix,
+        element,
+        server,
+      );
       if (process.env.PLUMIX_DEV && kind === "hydrate") {
-        // The last moment the SSR HTML exists: on a mismatch React re-renders
-        // the subtree in place.
-        const server = element.innerHTML;
         // `hydrateRoot` renders `node` itself; there is no follow-up
         // `root.render`.
-        root = hydrateRoot(element, node, {
-          identifierPrefix,
-          onUncaughtError: reportIslandError(element),
-          onRecoverableError: reportIslandMismatch(element, server),
-        });
+        root = hydrateRoot(element, node, rootOptions);
         return;
       }
-      root =
-        process.env.PLUMIX_DEV && kind === "create-reporting"
-          ? createRoot(element, {
-              identifierPrefix,
-              onUncaughtError: reportIslandError(element),
-            })
-          : createRoot(element, { identifierPrefix });
+      root = createRoot(element, rootOptions);
       root.render(node);
     },
     unmount() {
@@ -132,6 +126,33 @@ export function islandRootKind(
 ): "hydrate" | "create-reporting" | "create" {
   if (!dev) return "create";
   return hydrate ? "hydrate" : "create-reporting";
+}
+
+/**
+ * Every root takes the island's `id-prefix`. The inline `PLUMIX_DEV` at each
+ * reporter is what folds: the dev handlers would otherwise ship to production.
+ */
+export function islandRootOptions(
+  kind: "hydrate" | "create-reporting" | "create",
+  identifierPrefix: string | undefined,
+  element: HTMLElement,
+  server: string,
+): {
+  identifierPrefix?: string;
+  onUncaughtError?: (error: unknown, info: ErrorInfo) => void;
+  onRecoverableError?: (error: unknown, info: ErrorInfo) => void;
+} {
+  if (process.env.PLUMIX_DEV && kind === "hydrate") {
+    return {
+      identifierPrefix,
+      onUncaughtError: reportIslandError(element),
+      onRecoverableError: reportIslandMismatch(element, server),
+    };
+  }
+  if (process.env.PLUMIX_DEV && kind === "create-reporting") {
+    return { identifierPrefix, onUncaughtError: reportIslandError(element) };
+  }
+  return { identifierPrefix };
 }
 
 /** Each slot's raw HTML becomes a `<StaticHtml>` element on its named prop. */
