@@ -163,7 +163,7 @@ view: () =>
 
 where `cardView(name)` returns an object of the same shape, `{ default, loaders? }`.
 
-A view module can import CSS, islands and server code, and none of it reaches the editor's bundle until a block needs it. That is the reason for the split: the editor bundle carries the definitions alone, so it doesn't grow with a theme's block count, and a loader's database code never ships to the browser. Never import a view module, or server code, from a definition statically, or it lands in the editor's bundle again.
+A view module can import CSS, islands and server code, and none of it is in the editor entry's eager chunks: the JavaScript the editor loads before it can open. That is the reason for the split: the editor entry carries the definitions alone, so it doesn't grow with a theme's block count. Each view module is a separate chunk the editor fetches later, loader code included, so a loader still reaches the browser that way. Never import a view module, or server code, from a definition statically, or it lands in the editor entry again.
 
 The server imports every view when the site boots, so a page renders exactly as if the views were part of the definition. The editor canvas imports the views a document uses before it shows the document, the view of a block you hover in the catalog before you insert it, and every other view once it is idle, so a block never shows a loading state.
 
