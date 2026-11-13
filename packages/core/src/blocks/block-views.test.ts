@@ -235,6 +235,14 @@ function deferred<T>(): {
   return { promise, resolve, reject };
 }
 
+/**
+ * A load that rejected on the first failure would have done so within these
+ * jobs, so an import the test settles afterwards lands too late for it.
+ */
+async function runQueuedPromiseJobs(): Promise<void> {
+  for (let job = 0; job < 10; job += 1) await Promise.resolve();
+}
+
 describe("a view module that fails to import", () => {
   test("rejects with the failed import's own error", async () => {
     const flakyImport = deferred<BlockViewModule>();
@@ -265,18 +273,15 @@ describe("a view module that fails to import", () => {
       slow,
     ]);
     const SlowView = (): string => "slow";
+    flakyImport.reject(new Error("chunk 404"));
+
     const slowViewAtRejection = loadBlockViews(registry).catch(
       () => blockViewModule(slow).default,
     );
-    flakyImport.reject(new Error("chunk 404"));
-    // Shares the in-flight import, so it settles as late as a load that
-    // rejected on the first failure would: the slow import is still pending.
-    await loadBlockViews(registry, ["site/flaky"]).catch(() => undefined);
+    await runQueuedPromiseJobs();
     slowImport.resolve({ default: SlowView });
 
-    const view = await slowViewAtRejection;
-
-    expect(view).toBe(SlowView);
+    expect(await slowViewAtRejection).toBe(SlowView);
   });
 
   test("a later call retries a failed import", async () => {
