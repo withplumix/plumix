@@ -11,6 +11,8 @@ export function recoverDeliveries(
   pending: readonly PendingDelivery[],
   openPullRequests: readonly Queued[],
   findPullRequest: (branch: string) => QueuedPullRequest | undefined,
+  /** Whether this run resumes a ticket's unfinished work; its open PRs are watched either way. */
+  resumes: (ticket: number) => boolean = () => true,
 ): RecoveredDeliveries {
   const inFlight: Queued[] = [];
   const interrupted: PendingDelivery[] = [];
@@ -22,7 +24,7 @@ export function recoverDeliveries(
         ?.pullRequest ??
       (branch ? findPullRequest(branch) : undefined);
     if (found) inFlight.push({ ticket, pullRequest: found });
-    else interrupted.push(delivery);
+    else if (resumes(ticket.number)) interrupted.push(delivery);
   }
   for (const queued of openPullRequests) {
     if (

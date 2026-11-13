@@ -26,6 +26,9 @@ export function requestDrain(root: string): boolean {
   return true;
 }
 
+/** macOS file events can arrive late or not at all, so a pause also looks for a drain on its own. */
+const A_DRAIN_IS_NOTICED_WITHIN_MS = 1_000;
+
 export function createShipControl(root: string, deadline: number) {
   const owner = readlinkSync(join(root, "ship.lock"));
   const controller = new AbortController();
@@ -53,12 +56,14 @@ export function createShipControl(root: string, deadline: number) {
       const combined = signal
         ? AbortSignal.any([signal, controller.signal])
         : controller.signal;
+      const until = Math.min(Date.now() + ms, deadline);
       try {
-        await setTimeout(
-          Math.max(0, Math.min(ms, deadline - Date.now())),
-          undefined,
-          { signal: combined },
-        );
+        while (Date.now() < until && !stopped())
+          await setTimeout(
+            Math.min(until - Date.now(), A_DRAIN_IS_NOTICED_WITHIN_MS),
+            undefined,
+            { signal: combined },
+          );
       } catch (error) {
         if (!combined.aborted) throw error;
       }

@@ -19,6 +19,7 @@ describe("looksLikeTheRunBeingOver", () => {
 
   test.each([
     "Claude AI usage limit reached",
+    "claude-code exited with code 1:\nYou've hit your 5-hour limit · resets 4:40pm (UTC)",
     "claude-code exited with code 1: You've hit your weekly limit · resets Sep 30, 10pm (UTC)",
     "rate_limit_error: too many requests",
     "HTTP 429 Too Many Requests",
@@ -50,6 +51,15 @@ describe("whenTheLimitLifts", () => {
         at("2026-09-27T18:00:00Z"),
       )?.toISOString(),
     ).toBe("2026-09-27T21:20:00.000Z");
+  });
+
+  test("reads the reset time of the 5-hour limit", () => {
+    expect(
+      whenTheLimitLifts(
+        "claude-code exited with code 1:\nYou've hit your 5-hour limit · resets 4:40pm (UTC)",
+        at("2026-11-13T16:13:00Z"),
+      )?.toISOString(),
+    ).toBe("2026-11-13T16:40:00.000Z");
   });
 
   test("reads a reset time printed without minutes", () => {

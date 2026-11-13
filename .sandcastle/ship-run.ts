@@ -19,6 +19,7 @@ import {
   isTicketClosed,
   listReadyTickets,
   loopPullRequestsInFlight,
+  markWaiting,
   mergeGroupFailures,
   parentsWithEveryChildClosed,
   parkTicket,
@@ -130,11 +131,10 @@ export async function runShip({
     const selected = (number: number) =>
       !onlyTickets.length || onlyTickets.includes(number);
     const recovered = recoverDeliveries(
-      history.pending().filter(({ ticket }) => selected(ticket.number)),
-      loopPullRequestsInFlight().filter(({ ticket }) =>
-        selected(ticket.number),
-      ),
+      history.pending(),
+      loopPullRequestsInFlight(),
       pullRequestForBranch,
+      selected,
     );
     for (const { ticket, branch } of recovered.interrupted) {
       claimed.add(ticket.number);
@@ -208,6 +208,11 @@ export async function runShip({
           return shipTicket(ticket, journal, nextAdr, history).then(
             (outcome) => {
               if (outcome.status === "queued") journal.finish("shipped");
+              else if (outcome.status === "waiting")
+                journal.finish(
+                  "waiting",
+                  outcome.on.map((n) => `#${n}`).join(", "),
+                );
               else journal.finish("failed", outcome.reason);
               return outcome;
             },
@@ -221,9 +226,9 @@ export async function runShip({
           control.checkpoint();
           const journal = journalFor(ticket);
           return decideWhatTheDocsSettle(ticket, reason, journal).then(
-            (settled) => {
-              journal.finish(settled ? "shipped" : "failed", reason);
-              return settled;
+            (decision) => {
+              journal.finish(decision === null ? "failed" : "decided", reason);
+              return decision;
             },
             (error: unknown) => {
               journal.finish("failed", String(error));
@@ -235,6 +240,7 @@ export async function runShip({
           claimed.delete(number);
           if (onlyTickets.length) namedTickets.unshift(number);
         },
+        wait: ({ number }, on) => markWaiting(number, on),
         park: ({ number }, reason, pullRequestUrl, briefFails) =>
           parkTicket(number, reason, pullRequestUrl, briefFails),
         releaseClaim: ({ number }) => releaseClaim(number),

@@ -30,6 +30,11 @@ export interface PrObservation {
   readonly queueDrops: number;
 }
 
+export interface Replan {
+  readonly reason: string;
+  readonly decision: string;
+}
+
 export type ShipEvent =
   | {
       readonly type: "ship.configured";
@@ -43,6 +48,12 @@ export type ShipEvent =
       readonly type: "analysis.completed";
       readonly issue: number;
       readonly brief: string;
+    }
+  | {
+      readonly type: "brief.amended";
+      readonly issue: number;
+      readonly reason: string;
+      readonly decision: string;
     }
   | {
       readonly type: "account.cooldown";
@@ -82,7 +93,7 @@ export type ShipEvent =
       readonly issue: number;
     }
   | {
-      readonly type: "delivery.merged" | "delivery.parked";
+      readonly type: "delivery.merged" | "delivery.parked" | "delivery.waiting";
       readonly issue: number;
       readonly reason?: string;
     };
@@ -102,6 +113,12 @@ const shipEventSchema: z.ZodType<ShipEvent> = z.discriminatedUnion("type", [
     type: z.literal("analysis.completed"),
     issue: issueNumber,
     brief: z.string(),
+  }),
+  z.object({
+    type: z.literal("brief.amended"),
+    issue: issueNumber,
+    reason: z.string(),
+    decision: z.string(),
   }),
   z.object({
     type: z.literal("account.cooldown"),
@@ -145,7 +162,7 @@ const shipEventSchema: z.ZodType<ShipEvent> = z.discriminatedUnion("type", [
     issue: issueNumber,
   }),
   z.object({
-    type: z.enum(["delivery.merged", "delivery.parked"]),
+    type: z.enum(["delivery.merged", "delivery.parked", "delivery.waiting"]),
     issue: issueNumber,
     reason: z.string().optional(),
   }),
@@ -181,6 +198,9 @@ export class ShipHistory {
   readonly #reruns = new Set<string>();
   readonly #reviewedHeads = new Map<number, string>();
   readonly #ownerSessions = new Map<number, { id: string; path: string }>();
+  readonly #briefs = new Map<number, string>();
+  readonly #replans = new Map<number, Replan[]>();
+  readonly #parkedBranches = new Map<number, string>();
 
   constructor(
     root: string,
@@ -264,6 +284,26 @@ export class ShipHistory {
     return this.#ownerSessions.get(issue);
   }
 
+  /** The brief the analyst handed this delivery, while it still stands. */
+  recordedBrief(issue: number): string | undefined {
+    return this.#briefs.get(issue);
+  }
+
+  /** Each time this delivery stopped and went back for clearer instructions. */
+  /** The branch a ticket's last delivery parked on, until it is taken again or merged. */
+  parkedBranch(issue: number): string | undefined {
+    return this.#parkedBranches.get(issue);
+  }
+
+  replans(issue: number): readonly Replan[] {
+    return this.#replans.get(issue) ?? [];
+  }
+
+  #forgetPlanning(issue: number): void {
+    this.#briefs.delete(issue);
+    this.#replans.delete(issue);
+  }
+
   #apply(event: ShipEvent): void {
     if (event.type === "phase.finished") {
       for (const [path, lines] of event.phase.usageCursors ?? [])
@@ -274,6 +314,15 @@ export class ShipHistory {
     }
     if (event.type === "analysis.completed") {
       this.#reviewedHeads.delete(event.issue);
+      this.#briefs.set(event.issue, event.brief);
+      return;
+    }
+    if (event.type === "brief.amended") {
+      this.#briefs.delete(event.issue);
+      this.#replans.set(event.issue, [
+        ...this.replans(event.issue),
+        { reason: event.reason, decision: event.decision },
+      ]);
       return;
     }
     if (event.type === "account.cooldown") {
@@ -312,8 +361,10 @@ export class ShipHistory {
     )
       return;
     if (event.type === "delivery.started") {
+      this.#parkedBranches.delete(event.ticket.number);
       this.#reviewedHeads.delete(event.ticket.number);
       this.#ownerSessions.delete(event.ticket.number);
+      this.#forgetPlanning(event.ticket.number);
       this.#deliveries.set(event.ticket.number, {
         ticket: event.ticket,
         branch: event.branch,
@@ -322,8 +373,17 @@ export class ShipHistory {
       });
       return;
     }
-    if (event.type === "delivery.merged" || event.type === "delivery.parked") {
+    if (
+      event.type === "delivery.merged" ||
+      event.type === "delivery.parked" ||
+      event.type === "delivery.waiting"
+    ) {
+      const { branch } = this.#deliveries.get(event.issue) ?? {};
+      if (event.type === "delivery.merged")
+        this.#parkedBranches.delete(event.issue);
+      else if (branch) this.#parkedBranches.set(event.issue, branch);
       this.#deliveries.delete(event.issue);
+      this.#forgetPlanning(event.issue);
       return;
     }
     if (event.type === "pr.tracked") {

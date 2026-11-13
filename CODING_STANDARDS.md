@@ -519,3 +519,53 @@ source.
 Override a timeout only as a last resort. Profile the slow test first and fix what the profile
 shows. Keep an override only when the whole suite's timings call for it, not its single slowest
 test. [`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test) has the usual causes.
+
+## Review checklist
+
+Each line is a question with a yes or no answer about a diff. The implementer asks it before handing
+over and the reviewer asks it of every changed line; the section it names holds the rule and the
+reasons. Lint already reports what it can, so only what a reader sees is here. A "no" is a finding
+that names its line. A judgement outside this list, such as a module that could be deeper, is a
+note, never a finding.
+
+1. Does each changed function return early instead of wrapping its body in a branch, with no nested
+   ternary and no helper that only renames an expression? ([Readability](#readability))
+2. Do new names use the words in `GLOSSARY.md`? ([Readability](#readability))
+3. Does each added comment say only why, never what the code does, its history, a pointer to
+   elsewhere or a word for the reviewer? ([Comments](#comments))
+4. Is every case a caller can produce handled, with no guard for a state nothing reaches?
+   ([Correctness](#correctness))
+5. Does the change keep build, test and lint output free of new warnings and logs?
+   ([Correctness](#correctness))
+6. Does it load a set in one query or request, with no work quadratic in a list a user can grow,
+   and does any query it adds to a logged-out render have a reason in the PR?
+   ([Performance](#performance))
+7. Does every string a user reads go through a Lingui descriptor?
+   ([User-facing text](#user-facing-text))
+8. Does a published API change in place, with no deprecated alias or shim, and does the changeset
+   announce the break? ([Compatibility](#compatibility))
+9. Is every migration an install has applied left unchanged? ([Schema changes](#schema-changes))
+10. Is request data kept out of module scope, SQL bound, user markup sanitized and every URL from
+    input checked for `http:` or `https:`? ([Security](#security))
+11. Does every path that reads or writes protected data check the capability guarding it, narrowed
+    by the token's scopes, the same way on every surface that serves it? ([Access](#access))
+12. Does each added or edited test sit in the tier the placement questions pick, in the folder the
+    layout gives it, touching only what that tier allows?
+    ([Where a test goes](#where-a-test-goes), [Where a file goes](#where-a-file-goes))
+13. Does each test use the real collaborator, the owner's fake, or a narrow stub at a boundary
+    outside Plumix, and assert on the outcome rather than on which functions ran?
+    ([Test doubles](#test-doubles))
+14. Is each test one behaviour named as a sentence, with one act, straight-line code and literal
+    expected values? ([Writing a test](#writing-a-test))
+15. Is each test deterministic, with a faked clock and no sleeps, retries or snapshots?
+    ([Writing a test](#writing-a-test))
+16. Does the change ship tests for each requirement and its edge cases, and would each one fail if
+    the behaviour it names broke? ([Reviewing a test](#reviewing-a-test))
+17. Does each surviving mutant get a test that catches it, or a named reason to dismiss it?
+    ([Mutation testing](#mutation-testing))
+18. Does code in core import only from its own layer and the ones below, does code outside the
+    framework import Plumix only through `plumix`, does request-path code use only APIs every
+    runtime has, and does a change to the adapter contract land in every adapter? (`AGENTS.md`,
+    Architecture)
+19. Does the change correct every README, ADR, architecture page and standard it makes wrong?
+    (`AGENTS.md`, Working rules)

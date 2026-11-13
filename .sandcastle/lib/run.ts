@@ -4,6 +4,7 @@ import type { ShipOutcome } from "./ticket.js";
 import { ShipStopped } from "./control.js";
 import { drainAcrossLanes } from "./lanes.js";
 import { looksLikeTheRunBeingOver } from "./outage.js";
+import { replanning } from "./replans.js";
 import { slotsFor } from "./slots.js";
 
 export interface ShipPorts {
@@ -38,8 +39,11 @@ export interface ShipPorts {
   readonly brokenCheckout: () => string | undefined;
   readonly aBlockerIsMoving: () => boolean;
   /** True when it amended the brief, so the ticket can be taken again. */
-  readonly decide: (ticket: Ticket, reason: string) => Promise<boolean>;
+  /** What was decided once the brief is amended; null leaves it to a person. */
+  readonly decide: (ticket: Ticket, reason: string) => Promise<string | null>;
   readonly retake: (ticket: Ticket) => void;
+  /** Marks the ticket as waiting on open issues, so dispatch skips it until they close. */
+  readonly wait: (ticket: Ticket, on: readonly number[]) => void;
   readonly pause: (ms: number, signal: AbortSignal) => Promise<void>;
   readonly say: (line: string) => void;
 }
@@ -93,7 +97,6 @@ export const runShipLoop = async (
   let failuresInARow = 0;
   const sandboxes = slotsFor(lanes);
   let stoppedBecause: string | undefined;
-  const decidedOnce = new Set<number>();
 
   const park: ShipPorts["park"] = (
     ticket,
@@ -113,10 +116,11 @@ export const runShipLoop = async (
     ticket: Ticket,
     reason: string,
   ): Promise<boolean> => {
-    if (decidedOnce.has(ticket.number)) return false;
-    decidedOnce.add(ticket.number);
+    const decide = replanning(ports.history, ticket.number, (why) =>
+      sandboxes.run(() => ports.decide(ticket, why)),
+    );
     try {
-      return await sandboxes.run(() => ports.decide(ticket, reason));
+      return (await decide(reason)) !== null;
     } catch (error) {
       ports.say(`  #${ticket.number} decide: ${asReason(error)}`);
       return false;
@@ -328,6 +332,20 @@ export const runShipLoop = async (
         if (error instanceof ShipStopped) stoppedBecause = error.message;
         else if (looksLikeTheRunBeingOver(reason)) outage ??= reason;
         else noteFailure(reason);
+        return;
+      }
+
+      if (outcome.status === "waiting") {
+        ports.wait(ticket, outcome.on);
+        ports.history.record({
+          type: "delivery.waiting",
+          issue: ticket.number,
+          reason: `waits on ${outcome.on.map((n) => `#${n}`).join(", ")}`,
+        });
+        ports.releaseClaim(ticket);
+        ports.say(
+          `  #${ticket.number} waits on ${outcome.on.map((n) => `#${n}`).join(", ")}; it starts once they close`,
+        );
         return;
       }
 

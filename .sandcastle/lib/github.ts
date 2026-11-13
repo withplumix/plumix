@@ -23,6 +23,7 @@ import {
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
+  MERGE_BASE,
   READY_LABEL,
   REPO_ROOT,
   REPO_SLUG,
@@ -289,23 +290,60 @@ export const releaseClaim = (ticketNumber: number): void => {
   ]);
 };
 
-export const issueBody = (ticketNumber: number): string =>
-  ghJson<{ body: string }>([
-    "issue",
-    "view",
-    String(ticketNumber),
-    "-R",
-    REPO_SLUG,
-    "--json",
-    "body",
-  ]).body;
+/** Where a brief lives: the issue body, or the REST id of the comment holding it. */
+export interface BriefText {
+  readonly where: "body" | number;
+  readonly text: string;
+}
 
-export const amendIssue = (
+/** The issue body, then its comments oldest first. */
+export const briefTexts = (ticketNumber: number): BriefText[] => [
+  {
+    where: "body",
+    text: ghJson<{ body: string }>([
+      "issue",
+      "view",
+      String(ticketNumber),
+      "-R",
+      REPO_SLUG,
+      "--json",
+      "body",
+    ]).body,
+  },
+  ...ghJson<{ id: number; body: string }[][]>([
+    "api",
+    "--paginate",
+    "--slurp",
+    `repos/${REPO_SLUG}/issues/${ticketNumber}/comments`,
+  ])
+    .flat()
+    .map(({ id, body }) => ({ where: id, text: body })),
+];
+
+export const amendBrief = (
   ticketNumber: number,
-  body: string,
+  { where, text }: BriefText,
   comment: string,
 ): void => {
-  gh(["issue", "edit", String(ticketNumber), "-R", REPO_SLUG, "--body", body]);
+  if (where === "body")
+    gh([
+      "issue",
+      "edit",
+      String(ticketNumber),
+      "-R",
+      REPO_SLUG,
+      "--body",
+      text,
+    ]);
+  else
+    gh([
+      "api",
+      "--method",
+      "PATCH",
+      `repos/${REPO_SLUG}/issues/comments/${where}`,
+      "-f",
+      `body=${text}`,
+    ]);
   gh([
     "issue",
     "comment",
@@ -358,6 +396,31 @@ export const commentOnPullRequest = (
   body: string,
 ): void => {
   gh(["pr", "comment", String(pullRequest), "-R", REPO_SLUG, "--body", body]);
+};
+
+/** Whether an issue or pull request is still open; GitHub's issues API answers for both. */
+export const isOpenOnGitHub = (number: number): boolean =>
+  gh([
+    "api",
+    `repos/${REPO_SLUG}/issues/${number}`,
+    "--jq",
+    ".state",
+  ]).trim() === "open";
+
+/** Says on the ticket what it waits on, in the "Blocked by" form dispatch reads. */
+export const markWaiting = (
+  ticketNumber: number,
+  on: readonly number[],
+): void => {
+  gh([
+    "issue",
+    "comment",
+    String(ticketNumber),
+    "-R",
+    REPO_SLUG,
+    "--body",
+    `Blocked by ${on.map((n) => `#${n}`).join(", ")}. The ship loop's analyst found this ticket needs them merged first; it starts once they close.`,
+  ]);
 };
 
 export const isTicketClosed = (ticketNumber: number): boolean =>
@@ -654,6 +717,59 @@ export const whyTheCheckoutIsBroken = (
   if (probed.status === 0) return undefined;
   const said = probed.stderr?.trim().split("\n")[0] || String(probed.error);
   return `the checkout the run ships from, ${repoRoot}, is broken: ${said}`;
+};
+
+/**
+ * A run where main passed every named check: the latest merge-queue run that
+ * did, so a failure on a pull request that main does not share is the branch's.
+ */
+export const mainPassedChecks = (
+  checks: readonly string[],
+): string | undefined => {
+  if (checks.length === 0) return undefined;
+  const runs = ghJson<{ databaseId: number; url: string }[]>([
+    "run",
+    "list",
+    "-R",
+    REPO_SLUG,
+    "--workflow",
+    "CI",
+    "--event",
+    "merge_group",
+    "--status",
+    "success",
+    "--limit",
+    "1",
+    "--json",
+    "databaseId,url",
+  ]);
+  const [latest] = runs;
+  if (!latest) return undefined;
+  const { jobs } = ghJson<{ jobs: { name: string; conclusion: string }[] }>([
+    "run",
+    "view",
+    String(latest.databaseId),
+    "-R",
+    REPO_SLUG,
+    "--json",
+    "jobs",
+  ]);
+  const passed = new Set(
+    jobs
+      .filter(({ conclusion }) => conclusion === "success")
+      .map(({ name }) => name),
+  );
+  return checks.every((check) => passed.has(check)) ? latest.url : undefined;
+};
+
+/** Whether a local branch holds commits past main; a missing branch holds none. */
+export const branchCarriesWork = (branch: string): boolean => {
+  const counted = spawnSync(
+    "git",
+    ["-C", REPO_ROOT, "rev-list", "--count", `${MERGE_BASE}..${branch}`],
+    { encoding: "utf8" },
+  );
+  return counted.status === 0 && Number(counted.stdout.trim()) > 0;
 };
 
 export const syncRepoToMain = (): void => {

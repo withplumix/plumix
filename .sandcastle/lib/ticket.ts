@@ -16,21 +16,25 @@ import {
   taggedBlock,
 } from "./agent.js";
 import { analyseBeforeSetup } from "./analysis.js";
-import { checkBrief } from "./brief-check.js";
+import { checkBrief, planningContext } from "./brief-check.js";
 import { decideOnTheBranch } from "./decide.js";
 import { prepareDelivery } from "./delivery.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import { GATES, GATES_AFTER_A_RESOLVED_REBASE, runGates } from "./gates.js";
 import {
   assignToSelf,
+  branchCarriesWork,
+  isOpenOnGitHub,
   openPullRequest,
   pushBranch,
   queueForMerge,
   resetBranchToMain,
   syncRepoToMain,
 } from "./github.js";
+import { readOnly } from "./handoff.js";
 import { detail as say } from "./log.js";
 import { surveyMutants } from "./mutation.js";
+import { replanning } from "./replans.js";
 import { MERGE_BASE } from "./repo.js";
 import { reviewableHead, reviewHead } from "./review-proof.js";
 import {
@@ -39,6 +43,7 @@ import {
   createUnbuiltSandbox,
   SETUP_STEPS,
 } from "./sandbox.js";
+import { reviewChecklist } from "./standards.js";
 
 /**
  * Opus implements, fixes, resolves conflicts and repairs; Sonnet reviews. On
@@ -113,7 +118,8 @@ export type ShipOutcome =
       readonly pullRequestUrl?: string;
       readonly briefFails?: boolean;
       readonly alreadyDecided?: boolean;
-    };
+    }
+  | { readonly status: "waiting"; readonly on: readonly number[] };
 
 export const readFindingsTag = (stdout: string): Findings => {
   const block = taggedBlock(stdout, "findings");
@@ -175,6 +181,8 @@ const reviewItemSchema = z.object({
 
 const specGapSchema = reviewItemSchema.extend({
   needsADecision: z.boolean().default(false),
+  /** The review checklist item the gap breaks; absent for a spec gap. */
+  checklist: z.number().int().positive().optional(),
 });
 
 const reviewSchema = z.object({
@@ -258,6 +266,45 @@ const EMIT_THE_REVIEW =
   "End with the <review> block the prompt describes: summary, specGaps and notes, as JSON.";
 const EMIT_THE_PULL_REQUEST = `End with the <pr> block the prompt describes: a title: line, then body: and the PR description. Load the \`mattpocock-skills:pr\` skill and write the body in its template: ${PR_SKILL_SECTIONS.join(", ")}.`;
 
+/** A first edit is discarded and the review runs again on the commit it was given. */
+const READ_ONLY_ATTEMPTS = 2;
+
+const fileExists = async (sandbox: Executor, path: string): Promise<boolean> =>
+  (await sandbox.exec(`test -f '${path}'`)).exitCode === 0;
+
+/** The reviewer never writes code: its edits are discarded, so its verdict covers the commit that ships. */
+export const reviewedWithoutEdits = async (
+  sandbox: Executor,
+  review: () => Promise<Review | null>,
+): Promise<Review | null> => {
+  const { result, discarded } = await readOnly(
+    sandbox,
+    review,
+    READ_ONLY_ATTEMPTS,
+  );
+  if (discarded > 0)
+    say(
+      `  the reviewer changed the branch; its edits were discarded (${discarded})`,
+    );
+  return result;
+};
+
+/**
+ * Each fresh review of a whole diff finds new style points, so a final review
+ * that blocked on them would never let a branch ship. The loop's passes held
+ * every line to the checklist; the final review guards what a push risks.
+ */
+const FINAL_REVIEW_SCOPE = `# This is the final review before the push
+
+The review passes before this one held every changed line to the checklist,
+and their findings were fixed. Here a checklist "no" goes in \`notes\`. A spec
+gap is only one of these: a criterion unmet, or met in form but not in effect;
+something you broke by trying it; a requirement with no test that would fail
+without it; or a PR description that says what the code does not do.`;
+
+const reviewScope = (round: number | string): string =>
+  typeof round === "number" ? "" : FINAL_REVIEW_SCOPE;
+
 export const reviewBranch = async (
   runAgentPhase: RunAgentPhase,
   journal: Pick<Journal, "record">,
@@ -275,6 +322,8 @@ export const reviewBranch = async (
       BASE: MERGE_BASE,
       PR_BODY: pullRequestBody,
       MUTATION: mutation,
+      CHECKLIST: reviewChecklist(),
+      SCOPE: reviewScope(round),
     },
     maxIterations: 1,
     idleTimeoutSeconds: AN_HOUR_IN_SECONDS,
@@ -390,9 +439,9 @@ export const reviewUntilClosed = async (
     ...(alreadyDecided && { alreadyDecided }),
   });
   const decideOnce = async (reason: string): Promise<string | null> => {
-    if (alreadyDecided) return null;
-    alreadyDecided = true;
-    return decide(reason);
+    const decision = await decide(reason);
+    if (decision === null) alreadyDecided = true;
+    return decision;
   };
 
   for (let pass = 1; ; pass += 1) {
@@ -400,7 +449,7 @@ export const reviewUntilClosed = async (
     const read = await review(pass, pullRequestCopy.body);
     if (!read) {
       return blocked(
-        `review pass ${pass} ended without a readable <review> block, so the branch is unreviewed`,
+        `review pass ${pass} handed over no usable review (no readable <review> block, or the reviewer changed the branch on every attempt), so the branch is unreviewed`,
       );
     }
     const next = afterReview(read, pass);
@@ -439,6 +488,62 @@ export const reviewUntilClosed = async (
     }
     pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
     if (next.lastRound) return { status: "closed", pullRequestCopy };
+  }
+};
+
+export const PUBLISH_FIX_ROUNDS = 1;
+
+export interface PublishReview {
+  readonly review: (pullRequestBody: string) => Promise<Review | null>;
+  readonly fixer: Fixer;
+  /** The decision that settles a gap no change to the branch can close, or null when it needs a person. */
+  readonly decide: (reason: string) => Promise<string | null>;
+  /** Gates the fixed branch; the reason it is blocked, or null when green. */
+  readonly regate: () => Promise<string | null>;
+}
+
+/**
+ * The final review reads the commit that ships. A gap it finds that the fixer
+ * can close goes back to the fixer once, so a ticket parks only on what needs
+ * a person or what a fix round could not close.
+ */
+export const reviewBeforePublishing = async (
+  { review, fixer, decide, regate }: PublishReview,
+  firstCopy: PullRequestCopy,
+): Promise<Reviewed> => {
+  let pullRequestCopy = firstCopy;
+  for (let round = 1; ; round += 1) {
+    const read = await review(pullRequestCopy.body);
+    if (!read)
+      return {
+        status: "blocked",
+        reason: "Final commit has no readable independent review",
+      };
+    const specGaps = read.specGaps.filter(
+      ({ checklist }) => checklist === undefined,
+    );
+    if (specGaps.length === 0) return { status: "closed", pullRequestCopy };
+    const reason = `Final commit review: ${asGapList(specGaps)}`;
+    if (round > PUBLISH_FIX_ROUNDS) return { status: "blocked", reason };
+
+    let brief = asFixBrief(specGaps, pullRequestCopy);
+    if (specGaps.some(({ needsADecision }) => needsADecision)) {
+      const decision = await decide(reason);
+      if (decision === null)
+        return { status: "blocked", reason, alreadyDecided: true };
+      brief = asDecidedBrief(decision, specGaps, pullRequestCopy);
+    }
+
+    say(`--- fix ${specGaps.length} gap(s) the final review found ---`);
+    const fixed = await fixer.apply(`fix#publish${round}`, brief);
+    if (fixed.declined)
+      return {
+        status: "blocked",
+        reason: `${reason}\n\nThe fixer changed nothing: ${fixed.declined.reason}`,
+      };
+    pullRequestCopy = fixed.pullRequestCopy ?? pullRequestCopy;
+    const blocked = await regate();
+    if (blocked) return { status: "blocked", reason: blocked };
   }
 };
 
@@ -555,6 +660,7 @@ export const shipTicket = async (
     reset: resetBranchToMain,
     open: (branch) => createUnbuiltSandbox(branch),
     sessionExists: existsSync,
+    carriesWork: branchCarriesWork,
   });
   const { branch, sandbox } = prepared;
   journal.setTicket(ticket, branch);
@@ -568,7 +674,38 @@ export const shipTicket = async (
     say("\n--- check brief ---");
     const brief = await analyseBeforeSetup({
       analyse: async () => {
-        const result = await checkBrief(runAgentPhase, ticket);
+        const recorded = prepared.resumed
+          ? history.recordedBrief(ticket.number)
+          : undefined;
+        if (recorded) {
+          say("  resuming with the brief its analyst already handed over");
+          return { next: "implement" as const, brief: recorded };
+        }
+        const commits = (
+          await sandbox.exec(`git log --oneline ${MERGE_BASE}..HEAD`)
+        ).stdout
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean);
+        const result = (
+          await readOnly(
+            sandbox,
+            () =>
+              checkBrief(runAgentPhase, ticket, {
+                exists: (path) => fileExists(sandbox, path),
+                isOpen: async (issue) => isOpenOnGitHub(issue),
+                context: planningContext(
+                  commits,
+                  history.replans(ticket.number),
+                ),
+              }),
+            READ_ONLY_ATTEMPTS,
+          )
+        ).result ?? {
+          next: "park" as const,
+          reason:
+            "The analyst changed the branch on every attempt, so no plan was handed over",
+        };
         if (result.next === "implement" && result.brief)
           history.record({
             type: "analysis.completed",
@@ -597,6 +734,7 @@ export const shipTicket = async (
           throw new Error(`Setup failed: ${setup.stdout}${setup.stderr}`);
       },
     });
+    if (brief.next === "wait") return { status: "waiting", on: brief.on };
     if (brief.next === "park")
       return { status: "blocked", reason: brief.reason, briefFails: true };
 
@@ -621,6 +759,7 @@ export const shipTicket = async (
             TICKET: String(ticket.number),
             NEXT_ADR: nextAdr,
             GUIDANCE: guidance,
+            CHECKLIST: reviewChecklist(),
           },
           maxIterations: prepared.sessionId ? 1 : 40,
           resumeSession: unblocked ? undefined : prepared.sessionId,
@@ -667,6 +806,10 @@ export const shipTicket = async (
       implemented.iterations.at(-1)?.sessionId,
     );
 
+    const decideOnce = replanning(history, ticket.number, (reason) =>
+      decideOnTheBranch(runAgentPhase, ticket, reason),
+    );
+
     say("--- mutation survey ---");
     const mutation = await surveyMutants(sandbox);
     const reviewed = await reviewUntilClosed(
@@ -675,22 +818,23 @@ export const shipTicket = async (
           reviewHead(ticket.number, history, {
             head: () => reviewableHead(sandbox),
             review: () =>
-              reviewBranch(
-                runAgentPhase,
-                journal,
-                ticket,
-                pass,
-                pullRequestBody,
-                mutation,
+              reviewedWithoutEdits(sandbox, () =>
+                reviewBranch(
+                  runAgentPhase,
+                  journal,
+                  ticket,
+                  pass,
+                  pullRequestBody,
+                  mutation,
+                ),
               ),
           }),
         fixer,
-        decide: (reason) => decideOnTheBranch(runAgentPhase, ticket, reason),
+        decide: decideOnce,
       },
       firstCopy,
     );
     if (reviewed.status === "blocked") return reviewed;
-    const { pullRequestCopy } = reviewed;
 
     const gates = await gatesUntilGreen(
       sandbox,
@@ -731,25 +875,33 @@ export const shipTicket = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
-    const finalReview = await reviewHead(ticket.number, history, {
-      head: () => reviewableHead(sandbox),
-      review: async () =>
-        reviewBranch(
-          runAgentPhase,
-          journal,
-          ticket,
-          "publish",
-          pullRequestCopy.body,
-          await surveyMutants(sandbox),
-        ),
-    });
-    if (!finalReview || finalReview.specGaps.length > 0)
-      return {
-        status: "blocked",
-        reason: finalReview
-          ? `Final commit review: ${asGapList(finalReview.specGaps)}`
-          : "Final commit has no readable independent review",
-      };
+    const published = await reviewBeforePublishing(
+      {
+        review: (pullRequestBody) =>
+          reviewHead(ticket.number, history, {
+            head: () => reviewableHead(sandbox),
+            review: () =>
+              reviewedWithoutEdits(sandbox, async () =>
+                reviewBranch(
+                  runAgentPhase,
+                  journal,
+                  ticket,
+                  "publish",
+                  pullRequestBody,
+                  await surveyMutants(sandbox),
+                ),
+              ),
+          }),
+        fixer,
+        decide: decideOnce,
+        regate: async () =>
+          (await gatesUntilGreen(sandbox, GATES, journal, fixer, "publish"))
+            .blocked,
+      },
+      reviewed.pullRequestCopy,
+    );
+    if (published.status === "blocked") return published;
+    const { pullRequestCopy } = published;
     await pushBranch(branch, sandbox.worktreePath);
     const pullRequest = openPullRequest(
       branch,

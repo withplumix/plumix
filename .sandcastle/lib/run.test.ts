@@ -61,8 +61,9 @@ const ports = (over: Partial<ShipPorts> = {}) => {
     ticketClosed: () => true,
     brokenCheckout: () => undefined,
     aBlockerIsMoving: () => false,
-    decide: async () => false,
+    decide: async () => null,
     retake: () => {},
+    wait: () => {},
     pause: async () => {},
     say: () => {},
   };
@@ -263,7 +264,7 @@ describe("runShipLoop", () => {
               pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
             };
       },
-      decide: async () => true,
+      decide: async () => "the ADR settles it",
       retake: (t) => {
         retaken.push(t.number);
         waiting.push(t);
@@ -277,7 +278,7 @@ describe("runShipLoop", () => {
     expect(report.merged.map(({ ticket: t }) => t.number)).toEqual([1]);
   });
 
-  test("a ticket that parks again after a decision goes to a person, so the loop never argues with itself", async () => {
+  test("a ticket is sent back for clearer instructions at most twice, then goes to a person", async () => {
     const waiting = [ticket(1)];
     const decided: number[] = [];
     const { ports: p, parked } = ports({
@@ -285,21 +286,85 @@ describe("runShipLoop", () => {
       ship: async () => ({ status: "blocked", reason: "a spec gap" }),
       decide: async (t) => {
         decided.push(t.number);
-        return true;
+        return "follow the ADR";
       },
       retake: (t) => void waiting.push(t),
     });
 
     await runShipLoop(p, allLanes);
 
-    expect(decided).toEqual([1]);
+    expect(decided).toEqual([1, 1]);
     expect(parked.map(({ number }) => number)).toEqual([1]);
+  });
+
+  test("each re-plan is journaled with why the ticket stopped and what was decided, across restarts", async () => {
+    const root = historyRoot();
+    const waiting = [ticket(1)];
+    let attempts = 0;
+    const { ports: p } = ports({
+      history: new ShipHistory(root),
+      nextTicket: () => waiting.shift(),
+      ship: async (t) =>
+        ++attempts === 1
+          ? { status: "blocked", reason: "which docs page?" }
+          : {
+              status: "queued",
+              pullRequest: { number: 100 + t.number, url: `pr/${t.number}` },
+            },
+      decide: async () => "overview.mdx, as canonical did",
+      retake: (t) => void waiting.push(t),
+    });
+
+    await runShipLoop(p, allLanes);
+
+    expect(
+      new ShipHistory(root, "read").events
+        .map(({ event }) => event)
+        .filter(({ type }) => type === "brief.amended"),
+    ).toEqual([
+      {
+        type: "brief.amended",
+        issue: 1,
+        reason: "which docs page?",
+        decision: "overview.mdx, as canonical did",
+      },
+    ]);
+  });
+
+  test("a ticket whose dependency is still open waits for it: no decider, no park, its claim released", async () => {
+    const root = historyRoot();
+    const waited: { number: number; on: readonly number[] }[] = [];
+    const decided: number[] = [];
+    const waiting = [ticket(1)];
+    const {
+      ports: p,
+      parked,
+      released,
+    } = ports({
+      history: new ShipHistory(root),
+      nextTicket: () => waiting.shift(),
+      ship: async () => ({ status: "waiting", on: [3261] }),
+      decide: async (t) => {
+        decided.push(t.number);
+        return "settled";
+      },
+      wait: (t, on) => void waited.push({ number: t.number, on }),
+    });
+
+    const report = await runShipLoop(p, allLanes);
+
+    expect(waited).toEqual([{ number: 1, on: [3261] }]);
+    expect(decided).toEqual([]);
+    expect(parked).toEqual([]);
+    expect(report.parked).toEqual([]);
+    expect(released).toEqual([1]);
+    expect(new ShipHistory(root, "read").pending()).toEqual([]);
   });
 
   test("a park the decider cannot settle goes to a person", async () => {
     const { ports: p, parked } = ports({
       ship: async () => ({ status: "blocked", reason: "needs a secret" }),
-      decide: async () => false,
+      decide: async () => null,
     });
 
     await runShipLoop(p, allLanes);
@@ -807,7 +872,7 @@ describe("runShipLoop", () => {
       }),
       decide: async () => {
         decisions += 1;
-        return true;
+        return "settled";
       },
     });
 

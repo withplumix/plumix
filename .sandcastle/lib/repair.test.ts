@@ -318,6 +318,15 @@ describe("afterCiFix", () => {
       ),
     ).toEqual({ next: "not-this-branch", reason: "flaky runner" });
   });
+
+  test("a failure pinned on main while main passes that check is refuted with main's run as evidence", () => {
+    expect(
+      afterCiFix(
+        { reason: "it fails on main too", notThisBranch: true },
+        { rebaseMovedTheBranch: false, mainPassed: "https://ci/runs/1" },
+      ),
+    ).toEqual({ next: "refute", evidence: "https://ci/runs/1" });
+  });
 });
 
 describe("whyTheRebaseIsUnfinished", () => {

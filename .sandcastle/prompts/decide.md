@@ -39,18 +39,22 @@ ticket's intent. Then:
 
 It is **not decidable**, and a person must answer, when it needs a secret, a
 credential or an account; when it is a security or data-loss trade-off; when it
-needs a product direction neither the spec nor `VISION.md` gives; when it would
-cut scope a person asked for; or when the options are equally defensible from
-the documents.
+needs a product direction neither the spec nor `VISION.md` gives; or when it
+would cut scope a person asked for. Options the documents leave equally
+defensible are decidable: pick the one that follows the existing pattern, keeps
+scope and is easiest to reverse, and say in the comment that a reply overturns
+it.
 
-Edit no file and make no commit. The harness applies your edits to the issue.
+Edit no file and make no commit. The harness applies your edits to the brief:
+the issue body, or the comment holding the latest brief when one replaced it.
+Every edit must come from that one text.
 
 # Done
 
 <decision>
 {"decidable": true,
  "why": "one paragraph: the option chosen and the document or code that settles it, with file:line",
- "edits": [{"old": "an exact passage of the current issue body, appearing once", "new": "its replacement"}],
+ "edits": [{"old": "an exact passage of the current brief, appearing once in it", "new": "its replacement"}],
  "comment": "Decided by the ship loop: what changed and why, in two or three sentences, naming the document that settles it. Reply here to overturn it."}
 </decision>
 

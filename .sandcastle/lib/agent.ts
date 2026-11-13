@@ -173,7 +173,7 @@ export const agentPhaseRunner =
   };
 
 const TIMES_TO_ASK_AGAIN = 2;
-const FIVE_MINUTES_IN_SECONDS = 300;
+export const FIVE_MINUTES_IN_SECONDS = 300;
 
 export const readOrAskAgain = async <T>(
   runAgentPhase: RunAgentPhase,
