@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test } from "vitest";
 
 import type { BlockViewModule } from "./block-registry.js";
 import { createBlockRegistry, defineBlock } from "./block-registry.js";
@@ -235,40 +235,39 @@ describe("a view module that fails to import", () => {
       defineBlock({ name: "site/flaky", view: () => flakyImport.promise }),
       defineBlock({ name: "site/slow", view: () => slowImport.promise }),
     ]);
-    const first = loadBlockViews(registry);
-    const flakyAlone = loadBlockViews(registry, ["site/flaky"]);
+    let settled = false;
+    const load = loadBlockViews(registry).finally(() => {
+      settled = true;
+    });
+    onTestFinished(async () => {
+      slowImport.resolve({ default: () => "slow" });
+      await load.catch(() => undefined);
+    });
 
     flakyImport.reject(new Error("chunk 404"));
-    const outcome = await Promise.race([
-      first.then(
-        () => "settled",
-        () => "settled",
-      ),
-      flakyAlone.then(
-        () => "pending",
-        () => "pending",
-      ),
-    ]);
-    slowImport.resolve({ default: () => "slow" });
-    await first.catch(() => undefined);
+    await loadBlockViews(registry, ["site/flaky"]).catch(() => undefined);
 
-    expect(outcome).toBe("pending");
+    expect(settled).toBe(false);
   });
 
   test("a later call retries a failed import", async () => {
-    const imports = [
-      Promise.reject(new Error("chunk 404")),
-      Promise.resolve<BlockViewModule>({ default: () => "flaky" }),
-    ];
+    const failedImport = deferred<BlockViewModule>();
+    const retriedImport = deferred<BlockViewModule>();
+    const imports = [failedImport.promise, retriedImport.promise];
     const flaky = defineBlock({
       name: "site/flaky",
-      view: () => imports.shift() ?? Promise.reject(new Error("no import")),
+      view: () => imports.shift() ?? retriedImport.promise,
     });
     const registry = createBlockRegistry([flaky]);
-    await loadBlockViews(registry).catch(() => undefined);
+    const failed = loadBlockViews(registry);
+    failedImport.reject(new Error("chunk 404"));
+    await failed.catch(() => undefined);
+    const View = (): string => "flaky";
 
-    await loadBlockViews(registry);
+    const retried = loadBlockViews(registry);
+    retriedImport.resolve({ default: View });
+    await retried;
 
-    expect(blockViewModule(flaky).default).toEqual(expect.any(Function));
+    expect(blockViewModule(flaky).default).toBe(View);
   });
 });
