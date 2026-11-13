@@ -24,7 +24,7 @@ import type { ResolvedMeta } from "@plumix/core";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { describeRpcError } from "@plumix/core/admin";
 
-import { ENTRY_COPY_FAILED } from "./-entry-copy.js";
+import { failureNotice } from "./-entry-copy.js";
 
 const M = {
   saveFailed: defineMessage({
@@ -115,11 +115,12 @@ export function PlainFormRouteInner({
     listen({
       wrote: autosave.wrote,
       failed: (err, cause) => {
-        if (cause !== "reload" && cause !== "takeOver") {
-          autosave.failed(err, cause);
+        const notice = failureNotice(cause);
+        if (notice.kind === "write") {
+          autosave.failed(err, notice.work);
           return;
         }
-        setServerError(describeRpcError(err, {}, ENTRY_COPY_FAILED[cause]));
+        setServerError(describeRpcError(err, {}, notice.message));
       },
       discard: autosave.cancel,
     });

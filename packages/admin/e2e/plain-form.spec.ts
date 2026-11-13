@@ -13,6 +13,7 @@ import {
   mockManifest,
   mockRpc,
   mockRpcWithCapture,
+  rpcErrorBody,
   rpcEtagConflictBody,
   rpcLeaseBody,
   rpcLockedBody,
@@ -405,6 +406,7 @@ test.describe("plain-form edit lease", () => {
   interface LeaseServer {
     holder: { readonly id: number; readonly name: string } | null;
     since: Date;
+    failingTakeOvers: number;
   }
 
   async function openAs(
@@ -435,6 +437,17 @@ test.describe("plain-form edit lease", () => {
       ).json;
       const heldByOther = server.holder !== null && server.holder.id !== me.id;
       if (heldByOther && takeOver !== true) return route.fulfill(locked());
+      if (takeOver === true && server.failingTakeOvers > 0) {
+        server.failingTakeOvers -= 1;
+        return route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: rpcErrorBody({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Internal server error",
+          }),
+        });
+      }
       if (server.holder?.id !== me.id) {
         server.holder = me;
         server.since = new Date("2026-05-20T09:05:00Z");
@@ -453,13 +466,14 @@ test.describe("plain-form edit lease", () => {
     return updates;
   }
 
-  test("a second editor sees who holds the entry and takes it over; the first turns read-only with their work kept", async ({
+  test("a second editor sees who holds the entry, a failed take over says so, and the next takes it over; the first turns read-only with their work kept", async ({
     page,
     browser,
   }) => {
     const server: LeaseServer = {
       holder: null,
       since: new Date("2026-05-20T09:00:00Z"),
+      failingTakeOvers: 1,
     };
     const adaUpdates = await openAs(page, ADA, server);
     await expect(page.getByTestId("plain-form-title-input")).toBeEnabled();
@@ -474,6 +488,11 @@ test.describe("plain-form edit lease", () => {
       "Ada is editing this entry (since May 20, 2026, 9:05 AM)",
     );
     await expect(pageB.getByTestId("plain-form-title-input")).toBeDisabled();
+    await pageB.getByTestId("edit-lease-take-over").click();
+    await expect(pageB.getByTestId("plain-form-status-pill")).toHaveAttribute(
+      "data-status",
+      "error",
+    );
     await pageB.getByTestId("edit-lease-take-over").click();
     await expect(pageB.getByTestId("edit-lease-banner")).toBeHidden();
     await expect(pageB.getByTestId("plain-form-title-input")).toBeEnabled();

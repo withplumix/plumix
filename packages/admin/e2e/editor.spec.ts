@@ -1395,9 +1395,40 @@ test.describe("editor publishing & autosave", () => {
     await expect(button).toBeEnabled();
     await button.click();
 
-    await expect(page.getByTestId("toast-error")).toBeVisible();
+    await expect(page.getByTestId("toast-error")).toHaveText(
+      "Couldn't publish — try again.",
+    );
     // The entry stays unpublished, so the button must remain usable.
     await expect(button).toBeEnabled();
+  });
+
+  test("a failed autosave is told as a failed save, not a failed publish", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": AUTHED_ADMIN,
+      "/entry/get": editorEntry(),
+      "/entry/list": [],
+      "/entry/createPreviewLink": PREVIEW_LINK,
+    });
+    await page.route("**/_plumix/rpc/entry/update", (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: rpcErrorBody({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Internal server error",
+        }),
+      }),
+    );
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("entry-slug-input").fill("left-unsaved");
+
+    await expect(page.getByTestId("toast-error")).toHaveText(
+      "Couldn't save your changes — they may contain invalid content.",
+    );
   });
 
   test("Publish button is disabled when the entry is already published", async ({
@@ -2075,26 +2106,90 @@ test.describe("editor revision preview", () => {
     expect(saved).toHaveLength(1);
   });
 
-  test("while another user holds the entry, the preview names them and offers no Restore", async ({
+  test("while another user holds the entry, the preview names them and offers no Restore, and a failed Take over says so", async ({
     page,
   }) => {
     await installPreviewMocks(page);
-    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) =>
-      route.fulfill({
-        status: 423,
-        contentType: "application/json",
-        body: rpcLockedBody(
-          { id: 2, name: "Bo" },
-          new Date("2026-05-22T09:00:00Z"),
-        ),
-      }),
-    );
-
+    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) => {
+      const { takeOver } = (
+        route.request().postDataJSON() as { json: { takeOver?: boolean } }
+      ).json;
+      return route.fulfill(
+        takeOver === true
+          ? {
+              status: 500,
+              contentType: "application/json",
+              body: rpcErrorBody({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Internal server error",
+              }),
+            }
+          : {
+              status: 423,
+              contentType: "application/json",
+              body: rpcLockedBody(
+                { id: 2, name: "Bo" },
+                new Date("2026-05-22T09:00:00Z"),
+              ),
+            },
+      );
+    });
     await page.goto("entries/posts/1/edit?revision=42");
-
     await expect(page.getByTestId("edit-lease-held-by")).toBeVisible();
     await expect(page.getByTestId("revision-preview-banner")).toBeVisible();
     await expect(page.getByTestId("revision-preview-restore")).toHaveCount(0);
+
+    await page.getByTestId("edit-lease-take-over").click();
+
+    await expect(page.getByTestId("toast-error")).toHaveText(
+      "Couldn't take over editing this entry — try again.",
+    );
+  });
+
+  test("a failed Restore says why, and restoring again clears it", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    let restores = 0;
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    await page.route(
+      "**/_plumix/rpc/entry/revisions/restore",
+      async (route) => {
+        restores += 1;
+        if (restores === 1) {
+          return route.fulfill({
+            status: 500,
+            contentType: "application/json",
+            body: rpcErrorBody({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Internal server error",
+            }),
+          });
+        }
+        await answered;
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: entryBody(liveEntry()),
+        });
+      },
+    );
+    await page.goto("entries/posts/1/edit?revision=42");
+    const restore = page.getByTestId("revision-preview-restore");
+    await restore.click();
+    await expect(page.getByTestId("revision-preview-restore-error")).toHaveText(
+      "Couldn't restore this revision — try again.",
+    );
+
+    await restore.click();
+
+    await expect(
+      page.getByTestId("revision-preview-restore-error"),
+    ).toHaveCount(0);
+    answer?.();
   });
 
   test("a stale Restore opens the conflict dialog, and Keep mine restores from the token it reported", async ({

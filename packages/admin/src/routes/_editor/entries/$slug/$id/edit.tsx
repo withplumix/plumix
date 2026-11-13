@@ -76,7 +76,7 @@ import { idPathParam } from "@plumix/core/validation";
 
 import {
   compareEntry,
-  ENTRY_COPY_FAILED,
+  failureNotice,
   readSavedEntry,
   writeEntry,
 } from "./-entry-copy.js";
@@ -87,10 +87,6 @@ const M = {
   published: defineMessage({
     id: "editor.toast.published",
     message: "Published.",
-  }),
-  publishFailed: defineMessage({
-    id: "editor.toast.publishFailed",
-    message: "Couldn't publish — try again.",
   }),
   autosaveFailed: defineMessage({
     id: "editor.toast.autosaveFailed",
@@ -949,18 +945,17 @@ function EntryEditor({
         void invalidateEntry();
       },
       failed: (err, cause) => {
-        if (cause === "reload" || cause === "takeOver") {
-          toastError(renderLabel(ENTRY_COPY_FAILED[cause]));
-          return;
-        }
-        if (cause.kind !== "publish" && cause.kind !== "publishDraft") {
-          autosave.failed(err, cause);
+        const notice = failureNotice(cause);
+        if (notice.kind === "write") {
+          autosave.failed(err, notice.work);
           return;
         }
         // Publish is stricter than a draft save, rejecting values a draft
         // tolerated.
-        setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
-        toastError(renderLabel(M.publishFailed));
+        if (notice.kind === "publish") {
+          setMetaFieldErrors(extractMetaFieldErrors(err) ?? null);
+        }
+        toastError(renderLabel(notice.message));
       },
       discard: autosave.cancel,
     });
@@ -1213,11 +1208,12 @@ function RevisionPreview({
         ]).then(handleBackToLive);
       },
       failed: (err, cause) => {
-        if (cause === "reload" || cause === "takeOver") {
-          toastError(renderLabel(ENTRY_COPY_FAILED[cause]));
+        const notice = failureNotice(cause);
+        if (notice.kind !== "write") {
+          toastError(renderLabel(notice.message));
           return;
         }
-        const message = restoreErrorDescriptor(err, cause);
+        const message = restoreErrorDescriptor(err, notice.work);
         if (message) setRestoreError(message);
       },
       discard: () => undefined,

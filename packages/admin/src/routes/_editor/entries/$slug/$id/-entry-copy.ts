@@ -1,4 +1,5 @@
 import type { EntryRow, EntryWrite } from "@/editor/entry-autosave.js";
+import type { EntryCopyCause } from "@/editor/entry-copy.js";
 import type { MessageDescriptor } from "@lingui/core";
 import { orpc } from "@/lib/orpc.js";
 import { defineMessage } from "@lingui/core/macro";
@@ -9,16 +10,38 @@ import {
   NAMED_TEMPLATE_META_KEY,
 } from "@plumix/core/manifest";
 
-export const ENTRY_COPY_FAILED = {
-  reload: defineMessage({
+const M = {
+  reloadFailed: defineMessage({
     id: "editor.copy.reloadFailed",
     message: "Couldn't load this entry as it's saved now — try again.",
   }),
-  takeOver: defineMessage({
+  takeOverFailed: defineMessage({
     id: "editor.copy.takeOverFailed",
     message: "Couldn't take over editing this entry — try again.",
   }),
-} satisfies Record<"reload" | "takeOver", MessageDescriptor>;
+  publishFailed: defineMessage({
+    id: "editor.toast.publishFailed",
+    message: "Couldn't publish — try again.",
+  }),
+} satisfies Record<string, MessageDescriptor>;
+
+export type FailureNotice =
+  | { readonly kind: "copy"; readonly message: MessageDescriptor }
+  | { readonly kind: "publish"; readonly message: MessageDescriptor }
+  | { readonly kind: "write"; readonly work: EntryWrite };
+
+/**
+ * A reload or take over is the copy's own step, so it is never told as the
+ * write that ran before it, and a failed autosave keeps autosave's one report.
+ */
+export function failureNotice(cause: EntryCopyCause): FailureNotice {
+  if (cause === "reload") return { kind: "copy", message: M.reloadFailed };
+  if (cause === "takeOver") return { kind: "copy", message: M.takeOverFailed };
+  if (cause.kind === "publish" || cause.kind === "publishDraft") {
+    return { kind: "publish", message: M.publishFailed };
+  }
+  return { kind: "write", work: cause };
+}
 
 export function writeEntry(
   id: number,

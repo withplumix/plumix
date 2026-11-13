@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { SavedEntry } from "./-entry-copy.js";
-import { compareEntry } from "./-entry-copy.js";
+import { compareEntry, failureNotice } from "./-entry-copy.js";
 
 const SAVED: SavedEntry = {
   title: "Saved title",
@@ -138,5 +138,49 @@ describe("compareEntry", () => {
     );
 
     expect(sides).toEqual({ mine: { title: "My title" }, theirs: null });
+  });
+});
+
+describe("failureNotice", () => {
+  test("a failed take over is told with its own message", () => {
+    expect(failureNotice("takeOver")).toMatchObject({
+      kind: "copy",
+      message: {
+        id: "editor.copy.takeOverFailed",
+        message: "Couldn't take over editing this entry — try again.",
+      },
+    });
+  });
+
+  test("a failed reload is told with its own message", () => {
+    expect(failureNotice("reload")).toMatchObject({
+      kind: "copy",
+      message: {
+        id: "editor.copy.reloadFailed",
+        message: "Couldn't load this entry as it's saved now — try again.",
+      },
+    });
+  });
+
+  test("a failed publish is told as a failed publish", () => {
+    expect(failureNotice({ kind: "publish" })).toMatchObject({
+      kind: "publish",
+      message: {
+        id: "editor.toast.publishFailed",
+        message: "Couldn't publish — try again.",
+      },
+    });
+  });
+
+  test("a failed draft publish is told as a failed publish", () => {
+    expect(failureNotice({ kind: "publishDraft" })).toMatchObject({
+      kind: "publish",
+    });
+  });
+
+  test("a failed autosave is left to autosave's own report, never told as a failed publish", () => {
+    const work = { kind: "update", patch: { title: "Mine" } } as const;
+
+    expect(failureNotice(work)).toEqual({ kind: "write", work });
   });
 });

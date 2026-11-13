@@ -1433,7 +1433,7 @@ msgid "editor.previewFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_editor/entries/$slug/$id/edit.tsx
+#: src/routes/_editor/entries/$slug/$id/-entry-copy.ts
 msgid "editor.toast.publishFailed"
 msgstr ""
 
