@@ -5,11 +5,13 @@ import {
   createBlockRegistry,
   defineBlock,
   loadBlockViews,
+  loadedBlocksWithLoaders,
 } from "@plumix/core/blocks";
 
 import {
   createLoaderBlocksReporter,
   createTreeCommitter,
+  scheduleViewLoads,
   seedTree,
   settleViewLoad,
   treeBlockNames,
@@ -304,5 +306,122 @@ describe("a view that fails to load in the canvas", () => {
     const seed = await seedTree(registry, tree);
 
     expect(seed).toBe(tree);
+  });
+});
+
+/** Two blocks whose view imports the test can count. */
+function countedRegistry() {
+  const hero = vi.fn(() => Promise.resolve(blank));
+  const feed = vi.fn(() => Promise.resolve(blank));
+  const registry = createBlockRegistry([
+    defineBlock({ name: "site/hero", view: hero }),
+    defineBlock({ name: "site/feed", view: feed }),
+  ]);
+  return { registry, hero, feed };
+}
+
+/** A `requestIdleCallback` whose pending tasks the test runs by hand. */
+function stubIdleCallback() {
+  const pending = new Map<number, () => void>();
+  let next = 0;
+  vi.stubGlobal("requestIdleCallback", (task: () => void) => {
+    next += 1;
+    pending.set(next, task);
+    return next;
+  });
+  vi.stubGlobal("cancelIdleCallback", (handle: number) => {
+    pending.delete(handle);
+  });
+  return {
+    runIdle: () => {
+      for (const task of pending.values()) task();
+      pending.clear();
+    },
+  };
+}
+
+describe("scheduleViewLoads", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  test("imports no view before the browser is idle", () => {
+    stubIdleCallback();
+    const { registry, hero, feed } = countedRegistry();
+
+    scheduleViewLoads(registry, () => undefined);
+
+    expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  test("imports every view once the browser is idle", () => {
+    const idle = stubIdleCallback();
+    const { registry, hero, feed } = countedRegistry();
+    scheduleViewLoads(registry, () => undefined);
+
+    idle.runIdle();
+
+    expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([1, 1]);
+  });
+
+  test("falls back to a timer where there is no requestIdleCallback", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestIdleCallback", undefined);
+    const { registry, hero, feed } = countedRegistry();
+    scheduleViewLoads(registry, () => undefined);
+
+    vi.runAllTimers();
+
+    expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([1, 1]);
+  });
+
+  test("imports nothing at idle once cancelled", () => {
+    const idle = stubIdleCallback();
+    const { registry, hero, feed } = countedRegistry();
+    const loads = scheduleViewLoads(registry, () => undefined);
+    loads.cancel();
+
+    idle.runIdle();
+
+    expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  test("imports nothing from the fallback timer once cancelled", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("requestIdleCallback", undefined);
+    const { registry, hero, feed } = countedRegistry();
+    const loads = scheduleViewLoads(registry, () => undefined);
+    loads.cancel();
+
+    vi.runAllTimers();
+
+    expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 0]);
+  });
+
+  test("a prefetch imports exactly the named views", () => {
+    stubIdleCallback();
+    const { registry, hero, feed } = countedRegistry();
+    const loads = scheduleViewLoads(registry, () => undefined);
+
+    loads.prefetch(["site/feed"]);
+
+    expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 1]);
+  });
+
+  test("calls back once a prefetch's views have loaded", async () => {
+    stubIdleCallback();
+    const registry = loaderRegistry();
+    let settled!: (names: readonly string[]) => void;
+    const afterLoad = new Promise<readonly string[]>((resolve) => {
+      settled = resolve;
+    });
+    const loads = scheduleViewLoads(registry, () =>
+      settled(loadedBlocksWithLoaders(registry)),
+    );
+
+    loads.prefetch(["site/feed"]);
+
+    expect(await afterLoad).toEqual(["site/feed"]);
   });
 });

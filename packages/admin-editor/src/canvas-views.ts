@@ -108,3 +108,31 @@ export function createLoaderBlocksReporter(
     },
   };
 }
+
+export interface ScheduledViewLoads {
+  readonly prefetch: (names: readonly string[]) => void;
+  readonly cancel: () => void;
+}
+
+/**
+ * Loads every view once the browser is idle, and the named views at once on a
+ * prefetch. `afterLoad` runs when each load settles.
+ */
+export function scheduleViewLoads(
+  registry: BlockRegistry,
+  afterLoad: () => void,
+): ScheduledViewLoads {
+  const load = (names?: Iterable<string>): void =>
+    void settleViewLoad(loadBlockViews(registry, names), afterLoad);
+  return { prefetch: load, cancel: whenIdle(() => load()) };
+}
+
+/** The timer covers browsers with no `requestIdleCallback`, such as Safari. */
+function whenIdle(task: () => void): () => void {
+  if (typeof requestIdleCallback === "function") {
+    const handle = requestIdleCallback(task);
+    return () => cancelIdleCallback(handle);
+  }
+  const handle = setTimeout(task, 1);
+  return () => clearTimeout(handle);
+}

@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 import type { BlockNode } from "@plumix/core/blocks";
 import { test as base, expect } from "@plumix/core/test/playwright";
 
@@ -100,6 +102,55 @@ test("a block inserted from the catalog shows its view at once", async ({
   await expect(
     editor.canvas.frame.getByTestId("block-unregistered"),
   ).toHaveCount(0);
+});
+
+/** Records the block names each `host:prefetch-blocks` message names. */
+async function recordPrefetches(page: Page): Promise<() => Promise<unknown>> {
+  const handle = await page.getByTestId("plumix-canvas-iframe").elementHandle();
+  const frame = await handle.contentFrame();
+  if (!frame) throw new Error("The canvas iframe has no frame.");
+  await frame.evaluate(() => {
+    const seen: unknown[] = [];
+    Object.assign(window, { prefetched: seen });
+    window.addEventListener("message", (event: MessageEvent) => {
+      const { message } = event.data as {
+        message?: { type?: string; names?: unknown };
+      };
+      if (message?.type === "host:prefetch-blocks") seen.push(message.names);
+    });
+  });
+  return () =>
+    frame.evaluate(
+      () => (window as unknown as { prefetched: unknown[] }).prefetched,
+    );
+}
+
+test("hovering a catalog item prefetches its block's view", async ({
+  editor,
+  page,
+  seed,
+}) => {
+  await openPost(editor, seed, [{ id: "code", name: "core/code" }]);
+  const prefetched = await recordPrefetches(page);
+  await page.getByTestId("plumix-tab-blocks").click();
+
+  await page.getByTestId("block-catalog-item-playground/showcase").hover();
+
+  await expect.poll(prefetched).toEqual([["playground/showcase"]]);
+});
+
+test("focusing a catalog item prefetches its block's view", async ({
+  editor,
+  page,
+  seed,
+}) => {
+  await openPost(editor, seed, [{ id: "code", name: "core/code" }]);
+  const prefetched = await recordPrefetches(page);
+  await page.getByTestId("plumix-tab-blocks").click();
+
+  await page.getByTestId("block-catalog-item-playground/showcase").focus();
+
+  await expect.poll(prefetched).toEqual([["playground/showcase"]]);
 });
 
 const HIGHLIGHTED_CODE = {

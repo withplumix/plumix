@@ -40,6 +40,7 @@ import { canvasContextValue } from "./canvas-context.js";
 import {
   createLoaderBlocksReporter,
   createTreeCommitter,
+  scheduleViewLoads,
   settleViewLoad,
 } from "./canvas-views.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
@@ -130,8 +131,7 @@ export function EditorCanvas({
     const loaded = (): void => {
       if (!disposed) reporter.update();
     };
-    const loadViews = (names?: Iterable<string>): void =>
-      void settleViewLoad(loadBlockViews(registry, names), loaded);
+    const views = scheduleViewLoads(registry, loaded);
     const connection = connectRuntime({
       parentWindow: window.parent,
       origin,
@@ -142,15 +142,14 @@ export function EditorCanvas({
       onDeps: (resolved) => setDeps((prior) => mergeDeps(prior, resolved)),
       onConfig: setConfig,
       onXray: setXray,
-      onPrefetchBlocks: loadViews,
+      onPrefetchBlocks: views.prefetch,
       onConnect: () => reporter.resend(),
     });
     connectionRef.current = connection;
     reporter.update();
-    const cancelIdle = whenIdle(() => loadViews());
     return () => {
       disposed = true;
-      cancelIdle();
+      views.cancel();
       connection.dispose();
       connectionRef.current = null;
     };
@@ -407,16 +406,6 @@ export function EditorCanvas({
       </PlumixProvider>
     </HtmlAllowlistProvider>
   );
-}
-
-/** The timer covers browsers with no `requestIdleCallback`, such as Safari. */
-function whenIdle(task: () => void): () => void {
-  if (typeof requestIdleCallback === "function") {
-    const handle = requestIdleCallback(task);
-    return () => cancelIdleCallback(handle);
-  }
-  const handle = setTimeout(task, 1);
-  return () => clearTimeout(handle);
 }
 
 /** Bounding box covering all rects, or null when there are none. */
