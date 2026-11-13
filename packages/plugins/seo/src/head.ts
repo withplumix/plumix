@@ -89,7 +89,6 @@ function hasProperty(
   return meta?.some((entry) => entry.property === property) ?? false;
 }
 
-/** What a page is shared as: `og:type`, the `article:*` tags and the graph. */
 export type PageType = "article" | "website";
 
 /** How a page's type is decided, below whatever its template wrote itself. */
@@ -111,14 +110,15 @@ export function entryTypePageType(
 }
 
 /**
- * One answer per page, so `og:type`, the `article:*` tags and the graph's
- * `@type` cannot disagree. A template's own `og:type` wins; any value but
- * `article` means the page is not one.
+ * One answer, so `og:type`, the `article:*` tags and the graph cannot
+ * disagree. Only an entry has article facts; on one, a template's `og:type`
+ * wins.
  */
 export function resolvePageType(
   meta: readonly DocumentMeta[] | undefined,
   sources: PageTypeSources,
 ): PageType {
+  if (sources.typeDefault === null) return "website";
   const declared = meta?.find((entry) => entry.property === "og:type");
   if (declared !== undefined) {
     return declared.content === "article" ? "article" : "website";
@@ -126,7 +126,7 @@ export function resolvePageType(
   if (sources.override !== null) {
     return sources.override === WEB_PAGE ? "website" : "article";
   }
-  return sources.typeDefault ?? "website";
+  return sources.typeDefault;
 }
 
 function hasCanonical(link: readonly DocumentLink[] | undefined): boolean {
@@ -266,7 +266,6 @@ function hasJsonLd(scripts: readonly DocumentScript[] | undefined): boolean {
   );
 }
 
-/** The editor's Article subtype, else the default one. */
 function articleSubtype(overrides: SeoOverrides): SchemaType {
   const chosen = overrides.schemaType;
   return chosen === null || chosen === WEB_PAGE ? DEFAULT_SCHEMA_TYPE : chosen;

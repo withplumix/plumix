@@ -324,6 +324,15 @@ describe("resolvePageType", () => {
     ).toBe("website");
   });
 
+  test("a page that is not an entry is a website whatever its template says", () => {
+    expect(
+      resolvePageType([{ property: "og:type", content: "article" }], {
+        override: null,
+        typeDefault: null,
+      }),
+    ).toBe("website");
+  });
+
   test("a template's other tags leave the type to decide", () => {
     expect(
       resolvePageType([{ property: "og:site_name", content: "Theme" }], entry),

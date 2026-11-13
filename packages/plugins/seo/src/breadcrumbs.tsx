@@ -21,7 +21,6 @@ export interface BreadcrumbItem {
  */
 const HOME = "Home";
 
-/** A site path as an absolute URL, under the site's base path. */
 export function absolute(ctx: AppContext, path: string): string {
   return `${ctx.origin}${withBasePath(path, ctx.config.basePath)}`;
 }

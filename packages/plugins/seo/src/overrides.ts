@@ -173,7 +173,6 @@ export const SEO_BOX_LABELS = {
   description: D.boxDescription,
 } as const;
 
-/** The box's roster: Web page, then the Article subtypes. */
 function toPageChoice(
   value: string | null,
 ): SchemaType | typeof WEB_PAGE | null {
