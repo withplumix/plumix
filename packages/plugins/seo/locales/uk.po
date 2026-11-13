@@ -126,7 +126,12 @@ msgstr "Тип вмісту"
 #. js-lingui-explicit-id
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
-msgstr "Як структуровані дані класифікують цей запис. Типово — стаття."
+msgstr "Як цей запис поширюється та класифікується. Типово — як задано для його типу."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.web_page"
+msgstr "Вебсторінка"
 
 #. js-lingui-explicit-id
 #: src/settings.ts

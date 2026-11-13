@@ -126,7 +126,12 @@ msgstr "Inhaltstyp"
 #. js-lingui-explicit-id
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
-msgstr "Wie strukturierte Daten diesen Eintrag einordnen. Standard ist ein Artikel."
+msgstr "Als was dieser Eintrag geteilt und eingeordnet wird. Standard ist die Vorgabe seines Typs."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.web_page"
+msgstr "Webseite"
 
 #. js-lingui-explicit-id
 #: src/settings.ts

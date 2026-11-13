@@ -126,7 +126,12 @@ msgstr "نوع المحتوى"
 #. js-lingui-explicit-id
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
-msgstr "كيف تصنّف البيانات المنظَّمة هذا المُدخل. الافتراضي مقالة."
+msgstr "كيف يُشارَك هذا المُدخل ويُصنَّف. الافتراضي ما يحدده نوعه."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.web_page"
+msgstr "صفحة ويب"
 
 #. js-lingui-explicit-id
 #: src/settings.ts
