@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { BlockViewProps } from "../render-block-tree.js";
-
-const ALIGNS = ["left", "center", "right"] as const;
-type Align = (typeof ALIGNS)[number];
+import { pickAlign } from "./align.js";
 
 /**
  * React 19 dedupes this in the editor, but the public string render emits one
@@ -16,12 +14,6 @@ const TABLE_THEME_CSS = [
   "th[data-align=center],td[data-align=center]{text-align:center}",
   "th[data-align=right],td[data-align=right]{text-align:right}",
 ].join("");
-
-function pickAlign(raw: unknown): Align | undefined {
-  return typeof raw === "string" && (ALIGNS as readonly string[]).includes(raw)
-    ? (raw as Align)
-    : undefined;
-}
 
 export default function TableView({
   name,

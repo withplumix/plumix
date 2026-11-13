@@ -1,8 +1,20 @@
+import type { Label } from "../../i18n/label.js";
 import type { BlockInput } from "../block-registry.js";
 import type { BlockNode } from "../render-block-tree.js";
+import type { Align } from "./align.js";
 import { defineBlock } from "../block-registry.js";
+import { ALIGNS } from "./align.js";
 
 const COLUMN_COUNT = 3;
+
+const ALIGN_LABELS: Readonly<Record<Align, Label>> = {
+  left: { id: "block.core.table.input.align.option.left", message: "Left" },
+  center: {
+    id: "block.core.table.input.align.option.center",
+    message: "Center",
+  },
+  right: { id: "block.core.table.input.align.option.right", message: "Right" },
+};
 
 /**
  * Cell text alignment — shared by header and body cells. Left is the default
@@ -17,29 +29,7 @@ const ALIGN_INPUT: BlockInput = {
     id: "block.core.table.input.align.placeholder",
     message: "Left",
   },
-  options: [
-    {
-      label: {
-        id: "block.core.table.input.align.option.left",
-        message: "Left",
-      },
-      value: "left",
-    },
-    {
-      label: {
-        id: "block.core.table.input.align.option.center",
-        message: "Center",
-      },
-      value: "center",
-    },
-    {
-      label: {
-        id: "block.core.table.input.align.option.right",
-        message: "Right",
-      },
-      value: "right",
-    },
-  ],
+  options: ALIGNS.map((value) => ({ label: ALIGN_LABELS[value], value })),
 };
 
 /**

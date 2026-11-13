@@ -1,5 +1,8 @@
+import type { Label } from "../../i18n/label.js";
 import type { BlockNode } from "../render-block-tree.js";
+import type { StackAt } from "./stack-at.js";
 import { defineBlock } from "../block-registry.js";
+import { DEFAULT_STACK_AT, STACK_AT } from "./stack-at.js";
 
 /**
  * Two equal columns, each seeded with a paragraph so a fresh row isn't bare.
@@ -17,8 +20,20 @@ const DEFAULT_COLUMNS: readonly BlockNode[] = [
   },
 ];
 
-type StackAt = "tablet" | "mobile" | "never";
-const DEFAULT_STACK_AT: StackAt = "tablet";
+const STACK_AT_LABELS: Readonly<Record<StackAt, Label>> = {
+  tablet: {
+    id: "block.core.columns.input.stackAt.option.tablet",
+    message: "Tablet",
+  },
+  mobile: {
+    id: "block.core.columns.input.stackAt.option.mobile",
+    message: "Mobile",
+  },
+  never: {
+    id: "block.core.columns.input.stackAt.option.never",
+    message: "Never",
+  },
+};
 
 export const columnsBlock = defineBlock({
   name: "core/columns",
@@ -36,29 +51,10 @@ export const columnsBlock = defineBlock({
         id: "block.core.columns.input.stackAt.label",
         message: "Stack columns at",
       },
-      options: [
-        {
-          label: {
-            id: "block.core.columns.input.stackAt.option.tablet",
-            message: "Tablet",
-          },
-          value: "tablet",
-        },
-        {
-          label: {
-            id: "block.core.columns.input.stackAt.option.mobile",
-            message: "Mobile",
-          },
-          value: "mobile",
-        },
-        {
-          label: {
-            id: "block.core.columns.input.stackAt.option.never",
-            message: "Never",
-          },
-          value: "never",
-        },
-      ],
+      options: STACK_AT.map((value) => ({
+        label: STACK_AT_LABELS[value],
+        value,
+      })),
     },
     {
       name: "reverseWhenStacked",
@@ -80,8 +76,6 @@ export const columnsBlock = defineBlock({
     },
   ],
   defaults: { stackAt: DEFAULT_STACK_AT },
-  // Stacking isn't seeded here as a responsive bucket: it follows `stackAt`,
-  // so the preset owns it.
   defaultStyles: {
     large: { display: "flex", gap: "20px", alignItems: "stretch" },
   },

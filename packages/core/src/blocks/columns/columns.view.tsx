@@ -2,18 +2,9 @@ import type { ReactNode } from "react";
 
 import type { BlockViewProps } from "../render-block-tree.js";
 import type { ThemeBreakpoints } from "../styles/style-emitter.js";
+import type { StackAt } from "./stack-at.js";
 import { DEFAULT_BREAKPOINTS } from "../styles/style-emitter.js";
-
-const STACK_AT = ["tablet", "mobile", "never"] as const;
-type StackAt = (typeof STACK_AT)[number];
-const DEFAULT_STACK_AT: StackAt = "tablet";
-
-function pickStackAt(raw: unknown): StackAt {
-  return typeof raw === "string" &&
-    (STACK_AT as readonly string[]).includes(raw)
-    ? (raw as StackAt)
-    : DEFAULT_STACK_AT;
-}
+import { pickStackAt } from "./stack-at.js";
 
 /**
  * Emitted by the block rather than a stylesheet so it follows the theme's
