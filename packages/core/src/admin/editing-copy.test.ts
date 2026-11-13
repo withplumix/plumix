@@ -554,6 +554,135 @@ describe("createEditingCopy", () => {
     });
   });
 
+  test("while inactive it is idle and editable, and asks for no lease", async () => {
+    const acquired: number[] = [];
+    const lease = fakeLease();
+    const copy = openCopy({
+      active: false,
+      lease: {
+        ...lease.api,
+        acquire: (input) => {
+          acquired.push(input.id);
+          return lease.api.acquire(input);
+        },
+      },
+    });
+    await settle();
+
+    expect(acquired).toEqual([]);
+    expect(copy.getSnapshot()).toMatchObject({
+      mode: "idle",
+      readOnly: false,
+      banner: undefined,
+    });
+  });
+
+  test("becoming active asks for the lease, and it is loading until the lease is held", async () => {
+    const lease = fakeLease();
+    const copy = openCopy({ active: false, lease: lease.api });
+
+    copy.setActive(true);
+
+    expect(copy.getSnapshot()).toMatchObject({
+      mode: "loading",
+      readOnly: true,
+    });
+    lease.grant();
+    await settle();
+    expect(copy.getSnapshot()).toMatchObject({
+      mode: "editable",
+      readOnly: false,
+    });
+  });
+
+  test("becoming inactive gives up the lease it held and returns to idle", async () => {
+    const events: string[] = [];
+    const lease = fakeLease(events);
+    const copy = openCopy({ lease: lease.api });
+    lease.grant();
+    await settle();
+
+    copy.setActive(false);
+
+    expect(events).toEqual(["release"]);
+    expect(copy.getSnapshot()).toMatchObject({
+      mode: "idle",
+      readOnly: false,
+    });
+  });
+
+  test("going inactive asks for no lease again", async () => {
+    let acquires = 0;
+    const lease = fakeLease();
+    const copy = openCopy({
+      lease: {
+        ...lease.api,
+        acquire: (input) => {
+          acquires += 1;
+          return lease.api.acquire(input);
+        },
+      },
+    });
+    lease.grant();
+    await settle();
+
+    copy.setActive(false);
+    await settle();
+
+    expect(acquires).toBe(1);
+  });
+
+  test("being set active while already active keeps the lease it holds", async () => {
+    const events: string[] = [];
+    const lease = fakeLease(events);
+    const copy = openCopy({ lease: lease.api });
+    lease.grant();
+    await settle();
+
+    copy.setActive(true);
+
+    expect(events).toEqual([]);
+    expect(copy.getSnapshot()).toMatchObject({ mode: "editable" });
+  });
+
+  test("once inactive it shows no banner, though another user held the lease", async () => {
+    const lease = fakeLease();
+    const copy = openCopy({ lease: lease.api });
+    lease.refuse(ADA);
+    await settle();
+
+    copy.setActive(false);
+
+    expect(copy.getSnapshot()).toMatchObject({
+      mode: "idle",
+      readOnly: false,
+      banner: undefined,
+    });
+  });
+
+  test("an open conflict stays held through going inactive, and Keep mine still saves it", async () => {
+    const sent: { etag: string; work: Work }[] = [];
+    let refuse = true;
+    const copy = await openEditable({
+      save: (etag, work) => {
+        sent.push({ etag, work });
+        if (refuse) return Promise.reject(conflictError("e5"));
+        return Promise.resolve({ etag: "e6" });
+      },
+    });
+    await copy.save({ name: "mine" });
+    copy.setActive(false);
+    refuse = false;
+
+    await copy.keepMine();
+
+    expect(sent.at(-1)).toEqual({ etag: "e5", work: { name: "mine" } });
+    expect(copy.getSnapshot()).toMatchObject({
+      mode: "idle",
+      conflict: undefined,
+    });
+  });
+
   test("disposing resets it to loading, so the previous resource's banner and conflict never show", async () => {
     const lease = fakeLease();
     const copy = openCopy({

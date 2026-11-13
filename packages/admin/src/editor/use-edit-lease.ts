@@ -35,19 +35,11 @@ const SETTINGS_GROUP_LEASE_API: EditLeaseApi<string> = {
   release: ({ id }) => orpc.settings.lease.release.call({ group: id }),
 };
 
-/**
- * Holds the resource's edit lease while `active`; going inactive releases it
- * and forgets where the editor stood.
- */
-function useLease<Id>(
-  id: Id,
-  api: EditLeaseApi<Id>,
-  active: boolean,
-): EditLease {
+/** Holds the resource's edit lease while the calling component is mounted. */
+function useLease(id: number, api: EditLeaseApi): EditLease {
   const [state, setState] = useState<EditLeaseState>({ kind: "pending" });
   const session = useRef<EditLeaseSession | null>(null);
   useEffect(() => {
-    if (!active) return;
     const current = createEditLeaseSession({ id, api, onChange: setState });
     session.current = current;
     current.start();
@@ -56,7 +48,7 @@ function useLease<Id>(
       session.current = null;
       setState({ kind: "pending" });
     };
-  }, [id, api, active]);
+  }, [id, api]);
   const takeOver = useCallback(
     () => session.current?.takeOver() ?? Promise.resolve(),
     [],
@@ -68,25 +60,28 @@ function useLease<Id>(
   return { state, takeOver, lose };
 }
 
+/** What each resource an editor holds a lease on is identified by. */
+export interface EditLeaseIds {
+  readonly entry: number;
+  readonly user: number;
+  readonly term: number;
+  readonly settings: string;
+}
+
 /** Core's lease procedures for each resource an editor holds a lease on. */
-export const EDIT_LEASE_APIS = {
+export const EDIT_LEASE_APIS: {
+  readonly [Kind in keyof EditLeaseIds]: EditLeaseApi<EditLeaseIds[Kind]>;
+} = {
   entry: ENTRY_LEASE_API,
   user: USER_LEASE_API,
   term: TERM_LEASE_API,
-} as const;
+  settings: SETTINGS_GROUP_LEASE_API,
+};
 
 /** Holds the entry's, user's or term's edit lease while its editor is open. */
 export function useEditLease(
   kind: "entry" | "user" | "term",
   id: number,
 ): EditLease {
-  return useLease(id, EDIT_LEASE_APIS[kind], true);
-}
-
-/** Holds a settings group's edit lease while its card is being edited. */
-export function useSettingsGroupLease(
-  group: string,
-  active: boolean,
-): EditLease {
-  return useLease(group, SETTINGS_GROUP_LEASE_API, active);
+  return useLease(id, EDIT_LEASE_APIS[kind]);
 }

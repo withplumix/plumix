@@ -1,14 +1,9 @@
-import type { ConflictDialogState } from "@/editor/conflict-dialog.js";
 import type { MessageDescriptor } from "@lingui/core";
 import type { ReactNode } from "react";
-import { useReducer, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { MetaBoxField } from "@/components/meta-box/meta-box-field.js";
 import { useVisibleFields } from "@/components/meta-box/use-visible-fields.js";
-import { classifyAutosaveError } from "@/editor/autosave.js";
-import { conflictDialog } from "@/editor/conflict-dialog.js";
-import { EditConflictDialog } from "@/editor/EditConflictDialog.js";
-import { EditLeaseBanner } from "@/editor/EditLeaseBanner.js";
-import { useSettingsGroupLease } from "@/editor/use-edit-lease.js";
+import { useEditingCopy } from "@/editor/use-editing-copy.js";
 import {
   applyMetaFieldErrors,
   extractMetaFieldErrors,
@@ -20,7 +15,6 @@ import { defineMessage } from "@lingui/core/macro";
 import { Trans, useLingui } from "@lingui/react";
 import {
   useMutation,
-  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -39,11 +33,7 @@ import {
   CardTitle,
 } from "@plumix/admin-ui/card";
 import { Form } from "@plumix/admin-ui/form";
-import {
-  describeRpcError,
-  editingElsewhere,
-  editorLeaseMode,
-} from "@plumix/core/admin";
+import { describeRpcError } from "@plumix/core/admin";
 import { seedFromMetaBoxes } from "@plumix/core/manifest";
 
 const M = {
@@ -100,9 +90,6 @@ export function SettingsGroupCard({
     input: { group: group.name },
   });
   const { data: stored } = useSuspenseQuery(getOptions);
-  // The copy this card saves from. A refetch for a comparison must not move
-  // it, or the next save would overwrite what the author never saw.
-  const [etag, setEtag] = useState(stored.etag);
 
   const form = useForm({
     defaultValues: seedFromMetaBoxes([group], stored.values),
@@ -113,46 +100,43 @@ export function SettingsGroupCard({
     control: form.control,
   });
 
-  const [conflict, dispatchConflict] = useReducer(conflictDialog, {
-    open: false,
-  } satisfies ConflictDialogState);
-  const theirsQuery = useQuery({
-    queryKey: [
-      "settings.conflict",
-      group.name,
-      conflict.open && conflict.conflict.etag,
-    ],
-    queryFn: () => orpc.settings.get.call({ group: group.name }),
-    enabled: conflict.open,
-  });
-
   // The lease is held only while the author is working in this card.
   const formRef = useRef<HTMLFormElement>(null);
   const [engaged, setEngaged] = useState(false);
-  const lease = useSettingsGroupLease(group.name, engaged);
-  const leaseMode = editorLeaseMode(lease.state);
-  const notice = leaseMode.mode === "readOnly" ? leaseMode.notice : undefined;
   const disengageUnlessFocused = (): void => {
     if (!formRef.current?.contains(document.activeElement)) setEngaged(false);
   };
 
-  const save = useMutation({
-    mutationFn: (input: { values: ResolvedMeta; ifMatch: string }) =>
-      orpc.settings.upsert.call({ group: group.name, ...input }),
-    onMutate: () => {
-      setServerError(null);
-      setSaveNotice(null);
-    },
-    onSuccess: (fresh) => {
-      setEtag(fresh.etag);
+  const editing = useEditingCopy({
+    kind: "settings",
+    id: group.name,
+    etag: stored.etag,
+    active: engaged,
+    userId,
+    copy: SETTINGS_EDITING_COPY,
+    save: async (ifMatch, values: ResolvedMeta) => {
+      const fresh = await orpc.settings.upsert.call({
+        group: group.name,
+        values,
+        ifMatch,
+      });
       // Re-seed from the server's post-sanitize bag so the form reflects
       // any trimming / coercion the server applied.
       form.reset(seedFromMetaBoxes([group], fresh.values));
       queryClient.setQueryData(getOptions.queryKey, fresh);
       setSaveNotice(M.saved);
       disengageUnlessFocused();
+      return fresh;
     },
-    onError: (err) => {
+    readSaved: async () =>
+      (await orpc.settings.get.call({ group: group.name })).values,
+    reload: async () => {
+      const saved = await queryClient.query({ ...getOptions, staleTime: 0 });
+      form.reset(seedFromMetaBoxes([group], saved.values));
+      disengageUnlessFocused();
+      return saved.etag;
+    },
+    onFailed: (err) => {
       // Path-addressed field rejections render inline on the offending
       // inputs; everything else keeps the banner. The settings card keeps
       // its fields at the RHF root, so the base path is empty.
@@ -161,46 +145,28 @@ export function SettingsGroupCard({
         applyMetaFieldErrors(form.setError, "", fieldErrors, resolveMessage);
         return;
       }
-      const outcome = classifyAutosaveError(err);
-      if (outcome.kind === "conflict") {
-        dispatchConflict({ type: "conflict", conflict: outcome.conflict });
-        return;
-      }
-      if (outcome.kind === "locked") {
-        lease.lose(outcome.locked);
-        return;
-      }
       setServerError(describeRpcError(err, {}, M.saveFailed));
+    },
+    onBack: () => {
+      form.reset(seedFromMetaBoxes([group], stored.values));
+      setEngaged(false);
+    },
+  });
+  // Focusing the card is what asks for the lease, so locking it while the
+  // lease is asked for would take away the focus that asked.
+  const locked = editing.readOnly && editing.mode !== "loading";
+
+  const save = useMutation({
+    mutationFn: (values: ResolvedMeta) => editing.save(values),
+    onMutate: () => {
+      setServerError(null);
+      setSaveNotice(null);
     },
   });
 
   const onSubmit = form.handleSubmit((values) => {
-    save.mutate({ values, ifMatch: etag });
+    save.mutate(values);
   });
-
-  const handleKeepMine = (): void => {
-    if (!conflict.open) return;
-    dispatchConflict({ type: "keepMine" });
-    save.mutate({ values: form.getValues(), ifMatch: conflict.conflict.etag });
-  };
-  const loadSaved = async (): Promise<void> => {
-    const saved = await queryClient.query({ ...getOptions, staleTime: 0 });
-    setEtag(saved.etag);
-    form.reset(seedFromMetaBoxes([group], saved.values));
-    disengageUnlessFocused();
-  };
-  const handleLoadTheirs = (): void => {
-    dispatchConflict({ type: "loadTheirs" });
-    void loadSaved();
-  };
-  const takeOver = useMutation({
-    mutationFn: lease.takeOver,
-    onSuccess: loadSaved,
-  });
-  const handleBack = (): void => {
-    form.reset(seedFromMetaBoxes([group], stored.values));
-    setEngaged(false);
-  };
 
   return (
     // Container-query root so the inner grid's col-span classes resolve
@@ -210,29 +176,8 @@ export function SettingsGroupCard({
       className="@container"
       data-testid={`settings-group-card-${group.name}`}
     >
-      <EditConflictDialog
-        copy={SETTINGS_EDITING_COPY}
-        open={conflict.open}
-        changedAt={conflict.open ? (conflict.conflict.updatedAt ?? null) : null}
-        editingElsewhere={
-          conflict.open
-            ? editingElsewhere(conflict.conflict, userId)
-            : undefined
-        }
-        mineSnapshot={conflict.open ? form.getValues() : null}
-        theirsSnapshot={theirsQuery.data?.values ?? null}
-        onKeepMine={handleKeepMine}
-        onLoadTheirs={handleLoadTheirs}
-      />
-      {notice ? (
-        <EditLeaseBanner
-          copy={SETTINGS_EDITING_COPY}
-          notice={notice}
-          onTakeOver={() => takeOver.mutate()}
-          isTakingOver={takeOver.isPending}
-          onBack={handleBack}
-        />
-      ) : null}
+      {editing.dialog}
+      {editing.banner}
       <Form {...form}>
         {/* <form> interposes between <Card> and its children, so it must carry
             Card's own flex column gap or the sections collapse together. */}
@@ -242,7 +187,11 @@ export function SettingsGroupCard({
           onFocus={() => setEngaged(true)}
           onBlur={(event) => {
             const leftCard = !event.currentTarget.contains(event.relatedTarget);
-            if (leftCard && !form.formState.isDirty && !notice) {
+            if (
+              leftCard &&
+              !form.formState.isDirty &&
+              editing.mode !== "readOnly"
+            ) {
               setEngaged(false);
             }
           }}
@@ -270,7 +219,7 @@ export function SettingsGroupCard({
                   key={field.key}
                   field={field}
                   name={field.key}
-                  disabled={save.isPending || notice !== undefined}
+                  disabled={save.isPending || locked}
                   span={field.span ?? 12}
                 />
               ))}
@@ -307,7 +256,7 @@ export function SettingsGroupCard({
           <div className="flex justify-end px-6">
             <Button
               type="submit"
-              disabled={save.isPending || notice !== undefined}
+              disabled={save.isPending || locked}
               data-testid={`settings-submit-${group.name}`}
             >
               {save.isPending ? (
