@@ -22,8 +22,6 @@ async function settleLocally(
   path: string,
   event: Parameters<SyncEnd["settle"]>[0],
 ): ReturnType<SyncEnd["settle"]> {
-  // The settle renders no block, and outside Vite a view's CSS import can't
-  // load.
   const app = await buildApp(
     { ...options.config, database: nodeSqlite({ path }) },
     { skipBlockViews: true },

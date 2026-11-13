@@ -211,8 +211,6 @@ async function settleInSite(
   env: PlumixEnv,
   event: SyncAfterEvent,
 ): Promise<SyncSettleReport> {
-  // The settle renders no block, and outside Vite a view's CSS import can't
-  // load.
   const handler = createRuntimeHandler(
     await buildApp(config, { skipBlockViews: true }),
   );

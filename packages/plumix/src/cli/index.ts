@@ -264,8 +264,6 @@ export async function resolveCommandApp(
     );
   }
   const { buildApp } = await loadCore();
-  // A command never renders a block, and outside Vite a view's CSS import
-  // can't load.
   return buildApp(config, { skipBlockViews: true });
 }
 

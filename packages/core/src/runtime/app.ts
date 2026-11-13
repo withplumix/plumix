@@ -262,8 +262,8 @@ export interface RuntimeContext {
    */
   readonly catalogLocales?: CoreCatalogLocales;
   /**
-   * The app never renders a block: a CLI command, which evaluates the config
-   * outside Vite, where a view module's CSS or asset import can't load.
+   * Skips importing block view modules, for an app that never renders a block
+   * and runs outside Vite, where a view module's CSS or asset import can't load.
    */
   readonly skipBlockViews?: boolean;
 }
@@ -410,8 +410,6 @@ export async function buildApp(
   // the committed registry. Unknown block names and undeclared attrs
   // throw structured errors here rather than producing render junk later.
   commitBlockVariations(blocks);
-  // Every view is loaded before the first request, so SSR renders
-  // synchronously and never meets an unloaded block.
   if (!runtime.skipBlockViews) await loadBlockViews(blocks);
   const allowedBlocks: ReadonlySet<string> = new Set(
     resolveAllowedBlocks(blocks, {

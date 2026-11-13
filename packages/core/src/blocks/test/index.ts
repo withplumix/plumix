@@ -43,8 +43,7 @@ export function mockRegistry(input: MockRegistryInput = {}) {
 }
 
 /**
- * Render a single block spec in isolation and return its HTML output, loading
- * its view module first. Useful for asserting a view against attrs fixtures.
+ * Render a single block spec in isolation and return its HTML output.
  */
 export async function renderBlockSpecToHtml(
   spec: BlockSpec,
@@ -62,9 +61,8 @@ export async function renderBlockSpecToHtml(
 }
 
 /**
- * Render a tree of BlockNodes against a list of specs and return the HTML,
- * loading their view modules first. Use for testing multi-block compositions
- * (slots, ordering, context).
+ * Render a tree of BlockNodes against a list of specs and return the HTML.
+ * Use for testing multi-block compositions (slots, ordering, context).
  */
 export async function renderBlockTreeToHtml(
   specs: readonly BlockSpec[],

@@ -26,8 +26,6 @@ async function settleLocally(
   options: OpenSyncEndOptions,
   event: Parameters<SyncEnd["settle"]>[0],
 ): ReturnType<SyncEnd["settle"]> {
-  // The settle renders no block, and outside Vite a view's CSS import can't
-  // load.
   const app = await buildApp(options.config, { skipBlockViews: true });
   const handler = createRuntimeHandler(app);
   const { run } = handler;
