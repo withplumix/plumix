@@ -53,6 +53,13 @@ still served on a hit, and a personal render does not evict it. The `cdn`
 telemetry record for the request carries `personal: true`. There is no dev
 warning.
 
+The segment, not the store, decides the client copy, on a hit as on a miss.
+The CDN widens the edge copy of a shared segment to the page TTL so the edge
+can keep it, but a hit served from it still leaves `private, no-store` with
+`vary: cookie` and no `cache-tag` (#3640). Otherwise Workers Caching or any
+downstream cache would keep one member's copy past a revoked session, and
+serve it to anonymous visitors when the session rode in a header.
+
 On the `anonymous` segment the question cannot arise, because every privileged
 request renders `private` there (#2914). On the `private` segment nothing is
 ever stored, so the verdict changes nothing.

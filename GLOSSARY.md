@@ -566,10 +566,18 @@ _Avoid_: email template, notification
 ## Caching
 
 **CDN**:
-The shared-document cache for anonymous public renders, served read-through: a hit returns the stored response; a miss renders live and stores without blocking the response.
+The shared-document cache for public renders, one entry per segment, served read-through: a hit returns the edge copy; a miss renders live and stores without blocking the response.
+
+**Edge copy**:
+The copy of a public response the CDN stores under a segment and serves on a hit.
+_Avoid_: stored copy, cached response
+
+**Client copy**:
+The copy of a public response that leaves for the visitor. Its headers tell downstream caches and the browser what they may keep, and the segment decides them, on a hit and a miss alike: every segment but `anonymous` leaves `private, no-store`.
+_Avoid_: visitor's copy, response headers
 
 **Personal render**:
-A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.apiToken`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; a stored copy of the segment still serves the next principal in it. See ADR 0030.
+A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.apiToken`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; the segment's edge copy still serves the next principal in it. See ADR 0030.
 _Avoid_: personalized render, per-user render
 
 **Cache tag**:

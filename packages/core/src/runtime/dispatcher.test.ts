@@ -980,7 +980,7 @@ describe("dispatcher — user-dependent render caching", () => {
     expect(response.headers.get("vary")?.toLowerCase()).toContain("cookie");
   });
 
-  test("leaves an anonymous render untouched (no private/no-store)", async () => {
+  test("keeps an anonymous render with no CDN connected out of shared caches", async () => {
     const h = await createDispatcherHarness({ config: { plugins: [blog] } });
     await seedHelloWorldPost(h);
 
@@ -989,7 +989,7 @@ describe("dispatcher — user-dependent render caching", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBeNull();
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
     expect(response.headers.get("vary")).toBeNull();
   });
 });
@@ -1210,7 +1210,7 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
       "text/plain; charset=utf-8",
     );
     // A content 404 may become a real page at any moment — never cacheable.
-    expect(response.headers.get("cache-control")).toBeNull();
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
   });
 
   test("a browser-shaped Accept header still gets the themed 404 page", async () => {
@@ -1259,6 +1259,25 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
     expect(response.headers.get("content-type")).toBe(
       "text/plain; charset=utf-8",
     );
+  });
+
+  test("keeps a failed public render out of shared caches", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        theme: defineTheme({
+          templates: [
+            fallback(() => {
+              throw new Error("render kaboom");
+            }),
+          ],
+        }),
+      },
+    });
+
+    const response = await h.dispatch(new Request("https://cms.example/"));
+
+    expect(response.status).toBe(500);
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
   });
 });
 
@@ -2570,6 +2589,36 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
     expect(response.status).toBe(200);
     expect(match).not.toHaveBeenCalled();
     expect(put).not.toHaveBeenCalled();
+  });
+
+  test("keeps a bypassed archive's anonymous page out of shared caches", async () => {
+    const { cdn } = cdnStub();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [uncachedSchools], theme: customTheme },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/schools/london"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
+  });
+
+  test("keeps an anonymous 404 out of shared caches", async () => {
+    const { cdn } = cdnStub();
+    const h = await createDispatcherHarness({
+      cdn,
+      config: { plugins: [cacheableSchools], theme: customTheme },
+    });
+
+    const response = await h.dispatch(
+      new Request("https://cms.example/post/missing"),
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
   });
 
   // Core knows which types the query lists, so the plugin need not restate a

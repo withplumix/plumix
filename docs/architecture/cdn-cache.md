@@ -1,6 +1,6 @@
 # CDN cache
 
-The CDN cache serves public renders read-through, one shared copy per segment. A hit returns the stored response. A miss renders live, stores the response in the background under its cache tags where the runtime has an origin cache, and decorates it with cache headers and tags for a CDN in front. A later write purges those tags. Operators turn it on with the `cdn` config slot. Site developers and plugin authors meet it through `cacheable` opt-ins and the tag helpers. Editors only see that a publish shows up. It is the **CDN read-through** component in [ARCHITECTURE.md](../../ARCHITECTURE.md#components-of-the-app-process), and the origin cache on its deployment diagram. It lives in `packages/core/src/cdn/`, with the dispatch glue in `packages/core/src/runtime/dispatcher.ts`.
+The CDN cache serves public renders read-through, one shared copy per segment. A hit returns the edge copy with the segment's client headers. A miss renders live, stores the response in the background under its cache tags where the runtime has an origin cache, and decorates it with cache headers and tags for a CDN in front. A later write purges those tags. Operators turn it on with the `cdn` config slot. Site developers and plugin authors meet it through `cacheable` opt-ins and the tag helpers. Editors only see that a publish shows up. It is the **CDN read-through** component in [ARCHITECTURE.md](../../ARCHITECTURE.md#components-of-the-app-process), and the origin cache on its deployment diagram. It lives in `packages/core/src/cdn/`, with the dispatch glue in `packages/core/src/runtime/dispatcher.ts`.
 
 ## At a glance
 
@@ -20,7 +20,8 @@ sequenceDiagram
   else cacheable
     R->>S: match(the segment key)
     alt hit
-      S-->>R: Stored response
+      S-->>R: Edge copy
+      R->>R: segmentClientCopy(hit, segment)
     else miss, or no origin cache
       R->>P: Renders
       P-->>R: Response and its declared tags
@@ -28,7 +29,9 @@ sequenceDiagram
       R->>R: decorate(response, tags)
     end
   end
-  R-->>V: Response
+  R-->>D: Response
+  D->>D: pageClientCopy, if no Cache-Control
+  D-->>V: Response
   Note over D,S: A write enqueues purge tags, flushed to purgeTags when the request ends
 ```
 
@@ -68,11 +71,12 @@ What fills the slot on each runtime:
 - **Tag.** The dispatcher's `tags` callback unions `pageTags` (`packages/core/src/cdn/tags.ts`, derived from the intent and the resolved entity) with `declaredPageTags`: what the render declared through `declarePageTags`. That covers settings deps (`packages/core/src/template-deps-core.ts`), embedded lookups (each hydrated id under its adapter's `kind` tag, plus `embeddedCacheTags`), an archive type's or view's returned `tags`, `taxonomyTermRows` (`packages/core/src/terms/listing.ts`), `tagCdnEntry` and `ctx.cache.reads`. A read through `anonymousContext` declares on the request it was made from (`declareThrough`), so a sitemap read for every visitor still tags its response. Cacheable plugin routes carry only declared tags.
 - **Purge.** `registerCorePurgeInvalidator` (`packages/core/src/cdn/purge.ts`) subscribes to the `entry`, `term` and `user` events and to `settings.groupChanged`, all unscoped. `enqueuePurgeTags` drops the matching request-memo entries at once and collects the tags. `flushPurgeTags` runs once at the end of a request, a scheduled run or a runtime handler call, and defers `purgeTags`. A purge failure is logged and never fails the write. `ctx.entries` (`packages/core/src/rpc/procedures/entry/writes.ts`) is the write path core's entry procedures take, so a plugin's entry write emits the same events. A settings group written through `ctx.settings.write` (`packages/core/src/settings/write.ts`), which `settings.upsert` calls too, emits `settings.groupChanged` itself, so a plugin never emits it by hand. A private (`_internal`) group's write emits no event, since its values are secrets, and enqueues the group's settings tag itself. A direct write through `ctx.db` emits no event, so its writer enqueues tags itself through `plumix/db`, or calls `ctx.cache.changed` for the plugin's own data. `ctx.cache` reads the calling plugin from `pluginStore` (`packages/core/src/context/stores.ts`), which core sets around a plugin's routes and public routes, template deps, RPC procedures and its event and filter handlers; anywhere else it throws. A sync's settle calls `purgeAll` (`packages/core/src/context/settle-sync.ts`).
 - **Memo.** `createRequestMemo` (`packages/core/src/context/memo.ts`) dedupes per-request loads by key. A load registers tags, and `invalidate(tags)` drops them, so a read after a write in the same request sees the write.
-- **No-store surfaces.** `withNoStore` (`packages/core/src/runtime/contract/http.ts`) wraps `/_plumix/rpc`, `/_plumix/api`, `/_plumix/mcp` and the sync endpoints. Every non-anonymous segment's client copy leaves `private, no-store` with `vary: cookie` (`markAudience` in the dispatcher). A page outcome redirect leaves `private, no-store`.
+- **No-store surfaces.** `withNoStore` (`packages/core/src/runtime/contract/http.ts`) wraps `/_plumix/rpc`, `/_plumix/api`, `/_plumix/mcp` and the sync endpoints. Every non-anonymous segment's client copy leaves `private, no-store` with `vary: cookie` and no `cache-tag`, on a hit as on a miss (`segmentClientCopy` in `packages/core/src/cdn/client-copy.ts`, which the hit branch and `markAudience` in the dispatcher both call). A public page that leaves without a `Cache-Control` gets `private, no-cache` (`pageClientCopy`), so Workers Caching never stores a bypassed, non-200 or CDN-less page under its own defaults. A page outcome redirect leaves `private, no-store`.
 
 ## Invariants
 
-- A render that reads the principal is never stored in a shared segment and leaves `private, no-store`; a stored copy still serves the next member of the segment. [ADR 0030](../adr/0030-a-render-that-reads-the-principal-is-never-shared.md); `packages/core/src/cdn/read-through.test.ts`, `packages/core/src/route/render/personal-render.test.ts`.
+- A render that reads the principal is never stored in a shared segment and leaves `private, no-store`; the segment's edge copy still serves its next member. [ADR 0030](../adr/0030-a-render-that-reads-the-principal-is-never-shared.md); `packages/core/src/cdn/read-through.test.ts`, `packages/core/src/route/render/personal-render.test.ts`.
+- The segment decides the client copy on a hit as on a miss: only the `anonymous` segment's copy leaves shareable. [ADR 0030](../adr/0030-a-render-that-reads-the-principal-is-never-shared.md); `packages/core/src/cdn/cloudflare/cloudflare.test.ts`, `packages/core/src/runtime/dispatcher.test.ts`.
 - A view or archive type is stored only on `cacheable: true`. [ADR 0035](../adr/0035-an-app-page-is-a-view-not-an-archive.md); `packages/core/src/route/view.dispatch.test.tsx`, `packages/core/src/cdn/decision.test.ts`.
 - Archive pages are the same for every visitor, which is what lets the CDN store them, and they carry the type tags of what their query can list. [ADR 0008](../adr/0008-an-archive-is-one-entry-query.md); `packages/core/src/cdn/tags.test.ts`.
 - A page-step redirect is never stored. [ADR 0032](../adr/0032-a-page-step-ends-the-request-by-throwing-an-outcome.md); `packages/core/tests/feature/ending-a-page-with-an-outcome.test.tsx`.
