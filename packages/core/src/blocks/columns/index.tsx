@@ -80,8 +80,8 @@ export const columnsBlock = defineBlock({
     },
   ],
   defaults: { stackAt: DEFAULT_STACK_AT },
-  // A flex row with a gap. Responsive stacking rides a scoped media query keyed
-  // off `stackAt` (see the view), not a seeded bucket, so the preset owns it.
+  // Stacking isn't seeded here as a responsive bucket: it follows `stackAt`,
+  // so the preset owns it.
   defaultStyles: {
     large: { display: "flex", gap: "20px", alignItems: "stretch" },
   },

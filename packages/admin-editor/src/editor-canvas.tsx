@@ -118,9 +118,6 @@ export function EditorCanvas({
 
   useEffect(() => {
     let disposed = false;
-    // A tree commits only once its blocks' views have loaded, so the canvas
-    // never shows a block it can't render; a newer tree supersedes one still
-    // loading.
     const offerTree = createTreeCommitter(registry, (names) =>
       loadBlockViews(registry, names),
     );
