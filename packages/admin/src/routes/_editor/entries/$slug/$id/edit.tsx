@@ -234,7 +234,6 @@ function EditorRoute(): ReactNode {
   // leaves the source at "live", so this nonce forces it.
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
-  // One per entry: it pairs each failure with the attempt that threw it.
   const copy = useMemo(
     () =>
       entryCopy({
@@ -925,8 +924,7 @@ function EntryEditor({
     [id, entryTypeName, queryClient],
   );
   // Flushing first, then queueing behind autosave, means a publish neither
-  // drops the last edit nor races it for the token. It finishes in `wrote`,
-  // where Keep mine lands one too.
+  // drops the last edit nor races it for the token.
   const publish = useMutation({
     mutationFn: async () => {
       await autosave.flush();

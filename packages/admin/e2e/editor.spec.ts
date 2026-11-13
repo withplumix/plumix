@@ -2404,9 +2404,13 @@ test.describe("editor edit lease", () => {
   const BO = { id: 2, name: "Bo" };
   const SINCE = new Date("2026-05-20T09:00:00Z");
 
-  test("another user holding the entry opens it read-only naming them, and Take over makes it editable", async ({
+  test("the editor waits for the lease, then opens read-only naming its holder, and Take over makes it editable", async ({
     page,
   }) => {
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/entry/get": editorEntry(),
@@ -2414,10 +2418,11 @@ test.describe("editor edit lease", () => {
       "/entry/createPreviewLink": PREVIEW_LINK,
       "/entry/lease/release": null,
     });
-    await page.route("**/_plumix/rpc/entry/lease/acquire", (route) => {
+    await page.route("**/_plumix/rpc/entry/lease/acquire", async (route) => {
       const { takeOver } = (
         route.request().postDataJSON() as { json: { takeOver?: boolean } }
       ).json;
+      if (takeOver !== true) await answered;
       return route.fulfill(
         takeOver === true
           ? {
@@ -2432,7 +2437,13 @@ test.describe("editor edit lease", () => {
             },
       );
     });
+    const asked = page.waitForRequest("**/_plumix/rpc/entry/lease/acquire");
     await page.goto("entries/posts/1/edit");
+    await asked;
+    await expect(page.getByTestId("plumix-editor-loading")).toBeVisible();
+    await expect(page.getByTestId("plumix-editor-layout")).toHaveCount(0);
+    await expect(page.getByTestId("plumix-editor-preview")).toHaveCount(0);
+    answer?.();
     await expect(page.getByTestId("edit-lease-held-by")).toHaveText(
       "Bo is editing this entry (since May 20, 2026, 9:00 AM)",
     );
