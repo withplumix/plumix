@@ -80,12 +80,32 @@ export function compareEntry(
 
 type EntryPatch = Extract<EntryWrite, { readonly kind: "update" }>["patch"];
 
-type KeptOver = Omit<EntryPatch, "saveAs"> | { readonly revisionId: number };
+type KeptOver =
+  | (Omit<EntryPatch, "saveAs" | "terms"> & {
+      readonly terms?: SavedEntry["terms"];
+    })
+  | { readonly revisionId: number };
 
 function keptOver(work: EntryWrite, saved: SavedEntry | undefined): KeptOver {
   if (work.kind === "restore") return { revisionId: work.revisionId };
   if (work.kind !== "update") return { status: "published" };
-  const { saveAs: _saveAs, meta, ...fields } = work.patch;
-  if (meta === undefined) return fields;
-  return { ...fields, meta: { ...saved?.meta, ...meta } };
+  const { saveAs: _saveAs, meta, terms, ...fields } = work.patch;
+  return {
+    ...fields,
+    // A patch names only the taxonomies it changed.
+    ...(terms === undefined ? {} : { terms: { ...saved?.terms, ...terms } }),
+    ...(meta === undefined ? {} : { meta: keptMeta(saved?.meta, meta) }),
+  };
+}
+
+/** A patch removes a meta key by sending it as `null`. */
+function keptMeta(
+  saved: SavedEntry["meta"] | undefined,
+  patch: NonNullable<EntryPatch["meta"]>,
+): SavedEntry["meta"] {
+  return Object.fromEntries(
+    Object.entries({ ...saved, ...patch }).filter(
+      ([, value]) => value !== null,
+    ),
+  );
 }

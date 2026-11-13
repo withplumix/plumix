@@ -47,6 +47,33 @@ describe("compareEntry", () => {
     });
   });
 
+  test("my changed taxonomy is kept over the saved terms, and the taxonomies I left alone stay", () => {
+    const sides = compareEntry(
+      { kind: "update", patch: { terms: { tag: [7] } } },
+      { ...SAVED, terms: { category: [1], tag: [3, 4] } },
+    );
+
+    expect(sides.mine).toMatchObject({ terms: { category: [1], tag: [7] } });
+  });
+
+  test("a meta key my edit removes is gone from mine", () => {
+    const sides = compareEntry(
+      { kind: "update", patch: { meta: { headline: null } } },
+      SAVED,
+    );
+
+    expect(sides.mine).toEqual({
+      title: "Saved title",
+      slug: "saved-elsewhere",
+      status: "draft",
+      parentId: null,
+      content: null,
+      excerpt: null,
+      meta: {},
+      terms: {},
+    });
+  });
+
   test("a publish shows what is saved now, published", () => {
     const sides = compareEntry({ kind: "publish" }, SAVED);
 
