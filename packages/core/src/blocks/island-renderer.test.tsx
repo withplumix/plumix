@@ -3,8 +3,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import {
   islandRootKind,
-  islandRootOptions,
   mergeSlotProps,
+  mountWith,
 } from "./island-renderer.js";
 
 function Card(props: Readonly<Record<string, unknown>>) {
@@ -54,43 +54,87 @@ describe("islandRootKind", () => {
   );
 });
 
-describe("islandRootOptions", () => {
+interface RootCall {
+  readonly kind: "create" | "hydrate";
+  readonly options: object | undefined;
+}
+
+/** Doubles `react-dom/client`, recording the root each mount creates. */
+function recordingRoots(): {
+  readonly calls: RootCall[];
+  readonly roots: Parameters<typeof mountWith>[0];
+} {
+  const calls: RootCall[] = [];
+  const root = { render: () => undefined, unmount: () => undefined };
+  return {
+    calls,
+    roots: {
+      createRoot: (_container, options) => {
+        calls.push({ kind: "create", options });
+        return root;
+      },
+      hydrateRoot: (_container, _node, options) => {
+        calls.push({ kind: "hydrate", options });
+        return root;
+      },
+    },
+  };
+}
+
+function mountProbe(
+  roots: Parameters<typeof mountWith>[0],
+  hydrate: boolean,
+): void {
+  const element = { innerHTML: "" } as HTMLElement;
+  mountWith(roots, element, { hydrate, identifierPrefix: "i0-" }).render(
+    Card,
+    { label: "x" },
+    {},
+  );
+}
+
+describe("mount", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  const element = {} as HTMLElement;
-
-  test("a hydrated root takes the island's id prefix and reports errors and mismatches in dev", () => {
+  test("hydrates a server-rendered island in dev under its id prefix, reporting errors and mismatches", () => {
     vi.stubEnv("PLUMIX_DEV", "1");
+    const { calls, roots } = recordingRoots();
 
-    const options = islandRootOptions("hydrate", "i0-", element, "");
+    mountProbe(roots, true);
 
-    expect(options.identifierPrefix).toBe("i0-");
-    expect(Object.keys(options)).toEqual([
+    expect(calls.map(({ kind }) => kind)).toEqual(["hydrate"]);
+    expect(calls[0]?.options).toMatchObject({ identifierPrefix: "i0-" });
+    expect(Object.keys(calls[0]?.options ?? {})).toEqual([
       "identifierPrefix",
       "onUncaughtError",
       "onRecoverableError",
     ]);
   });
 
-  test("a client-only root in dev takes the id prefix and reports errors", () => {
+  test("creates a client-only island's root in dev under its id prefix, reporting errors", () => {
     vi.stubEnv("PLUMIX_DEV", "1");
+    const { calls, roots } = recordingRoots();
 
-    const options = islandRootOptions("create-reporting", "i1-", element, "");
+    mountProbe(roots, false);
 
-    expect(options.identifierPrefix).toBe("i1-");
-    expect(Object.keys(options)).toEqual([
+    expect(calls.map(({ kind }) => kind)).toEqual(["create"]);
+    expect(calls[0]?.options).toMatchObject({ identifierPrefix: "i0-" });
+    expect(Object.keys(calls[0]?.options ?? {})).toEqual([
       "identifierPrefix",
       "onUncaughtError",
     ]);
   });
 
-  test("a production root takes the id prefix and no reporter", () => {
+  test("creates a production root under the island's id prefix, with no reporter", () => {
     vi.stubEnv("PLUMIX_DEV", "");
+    const { calls, roots } = recordingRoots();
 
-    const options = islandRootOptions("create", "i2-", element, "");
+    mountProbe(roots, true);
 
-    expect(options).toEqual({ identifierPrefix: "i2-" });
+    expect(calls).toEqual([
+      { kind: "create", options: { identifierPrefix: "i0-" } },
+    ]);
   });
 });

@@ -40,6 +40,18 @@ export function mount(
   element: HTMLElement,
   options: MountOptions = {},
 ): IslandRoot {
+  return mountWith({ createRoot, hydrateRoot }, element, options);
+}
+
+/** `mount` over the root functions it is given, so a unit test can double them. */
+export function mountWith(
+  roots: {
+    readonly createRoot: typeof createRoot;
+    readonly hydrateRoot: typeof hydrateRoot;
+  },
+  element: HTMLElement,
+  options: MountOptions,
+): IslandRoot {
   const { hydrate = true, identifierPrefix } = options;
   // Lazy: `hydrateRoot` needs the first node, and a later `props` change must
   // re-render, never re-hydrate.
@@ -65,10 +77,10 @@ export function mount(
       if (process.env.PLUMIX_DEV && kind === "hydrate") {
         // `hydrateRoot` renders `node` itself; there is no follow-up
         // `root.render`.
-        root = hydrateRoot(element, node, rootOptions);
+        root = roots.hydrateRoot(element, node, rootOptions);
         return;
       }
-      root = createRoot(element, rootOptions);
+      root = roots.createRoot(element, rootOptions);
       root.render(node);
     },
     unmount() {
@@ -133,7 +145,7 @@ export function islandRootKind(
  * Every root takes the island's `id-prefix`. The inline `PLUMIX_DEV` at each
  * reporter is what folds: the dev handlers would otherwise ship to production.
  */
-export function islandRootOptions(
+function islandRootOptions(
   kind: "hydrate" | "create-reporting" | "create",
   identifierPrefix: string | undefined,
   element: HTMLElement,
