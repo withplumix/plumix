@@ -69,8 +69,8 @@ export const dynamicImportInLoadOnce: Rule.RuleModule = {
     schema: [],
   },
   create(context) {
-    // `defineBlock`'s `view: () => import(…)`: `loadBlockViews` imports it once
-    // per spec and retries a failed import, as `loadOnce` would.
+    // `loadBlockViews` imports `defineBlock`'s `view` once per spec and retries
+    // a failed import, so the view needs no `loadOnce` of its own.
     const blockViews = new Set<Rule.Node>();
     return {
       "CallExpression[callee.name='defineBlock'] > ObjectExpression > Property[computed=false][key.name='view'] > :function"(

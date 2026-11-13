@@ -27,8 +27,8 @@ export function treeBlockNames(
 type LoadViews = (names: Iterable<string>) => Promise<void>;
 
 /**
- * Commits each offered tree once its blocks' views have loaded. A tree offered
- * while an earlier one loads supersedes it, which then never commits.
+ * A tree offered while an earlier one loads supersedes it, so a slow import
+ * never paints a tree the host has since replaced.
  */
 export function createTreeCommitter(
   registry: BlockRegistry,
@@ -50,8 +50,8 @@ const VIEW_LOAD_FAILED =
   "[plumix:editor] A block view failed to load; the canvas keeps what it shows and retries on the next update.";
 
 /**
- * Settles a view load without rejecting. A failed import, such as a chunk gone
- * after a deploy, is logged, and the next load naming it retries it.
+ * A failed import, such as a chunk gone after a deploy, must not break the
+ * canvas: it is logged, and the next load naming it retries it.
  */
 export function settleViewLoad(
   load: Promise<void>,
@@ -64,10 +64,7 @@ export function settleViewLoad(
     .finally(afterLoad);
 }
 
-/**
- * The tree the canvas first renders: the seed once its views load, or an empty
- * tree when they fail, which the host's first tree push then retries.
- */
+/** An empty seed when its views fail lets the host's first tree push retry them. */
 export async function seedTree(
   registry: BlockRegistry,
   tree: readonly BlockNode[],
@@ -114,10 +111,7 @@ export interface ScheduledViewLoads {
   readonly cancel: () => void;
 }
 
-/**
- * Loads every view once the browser is idle, and the named views at once on a
- * prefetch. `afterLoad` runs when each load settles.
- */
+/** Every view loads at idle, so an insert seldom waits on an import. */
 export function scheduleViewLoads(
   registry: BlockRegistry,
   afterLoad: () => void,

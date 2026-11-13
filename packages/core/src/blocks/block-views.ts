@@ -44,8 +44,8 @@ function loadOne(spec: BlockSpec): Promise<void> {
 }
 
 /**
- * Imports the named blocks' view modules, or every block's, each at most
- * once. A failure rejects only after the other imports settle.
+ * A failure rejects only after the other imports settle, so one lost chunk
+ * leaves every other view usable.
  */
 export async function loadBlockViews(
   registry: BlockRegistry,
