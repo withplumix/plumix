@@ -20,7 +20,7 @@ new RuleTester({
     'const Editor = React.lazy(() => import("./editor.js"));',
     'type Routes = typeof import("./routes.js");',
     'defineBlock({ name: "acme/hero", view: () => import("./hero.view.js") });',
-    'const spec = { view: () => import("./card.view.js").then(({ cardView }) => cardView("acme/card")) };',
+    'defineBlock({ name: "acme/card", view: () => import("./card.view.js").then(({ cardView }) => cardView("acme/card")) });',
   ],
   invalid: [
     {
@@ -36,11 +36,23 @@ new RuleTester({
       errors: [{ messageId: "outsideLoadOnce" }],
     },
     {
-      code: 'const spec = { view: () => () => import("./per-call.js") };',
+      code: 'defineBlock({ view: () => () => import("./per-call.js") });',
       errors: [{ messageId: "outsideLoadOnce" }],
     },
     {
-      code: 'const spec = { render: () => import("./hero.view.js") };',
+      code: 'defineBlock({ render: () => import("./hero.view.js") });',
+      errors: [{ messageId: "outsideLoadOnce" }],
+    },
+    {
+      code: 'const route = { view: () => import("./route.js") };',
+      errors: [{ messageId: "outsideLoadOnce" }],
+    },
+    {
+      code: 'defineRoute({ view: () => import("./route.js") });',
+      errors: [{ messageId: "outsideLoadOnce" }],
+    },
+    {
+      code: 'const spec: BlockSpec = { view: () => import("./hero.view.js") };',
       errors: [{ messageId: "outsideLoadOnce" }],
     },
     {

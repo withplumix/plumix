@@ -60,20 +60,22 @@ export const dynamicImportInLoadOnce: Rule.RuleModule = {
     type: "problem",
     docs: {
       description:
-        "Require every dynamic `import()` to sit in a `loadOnce` factory, `lazy`, or a block's `view` function.",
+        "Require every dynamic `import()` to sit in a `loadOnce` factory, `lazy`, or `defineBlock`'s `view` function.",
     },
     messages: {
       outsideLoadOnce:
-        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, or as a block's `view: () => import(…)`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried.",
+        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, or as `defineBlock`'s `view: () => import(…)`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried.",
     },
     schema: [],
   },
   create(context) {
-    // A block's `view: () => import(…)`: `loadBlockViews` imports it once per
-    // spec and retries a failed import, as `loadOnce` would.
+    // `defineBlock`'s `view: () => import(…)`: `loadBlockViews` imports it once
+    // per spec and retries a failed import, as `loadOnce` would.
     const blockViews = new Set<Rule.Node>();
     return {
-      "Property[computed=false][key.name='view'] > :function"(node: Rule.Node) {
+      "CallExpression[callee.name='defineBlock'] > ObjectExpression > Property[computed=false][key.name='view'] > :function"(
+        node: Rule.Node,
+      ) {
         blockViews.add(node);
       },
       ImportExpression(node: Rule.Node) {
