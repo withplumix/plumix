@@ -29,15 +29,18 @@ warning, and it grew with every block a theme added. Tracing the imports from
 
 ## Measurements
 
-| Site        | When                  | Editor entry chunk | Eager editor JS         |
-| ----------- | --------------------- | ------------------ | ----------------------- |
-| eduscope.uk | before, Plumix 0.26.0 | —                  | 1080 kB                 |
-| apps/demo   | after this change     | 32.85 kB           | 263 kB across 12 chunks |
+| Site        | When                     | Editor entry chunk | Eager editor JS         |
+| ----------- | ------------------------ | ------------------ | ----------------------- |
+| apps/demo   | before, `main` (a786a21) | 181.57 kB          | 571 kB across 8 chunks  |
+| apps/demo   | after this change        | 33.13 kB           | 263 kB across 12 chunks |
+| eduscope.uk | before, Plumix 0.26.0    | —                  | 1080 kB                 |
 
-The before figure is eduscope.uk's, traced through the five chains above. The
-after figures are measured on the repo's demo site (`apps/demo`), where every
-one of its 16 block views is a dynamically imported chunk. The demo wasn't
-measured before the change, so the two rows are different sites.
+The `apps/demo` rows are one site built from `main` and from this change. Eager
+editor JS is the `plumix-editor` entry plus every chunk it imports statically,
+summed from the build's `.vite/manifest.json`. After the change, every one of
+the demo's 16 block views is a dynamically imported chunk. The eduscope.uk row
+is the production site that prompted the change, traced through the five chains
+above; it wasn't measured after the change.
 
 ## Precedent
 
