@@ -8,8 +8,10 @@ import type { QueuedPullRequest, Ticket } from "./github.js";
 import type { RepairOutcome } from "./run.js";
 import type { ShipHistory } from "./ship-history.js";
 import type { Journal } from "./telemetry.js";
+import type { PullRequestCopy } from "./ticket.js";
 import type { FailingCheck, MergeOutcome, ReviewThread } from "./verdict.js";
 import { agentPhaseRunner } from "./agent.js";
+import { decideOnTheBranch } from "./decide.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import {
   gateBehindCheck,
@@ -19,6 +21,7 @@ import {
 } from "./gates.js";
 import {
   branchOfPullRequest,
+  mainPassedChecks,
   pushBranch,
   resolveReviewThreads,
   runStatus,
@@ -28,6 +31,7 @@ import { say } from "./log.js";
 import { surveyMutants } from "./mutation.js";
 import { blockFor, retryWhatGitHubDroppedNow } from "./outage.js";
 import { prepareRepairBranch } from "./repair-branch.js";
+import { replanning } from "./replans.js";
 import { REPO_ROOT, REPO_SLUG } from "./repo.js";
 import { reviewableHead, reviewHead } from "./review-proof.js";
 import { untilTheRunCompletes } from "./run-completion.js";
@@ -41,7 +45,9 @@ import {
   gatesUntilGreen,
   IMPLEMENTER,
   readDeclinedTag,
+  reviewBeforePublishing,
   reviewBranch,
+  reviewedWithoutEdits,
 } from "./ticket.js";
 
 export const SCREENSHOT_DIFF_STEP =
@@ -243,7 +249,8 @@ const recapturedScreenshotsInto = (
 type AfterCiFix =
   | { readonly next: "gates" }
   | { readonly next: "decline"; readonly reason: string }
-  | { readonly next: "not-this-branch"; readonly reason: string };
+  | { readonly next: "not-this-branch"; readonly reason: string }
+  | { readonly next: "refute"; readonly evidence: string };
 
 /**
  * A rebase onto newer main can carry the fix itself, so a fixer with nothing
@@ -251,9 +258,18 @@ type AfterCiFix =
  */
 export const afterCiFix = (
   declined: { readonly reason: string; readonly notThisBranch: boolean } | null,
-  { rebaseMovedTheBranch }: { readonly rebaseMovedTheBranch: boolean },
+  {
+    rebaseMovedTheBranch,
+    mainPassed,
+  }: {
+    readonly rebaseMovedTheBranch: boolean;
+    /** A run where main passed every check that failed here, when there is one. */
+    readonly mainPassed?: string;
+  },
 ): AfterCiFix => {
   if (!declined) return { next: "gates" };
+  if (declined.notThisBranch && mainPassed)
+    return { next: "refute", evidence: mainPassed };
   if (declined.notThisBranch)
     return { next: "not-this-branch", reason: declined.reason };
   if (rebaseMovedTheBranch) return { next: "gates" };
@@ -344,13 +360,29 @@ export const repairPullRequest = async (
     });
     if (brief) {
       say(`--- repair #${pullRequest.number}: fix what CI saw ---`);
-      const { declined: fixDeclined } = await fixer.apply("repair:ci", brief);
-      const headAfter = (
-        await sandbox.exec("git rev-parse HEAD")
-      ).stdout.trim();
-      const next = afterCiFix(fixDeclined, {
-        rebaseMovedTheBranch: headAfter !== headBefore,
+      const failing =
+        refusal.status === "failed"
+          ? refusal.failingChecks.map(({ name }) => name)
+          : [];
+      const headNow = async () =>
+        (await sandbox.exec("git rev-parse HEAD")).stdout.trim();
+      let { declined: fixDeclined } = await fixer.apply("repair:ci", brief);
+      let next = afterCiFix(fixDeclined, {
+        rebaseMovedTheBranch: (await headNow()) !== headBefore,
+        mainPassed: mainPassedChecks(failing),
       });
+      if (next.next === "refute") {
+        say(
+          `  main passes ${failing.join(", ")} (${next.evidence}), so the failure is this branch's`,
+        );
+        ({ declined: fixDeclined } = await fixer.apply(
+          "repair:ci-refuted",
+          `${brief}\n\nYou said this failure is not this branch's. Main passed ${failing.join(", ")} in ${next.evidence}, so it is. A check that serves \`dist/\` (e2e, typecheck) reads the build: rebuild after you change or check out source, before you trust its result. Find what this branch changes that the failing test reaches, and fix it.`,
+        ));
+        next = afterCiFix(fixDeclined, {
+          rebaseMovedTheBranch: (await headNow()) !== headBefore,
+        });
+      }
       if (next.next === "not-this-branch") {
         return {
           status: "not-this-branch",
@@ -402,26 +434,47 @@ export const repairPullRequest = async (
       );
     }
     const copy = JSON.parse(
-      gh(["pr", "view", String(pullRequest.number), "--json", "body"]),
-    ) as { body: string };
-    const review = await reviewHead(ticket.number, history, {
-      head: () => reviewableHead(sandbox),
-      review: async () =>
-        reviewBranch(
-          runAgentPhase,
-          journal,
-          ticket,
-          "repair-publish",
-          copy.body,
-          await surveyMutants(sandbox),
+      gh(["pr", "view", String(pullRequest.number), "--json", "title,body"]),
+    ) as PullRequestCopy;
+    const published = await reviewBeforePublishing(
+      {
+        review: (pullRequestBody) =>
+          reviewHead(ticket.number, history, {
+            head: () => reviewableHead(sandbox),
+            review: () =>
+              reviewedWithoutEdits(sandbox, async () =>
+                reviewBranch(
+                  runAgentPhase,
+                  journal,
+                  ticket,
+                  "repair-publish",
+                  pullRequestBody,
+                  await surveyMutants(sandbox),
+                ),
+              ),
+          }),
+        fixer,
+        decide: replanning(history, ticket.number, (reason) =>
+          decideOnTheBranch(runAgentPhase, ticket, reason),
         ),
-    });
-    if (!review || review.specGaps.length > 0)
+        regate: async () =>
+          (await gatesUntilGreen(sandbox, GATES, journal, fixer, "repair"))
+            .blocked,
+      },
+      copy,
+    );
+    if (published.status === "blocked")
       return declined(
-        review
-          ? `Final repair review: ${JSON.stringify(review.specGaps)}`
-          : "Final repair has no readable independent review",
+        published.reason.replace(/^Final commit/, "Final repair"),
       );
+    if (published.pullRequestCopy.body !== copy.body)
+      gh([
+        "pr",
+        "edit",
+        String(pullRequest.number),
+        "--body",
+        published.pullRequestCopy.body,
+      ]);
     await pushBranch(branch, sandbox.worktreePath);
     resolveReviewThreads(
       (refusal.reviewThreads ?? []).map(({ id }) => id),

@@ -23,8 +23,14 @@ that from what you write below.
    none, use **{{NEXT_ADR}}**. Main, every open pull request and every open issue
    were checked for it, and no other lane of this run holds it, so do not pick a
    number of your own.
-4. **Commit** by the rules in AGENTS.md's "Commits, branches, PRs". Use
+4. **Check the diff against the review checklist** below before your last commit,
+   and fix every "no". The reviewer asks the same questions of every line.
+5. **Commit** by the rules in AGENTS.md's "Commits, branches, PRs". Use
    `Fixes #{{TICKET}}` when every criterion is met, otherwise `Refs #{{TICKET}}`.
+
+## Review checklist
+
+{{CHECKLIST}}
 
 You prove your own change; there is no slower suite after you to catch it before CI. Run only
 what the change affects, never a whole suite or the whole workspace:

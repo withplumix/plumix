@@ -60,7 +60,8 @@ left untouched; open loop-owned PRs can still be discovered through GitHub.
 Run the same `ship` command again. It reads previous ship journals before
 dispatching new issues, combines their unfinished deliveries with GitHub's open
 loop-owned PRs, and reports recovered work. Selecting issue numbers restricts
-recovery and dispatch to those issues.
+dispatch and the resumption of unfinished work to those issues; every open
+loop-owned PR is still watched and repaired.
 
 - Recorded PRs are inspected even if they merged or closed while the process was
   stopped. A confirmed merge completes the delivery. A closed PR is parked for a
@@ -72,6 +73,11 @@ recovery and dispatch to those issues.
 - Interrupted implementations without a PR resume their branch without resetting
   it. The owner resumes its last recorded Claude session when the transcript still
   exists; otherwise a fresh session inspects the preserved commits and work.
+- A repair that says a failing check is not its branch's is checked against
+  main: when main's latest merge-queue run passed that check, the fixer is sent
+  back with that run as evidence before the PR parks. The repair's final review
+  works like the ship's: one fix round, the decider for a decision, and no block
+  on a checklist point.
 - Repairs preserve leftover worktrees and unpublished local commits and report
   that they need manual recovery instead of resetting them to the remote branch.
 - An incomplete final JSONL line is ignored and its file is reported. Earlier
@@ -95,16 +101,49 @@ goes to the implementer. Thread and comment pagination preserves the discussion.
 The coordinator requests at most one check rerun per issue and head across runs.
 Repair and rebase budgets also survive restarts. A final independent review must
 approve the exact commit being published, including changes made by gate fixes or
-rebases. Repair replies name that commit before resolving addressed threads.
+rebases. The review passes before it hold every changed line to the review checklist
+in `CODING_STANDARDS.md`, which the implementer also checks before handing over. The
+final review blocks only on the spec: a criterion unmet, something it broke, a
+requirement with no test, or a PR description the code contradicts. A gap that names a
+checklist item is not a block there, so a branch never loops on new style points. Gaps
+it finds go back to the fixer for one round, then through the gates and a fresh final
+review; a gap no change can close goes to the decider first. A ticket that must wait on
+an open issue is marked "Blocked by" it and left for later, not parked. Repair replies name that commit before
+resolving addressed threads.
 Merge requests check the PR's current state and match its current head; repository
 rules still govern approval and merging.
 
 ## Analysis and local capacity
 
 An analyst reads the repository and GitHub issue before dependency installation
-or builds. The handoff records acceptance criteria, repository evidence, and an
-ordered implementation plan. Missing output, false premises, or unresolved
-questions stop implementation. The implementer receives the recorded handoff.
+or builds. The handoff records acceptance criteria, repository evidence, an
+ordered implementation plan, and protected paths the implementer must leave
+alone. The analyst settles every choice the architecture pages, ADRs, VISION.md
+and the surrounding code settle, and asks only what a person must answer: a
+secret or account, a security or data-loss trade-off, cut scope, or a product
+direction. Missing output, false premises, or such questions stop
+implementation. Evidence that cites a file the repository lacks goes back to the
+analyst once, then stops implementation. The implementer receives the recorded
+handoff.
+
+A stop goes back for clearer instructions before it goes to a person. The
+decider reads the stop reason against the spec, ADRs and VISION.md, amends the
+brief, and the ticket is taken again on the same branch. The analyst then plans
+from the work already there and from every earlier decision. A gap a review
+finds that no change to the branch can close goes to the same decider, and the
+implementer closes it with the decision in hand. A ticket gets two decisions,
+wherever they happen, recorded in the ship journal so a restart keeps the count;
+it parks when they run out or when the decider says a person must choose. Two
+options the documents leave equally open are not a person's choice: the decider
+picks the one that follows the existing pattern and keeps scope. A delivery
+resumed after an interruption reuses the brief its analyst already handed over. A
+ticket taken again after a park continues on the parked branch when it holds commits:
+the analyst plans from that work and the brief's latest decisions, so a late park never
+pays to implement the ticket again.
+
+The analyst and the reviewer are read-only: the coordinator discards any edit
+they make and runs them again on the same commit, once. Every change comes from
+the implementer, so a review's verdict covers the commit that ships.
 
 Implementation, setup, repairs, and decision sessions share the configured total
 capacity. Repairs take priority over waiting new work; occupied work finishes its

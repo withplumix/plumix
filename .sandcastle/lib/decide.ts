@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { z } from "zod";
 
 import type { RunAgentPhase, Thinker } from "./agent.js";
-import type { Ticket } from "./github.js";
+import type { BriefText, Ticket } from "./github.js";
 import type { Journal } from "./telemetry.js";
 import {
   agentPhaseRunner,
@@ -11,7 +11,7 @@ import {
   readOrAskAgain,
   taggedBlock,
 } from "./agent.js";
-import { amendIssue, issueBody, resetBranchToMain } from "./github.js";
+import { amendBrief, briefTexts, resetBranchToMain } from "./github.js";
 import { say } from "./log.js";
 import {
   closePlumixSandbox,
@@ -58,6 +58,18 @@ export const amendedBrief = (
   return amended;
 };
 
+/** The latest of the issue body and its comments that takes every edit, amended. */
+export const amendedBriefIn = (
+  texts: readonly BriefText[],
+  edits: Decision["edits"],
+): BriefText | null => {
+  for (const { where, text } of [...texts].reverse()) {
+    const amended = amendedBrief(text, edits);
+    if (amended !== null) return { where, text: amended };
+  }
+  return null;
+};
+
 const EMIT_THE_DECISION =
   "End with the <decision> block the prompt describes: decidable, why, edits and comment, as JSON.";
 
@@ -88,24 +100,24 @@ export const decideOnTheBranch = async (
     );
     return null;
   }
-  const amended = amendedBrief(issueBody(ticket.number), decision.edits);
+  const amended = amendedBriefIn(briefTexts(ticket.number), decision.edits);
   if (!amended) {
     say(
       `  #${ticket.number} needs a person: the decider's edits do not match the brief`,
     );
     return null;
   }
-  amendIssue(ticket.number, amended, decision.comment);
+  amendBrief(ticket.number, amended, decision.comment);
   say(`  #${ticket.number} decided: ${decision.why}`);
   return decision.why;
 };
 
-/** True when the brief was amended and the ticket can be taken again. */
+/** What was decided once the brief is amended, so the ticket can be taken again; null leaves it to a person. */
 export const decideWhatTheDocsSettle = async (
   ticket: Ticket,
   reason: string,
   journal: Journal,
-): Promise<boolean> => {
+): Promise<string | null> => {
   const branch = `chore/decide-${ticket.number}`;
   journal.setTicket(ticket, branch);
   resetBranchToMain(branch);
@@ -116,7 +128,7 @@ export const decideWhatTheDocsSettle = async (
       ticket,
       reason,
     );
-    return decided !== null;
+    return decided;
   } finally {
     await closePlumixSandbox(sandbox);
   }

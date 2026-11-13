@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 import type { RunAgentPhase } from "./agent.js";
 import type { Review } from "./ticket.js";
+import { PROMPT_DIR } from "./agent.js";
 import { GATES, GATES_LEFT_TO_CI, underAnOrphanReaper } from "./gates.js";
 import {
   SETUP_STEPS,
@@ -22,6 +25,7 @@ import {
   readPullRequestTag,
   readReviewTag,
   readTemplatedPullRequest,
+  reviewBeforePublishing,
   reviewBranch,
   reviewUntilClosed,
 } from "./ticket.js";
@@ -403,6 +407,55 @@ describe("reviewBranch", () => {
     expect(recorded).toEqual([{ phase: "review#2:findings", high: 1, low: 2 }]);
   });
 
+  const scopeOf = async (round: number | string) => {
+    let scope: unknown;
+    await reviewBranch(
+      async (_phase, _agent, options) => {
+        scope = options.promptArgs?.SCOPE;
+        return ranWith(reviewBlock({ summary: "", specGaps: [], notes: [] }));
+      },
+      { record: () => {} },
+      TICKET,
+      round,
+      "body",
+      "",
+    );
+    return scope;
+  };
+
+  test("every placeholder in the review prompt gets a value, since a missing one fails the phase", async () => {
+    let given: string[] = [];
+    await reviewBranch(
+      async (_phase, _agent, options) => {
+        given = Object.keys(options.promptArgs ?? {});
+        return ranWith(reviewBlock({ summary: "", specGaps: [], notes: [] }));
+      },
+      { record: () => {} },
+      TICKET,
+      1,
+      "body",
+      "",
+    );
+    const prompt = readFileSync(join(PROMPT_DIR, "review.md"), "utf8");
+    const wanted = [...prompt.matchAll(/\{\{(\w+)\}\}/g)].map(([, key]) => key);
+
+    expect(given).toEqual(expect.arrayContaining(wanted));
+  });
+
+  test("a review pass inside the loop holds every line to the checklist", async () => {
+    expect(await scopeOf(1)).toBe("");
+  });
+
+  test.each(["publish", "repair-publish"])(
+    "the %s review blocks only on the spec, since the loop already held the lines to the checklist",
+    async (round) => {
+      const scope = await scopeOf(round);
+
+      expect(scope).toContain('checklist "no" goes in `notes`');
+      expect(scope).toContain("criterion");
+    },
+  );
+
   test("hands the reviewer the lines mutation testing found", async () => {
     const promptArgs: unknown[] = [];
 
@@ -619,7 +672,7 @@ describe("reviewUntilClosed", () => {
     );
   });
 
-  test("a second decision is a person's, so the decider runs once per ticket", async () => {
+  test("each decision gap goes to the decider, whose port holds the ticket's re-plan budget", async () => {
     const { ports, seen } = loop(
       [aReview([decisionGap]), aReview([decisionGap])],
       { decide: async () => "settled" },
@@ -627,8 +680,8 @@ describe("reviewUntilClosed", () => {
 
     const outcome = await reviewUntilClosed(ports, copy);
 
-    expect(outcome).toMatchObject({ status: "blocked", alreadyDecided: true });
-    expect(seen.filter((step) => step === "decide")).toHaveLength(1);
+    expect(outcome.status).toBe("closed");
+    expect(seen.filter((step) => step === "decide")).toHaveLength(2);
   });
 
   test("an unreadable review blocks the ticket, since the branch is unreviewed", async () => {
@@ -640,6 +693,172 @@ describe("reviewUntilClosed", () => {
     expect(outcome.status === "blocked" && outcome.reason).toContain(
       "unreviewed",
     );
+  });
+});
+
+describe("reviewBeforePublishing", () => {
+  const copy = { title: "t", body: "b" };
+  const gap = { file: "a.ts", summary: "the changeset overclaims", why: "w" };
+  const aReview = (specGaps: object[]) =>
+    readReviewTag(reviewBlock({ summary: "", specGaps, notes: [] }))!;
+
+  const publishing = (
+    reviews: (Review | null)[],
+    {
+      declines = false,
+      gateFails = null,
+      fixedCopy = null,
+      decide = async () => null,
+    }: {
+      declines?: boolean;
+      gateFails?: string | null;
+      fixedCopy?: { title: string; body: string } | null;
+      decide?: (reason: string) => Promise<string | null>;
+    } = {},
+  ) => {
+    const seen: string[] = [];
+    const reviewedBodies: string[] = [];
+    const briefs: string[] = [];
+    return {
+      seen,
+      reviewedBodies,
+      briefs,
+      ports: {
+        decide: async (reason: string) => {
+          seen.push("decide");
+          return decide(reason);
+        },
+        review: async (pullRequestBody: string) => {
+          seen.push("review");
+          reviewedBodies.push(pullRequestBody);
+          return reviews.shift() ?? null;
+        },
+        fixer: {
+          apply: async (phase: string, brief: string) => {
+            seen.push(phase);
+            briefs.push(brief);
+            return declines
+              ? {
+                  declined: { reason: "cannot", notThisBranch: false },
+                  pullRequestCopy: null,
+                }
+              : { declined: null, pullRequestCopy: fixedCopy };
+          },
+        },
+        regate: async () => {
+          seen.push("gates");
+          return gateFails;
+        },
+      },
+    };
+  };
+
+  test("gaps the final review finds go back to the fixer, are gated, and reviewed again before the push", async () => {
+    const fixedCopy = { title: "t2", body: "b2" };
+    const { ports, seen, reviewedBodies } = publishing(
+      [aReview([gap]), aReview([])],
+      { fixedCopy },
+    );
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome).toEqual({ status: "closed", pullRequestCopy: fixedCopy });
+    expect(seen).toEqual(["review", "fix#publish1", "gates", "review"]);
+    expect(reviewedBodies).toEqual(["b", "b2"]);
+  });
+
+  test("a checklist point the final review files as a gap does not hold the push", async () => {
+    const { ports, seen } = publishing([aReview([{ ...gap, checklist: 3 }])]);
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome).toEqual({ status: "closed", pullRequestCopy: copy });
+    expect(seen).toEqual(["review"]);
+  });
+
+  test("only the spec gaps go to the fixer when the final review mixes them with checklist points", async () => {
+    const { ports, briefs } = publishing([
+      aReview([{ ...gap, checklist: 3, summary: "a comment narrates" }, gap]),
+      aReview([]),
+    ]);
+
+    await reviewBeforePublishing(ports, copy);
+
+    expect(briefs[0]).toContain("the changeset overclaims");
+    expect(briefs[0]).not.toContain("a comment narrates");
+  });
+
+  test("gaps the final review still finds after its fix round park the ticket", async () => {
+    const { ports } = publishing([aReview([gap]), aReview([gap])]);
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome.status).toBe("blocked");
+    expect(outcome.status === "blocked" && outcome.reason).toContain(
+      "Final commit review",
+    );
+  });
+
+  test("a gap that needs a decision goes to the decider, and the fixer closes it with the decision in hand", async () => {
+    const { ports, seen, briefs } = publishing(
+      [aReview([{ ...gap, needsADecision: true }]), aReview([])],
+      { decide: async () => "the ADR settles it" },
+    );
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome.status).toBe("closed");
+    expect(seen).toEqual([
+      "review",
+      "decide",
+      "fix#publish1",
+      "gates",
+      "review",
+    ]);
+    expect(briefs[0]).toContain("the ADR settles it");
+  });
+
+  test("a gap the documents do not settle parks for a person, marked as already decided", async () => {
+    const { ports, seen } = publishing([
+      aReview([{ ...gap, needsADecision: true }]),
+    ]);
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome).toMatchObject({ status: "blocked", alreadyDecided: true });
+    expect(seen).toEqual(["review", "decide"]);
+  });
+
+  test("a fix the gates reject parks with the gate's reason", async () => {
+    const { ports } = publishing([aReview([gap])], {
+      gateFails: "format failed",
+    });
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome).toEqual({ status: "blocked", reason: "format failed" });
+  });
+
+  test("a fix declined outright parks with the fixer's reason and the gaps", async () => {
+    const { ports } = publishing([aReview([gap])], { declines: true });
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome.status === "blocked" && outcome.reason).toContain("cannot");
+    expect(outcome.status === "blocked" && outcome.reason).toContain(
+      "the changeset overclaims",
+    );
+  });
+
+  test("an unreadable final review parks, since the commit is unreviewed", async () => {
+    const { ports } = publishing([null]);
+
+    const outcome = await reviewBeforePublishing(ports, copy);
+
+    expect(outcome).toEqual({
+      status: "blocked",
+      reason: "Final commit has no readable independent review",
+    });
   });
 });
 

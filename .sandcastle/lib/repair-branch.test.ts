@@ -25,6 +25,7 @@ describe("prepareRepairBranch", () => {
       if (args[0] === "worktree") return "";
       if (args[0] === "for-each-ref") return "refs/heads/feat/fix-3450\n";
       if (args[0] === "rev-list") return "1\n";
+      if (args[0] === "cherry") return "+ 9f477c2e6\n- ca74aef70\n";
       writes.push([...args]);
       return "";
     };
@@ -32,6 +33,22 @@ describe("prepareRepairBranch", () => {
     expect(() => prepareRepairBranch("feat/fix-3450", "/repo", git)).toThrow(
       "unpublished commits",
     );
+    expect(writes).toEqual([]);
+  });
+
+  test("local work that holds every pushed commit, rebased or not, is what the repair continues from", () => {
+    const writes: string[][] = [];
+    const git = (args: readonly string[]): string => {
+      if (args[0] === "worktree") return "";
+      if (args[0] === "for-each-ref") return "refs/heads/feat/fix-3450\n";
+      if (args[0] === "rev-list") return "1\n";
+      if (args[0] === "cherry") return "- 9f477c2e6\n- ca74aef70\n";
+      writes.push([...args]);
+      return "";
+    };
+
+    prepareRepairBranch("feat/fix-3450", "/repo", git);
+
     expect(writes).toEqual([]);
   });
 

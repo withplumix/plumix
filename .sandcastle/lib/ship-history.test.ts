@@ -108,23 +108,24 @@ describe("ShipHistory", () => {
     });
   });
 
-  test.each(["delivery.merged", "delivery.parked"] as const)(
-    "%s is terminal when the next run reads the journal",
-    (type) => {
-      const root = historyRoot();
-      const previous = new ShipHistory(root);
-      previous.record({
-        type: "pr.tracked",
-        ticket: { number: 3450, title: "fix saving" },
-        pullRequest: { number: 3501, url: "pr/3501" },
-      });
-      previous.record({ type, issue: 3450, reason: "finished" });
+  test.each([
+    "delivery.merged",
+    "delivery.parked",
+    "delivery.waiting",
+  ] as const)("%s is terminal when the next run reads the journal", (type) => {
+    const root = historyRoot();
+    const previous = new ShipHistory(root);
+    previous.record({
+      type: "pr.tracked",
+      ticket: { number: 3450, title: "fix saving" },
+      pullRequest: { number: 3501, url: "pr/3501" },
+    });
+    previous.record({ type, issue: 3450, reason: "finished" });
 
-      const restarted = new ShipHistory(root);
+    const restarted = new ShipHistory(root);
 
-      expect(restarted.pending()).toEqual([]);
-    },
-  );
+    expect(restarted.pending()).toEqual([]);
+  });
 
   test("an implementation interrupted before opening a PR keeps its branch for reconciliation", () => {
     const root = historyRoot();
@@ -145,6 +146,56 @@ describe("ShipHistory", () => {
         rebases: 0,
       },
     ]);
+  });
+
+  test("a resumed delivery keeps the brief its analyst handed over until the brief is amended", () => {
+    const root = historyRoot();
+    const previous = new ShipHistory(root);
+    previous.record({
+      type: "delivery.started",
+      ticket: { number: 3450, title: "fix saving" },
+      branch: "feat/fix-saving-3450",
+    });
+    previous.record({
+      type: "analysis.completed",
+      issue: 3450,
+      brief: "the plan",
+    });
+
+    expect(new ShipHistory(root).recordedBrief(3450)).toBe("the plan");
+
+    previous.record({
+      type: "brief.amended",
+      issue: 3450,
+      reason: "which page?",
+      decision: "overview.mdx",
+    });
+    const restarted = new ShipHistory(root);
+
+    expect(restarted.recordedBrief(3450)).toBeUndefined();
+    expect(restarted.replans(3450)).toEqual([
+      { reason: "which page?", decision: "overview.mdx" },
+    ]);
+  });
+
+  test("a parked delivery forgets its brief and re-plans, so a later delivery starts clean", () => {
+    const history = new ShipHistory(historyRoot());
+    history.record({
+      type: "delivery.started",
+      ticket: { number: 3450, title: "fix saving" },
+      branch: "feat/fix-saving-3450",
+    });
+    history.record({ type: "analysis.completed", issue: 3450, brief: "plan" });
+    history.record({
+      type: "brief.amended",
+      issue: 3450,
+      reason: "r",
+      decision: "d",
+    });
+    history.record({ type: "delivery.parked", issue: 3450, reason: "person" });
+
+    expect(history.recordedBrief(3450)).toBeUndefined();
+    expect(history.replans(3450)).toEqual([]);
   });
 
   test("an interrupted final write keeps earlier complete events and names the incomplete journal", () => {

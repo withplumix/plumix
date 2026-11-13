@@ -35,12 +35,37 @@ describe("surveyMutants", () => {
 });
 
 describe("surveyMutants when the run fails", () => {
+  test("names why it failed, from the end of the run's output, so the failure can be fixed", async () => {
+    const failing = underAnOrphanReaper("pnpm test:mutation");
+    const ran: string[] = [];
+    const sandbox = {
+      exec: async (command: string) => {
+        ran.push(command);
+        return command === failing
+          ? {
+              exitCode: 3,
+              stdout:
+                "noise\n".repeat(100) +
+                "@plumix/admin-editor#test:mutation: exited 1",
+              stderr: "",
+              durationMs: 0,
+            }
+          : { exitCode: 0, stdout: "", stderr: "", durationMs: 0 };
+      },
+    };
+
+    const survey = await surveyMutants(sandbox);
+
+    expect(survey).toContain("@plumix/admin-editor#test:mutation: exited 1");
+    expect(survey.split("noise")).toHaveLength(40);
+  });
+
   test("says there is no summary, and still puts the tree back", async () => {
     const sandbox = sandboxAnswering({
       [underAnOrphanReaper("pnpm test:mutation")]: 3,
     });
 
-    expect(await surveyMutants(sandbox)).toBe(
+    expect(await surveyMutants(sandbox)).toContain(
       "The mutation run failed this pass, so there is no list of surviving lines to read.",
     );
     expect(sandbox.ran).toContain(

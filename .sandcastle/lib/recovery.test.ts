@@ -25,6 +25,37 @@ describe("recoverDeliveries", () => {
     expect(recovered).toEqual({ inFlight: [queued], interrupted: [] });
   });
 
+  test("a run named for some tickets still watches every PR the loop opened, and resumes only the named work", () => {
+    const earlierPullRequest = {
+      ticket: { number: 3522, title: "useId mismatch" },
+      pullRequest: { number: 3630, url: "pr/3630" },
+    };
+    const unnamedWork = {
+      ticket: { number: 3500, title: "unnamed" },
+      branch: "feat/unnamed-3500",
+      repairs: 0,
+      rebases: 0,
+    };
+    const namedWork = {
+      ticket: { number: 3529, title: "named" },
+      branch: "feat/named-3529",
+      repairs: 0,
+      rebases: 0,
+    };
+
+    const recovered = recoverDeliveries(
+      [unnamedWork, namedWork],
+      [earlierPullRequest],
+      () => undefined,
+      (ticket) => ticket === 3529,
+    );
+
+    expect(recovered).toEqual({
+      inFlight: [earlierPullRequest],
+      interrupted: [namedWork],
+    });
+  });
+
   test("interrupted work without a PR is held instead of being handed out for a fresh implementation", () => {
     const delivery = {
       ticket: { number: 3450, title: "fix saving" },

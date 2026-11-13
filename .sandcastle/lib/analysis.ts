@@ -1,6 +1,7 @@
 type Analysis =
   | { readonly next: "implement"; readonly brief?: string }
-  | { readonly next: "park"; readonly reason: string };
+  | { readonly next: "park"; readonly reason: string }
+  | { readonly next: "wait"; readonly on: readonly number[] };
 
 export async function analyseBeforeSetup(ports: {
   readonly analyse: () => Promise<Analysis>;
