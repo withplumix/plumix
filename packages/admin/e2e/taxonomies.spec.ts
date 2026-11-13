@@ -402,11 +402,15 @@ test.describe("/terms/$name/$id/edit concurrency", () => {
     return { updates };
   }
 
-  test("a save after another session saved opens the conflict dialog, and Keep mine saves over it", async ({
+  test("a save after another session saved opens the conflict; Compare shows both, and Keep mine saves over it", async ({
     page,
   }) => {
     const { updates } = await openConflictDialog(page);
 
+    await page.getByTestId("entry-conflict-compare").click();
+    const panes = page.getByTestId("entry-conflict-compare-panes");
+    await expect(panes).toContainText("Mine");
+    await expect(panes).toContainText("Saved elsewhere");
     await page.getByTestId("entry-conflict-keep-mine").click();
 
     await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
@@ -416,25 +420,16 @@ test.describe("/terms/$name/$id/edit concurrency", () => {
     expect(updates).toHaveLength(2);
   });
 
-  test("Load theirs in the conflict dialog shows the other session's save", async ({
-    page,
-  }) => {
-    await openConflictDialog(page);
-
-    await page.getByTestId("entry-conflict-load-theirs").click();
-
-    await expect(page.getByTestId("entry-conflict-dialog")).toBeHidden();
-    await expect(page.getByTestId("term-form-name-input")).toHaveValue(
-      "Saved elsewhere",
-    );
-  });
-
-  test("a term another editor holds opens read-only, and Take over makes it editable", async ({
+  test("a term is locked while its lease loads, read-only while another editor holds it, and Take over makes it editable", async ({
     page,
   }) => {
     const ada = { id: 2, name: "Ada" };
     const since = new Date("2026-05-20T09:05:00Z");
     const takeOvers: unknown[] = [];
+    let answerLease: () => void = () => undefined;
+    const leaseAnswered = new Promise<void>((resolve) => {
+      answerLease = resolve;
+    });
     await mockRpc(page, {
       "/auth/session": AUTHED_ADMIN,
       "/term/get": term({ id: 7, name: "Fruit" }),
@@ -445,11 +440,13 @@ test.describe("/terms/$name/$id/edit concurrency", () => {
         route.request().postDataJSON() as { json: { takeOver?: boolean } }
       ).json;
       if (takeOver !== true) {
-        return route.fulfill({
-          status: 423,
-          contentType: "application/json",
-          body: rpcLockedBody(ada, since),
-        });
+        return leaseAnswered.then(() =>
+          route.fulfill({
+            status: 423,
+            contentType: "application/json",
+            body: rpcLockedBody(ada, since),
+          }),
+        );
       }
       takeOvers.push(takeOver);
       return route.fulfill({
@@ -460,6 +457,9 @@ test.describe("/terms/$name/$id/edit concurrency", () => {
     });
 
     await page.goto("terms/category/7/edit");
+    await expect(page.getByTestId("term-form-name-input")).toHaveValue("Fruit");
+    await expect(page.getByTestId("term-form-name-input")).toBeDisabled();
+    answerLease();
 
     await expect(page.getByTestId("edit-lease-held-by")).toHaveText(
       "Ada is editing this term (since May 20, 2026, 9:05 AM)",
