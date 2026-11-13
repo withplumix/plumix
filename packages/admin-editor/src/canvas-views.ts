@@ -6,7 +6,6 @@ import {
   loadedBlocksWithLoaders,
 } from "@plumix/core/blocks";
 
-/** Every block name in `tree`, slot children included, in first-seen order. */
 export function treeBlockNames(
   tree: readonly BlockNode[],
   registry: BlockRegistry,
@@ -83,9 +82,7 @@ export async function seedTree(
 }
 
 export interface LoaderBlocksReporter {
-  /** Reports the set if it changed since the last report. Call after a load. */
   readonly update: () => void;
-  /** Reports the set regardless, for a host that just (re)connected. */
   readonly resend: () => void;
 }
 

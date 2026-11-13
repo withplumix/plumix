@@ -1,9 +1,6 @@
 import { HEADING_TAGS } from "../headings.js";
 import { LINK_SCHEMES } from "../marks/safe-href.js";
 
-// Apart from `sanitize.ts`, so the editor canvas reads the baseline without
-// loading the sanitizer, which loads with the views that sanitize.
-
 /**
  * Shape consumed by `sanitizeHtml`. Operators extend / replace it
  * via `defineApp({ blocks: { htmlAllowlist: {...} } })`; the schema-

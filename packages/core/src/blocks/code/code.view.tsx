@@ -4,7 +4,6 @@ import type { BlockViewProps } from "../render-block-tree.js";
 import { CODE_THEME_CSS, highlightCode } from "./highlight.js";
 import { normalizeLanguage } from "./languages.js";
 
-/** Imports the highlighter, so it loads only when a code block renders. */
 export default function CodeView({
   attrs,
   blockProps,

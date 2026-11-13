@@ -103,9 +103,8 @@ export interface EditorState {
    *  state, not persisted to the document. */
   readonly xray: boolean;
   /**
-   * The blocks whose view module declares loaders, as the canvas last
-   * reported: the shell never loads a view module, so it can't read them off
-   * the definition.
+   * The blocks whose view module declares loaders. The shell loads no view
+   * module, so it can't read them off the definition.
    */
   readonly loaderBlocks: ReadonlySet<string>;
   /** Theme breakpoints driving the device canvas widths. */

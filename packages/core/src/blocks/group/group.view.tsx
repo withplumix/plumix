@@ -8,8 +8,6 @@ export default function GroupView({
   tagName,
 }: BlockViewProps): ReactNode {
   const Content = attrs.content as (() => ReactNode) | undefined;
-  // Honor the author's root-element override (Builder's tag-name); the Box is
-  // a generic container, so div/section/nav/etc are all valid.
   const Tag = tagName ?? "div";
   return <Tag {...blockProps}>{Content ? <Content /> : null}</Tag>;
 }

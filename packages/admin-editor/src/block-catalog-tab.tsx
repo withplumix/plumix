@@ -216,7 +216,6 @@ function CatalogCard({
   readonly label: string;
   readonly onClick: () => void;
   readonly onPointerDown?: () => void;
-  /** The author hovered or focused the card, so an insert may follow. */
   readonly onIntent?: () => void;
 }): ReactElement {
   return (

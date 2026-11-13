@@ -149,11 +149,7 @@ export type CanvasMessage =
       readonly tree: readonly BlockNode[];
     }
   | {
-      /**
-       * The loaded blocks whose view module declares loaders, for the shell's
-       * Refresh control: the shell loads no view module. Sent on connect and
-       * whenever more load.
-       */
+      /** The loaded blocks whose view module declares loaders. */
       readonly type: "canvas:loader-blocks";
       readonly names: readonly string[];
     }

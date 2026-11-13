@@ -23,7 +23,6 @@ const registry = createBlockRegistry([
   searchSpec,
 ]);
 
-/** As `mountEditorRuntime` does, the seed's views load before the first render. */
 const initialTree = await seedTree(registry, SEED_BLOCKS);
 
 const root = document.getElementById("root");
