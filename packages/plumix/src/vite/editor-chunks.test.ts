@@ -139,7 +139,7 @@ describe("the editor entry's chunks", () => {
     entryDynamicImports = new Set(
       [...eagerSet].flatMap((c) => c.dynamicImports),
     );
-  }, 60_000);
+  });
 
   test.each(MUST_STAY_OUT)("loads no %s eagerly", (_, pattern) => {
     expect(eager.filter((id) => pattern.test(id))).toEqual([]);
