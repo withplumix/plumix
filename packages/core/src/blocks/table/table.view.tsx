@@ -23,7 +23,6 @@ function pickAlign(raw: unknown): Align | undefined {
     : undefined;
 }
 
-/** One view for the table and its rows and cells, picked by block name. */
 export default function TableView({
   name,
   attrs,

@@ -77,7 +77,6 @@ export function loadedBlocksWithLoaders(registry: BlockRegistry): string[] {
   return names;
 }
 
-/** The loaded view module of `spec`; throws when it isn't loaded yet. */
 export function blockViewModule(spec: BlockSpec): BlockViewModule {
   const module = loaded.get(spec);
   if (!module) throw new BlockViewNotLoadedError(spec.name);

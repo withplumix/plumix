@@ -4,10 +4,6 @@ import { defineBlock } from "plumix/blocks";
 import type { FormRegistry } from "../registry.js";
 import { FORM_BLOCK_NAME } from "../contract.js";
 
-/**
- * The form block over the site's forms. Its view module holds the render
- * and the loader that signs a bound form.
- */
 export function createFormBlock(registry: FormRegistry): BlockSpec {
   return defineBlock({
     name: FORM_BLOCK_NAME,

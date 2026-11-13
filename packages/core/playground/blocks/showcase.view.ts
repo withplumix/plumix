@@ -8,7 +8,6 @@ import { and, count, eq } from "plumix/db";
 
 import { Clicker } from "../islands/counter.js";
 
-/** The columns of core's `entries` table the loader reads. */
 const entries = sqliteTable("entries", {
   id: integer("id").primaryKey(),
   type: text("type").notNull(),

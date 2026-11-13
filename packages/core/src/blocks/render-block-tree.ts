@@ -193,7 +193,6 @@ export interface BlockViewProps<
   readonly breakpoints?: ThemeBreakpoints;
 }
 
-/** The default export of a block's view module. */
 export type BlockView<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,

@@ -149,7 +149,6 @@ export type CanvasMessage =
       readonly tree: readonly BlockNode[];
     }
   | {
-      /** The loaded blocks whose view module declares loaders. */
       readonly type: "canvas:loader-blocks";
       readonly names: readonly string[];
     }
