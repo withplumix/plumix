@@ -7,40 +7,14 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
 
+import { eagerChunks } from "./test-support.js";
+
 type OutputChunk = Rolldown.OutputChunk;
 
 const PACKAGE_DIR = fileURLToPath(new URL("../../", import.meta.url));
 const MEDIA_BLOCKS = fileURLToPath(
   new URL("../../../plugins/media/src/media-blocks.ts", import.meta.url),
 );
-
-/**
- * The entry chunk named `name` and every chunk it imports statically: what the
- * browser fetches before the entry runs.
- */
-function eagerChunks(
-  chunks: readonly OutputChunk[],
-  name: string,
-): ReadonlySet<OutputChunk> {
-  const byFile = new Map(chunks.map((c) => [c.fileName, c]));
-  const entry = chunks.find((c) => c.isEntry && c.name === name);
-  if (!entry) {
-    throw new Error(
-      `no ${name} entry chunk; chunks: ${chunks.map((c) => c.name).join(", ")}`,
-    );
-  }
-  const seen = new Set<OutputChunk>();
-  const queue = [entry];
-  for (let chunk = queue.pop(); chunk; chunk = queue.pop()) {
-    if (seen.has(chunk)) continue;
-    seen.add(chunk);
-    for (const file of chunk.imports) {
-      const imported = byFile.get(file);
-      if (imported) queue.push(imported);
-    }
-  }
-  return seen;
-}
 
 /** The fixture block: a view that renders an island, and a loader that reads a
  *  drizzle table, as a theme block with server data does. */
