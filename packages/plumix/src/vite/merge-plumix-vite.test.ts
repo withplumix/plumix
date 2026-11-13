@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { UserConfig } from "vite";
-import { build, createLogger, mergeConfig } from "vite";
+import { build, createLogger, mergeConfig, resolveConfig } from "vite";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { plumix } from "./index.js";
@@ -218,14 +218,23 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       return raw === undefined ? undefined : JSON.parse(raw);
     }
 
-    test("returns the same UUID from repeated config() calls on one plugin instance", async () => {
-      const plugin = sitePlugin();
+    test("resolves one UUID for both the client and server environments of a build", async () => {
+      const resolved = await resolveConfig(
+        {
+          configFile: false,
+          root: dir,
+          plugins: [sitePlugin()],
+          environments: { client: {}, server: {} },
+        },
+        "build",
+      );
 
-      const first = await buildId(plugin, "build");
-      const second = await buildId(plugin, "build");
-
-      expect(first).toMatch(UUID);
-      expect(second).toBe(first);
+      const client: unknown =
+        resolved.environments.client?.define?.["process.env.PLUMIX_BUILD_ID"];
+      const server: unknown =
+        resolved.environments.server?.define?.["process.env.PLUMIX_BUILD_ID"];
+      expect(JSON.parse(String(client))).toMatch(UUID);
+      expect(server).toBe(client);
     });
 
     test("gives two builds different ids, so a deploy never reads the last one's pages", async () => {

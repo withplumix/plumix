@@ -197,7 +197,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
             ? ""
             : (process.env.PLUMIX_EDITOR_PATH_MAP ?? ""),
         ),
-        // `BUILD_KEY_PARAM` in core's CDN keys.
+        // Generated here, never read from the shell.
         "process.env.PLUMIX_BUILD_ID": JSON.stringify(
           env.command === "build" ? buildId : "dev",
         ),
