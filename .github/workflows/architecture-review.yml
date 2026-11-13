@@ -8,6 +8,9 @@ name: Architecture Review
 # The agent runs on the runner with no container and reads issues anyone can
 # file, so its job holds only read permissions and its tools are the allow list
 # in .sandcastle/architecture-review.settings.json. Filing is a separate job.
+# Its Read rules, which Grep and Glob follow too, reach only the checkout and the
+# installed skills; `dontAsk` refuses any other path. The `/proc` deny also
+# refuses a symlink into the agent's environment, which holds the OAuth token.
 on:
   schedule:
     - cron: "0 9 * * 1" # Mondays, 09:00 UTC
