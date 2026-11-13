@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type { CdnStore, ConnectedCdn } from "../../runtime/contract/slots.js";
 import type { CloudflareCdnConfig } from "./cloudflare.js";
+import { NOOP_TELEMETRY } from "../../context/telemetry.js";
 import { describeCdnContract } from "../../test/conformance/cdn.js";
+import { readThrough } from "../read-through.js";
 import { cloudflare } from "./cloudflare.js";
 
 /**
@@ -367,6 +369,71 @@ describe("on a runtime with a response store", () => {
     store: true,
     purgeTags: true,
     purgeAll: true,
+  });
+});
+
+describe("an origin store across builds", () => {
+  beforeEach(() => {
+    const zone = purgeableZone();
+    (globalThis as { caches?: unknown }).caches = { default: zone.cache };
+    globalThis.fetch = zone.purgeEndpoint;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  async function serveFrontAfterStoreWrite(body: string): Promise<string> {
+    const writes: Promise<unknown>[] = [];
+    const response = await readThrough({
+      request: new Request("https://site.test/"),
+      segment: "anonymous",
+      intentKind: "frontPage",
+      cdn: connect(),
+      defer: (write) => {
+        writes.push(write);
+      },
+      telemetry: NOOP_TELEMETRY,
+      render: () =>
+        Promise.resolve(
+          new Response(body, { headers: { "content-type": "text/html" } }),
+        ),
+      tags: () => ["e:1"],
+      personal: () => false,
+    });
+    await Promise.all(writes);
+    return response.text();
+  }
+
+  it("a new build renders afresh instead of reading the previous build's page", async () => {
+    vi.stubEnv("PLUMIX_BUILD_ID", "a");
+    await serveFrontAfterStoreWrite("from a");
+    vi.stubEnv("PLUMIX_BUILD_ID", "b");
+
+    const body = await serveFrontAfterStoreWrite("from b");
+
+    expect(body).toBe("from b");
+  });
+
+  it("the first build finds its own page again", async () => {
+    vi.stubEnv("PLUMIX_BUILD_ID", "a");
+    await serveFrontAfterStoreWrite("from a");
+    vi.stubEnv("PLUMIX_BUILD_ID", "b");
+    await serveFrontAfterStoreWrite("from b");
+    vi.stubEnv("PLUMIX_BUILD_ID", "a");
+
+    const body = await serveFrontAfterStoreWrite("from a, again");
+
+    expect(body).toBe("from a");
+  });
+
+  it("still lets a tag purge remove a build's page", async () => {
+    vi.stubEnv("PLUMIX_BUILD_ID", "a");
+    await serveFrontAfterStoreWrite("before");
+
+    await purgeTags(["e:1"]);
+
+    expect(await serveFrontAfterStoreWrite("after")).toBe("after");
   });
 });
 

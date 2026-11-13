@@ -195,6 +195,8 @@ The stored copy differs from the one the visitor receives in two ways, both of t
 
 That store is also what lets a Workers deploy cache a page for an audience segment at all. The site owns the key, so two visitors in the same segment share one entry and distinct segments never collide. Behind a CDN the site does not run on, there is no key to write and a non-anonymous segment renders live — the trade-off [CDN Caching](/deployment/cdn/#what-each-host-caches) states beside the host comparison.
 
+Each entry is also keyed by the build that rendered it. A deploy therefore starts with an empty store: the new version renders its pages afresh instead of finding the previous version's, whose stylesheet and script URLs the new deploy no longer serves, and two versions in a gradual rollout never read each other's pages. The previous version's entries are left to expire by their `ttl`.
+
 A `workers.dev` deploy has no zone and so no `zoneId` to resolve, which is why caching stays off there and switches on when you attach a domain and set both secrets.
 
 ### Workers Caching

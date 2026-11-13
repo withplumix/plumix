@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cp, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -128,6 +129,8 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   // The last config staged, which a dev server restages on an admin edit.
   let emitted: Regenerated | undefined;
   let adminSourceFiles: readonly string[] = [];
+  // One per plugin instance, so the client and server of one build share it.
+  const buildId = randomUUID();
 
   async function stage(next: Regenerated): Promise<void> {
     emitted = next;
@@ -193,6 +196,10 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
           env.command === "build"
             ? ""
             : (process.env.PLUMIX_EDITOR_PATH_MAP ?? ""),
+        ),
+        // Generated here, never read from the shell.
+        "process.env.PLUMIX_BUILD_ID": JSON.stringify(
+          env.command === "build" ? buildId : "dev",
         ),
         "process.env.PLUMIX_FORWARD_ERRORS": JSON.stringify(
           env.command === "build"

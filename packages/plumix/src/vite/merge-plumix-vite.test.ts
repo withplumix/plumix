@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { UserConfig } from "vite";
-import { build, createLogger, mergeConfig } from "vite";
+import { build, createLogger, mergeConfig, resolveConfig } from "vite";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { plumix } from "./index.js";
@@ -185,6 +185,69 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       expect(define?.["process.env.WORKERS_CI_BRANCH"]).toBe(
         JSON.stringify(""),
       );
+    });
+  });
+
+  describe("build id", () => {
+    const UUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+    function sitePlugin(): ReturnType<typeof plumix> {
+      const configPath = join(dir, "plumix.config.mjs");
+      writeFileSync(
+        configPath,
+        `export default {
+          runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+          database: { kind: 'x' },
+          auth: { passkey: {} },
+        };`,
+        "utf8",
+      );
+      return plumix({ configFile: configPath });
+    }
+
+    async function buildId(
+      plugin: ReturnType<typeof plumix>,
+      command: "build" | "serve",
+    ): Promise<unknown> {
+      const result = await (
+        plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
+      )({ root: dir }, { command, mode: "production" });
+      const define = (result as { define?: Record<string, string> }).define;
+      const raw = define?.["process.env.PLUMIX_BUILD_ID"];
+      return raw === undefined ? undefined : JSON.parse(raw);
+    }
+
+    test("resolves one UUID for both the client and server environments of a build", async () => {
+      const resolved = await resolveConfig(
+        {
+          configFile: false,
+          root: dir,
+          plugins: [sitePlugin()],
+          environments: { client: {}, server: {} },
+        },
+        "build",
+      );
+
+      const client: unknown =
+        resolved.environments.client?.define?.["process.env.PLUMIX_BUILD_ID"];
+      const server: unknown =
+        resolved.environments.server?.define?.["process.env.PLUMIX_BUILD_ID"];
+      expect(JSON.parse(String(client))).toMatch(UUID);
+      expect(server).toBe(client);
+    });
+
+    test("gives two builds different ids, so a deploy never reads the last one's pages", async () => {
+      const a = await buildId(sitePlugin(), "build");
+      const b = await buildId(sitePlugin(), "build");
+
+      expect(a).toMatch(UUID);
+      expect(b).toMatch(UUID);
+      expect(a).not.toBe(b);
+    });
+
+    test('defines "dev" under the dev server', async () => {
+      expect(await buildId(sitePlugin(), "serve")).toBe("dev");
     });
   });
 

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  BUILD_KEY_PARAM,
   cdnBypassReason,
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
@@ -339,6 +340,59 @@ describe("routeCdnKey", () => {
     expect(key.url).toBe("https://site.test/_plumix/og/card/abc.png?w=1200");
     expect(key.headers.has("cookie")).toBe(false);
   });
+});
+
+describe("the build axis of a CDN key", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const keyFunctions = [
+    {
+      name: "segmentCdnKey, anonymous",
+      key: (request: Request) => segmentCdnKey(request, "anonymous"),
+    },
+    {
+      name: "segmentCdnKey, authenticated",
+      key: (request: Request) => segmentCdnKey(request, "authenticated"),
+    },
+    { name: "routeCdnKey", key: routeCdnKey },
+  ];
+
+  it.each(keyFunctions)(
+    "$name folds the build that renders the page into the key",
+    ({ key }) => {
+      vi.stubEnv("PLUMIX_BUILD_ID", "a");
+
+      const keyed = key(new Request("https://site.test/post"));
+
+      expect(new URL(keyed.url).searchParams.get(BUILD_KEY_PARAM)).toBe("a");
+    },
+  );
+
+  it.each(keyFunctions)(
+    "$name replaces a client-sent build so a crafted query can't reach another build's entry",
+    ({ key }) => {
+      vi.stubEnv("PLUMIX_BUILD_ID", "a");
+
+      const keyed = key(new Request("https://site.test/post?__plumix_build=b"));
+
+      expect(new URL(keyed.url).searchParams.getAll(BUILD_KEY_PARAM)).toEqual([
+        "a",
+      ]);
+    },
+  );
+
+  it.each(keyFunctions)(
+    "$name drops a client-sent build when no build id is defined",
+    ({ key }) => {
+      vi.stubEnv("PLUMIX_BUILD_ID", "");
+
+      const keyed = key(new Request("https://site.test/post?__plumix_build=b"));
+
+      expect(new URL(keyed.url).searchParams.has(BUILD_KEY_PARAM)).toBe(false);
+    },
+  );
 });
 
 describe("responseAllowsSharedStorage", () => {
