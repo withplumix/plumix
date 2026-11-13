@@ -42,7 +42,6 @@ export interface RuntimeConnection {
   readonly reportClipboard: (op: "copy" | "cut" | "paste") => void;
   /** Ask the host to resolve deps the tree declares and the canvas lacks. */
   readonly reportRequestDeps: (tree: readonly BlockNode[]) => void;
-  /** Tell the host which loaded blocks declare loaders. */
   readonly reportLoaderBlocks: (names: readonly string[]) => void;
   readonly dispose: () => void;
 }
@@ -58,9 +57,7 @@ interface ConnectRuntimeOptions {
   readonly onDeps?: (deps: LoadedDeps) => void;
   readonly onConfig?: (config: CanvasConfig) => void;
   readonly onXray?: (enabled: boolean) => void;
-  /** The host expects these blocks to be inserted soon. */
   readonly onPrefetchBlocks?: (names: readonly string[]) => void;
-  /** The host (re)connected and is listening. */
   readonly onConnect?: () => void;
 }
 

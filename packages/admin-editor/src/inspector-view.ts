@@ -34,8 +34,8 @@ export interface InspectorView {
 }
 
 /**
- * The inspector's view of the active block, or `null` when none is selected.
- * `loaderBlocks` names the blocks the canvas reported declaring loaders.
+ * What the block inspector shows for the active block, or `null` when nothing
+ * is selected. `canRefresh` says whether the host wired a loader refresh.
  */
 export function inspectorView(
   registry: BlockRegistry,

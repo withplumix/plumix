@@ -16,7 +16,7 @@ export interface RenderEnv {
   readonly templateDeps: ReadonlyMap<string, RegisteredTemplateDep>;
   readonly assetManifest: AssetManifest;
   readonly htmlAllowlist: HtmlAllowlist;
-  /** The catalog a block's `render` resolves its strings from, per locale. */
+  /** The catalog a block's view resolves its strings from, per locale. */
   readonly blockCatalogs: BlockCatalogs;
   /** What a page renders beside its template; see {@link RenderChrome}. */
   readonly chrome: RenderChrome;

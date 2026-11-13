@@ -71,8 +71,8 @@ export type HostMessage =
     }
   | {
       /**
-       * Blocks the author may insert next, such as a hovered catalog item. The
-       * canvas loads their view modules so the insert renders at once.
+       * The canvas loads these blocks' view modules ahead of an insert, so the
+       * inserted block renders at once.
        */
       readonly type: "host:prefetch-blocks";
       readonly names: readonly string[];

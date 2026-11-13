@@ -110,7 +110,7 @@ export function useLoaderPushRef(): RefObject<LoaderDataPush | null> | null {
 }
 
 /** Null outside an EditorProvider, and `.current` null until the canvas
- *  bridge connects; a call then has no canvas to prefetch into. */
+ *  bridge connects. */
 export function useBlockPrefetchRef(): RefObject<BlockPrefetch | null> | null {
   return useContext(BlockPrefetchContext);
 }
