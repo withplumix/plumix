@@ -1,14 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Read",
-      "Grep",
-      "Glob",
+      "Read(./**)",
+      "Read(~/.claude/plugins/cache/mattpocock/**)",
       "Agent",
       "Skill",
       "Bash(git log:*)",
       "Bash(gh issue list:*)",
       "Bash(gh issue view:*)"
-    ]
+    ],
+    "deny": ["Read(//proc/**)"]
   }
 }
