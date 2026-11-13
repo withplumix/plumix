@@ -4,7 +4,7 @@ import { createDebouncer } from "@/editor/debounce.js";
 import type { AppRouterClient } from "@plumix/core";
 
 type EntryUpdateInput = Parameters<AppRouterClient["entry"]["update"]>[0];
-type EntryRow = Awaited<ReturnType<AppRouterClient["entry"]["update"]>>;
+export type EntryRow = Awaited<ReturnType<AppRouterClient["entry"]["update"]>>;
 
 type EntryUpdatePatch = Omit<EntryUpdateInput, "id" | "ifMatch">;
 
@@ -56,22 +56,30 @@ export interface EntryAutosave<G extends Record<string, unknown>> {
   readonly wrote: (work: EntryWrite, response: EntryRow) => void;
   /** A write from the copy failed for a reason other than a conflict or the
    *  lease. */
-  readonly failed: (err: unknown) => void;
+  readonly failed: (err: unknown, work: EntryWrite) => void;
 }
 
 type UpdateWrite = Extract<EntryWrite, { readonly kind: "update" }>;
+
+/** A group's write that hasn't landed: in flight, refused or failed. */
+interface GroupWrite<S> {
+  readonly patch: UpdateWrite["patch"];
+  readonly next: S;
+  unanswered: boolean;
+  failed: boolean;
+}
 
 interface GroupRunner {
   readonly schedule: () => void;
   readonly flush: () => Promise<void>;
   readonly cancel: () => void;
   readonly pending: () => boolean;
-  /** Whether the group's last write went unanswered: refused or failed. */
-  readonly held: () => boolean;
-  readonly landed: (
-    work: EntryWrite,
-    response: EntryRow,
-  ) => { readonly kept: boolean };
+  readonly unanswered: () => boolean;
+  /** Whether the copy refused a write while a conflict or the lease paused
+   *  it, so it goes out again once a write lands. */
+  readonly heldBack: () => boolean;
+  readonly landed: (work: EntryWrite, response: EntryRow) => void;
+  readonly failed: (work: EntryWrite) => void;
   /** Send the group's unsaved edit now, debounced or not. */
   readonly save: () => Promise<void>;
 }
@@ -108,9 +116,13 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
 
   function runner<K extends keyof G>(key: K, initialSaved: G[K]): GroupRunner {
     let saved = initialSaved;
-    let sent: { readonly work: UpdateWrite; readonly next: G[K] } | undefined;
-    let held = false;
+    const writes = new Map<EntryWrite, GroupWrite<G[K]>>();
     const save = async (): Promise<void> => {
+      // A new write diffs from what last landed, so it carries each one that
+      // went unanswered.
+      for (const [work, write] of writes) {
+        if (write.unanswered) writes.delete(work);
+      }
       const next = latest.groups[key].snapshot();
       const patch = latest.groups[key].diff(saved, next);
       if (patch === null) {
@@ -118,17 +130,24 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
         return;
       }
       const work: UpdateWrite = { kind: "update", patch };
-      sent = { work, next };
-      held = false;
+      const write: GroupWrite<G[K]> = {
+        patch,
+        next,
+        unanswered: false,
+        failed: false,
+      };
+      writes.set(work, write);
       track(1);
       try {
-        // Unanswered, the copy refused it or it failed: it stays unsaved.
-        held = (await latest.write(work)) === undefined;
+        await latest.write(work);
       } finally {
+        write.unanswered = true;
         track(-1);
       }
     };
     const debouncer = createDebouncer(() => save(), AUTOSAVE_DEBOUNCE_MS);
+    const some = (is: (write: GroupWrite<G[K]>) => boolean): boolean =>
+      [...writes.values()].some(is);
     return {
       schedule: () => {
         debouncer.call();
@@ -137,19 +156,21 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       flush: debouncer.flush,
       cancel: () => {
         debouncer.cancel();
-        sent = undefined;
-        held = false;
+        writes.clear();
       },
       pending: debouncer.pending,
-      held: () => held,
+      unanswered: () => some((write) => write.unanswered),
+      heldBack: () => some((write) => write.unanswered && !write.failed),
       landed: (work, response) => {
-        if (sent?.work !== work) return { kept: false };
-        const kept = held;
-        saved = latest.groups[key].commit(saved, sent.next, response);
-        latest.groups[key].onSaved?.(sent.work.patch, response);
-        sent = undefined;
-        held = false;
-        return { kept };
+        const write = writes.get(work);
+        if (!write) return;
+        writes.delete(work);
+        saved = latest.groups[key].commit(saved, write.next, response);
+        latest.groups[key].onSaved?.(write.patch, response);
+      },
+      failed: (work) => {
+        const write = writes.get(work);
+        if (write) write.failed = true;
       },
       save: () => {
         debouncer.cancel();
@@ -160,7 +181,7 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
 
   const runners: GroupRunner[] = [];
   const unsaved = (): boolean =>
-    inFlight > 0 || runners.some((r) => r.pending() || r.held());
+    inFlight > 0 || runners.some((r) => r.pending() || r.unanswered());
   // Filled for every key of `groups` by the loop below.
   const schedule = {} as { [K in keyof G]: () => void };
   for (const key in initial.groups) {
@@ -181,14 +202,14 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       },
       wrote: (work, response) => {
         failing = false;
-        // Never on an ordinary landing: an edit whose write failed would
-        // fail again with no new edit to fix it.
-        if (runners.some((r) => r.landed(work, response).kept)) {
-          for (const r of runners) if (r.held()) void r.save();
-        }
+        for (const r of runners) r.landed(work, response);
+        // A write landing means the copy took writes again, Keep mine's
+        // included. A failed one stays put: it would only fail again.
+        for (const r of runners) if (r.heldBack()) void r.save();
         reportUnsaved();
       },
-      failed: (err) => {
+      failed: (err, work) => {
+        for (const r of runners) r.failed(work);
         if (failing) return;
         failing = true;
         latest.onError(err);

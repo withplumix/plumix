@@ -1,5 +1,6 @@
 import type { PostEditorValues } from "@/components/editor/post-editor-form.js";
-import type { EntryWrite } from "@/editor/entry-autosave.js";
+import type { EntryRow, EntryWrite } from "@/editor/entry-autosave.js";
+import type { EntryCopyEvents } from "@/editor/entry-copy.js";
 import type { EditingCopyState } from "@/editor/use-editing-copy.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
@@ -23,7 +24,6 @@ import type { ResolvedMeta } from "@plumix/core";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { describeRpcError } from "@plumix/core/admin";
 
-import type { EntryCopyEvents, EntryRow } from "./-entry-copy.js";
 import { ENTRY_COPY_FAILED } from "./-entry-copy.js";
 
 const M = {
@@ -116,7 +116,7 @@ export function PlainFormRouteInner({
       wrote: autosave.wrote,
       failed: (err, cause) => {
         if (cause !== "reload" && cause !== "takeOver") {
-          autosave.failed(err);
+          autosave.failed(err, cause);
           return;
         }
         setServerError(describeRpcError(err, {}, ENTRY_COPY_FAILED[cause]));

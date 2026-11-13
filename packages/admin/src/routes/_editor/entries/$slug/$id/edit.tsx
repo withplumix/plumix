@@ -1,4 +1,5 @@
-import type { EntryWrite } from "@/editor/entry-autosave.js";
+import type { EntryRow, EntryWrite } from "@/editor/entry-autosave.js";
+import type { EntryCopyEvents } from "@/editor/entry-copy.js";
 import type { EditingCopyState } from "@/editor/use-editing-copy.js";
 import type { MetaFieldServerError } from "@/lib/meta-field-errors.js";
 import type { MessageDescriptor } from "@lingui/core";
@@ -9,6 +10,7 @@ import { ErrorPlaceholder } from "@/components/error-placeholder.js";
 import { createDebouncer } from "@/editor/debounce.js";
 import { detectStaleAutosave } from "@/editor/detect-stale-autosave.js";
 import { ENTRY_EDITING_COPY } from "@/editor/editing-copy.js";
+import { entryCopy } from "@/editor/entry-copy.js";
 import { diffMetaBag } from "@/editor/meta-diff.js";
 import {
   resolveEditorMode,
@@ -73,10 +75,8 @@ import {
 } from "@plumix/core/manifest";
 import { idPathParam } from "@plumix/core/validation";
 
-import type { EntryCopyEvents, EntryRow } from "./-entry-copy.js";
 import {
   ENTRY_COPY_FAILED,
-  entryCopy,
   readSavedEntry,
   writeEntry,
 } from "./-entry-copy.js";
@@ -954,8 +954,8 @@ function EntryEditor({
           toastError(renderLabel(ENTRY_COPY_FAILED[cause]));
           return;
         }
-        if (cause !== "publish" && cause !== "publishDraft") {
-          autosave.failed(err);
+        if (cause.kind !== "publish" && cause.kind !== "publishDraft") {
+          autosave.failed(err, cause);
           return;
         }
         // Publish is stricter than a draft save, rejecting values a draft

@@ -1,11 +1,11 @@
-import type { EntryWrite } from "@/editor/entry-autosave.js";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { EditLeaseApi } from "@plumix/core/admin";
 import { createEditingCopy } from "@plumix/core/admin";
 
-import type { EntryCopyCause, EntryRow } from "./-entry-copy.js";
-import { entryCopy } from "./-entry-copy.js";
+import type { EntryRow, EntryWrite } from "./entry-autosave.js";
+import type { EntryCopyCause } from "./entry-copy.js";
+import { entryCopy } from "./entry-copy.js";
 
 const ME = { id: 1, name: "Me" };
 const T0 = new Date("2026-05-20T00:00:00.000Z");
@@ -96,7 +96,7 @@ describe("entryCopy", () => {
 
     await copy.save({ kind: "publish" });
 
-    expect(failures).toEqual([["refused publish", "publish"]]);
+    expect(failures).toEqual([["refused publish", { kind: "publish" }]]);
   });
 
   test("a take over that fails after a failed publish is told as a take over", async () => {
@@ -109,7 +109,7 @@ describe("entryCopy", () => {
     await copy.takeOver();
 
     expect(failures).toEqual([
-      ["refused publish", "publish"],
+      ["refused publish", { kind: "publish" }],
       ["lease unavailable", "takeOver"],
     ]);
   });
@@ -124,7 +124,7 @@ describe("entryCopy", () => {
     await copy.loadTheirs();
 
     expect(failures).toEqual([
-      ["refused update", "update"],
+      ["refused update", { kind: "update", patch: { title: "Mine" } }],
       ["offline", "reload"],
     ]);
   });

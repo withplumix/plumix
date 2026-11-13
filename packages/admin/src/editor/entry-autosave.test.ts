@@ -12,6 +12,7 @@ import type {
 } from "./entry-autosave.js";
 import { AUTOSAVE_DEBOUNCE_MS } from "./autosave.js";
 import { createEntryAutosave } from "./entry-autosave.js";
+import { entryCopy } from "./entry-copy.js";
 
 type EntryRow = Awaited<ReturnType<AppRouterClient["entry"]["update"]>>;
 
@@ -108,24 +109,27 @@ function openAutosave<G extends Record<string, unknown>>(
   const pending = [...replies];
   const sent: Sent[] = [];
   const errors: unknown[] = [];
-  const copy = createEditingCopy<number, EntryWrite, EntryRow, EntryRow>({
-    id: 1,
-    lease: HELD_LEASE,
-    etag: "e0",
-    userId: ME.id,
-    save: async (ifMatch, work) => {
+  const wires = entryCopy({
+    write: async (ifMatch, work) => {
       sent.push({ ifMatch, work });
       const reply = pending.shift();
       if (reply === undefined) throw new Error("an unexpected write");
       if (reply instanceof Error) throw reply;
       // A tick on the wire, so a write is in flight before it lands.
       await Promise.resolve();
-      entry.autosave.wrote(work, reply);
       return reply;
     },
-    readSaved: () => Promise.resolve(row()),
     reload: () => Promise.resolve("reloaded"),
-    onFailed: (err) => entry.autosave.failed(err),
+  });
+  const copy = createEditingCopy<number, EntryWrite, EntryRow, EntryRow>({
+    id: 1,
+    lease: HELD_LEASE,
+    etag: "e0",
+    userId: ME.id,
+    save: wires.save,
+    readSaved: () => Promise.resolve(row()),
+    reload: wires.reload,
+    onFailed: wires.onFailed,
   });
   opened.push(copy);
   const entry = createEntryAutosave({
@@ -133,6 +137,14 @@ function openAutosave<G extends Record<string, unknown>>(
     groups,
     onError: (err) => errors.push(err),
     ...options,
+  });
+  wires.listen({
+    wrote: entry.autosave.wrote,
+    failed: (err, cause) => {
+      if (typeof cause === "string") return;
+      entry.autosave.failed(err, cause);
+    },
+    discard: entry.autosave.cancel,
   });
   return { ...entry, copy, sent, errors };
 }
@@ -315,6 +327,54 @@ describe("createEntryAutosave", () => {
 
     expect(sent.slice(1)).toEqual([
       { ifMatch: "theirs", work: { kind: "update", patch: { title: "Mine" } } },
+      {
+        ifMatch: "e2",
+        work: { kind: "update", patch: { title: "Held back" } },
+      },
+    ]);
+  });
+
+  test("after Keep mine lands, an edit to the same group made while the refused write was in flight is sent", async () => {
+    const title = titleField();
+    const { autosave, copy, sent, unsaved } = openAutosave(
+      { title: title.group },
+      [staleCopy(), row({ etag: "e2" }), row({ etag: "e3" })],
+    );
+    title.value = "b";
+    autosave.schedule.title();
+    vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
+    title.value = "c";
+    autosave.schedule.title();
+    await autosave.flush();
+    await vi.advanceTimersByTimeAsync(0);
+
+    await copy.keepMine();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sent.slice(1)).toEqual([
+      { ifMatch: "theirs", work: { kind: "update", patch: { title: "b" } } },
+      { ifMatch: "e2", work: { kind: "update", patch: { title: "c" } } },
+    ]);
+    expect(unsaved()).toBe(false);
+  });
+
+  test("after Keep mine lands a refused publish, an edit held back behind it is sent from the token it answered with", async () => {
+    const title = titleField();
+    const { autosave, copy, sent } = openAutosave({ title: title.group }, [
+      staleCopy(),
+      row({ etag: "e2" }),
+      row({ etag: "e3" }),
+    ]);
+    await copy.save({ kind: "publish" });
+    title.value = "Held back";
+    autosave.schedule.title();
+    await autosave.flush();
+
+    await copy.keepMine();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sent.slice(1)).toEqual([
+      { ifMatch: "theirs", work: { kind: "publish" } },
       {
         ifMatch: "e2",
         work: { kind: "update", patch: { title: "Held back" } },
