@@ -149,7 +149,7 @@ export interface BlockViewModule<Attrs = MaterializedAttrs> {
    * The template deps the block reads, keyed by kind like a template's. The
    * page loads every block's keys once, and the view reads them as `deps`.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see `default`
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a module's own deps type is checked where it declares them
   readonly deps?: BlockDeps<Attrs, any>;
   /**
    * Renders in place of the view when a loader rejects. Without one, the

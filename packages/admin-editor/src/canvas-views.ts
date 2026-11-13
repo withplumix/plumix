@@ -24,7 +24,7 @@ export function treeBlockNames(
   return names;
 }
 
-type LoadViews = (names: Iterable<string>) => Promise<void>;
+type LoadViewModules = (names: Iterable<string>) => Promise<void>;
 
 /**
  * A tree offered while an earlier one loads supersedes it, so a slow import
@@ -32,7 +32,7 @@ type LoadViews = (names: Iterable<string>) => Promise<void>;
  */
 export function createTreeCommitter(
   registry: BlockRegistry,
-  load: LoadViews,
+  load: LoadViewModules,
 ): (
   tree: readonly BlockNode[],
   commit: (tree: readonly BlockNode[]) => void,
@@ -46,17 +46,17 @@ export function createTreeCommitter(
   };
 }
 
-const VIEW_LOAD_FAILED =
-  "[plumix:editor] A block view failed to load; the canvas keeps what it shows and retries on the next update.";
+const VIEW_MODULE_LOAD_FAILED =
+  "[plumix:editor] A block's view module failed to load; the canvas keeps what it shows and retries on the next update.";
 
 /** A chunk lost after a deploy must not break the canvas. */
-export function settleViewLoad(
+export function settleViewModuleLoad(
   load: Promise<void>,
   afterLoad: () => void,
 ): Promise<void> {
   return load
     .catch((error: unknown) => {
-      console.error(VIEW_LOAD_FAILED, error);
+      console.error(VIEW_MODULE_LOAD_FAILED, error);
     })
     .finally(afterLoad);
 }
@@ -70,7 +70,7 @@ export async function seedTree(
     await loadBlockViews(registry, treeBlockNames(tree, registry));
     return tree;
   } catch (error) {
-    console.error(VIEW_LOAD_FAILED, error);
+    console.error(VIEW_MODULE_LOAD_FAILED, error);
     return [];
   }
 }
@@ -103,18 +103,18 @@ export function createLoaderBlocksReporter(
   };
 }
 
-export interface ScheduledViewLoads {
+export interface ScheduledViewModuleLoads {
   readonly prefetch: (names: readonly string[]) => void;
   readonly cancel: () => void;
 }
 
-/** Every view loads at idle, so an insert seldom waits on an import. */
-export function scheduleViewLoads(
+/** Every view module loads at idle, so an insert seldom waits on an import. */
+export function scheduleViewModuleLoads(
   registry: BlockRegistry,
   afterLoad: () => void,
-): ScheduledViewLoads {
+): ScheduledViewModuleLoads {
   const load = (names?: Iterable<string>): void =>
-    void settleViewLoad(loadBlockViews(registry, names), afterLoad);
+    void settleViewModuleLoad(loadBlockViews(registry, names), afterLoad);
   return { prefetch: load, cancel: whenIdle(() => load()) };
 }
 

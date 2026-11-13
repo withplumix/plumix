@@ -40,8 +40,8 @@ import { canvasContextValue } from "./canvas-context.js";
 import {
   createLoaderBlocksReporter,
   createTreeCommitter,
-  scheduleViewLoads,
-  settleViewLoad,
+  scheduleViewModuleLoads,
+  settleViewModuleLoad,
 } from "./canvas-views.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
@@ -131,25 +131,25 @@ export function EditorCanvas({
     const loaded = (): void => {
       if (!disposed) reporter.update();
     };
-    const views = scheduleViewLoads(registry, loaded);
+    const viewModuleLoads = scheduleViewModuleLoads(registry, loaded);
     const connection = connectRuntime({
       parentWindow: window.parent,
       origin,
       onTree: (next) =>
-        void settleViewLoad(offerTree(next, commitTree), loaded),
+        void settleViewModuleLoad(offerTree(next, commitTree), loaded),
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
       onDeps: (resolved) => setDeps((prior) => mergeDeps(prior, resolved)),
       onConfig: setConfig,
       onXray: setXray,
-      onPrefetchBlocks: views.prefetch,
+      onPrefetchBlocks: viewModuleLoads.prefetch,
       onConnect: () => reporter.resend(),
     });
     connectionRef.current = connection;
     reporter.update();
     return () => {
       disposed = true;
-      views.cancel();
+      viewModuleLoads.cancel();
       connection.dispose();
       connectionRef.current = null;
     };

@@ -11,9 +11,9 @@ import {
 import {
   createLoaderBlocksReporter,
   createTreeCommitter,
-  scheduleViewLoads,
+  scheduleViewModuleLoads,
   seedTree,
-  settleViewLoad,
+  settleViewModuleLoad,
   treeBlockNames,
 } from "./canvas-views.js";
 
@@ -233,7 +233,7 @@ describe("a view that fails to load in the canvas", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { offer, reporter, committed } = canvasWithFailingView();
 
-    await settleViewLoad(
+    await settleViewModuleLoad(
       offer(HERO_AND_FEED, (next) => committed.push(next)),
       reporter.update,
     );
@@ -245,7 +245,7 @@ describe("a view that fails to load in the canvas", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { offer, reporter, committed, reports } = canvasWithFailingView();
 
-    await settleViewLoad(
+    await settleViewModuleLoad(
       offer(HERO_AND_FEED, (next) => committed.push(next)),
       reporter.update,
     );
@@ -261,12 +261,12 @@ describe("a view that fails to load in the canvas", () => {
       loadBlockViews(registry, names),
     );
     const tree = [{ id: "a", name: "site/hero" }];
-    await settleViewLoad(
+    await settleViewModuleLoad(
       offer(tree, (next) => committed.push(next)),
       () => undefined,
     );
 
-    await settleViewLoad(
+    await settleViewModuleLoad(
       offer(tree, (next) => committed.push(next)),
       () => undefined,
     );
@@ -280,10 +280,10 @@ describe("a view that fails to load in the canvas", () => {
       .mockImplementation(() => undefined);
     const registry = createBlockRegistry([failsOnceBlock("site/hero")]);
 
-    await settleViewLoad(loadBlockViews(registry), () => undefined);
+    await settleViewModuleLoad(loadBlockViews(registry), () => undefined);
 
     expect(logged).toHaveBeenCalledWith(
-      "[plumix:editor] A block view failed to load; the canvas keeps what it shows and retries on the next update.",
+      "[plumix:editor] A block's view module failed to load; the canvas keeps what it shows and retries on the next update.",
       new Error("chunk 404"),
     );
   });
@@ -340,7 +340,7 @@ function stubIdleCallback() {
   };
 }
 
-describe("scheduleViewLoads", () => {
+describe("scheduleViewModuleLoads", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
@@ -350,7 +350,7 @@ describe("scheduleViewLoads", () => {
     stubIdleCallback();
     const { registry, hero, feed } = countedRegistry();
 
-    scheduleViewLoads(registry, () => undefined);
+    scheduleViewModuleLoads(registry, () => undefined);
 
     expect([hero.mock.calls.length, feed.mock.calls.length]).toEqual([0, 0]);
   });
@@ -358,7 +358,7 @@ describe("scheduleViewLoads", () => {
   test("imports every view once the browser is idle", () => {
     const idle = stubIdleCallback();
     const { registry, hero, feed } = countedRegistry();
-    scheduleViewLoads(registry, () => undefined);
+    scheduleViewModuleLoads(registry, () => undefined);
 
     idle.runIdle();
 
@@ -369,7 +369,7 @@ describe("scheduleViewLoads", () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestIdleCallback", undefined);
     const { registry, hero, feed } = countedRegistry();
-    scheduleViewLoads(registry, () => undefined);
+    scheduleViewModuleLoads(registry, () => undefined);
 
     vi.runAllTimers();
 
@@ -379,7 +379,7 @@ describe("scheduleViewLoads", () => {
   test("imports nothing at idle once cancelled", () => {
     const idle = stubIdleCallback();
     const { registry, hero, feed } = countedRegistry();
-    const loads = scheduleViewLoads(registry, () => undefined);
+    const loads = scheduleViewModuleLoads(registry, () => undefined);
     loads.cancel();
 
     idle.runIdle();
@@ -391,7 +391,7 @@ describe("scheduleViewLoads", () => {
     vi.useFakeTimers();
     vi.stubGlobal("requestIdleCallback", undefined);
     const { registry, hero, feed } = countedRegistry();
-    const loads = scheduleViewLoads(registry, () => undefined);
+    const loads = scheduleViewModuleLoads(registry, () => undefined);
     loads.cancel();
 
     vi.runAllTimers();
@@ -402,7 +402,7 @@ describe("scheduleViewLoads", () => {
   test("a prefetch imports exactly the named views", () => {
     stubIdleCallback();
     const { registry, hero, feed } = countedRegistry();
-    const loads = scheduleViewLoads(registry, () => undefined);
+    const loads = scheduleViewModuleLoads(registry, () => undefined);
 
     loads.prefetch(["site/feed"]);
 
@@ -416,7 +416,7 @@ describe("scheduleViewLoads", () => {
     const afterLoad = new Promise<readonly string[]>((resolve) => {
       settled = resolve;
     });
-    const loads = scheduleViewLoads(registry, () =>
+    const loads = scheduleViewModuleLoads(registry, () =>
       settled(loadedBlocksWithLoaders(registry)),
     );
 

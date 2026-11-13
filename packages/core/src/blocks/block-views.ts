@@ -15,7 +15,7 @@ export class BlockViewNotLoadedError extends Error {
 
   constructor(blockName: string) {
     super(
-      `The view of block "${blockName}" isn't loaded. Call loadBlockViews(registry) before rendering it.`,
+      `The view module of block "${blockName}" isn't loaded. Call loadBlockViews(registry) before rendering it.`,
     );
   }
 }

@@ -90,7 +90,7 @@ describe("blockViewModule", () => {
     });
 
     expect(() => blockViewModule(spec)).toThrow(
-      'The view of block "site/hero" isn\'t loaded. Call loadBlockViews(registry) before rendering it.',
+      'The view module of block "site/hero" isn\'t loaded. Call loadBlockViews(registry) before rendering it.',
     );
   });
 });
@@ -126,7 +126,7 @@ describe("reading a block's view module", () => {
       renderToStaticMarkup(
         renderBlockTree([{ id: "a", name: "site/hero" }], registry),
       ),
-    ).toThrow('The view of block "site/hero" isn\'t loaded.');
+    ).toThrow('The view module of block "site/hero" isn\'t loaded.');
   });
 
   test("the walker renders the module's error fallback when a loader rejected", async () => {
