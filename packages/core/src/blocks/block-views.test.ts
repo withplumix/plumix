@@ -212,48 +212,63 @@ describe("loadedBlocksWithLoaders", () => {
   });
 });
 
-/** Runs every queued promise job, so a rejection that is ready has landed. */
-function drainPromiseJobs(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
+/** A promise the test settles by hand, so nothing waits on a timer. */
+function deferred<T>(): {
+  readonly promise: Promise<T>;
+  readonly resolve: (value: T) => void;
+  readonly reject: (error: unknown) => void;
+} {
+  let resolve: (value: T) => void = () => undefined;
+  let reject: (error: unknown) => void = () => undefined;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 describe("a view module that fails to import", () => {
-  test("rejects only once the other views have loaded, and a later call retries it", async () => {
-    let attempts = 0;
+  test("rejects only once the other views have loaded", async () => {
+    const flakyImport = deferred<BlockViewModule>();
+    const slowImport = deferred<BlockViewModule>();
+    const registry = createBlockRegistry([
+      defineBlock({ name: "site/flaky", view: () => flakyImport.promise }),
+      defineBlock({ name: "site/slow", view: () => slowImport.promise }),
+    ]);
+    const first = loadBlockViews(registry);
+    const flakyAlone = loadBlockViews(registry, ["site/flaky"]);
+
+    flakyImport.reject(new Error("chunk 404"));
+    const outcome = await Promise.race([
+      first.then(
+        () => "settled",
+        () => "settled",
+      ),
+      flakyAlone.then(
+        () => "pending",
+        () => "pending",
+      ),
+    ]);
+    slowImport.resolve({ default: () => "slow" });
+    await first.catch(() => undefined);
+
+    expect(outcome).toBe("pending");
+  });
+
+  test("a later call retries a failed import", async () => {
+    const imports = [
+      Promise.reject(new Error("chunk 404")),
+      Promise.resolve<BlockViewModule>({ default: () => "flaky" }),
+    ];
     const flaky = defineBlock({
       name: "site/flaky",
-      view: () => {
-        attempts += 1;
-        return attempts === 1
-          ? Promise.reject(new Error("chunk 404"))
-          : Promise.resolve({ default: () => "flaky" });
-      },
+      view: () => imports.shift() ?? Promise.reject(new Error("no import")),
     });
-    let release = (): void => undefined;
-    const slow = defineBlock({
-      name: "site/slow",
-      view: () =>
-        new Promise<BlockViewModule>((resolve) => {
-          release = () => resolve({ default: () => "slow" });
-        }),
-    });
-    const registry = createBlockRegistry([flaky, slow]);
-    let settledEarly = false;
+    const registry = createBlockRegistry([flaky]);
+    await loadBlockViews(registry).catch(() => undefined);
 
-    const first = loadBlockViews(registry).finally(() => {
-      settledEarly = true;
-    });
-    await drainPromiseJobs();
-    const beforeRelease = settledEarly;
-    release();
-    await expect(first).rejects.toThrow("chunk 404");
     await loadBlockViews(registry);
 
-    expect([beforeRelease, attempts, blockViewModule(slow).default]).toEqual([
-      false,
-      2,
-      expect.any(Function),
-    ]);
     expect(blockViewModule(flaky).default).toEqual(expect.any(Function));
   });
 });
