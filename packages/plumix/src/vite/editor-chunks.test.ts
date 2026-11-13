@@ -84,6 +84,7 @@ const MUST_STAY_OUT: readonly (readonly [string, RegExp])[] = [
   ["radix-ui", /[\\/]node_modules[\\/](?:radix-ui|@radix-ui)[\\/]/],
   ["highlight.js", /[\\/]node_modules[\\/]highlight\.js[\\/]/],
   ["dompurify", /[\\/]node_modules[\\/]dompurify[\\/]/],
+  ["sanitize-html", /[\\/]node_modules[\\/]sanitize-html[\\/]/],
   ["a block's view module", /\.view\.[jt]sx?$/],
   ["the fixture's island", /fixture-island\.js$/],
   ["drizzle-orm", /[\\/]node_modules[\\/]drizzle-orm[\\/]/],
