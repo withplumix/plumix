@@ -244,10 +244,7 @@ const VIEWPORT_FIELD_BY_META_NAME: ReadonlyMap<string, string> = new Map([
   ["color-scheme", "viewport.colorScheme"],
 ]);
 
-/**
- * Catches at boot what the renderer can't recover from: a link with no `rel`,
- * a script with no `src` or body, and a `meta` the `viewport` field owns.
- */
+/** Catches at boot what the renderer can't recover from. */
 export function validateDocumentManifest(manifest: DocumentManifest): void {
   validateMetaNames(manifest.meta);
   manifest.link?.forEach((entry, index) => {

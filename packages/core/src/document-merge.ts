@@ -26,7 +26,7 @@ export function mergeDocumentManifest(
   };
 }
 
-/** Per field, last wins; a field set to `undefined` keeps the earlier value. */
+/** A field set to `undefined` keeps the earlier value. */
 export function mergeViewport(
   theme: DocumentViewport | undefined,
   fragment: DocumentViewport | undefined,

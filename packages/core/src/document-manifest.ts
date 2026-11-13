@@ -35,7 +35,6 @@ export type DocumentScript = Omit<
  */
 export type DocumentAttrs = Readonly<Record<string, unknown>>;
 
-/** One `<meta name="theme-color">`; `media` scopes it, e.g. to dark mode. */
 export interface DocumentThemeColor {
   readonly color: string;
   readonly media?: string;
