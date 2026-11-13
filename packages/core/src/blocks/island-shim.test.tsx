@@ -1,17 +1,28 @@
 import type { ReactElement, ReactNode } from "react";
 import { createContext, createElement as h, useId } from "react";
-import { renderToStaticMarkup, renderToString } from "react-dom/server";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import type { IslandRender } from "./island-shim.js";
+import type { HtmlAllowlist } from "./html/allowlist.js";
+import type { PlumixContextValue } from "./renderer/index.js";
+import { createBlockRegistry } from "./block-registry.js";
+import { BASELINE_HTML_ALLOWLIST } from "./html/allowlist.js";
+import { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
 import {
+  createIslandCounter,
   InsideIslandContext,
   IslandRenderContext,
   IslandShim,
 } from "./island-shim.js";
+import { Link, PlumixProvider } from "./renderer/index.js";
 import { IslandPropSerializationError } from "./serialize.js";
 
 type Props = Readonly<Record<string, unknown>>;
+
+const plumix: PlumixContextValue = {
+  registry: createBlockRegistry([]),
+  basePath: "/blog",
+};
 
 /**
  * Wrap `Component` exactly as the SSR shim the Vite transform generates
@@ -177,18 +188,21 @@ describe("IslandShim boundary", () => {
   });
 });
 
-function renderPage(tree: ReactNode): string {
-  let next = 0;
-  const islandRender: IslandRender = {
-    take: () => next++,
-    render: (node, identifierPrefix) =>
-      renderToString(
-        h(IslandRenderContext.Provider, { value: islandRender }, node),
-        { identifierPrefix },
-      ),
-  };
+/** Wraps `tree` the way the page render does: one counter per page render. */
+function renderPage(
+  tree: ReactNode,
+  htmlAllowlist: HtmlAllowlist = BASELINE_HTML_ALLOWLIST,
+): string {
   return renderToStaticMarkup(
-    h(IslandRenderContext.Provider, { value: islandRender }, tree),
+    h(
+      PlumixProvider,
+      { value: plumix },
+      h(
+        HtmlAllowlistProvider,
+        { value: htmlAllowlist },
+        h(IslandRenderContext.Provider, { value: createIslandCounter() }, tree),
+      ),
+    ),
   );
 }
 
@@ -246,5 +260,31 @@ describe("IslandShim id scope", () => {
     expect(() =>
       renderToStaticMarkup(island(UseIdProbe, "Widget", { client: "only" })),
     ).toThrow(/IslandRenderContext/);
+  });
+});
+
+function AllowlistReader(): ReactNode {
+  return h("i", null, useHtmlAllowlist().allowedTags.join());
+}
+
+function Frame(props: Props): ReactNode {
+  return h("section", null, props.children as ReactNode);
+}
+
+describe("IslandShim's own render", () => {
+  test("an island renders with the page's HTML allowlist", () => {
+    const allowlist = { allowedTags: ["marquee"], allowedAttributes: {} };
+
+    const html = renderPage(island(AllowlistReader, "Reader"), allowlist);
+
+    expect(html).toContain("<i>marquee</i>");
+  });
+
+  test("a slot inside an island renders with the page's Plumix context", () => {
+    const html = renderPage(
+      island(Frame, "Frame", { children: h(Link, { href: "/x" }, "x") }),
+    );
+
+    expect(html).toContain('href="/blog/x"');
   });
 });

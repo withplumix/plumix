@@ -85,7 +85,7 @@ export interface PlumixContextValue {
   readonly renderFilters?: BlockRenderFilters;
 }
 
-const PlumixContext = createContext<PlumixContextValue | null>(null);
+export const PlumixContext = createContext<PlumixContextValue | null>(null);
 
 function usePlumixContext(consumer: string): PlumixContextValue {
   const ctx = useContext(PlumixContext);

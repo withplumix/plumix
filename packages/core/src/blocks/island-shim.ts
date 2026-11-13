@@ -4,8 +4,11 @@
 
 import type { ComponentType, ReactElement, ReactNode } from "react";
 import { createContext, createElement, useContext } from "react";
+import { renderToString } from "react-dom/server";
 
 import type { SerializedProps } from "./serialize.js";
+import { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
+import { PlumixContext } from "./renderer/context.js";
 import { serializeProps } from "./serialize.js";
 
 /**
@@ -14,13 +17,14 @@ import { serializeProps } from "./serialize.js";
  */
 export const InsideIslandContext = createContext(false);
 
-/**
- * Supplied by the page render, so server React stays out of the island chunks
- * that import this module.
- */
-export interface IslandRender {
+interface IslandCounter {
   readonly take: () => number;
-  readonly render: (node: ReactNode, identifierPrefix: string) => string;
+}
+
+/** One per page render, so every page numbers its islands from `i0-`. */
+export function createIslandCounter(): IslandCounter {
+  let next = 0;
+  return { take: () => next++ };
 }
 
 class IslandRenderError extends Error {
@@ -39,7 +43,7 @@ class IslandRenderError extends Error {
   }
 }
 
-export const IslandRenderContext = createContext<IslandRender | null>(null);
+export const IslandRenderContext = createContext<IslandCounter | null>(null);
 
 /**
  * Default prefetch trigger per hydration trigger — the chunk warms before
@@ -79,8 +83,10 @@ function isReactElementValue(value: unknown): value is ReactElement {
 export function IslandShim(shim: IslandShimProps): ReactNode {
   const { Component, exportName, chunkUrl, props } = shim;
   const insideIsland = useContext(InsideIslandContext);
-  const islandRender = useContext(IslandRenderContext);
-  if (islandRender === null) {
+  const counter = useContext(IslandRenderContext);
+  const htmlAllowlist = useHtmlAllowlist();
+  const plumix = useContext(PlumixContext);
+  if (counter === null) {
     throw IslandRenderError.missingContext(exportName);
   }
   const { client: rawClient, prefetch, ...forwarded } = props;
@@ -150,8 +156,21 @@ export function IslandShim(shim: IslandShimProps): ReactNode {
 
   // The client mounts each island as its own root, so `useId` matches only
   // when the server renders it as one too.
-  const idPrefix = `i${String(islandRender.take())}-`;
-  const html = islandRender.render(child, idPrefix);
+  const idPrefix = `i${String(counter.take())}-`;
+  // Context does not cross into the island's own render, so it provides the
+  // page's again; slot children read Plumix context.
+  const html = renderToString(
+    createElement(
+      PlumixContext.Provider,
+      { value: plumix },
+      createElement(
+        HtmlAllowlistProvider,
+        { value: htmlAllowlist },
+        createElement(IslandRenderContext.Provider, { value: counter }, child),
+      ),
+    ),
+    { identifierPrefix: idPrefix },
+  );
   return createElement("plumix-island", {
     ...attributes,
     "id-prefix": idPrefix,
