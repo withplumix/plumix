@@ -25,7 +25,23 @@ export interface IslandRender {
   readonly render: (node: ReactNode, identifierPrefix: string) => string;
 }
 
-/** Without one an island renders inline, with no id scope of its own. */
+class IslandRenderError extends Error {
+  static {
+    IslandRenderError.prototype.name = "IslandRenderError";
+  }
+
+  private constructor(message: string) {
+    super(message);
+  }
+
+  static missingContext(exportName: string): IslandRenderError {
+    return new IslandRenderError(
+      `Island "${exportName}" rendered outside an IslandRenderContext; the page render provides one.`,
+    );
+  }
+}
+
+/** The page render provides it; an island rendered without it throws. */
 export const IslandRenderContext = createContext<IslandRender | null>(null);
 
 /**
@@ -67,6 +83,9 @@ export function IslandShim(shim: IslandShimProps): ReactNode {
   const { Component, exportName, chunkUrl, props } = shim;
   const insideIsland = useContext(InsideIslandContext);
   const islandRender = useContext(IslandRenderContext);
+  if (islandRender === null) {
+    throw IslandRenderError.missingContext(exportName);
+  }
   const { client: rawClient, prefetch, ...forwarded } = props;
   const client = typeof rawClient === "string" ? rawClient : undefined;
   const hasDirective = client !== undefined;
@@ -128,12 +147,12 @@ export function IslandShim(shim: IslandShimProps): ReactNode {
     ssr: only ? null : "",
   };
 
-  if (islandRender === null || child === null) {
+  if (child === null) {
     return createElement("plumix-island", attributes, child);
   }
 
   // The client mounts each island as its own root, so `useId` matches only
-  // when the server renders it as one too. Context stays outside that render.
+  // when the server renders it as one too.
   const idPrefix = `i${String(islandRender.take())}-`;
   const html = islandRender.render(child, idPrefix);
   return createElement("plumix-island", {
