@@ -30,7 +30,6 @@ export function eagerChunks(
   return seen;
 }
 
-/** The modules of {@link eagerChunks}. */
 export function eagerModules(
   chunks: readonly OutputChunk[],
   name: string,

@@ -16,8 +16,6 @@ const MEDIA_BLOCKS = fileURLToPath(
   new URL("../../../plugins/media/src/media-blocks.ts", import.meta.url),
 );
 
-/** The fixture block: a view that renders an island, and a loader that reads a
- *  drizzle table, as a theme block with server data does. */
 const FIXTURE_FILES = {
   "entry.js": [
     'import { bootEditor } from "plumix/editor-runtime";',

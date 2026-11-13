@@ -38,8 +38,6 @@ export default function ImageView({
   // `src` escape hatch so a managed image survives a stale typed URL.
   const media = normalizeMediaValue(attrs.media);
   const rawSrc = typeof attrs.src === "string" ? attrs.src : "";
-  // `media.url` is guaranteed non-empty when present (normalizeMediaValue
-  // drops a blank url), so ?? cleanly falls through to the raw src.
   const src = media?.url ?? rawSrc;
   const caption = typeof attrs.caption === "string" ? attrs.caption : "";
 

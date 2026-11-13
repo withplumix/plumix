@@ -1,11 +1,6 @@
 import { HEADING_TAGS } from "../headings.js";
 import { LINK_SCHEMES } from "../marks/safe-href.js";
 
-/**
- * Shape consumed by `sanitizeHtml`. Operators extend / replace it
- * via `defineApp({ blocks: { htmlAllowlist: {...} } })`; the schema-
- * derived builder produces the same shape from the registry.
- */
 export interface HtmlAllowlist {
   readonly allowedTags: readonly string[];
   readonly allowedAttributes: Readonly<Record<string, readonly string[]>>;
