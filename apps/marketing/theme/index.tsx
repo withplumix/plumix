@@ -71,6 +71,6 @@ export const marketingTheme = defineTheme({
   document: {
     titleTemplate: (title) =>
       title ? `${title} · Plumix` : "Plumix: publishing, typed",
-    meta: [{ name: "theme-color", content: "#f7f4ee" }],
+    viewport: { themeColor: "#f7f4ee" },
   },
 });

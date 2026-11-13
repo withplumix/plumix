@@ -532,6 +532,8 @@ export type {
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
+  DocumentThemeColor,
+  DocumentViewport,
 } from "./document-manifest.js";
 export type {
   GenericTier,
@@ -543,7 +545,11 @@ export type {
   ThemeDescriptor,
   TierMatchRule,
 } from "./theme.js";
-export { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
+export {
+  DocumentManifestError,
+  ThemeError,
+  ThemeRegistrationError,
+} from "./theme-errors.js";
 export type { ViewTransitionsInput } from "./theme-view-transitions.js";
 export { transitionName, viewTransitionTypes } from "./view-transition.js";
 export type { ViewTransitionType } from "./view-transition.js";

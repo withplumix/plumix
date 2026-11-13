@@ -20,6 +20,7 @@ import type {
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
+  DocumentViewport,
 } from "../../document-manifest.js";
 import type { TransformOpts } from "../../runtime/contract/slots.js";
 import type { LoadedTemplateDeps } from "../../template-deps.js";
@@ -43,7 +44,7 @@ import {
   resolveBlockLoaders,
 } from "../../blocks/index.js";
 import { PlumixProvider } from "../../blocks/renderer/index.js";
-import { mergeDocumentManifest } from "../../document-merge.js";
+import { mergeDocumentManifest, mergeViewport } from "../../document-merge.js";
 import { escapeHtml } from "../../escape-html.js";
 import { block } from "../../events-and-filters/block-render.js";
 import { render } from "../../events-and-filters/render.js";
@@ -61,7 +62,7 @@ import {
   viewTransitionsScriptTag,
   viewTransitionsStyleTag,
 } from "../../theme-view-transitions.js";
-import { validateDocumentManifest } from "../../theme.js";
+import { validateDocumentManifest, validateMetaNames } from "../../theme.js";
 import { isPageOutcome } from "../contract/page-outcome.js";
 import { LIVE_EDIT_MODE } from "../edit-mode.js";
 import {
@@ -160,6 +161,7 @@ async function renderThroughThemeInner({
     data,
     title,
   });
+  validateMetaNames(filtered.meta);
   // The `<title>` fallback reads site settings from the DB — worth its own row
   // in the waterfall. The `render.document` handlers above are already
   // traced per handler as `filter:` spans.
@@ -336,7 +338,12 @@ async function applyErrorDocumentFilter({
   title,
 }: ErrorDocumentArgs): Promise<DocumentManifest> {
   try {
-    return await ctx.filters.apply(render.document, merged, { data, title });
+    const filtered = await ctx.filters.apply(render.document, merged, {
+      data,
+      title,
+    });
+    validateMetaNames(filtered.meta);
+    return filtered;
   } catch (error) {
     ctx.logger.error("render.document failed on the error page", {
       err: error,
@@ -599,7 +606,7 @@ async function renderTree({
   const headContent =
     scripts.headStart.map(scriptToHtml).join("") +
     '<meta charSet="utf-8"/>' +
-    '<meta name="viewport" content="width=device-width, initial-scale=1"/>' +
+    viewportTagsToHtml(document.viewport) +
     // Render-blocking ahead of every stylesheet, so its `pagereveal` listener
     // is registered before the first frame.
     viewTransitionsScriptTag(viewTransitions) +
@@ -703,6 +710,62 @@ function scriptToHtml(script: DocumentScript): string {
   void position;
   const inner = children ?? dangerouslySetInnerHTML?.__html ?? "";
   return `<script${renderAttrs(attrs)}>${inner}</script>`;
+}
+
+const VIEWPORT_DEFAULT: DocumentViewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+/** Fixed order, so the same viewport always serializes to the same tag. */
+const VIEWPORT_KEYS = [
+  ["width", "width"],
+  ["height", "height"],
+  ["initialScale", "initial-scale"],
+  ["minimumScale", "minimum-scale"],
+  ["maximumScale", "maximum-scale"],
+  ["userScalable", "user-scalable"],
+  ["viewportFit", "viewport-fit"],
+  ["interactiveWidget", "interactive-widget"],
+] as const;
+
+/**
+ * The only writer of the viewport and theme-color tags, so a page carries
+ * exactly one viewport tag.
+ */
+function viewportTagsToHtml(viewport: DocumentViewport | undefined): string {
+  const fields = mergeViewport(VIEWPORT_DEFAULT, viewport);
+  const content = VIEWPORT_KEYS.flatMap(([key, name]) => {
+    const value = fields?.[key];
+    if (value === undefined) return [];
+    if (typeof value === "boolean") return [`${name}=${value ? "yes" : "no"}`];
+    return [`${name}=${value}`];
+  }).join(", ");
+  return (
+    `<meta name="viewport" content="${escapeAttr(content)}"/>` +
+    themeColorTagsToHtml(viewport?.themeColor) +
+    (viewport?.colorScheme === undefined
+      ? ""
+      : voidTagsToHtml("meta", [
+          { name: "color-scheme", content: viewport.colorScheme },
+        ]))
+  );
+}
+
+function themeColorTagsToHtml(
+  themeColor: DocumentViewport["themeColor"],
+): string {
+  if (themeColor === undefined) return "";
+  const entries =
+    typeof themeColor === "string" ? [{ color: themeColor }] : themeColor;
+  return voidTagsToHtml(
+    "meta",
+    entries.map(({ color, media }) => ({
+      name: "theme-color",
+      content: color,
+      media,
+    })),
+  );
 }
 
 function voidTagsToHtml(

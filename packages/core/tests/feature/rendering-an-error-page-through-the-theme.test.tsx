@@ -191,6 +191,40 @@ describe("an error page whose head plugin throws", () => {
   });
 });
 
+const reservedHeadPlugin = definePlugin("reserved-head", {
+  setup: (ctx) => {
+    ctx.filters.add(render.document, (manifest) => ({
+      ...manifest,
+      meta: [
+        ...(manifest.meta ?? []),
+        { name: "viewport", content: "width=320" },
+      ],
+    }));
+  },
+});
+
+const reservedHeadSite = await testSite({
+  plugins: [blogPlugin, reservedHeadPlugin],
+  config: {
+    theme: defineTheme({
+      templates: [fallback(() => null), notFound(() => <main />)],
+    }),
+  },
+});
+
+describe("an error page whose head plugin writes a reserved meta name", () => {
+  test("the entry is logged and the unfiltered document renders one viewport tag", async () => {
+    const page = await reservedHeadSite.visit("/never-existed");
+
+    page.assertNotFound().assertDontSee("width=320");
+    expect(page.body.match(/<meta name="viewport"/g)).toHaveLength(1);
+    reservedHeadSite.logger.assertLogged(
+      "error",
+      "render.document failed on the error page",
+    );
+  });
+});
+
 const builtInSite = await testSite({
   plugins: [blogPlugin],
   config: {

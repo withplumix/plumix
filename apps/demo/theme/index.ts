@@ -29,6 +29,6 @@ export const blogTheme = defineTheme({
   css: ["./theme/styles.css"],
   document: {
     titleTemplate: (title) => (title ? `${title} — Blog` : "Blog"),
-    meta: [{ name: "theme-color", content: "#fbfaf8" }],
+    viewport: { themeColor: "#fbfaf8" },
   },
 });

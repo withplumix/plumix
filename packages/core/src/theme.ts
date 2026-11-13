@@ -29,7 +29,11 @@ import type { Template } from "./template.js";
 import type { ViewTransitionsInput } from "./theme-view-transitions.js";
 import { isReservedBlockName } from "./blocks/index.js";
 import { RESERVED_DEP_KIND_NAMES } from "./template-deps.js";
-import { ThemeError, ThemeRegistrationError } from "./theme-errors.js";
+import {
+  DocumentManifestError,
+  ThemeError,
+  ThemeRegistrationError,
+} from "./theme-errors.js";
 
 /**
  * A template receiving the whole union discriminates on `kind`, or uses the
@@ -234,11 +238,19 @@ export function defineTheme(descriptor: ThemeDescriptor): ThemeDescriptor {
   return descriptor;
 }
 
+/** The `meta` names the renderer writes from `viewport`, and the field for each. */
+const RESERVED_META_FIELDS: ReadonlyMap<string, string> = new Map([
+  ["viewport", "viewport"],
+  ["theme-color", "viewport.themeColor"],
+  ["color-scheme", "viewport.colorScheme"],
+]);
+
 /**
- * Catches at boot the two cases the renderer can't recover from: a link with
- * no `rel`, and a script with neither `src` nor body.
+ * Catches at boot what the renderer can't recover from: a link with no `rel`,
+ * a script with no `src` or body, and a `meta` the `viewport` field owns.
  */
 export function validateDocumentManifest(manifest: DocumentManifest): void {
+  validateMetaNames(manifest.meta);
   manifest.link?.forEach((entry, index) => {
     if (typeof entry.rel !== "string" || entry.rel.length === 0) {
       throw ThemeRegistrationError.documentInvalidLink({ index });
@@ -254,6 +266,20 @@ export function validateDocumentManifest(manifest: DocumentManifest): void {
     if (!hasSrc && !hasChildren && !hasInnerHtml) {
       throw ThemeRegistrationError.documentInvalidScript({ index });
     }
+  });
+}
+
+/** Also run on a `render.document` filter's result, which nothing else checks. */
+export function validateMetaNames(meta: DocumentManifest["meta"]): void {
+  meta?.forEach((entry, index) => {
+    if (typeof entry.name !== "string") return;
+    const field = RESERVED_META_FIELDS.get(entry.name.toLowerCase());
+    if (field === undefined) return;
+    throw DocumentManifestError.reservedMetaName({
+      index,
+      name: entry.name,
+      field,
+    });
   });
 }
 

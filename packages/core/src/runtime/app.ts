@@ -553,5 +553,11 @@ function deepFreezeManifest(manifest: DocumentManifest): DocumentManifest {
   if (manifest.script) Object.freeze(manifest.script);
   if (manifest.html) Object.freeze(manifest.html);
   if (manifest.body) Object.freeze(manifest.body);
+  const themeColor = manifest.viewport?.themeColor;
+  if (typeof themeColor === "object") {
+    themeColor.forEach((entry) => Object.freeze(entry));
+    Object.freeze(themeColor);
+  }
+  if (manifest.viewport) Object.freeze(manifest.viewport);
   return Object.freeze(manifest);
 }

@@ -93,6 +93,33 @@ export class ThemeRegistrationError extends Error {
   }
 }
 
+export class DocumentManifestError extends Error {
+  static {
+    DocumentManifestError.prototype.name = "DocumentManifestError";
+  }
+
+  readonly code: "reserved_meta_name";
+
+  private constructor(code: "reserved_meta_name", message: string) {
+    super(message);
+    this.code = code;
+  }
+
+  static reservedMetaName(ctx: {
+    index: number;
+    name: string;
+    field: string;
+  }): DocumentManifestError {
+    return new DocumentManifestError(
+      "reserved_meta_name",
+      `The document manifest has a \`meta[${ctx.index}]\` entry named ` +
+        `"${ctx.name}". The renderer writes that tag itself, once per page, ` +
+        `so a second one would leave browsers to pick between them. Set ` +
+        `\`${ctx.field}\` instead.`,
+    );
+  }
+}
+
 export class ThemeError extends Error {
   static {
     ThemeError.prototype.name = "ThemeError";

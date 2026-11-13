@@ -35,6 +35,38 @@ export type DocumentScript = Omit<
  */
 export type DocumentAttrs = Readonly<Record<string, unknown>>;
 
+/** One `<meta name="theme-color">`; `media` scopes it, e.g. to dark mode. */
+export interface DocumentThemeColor {
+  readonly color: string;
+  readonly media?: string;
+}
+
+/**
+ * Default `width=device-width, initial-scale=1`. `viewportFit: "cover"` lays
+ * the page under a notch, so `env(safe-area-inset-*)` has values. The renderer
+ * alone writes these tags, so `meta[]` may not name them.
+ */
+export interface DocumentViewport {
+  readonly width?: number | "device-width";
+  readonly height?: number | "device-height";
+  readonly initialScale?: number;
+  readonly minimumScale?: number;
+  readonly maximumScale?: number;
+  readonly userScalable?: boolean;
+  readonly viewportFit?: "auto" | "contain" | "cover";
+  readonly interactiveWidget?:
+    "resizes-visual" | "resizes-content" | "overlays-content";
+  readonly themeColor?: string | readonly DocumentThemeColor[];
+  readonly colorScheme?:
+    | "normal"
+    | "light"
+    | "dark"
+    | "light dark"
+    | "dark light"
+    | "only light"
+    | "only dark";
+}
+
 export interface DocumentManifest {
   readonly html?: Omit<
     DocumentTag<"html">,
@@ -54,4 +86,6 @@ export interface DocumentManifest {
    * in `link` still renders.
    */
   readonly canonical?: false;
+  /** Merges field by field, last wins; `themeColor` is replaced whole. */
+  readonly viewport?: DocumentViewport;
 }
