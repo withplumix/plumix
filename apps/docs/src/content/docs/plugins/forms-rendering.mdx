@@ -8,14 +8,14 @@ sidebar:
 
 import { Aside } from "@astrojs/starlight/components";
 
-The `forms/form` block is one of three ways to put a form on screen. A theme can render a form straight from a template, replace the block's render outright, or take only the fields, a submit call and the errors and write every control itself. This page covers the three, then the class names, attributes and accessibility guarantees of the markup the plugin renders.
+The `forms/form` block is one of three ways to put a form on screen. A theme can render a form straight from a template, replace the block's view outright, or take only the fields, a submit call and the errors and write every control itself. This page covers the three, then the class names, attributes and accessibility guarantees of the markup the plugin renders.
 
 ## Overview
 
 All three surfaces render one definition and post to one endpoint, so the plugin validates, spam-checks and stores a submission the same way whichever surface sent it. Each surface gives up more of the plugin's rendering than the last:
 
 - `PlumixForm` from `@plumix/plugin-forms/theme` renders exactly what the block renders, from a template, with no block on the page.
-- A theme block named `forms/form` replaces the block's render, while editors keep inserting the same block.
+- A theme block named `forms/form` replaces the block's view, while editors keep inserting the same block.
 - `usePlumixForm` from `@plumix/plugin-forms/hooks` hands a `"use client"` island the form's fields, a `submit` function and the errors, and renders nothing.
 
 The plugin ships no colour, type or borders, so the markup it renders inherits your theme's input and button styling. Every part carries a stable class and a data attribute, and both are public API.
