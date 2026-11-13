@@ -70,7 +70,7 @@ describe("buildApp — registerDocumentManifest", () => {
     const firstPlugin = definePlugin("first", {
       setup: (ctx) => {
         ctx.registerDocumentManifest({
-          meta: [{ name: "viewport", content: "first" }],
+          meta: [{ name: "author", content: "first" }],
           titleTemplate: "%s | first",
         });
       },
@@ -78,7 +78,7 @@ describe("buildApp — registerDocumentManifest", () => {
     const secondPlugin = definePlugin("second", {
       setup: (ctx) => {
         ctx.registerDocumentManifest({
-          meta: [{ name: "viewport", content: "second" }],
+          meta: [{ name: "author", content: "second" }],
           titleTemplate: "%s | second",
         });
       },
@@ -90,15 +90,15 @@ describe("buildApp — registerDocumentManifest", () => {
         auth: stubAuth,
         theme: defineTheme({
           templates: [fallback(() => null)],
-          document: { meta: [{ name: "theme-color", content: "#fff" }] },
+          document: { meta: [{ name: "description", content: "Site" }] },
         }),
         plugins: [secondPlugin, firstPlugin],
       }),
     );
     expect(app.document.meta).toEqual([
-      { name: "theme-color", content: "#fff" },
-      { name: "viewport", content: "second" },
-      { name: "viewport", content: "first" },
+      { name: "description", content: "Site" },
+      { name: "author", content: "second" },
+      { name: "author", content: "first" },
     ]);
     expect(app.document.titleTemplate).toBe("%s | first");
   });
@@ -168,11 +168,21 @@ describe("buildApp — registerDocumentManifest", () => {
         auth: stubAuth,
         theme: defineTheme({
           templates: [fallback(() => null)],
-          document: { meta: [{ name: "viewport", content: "x" }] },
+          document: {
+            meta: [{ name: "description", content: "x" }],
+            viewport: { themeColor: [{ color: "#fff" }] },
+          },
         }),
         plugins: [plugin],
       }),
     );
+    expect(Object.isFrozen(app.document.viewport)).toBe(true);
+    expect(Object.isFrozen(app.document.viewport?.themeColor)).toBe(true);
+    expect(
+      Object.isFrozen(
+        (app.document.viewport?.themeColor as readonly object[])[0],
+      ),
+    ).toBe(true);
     expect(Object.isFrozen(app.document)).toBe(true);
     expect(Object.isFrozen(app.document.meta)).toBe(true);
     expect(Object.isFrozen(app.document.meta?.[1])).toBe(true);
@@ -223,6 +233,58 @@ describe("buildApp — registerDocumentManifest", () => {
     ).rejects.toMatchObject({
       name: "ThemeRegistrationError",
       code: "document_invalid_script",
+    });
+  });
+});
+
+describe("buildApp — reserved document meta names", () => {
+  test.each([
+    ["viewport", "viewport"],
+    ["Theme-Color", "viewport.themeColor"],
+    ["COLOR-SCHEME", "viewport.colorScheme"],
+  ])(
+    "a theme's `meta` entry named %s fails boot, naming %s",
+    async (name, field) => {
+      const app = buildApp(
+        plumix({
+          runtime: stubAdapter,
+          database: stubDatabase,
+          auth: stubAuth,
+          theme: defineTheme({
+            templates: [fallback(() => null)],
+            document: { meta: [{ name, content: "x" }] },
+          }),
+        }),
+      );
+      await expect(app).rejects.toMatchObject({
+        name: "DocumentManifestError",
+        code: "reserved_meta_name",
+      });
+      await expect(app).rejects.toThrow(`\`${field}\``);
+    },
+  );
+
+  test("a plugin's `meta` entry named theme-color fails boot", async () => {
+    const plugin = definePlugin("theme-color-meta", {
+      setup: (ctx) => {
+        ctx.registerDocumentManifest({
+          meta: [{ name: "theme-color", content: "#fff" }],
+        });
+      },
+    });
+    await expect(
+      buildApp(
+        plumix({
+          runtime: stubAdapter,
+          database: stubDatabase,
+          auth: stubAuth,
+          theme: defineTheme({ templates: [fallback(() => null)] }),
+          plugins: [plugin],
+        }),
+      ),
+    ).rejects.toMatchObject({
+      name: "DocumentManifestError",
+      code: "reserved_meta_name",
     });
   });
 });

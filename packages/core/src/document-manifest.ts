@@ -35,6 +35,33 @@ export type DocumentScript = Omit<
  */
 export type DocumentAttrs = Readonly<Record<string, unknown>>;
 
+export interface DocumentThemeColor {
+  readonly color: string;
+  readonly media?: string;
+}
+
+export interface DocumentViewport {
+  readonly width?: number | "device-width";
+  readonly height?: number | "device-height";
+  readonly initialScale?: number;
+  readonly minimumScale?: number;
+  readonly maximumScale?: number;
+  readonly userScalable?: boolean;
+  readonly viewportFit?: "auto" | "contain" | "cover";
+  readonly interactiveWidget?:
+    "resizes-visual" | "resizes-content" | "overlays-content";
+  /** A later list replaces an earlier one whole; the lists never concatenate. */
+  readonly themeColor?: string | readonly DocumentThemeColor[];
+  readonly colorScheme?:
+    | "normal"
+    | "light"
+    | "dark"
+    | "light dark"
+    | "dark light"
+    | "only light"
+    | "only dark";
+}
+
 export interface DocumentManifest {
   readonly html?: Omit<
     DocumentTag<"html">,
@@ -54,4 +81,5 @@ export interface DocumentManifest {
    * in `link` still renders.
    */
   readonly canonical?: false;
+  readonly viewport?: DocumentViewport;
 }

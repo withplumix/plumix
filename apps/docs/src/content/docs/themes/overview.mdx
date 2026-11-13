@@ -18,7 +18,7 @@ A site has one theme, and it arrives through the `theme` slot in `plumix.config.
 
 `templates` is the only required slot. It holds an array of rules built by the [template builders](/themes/templates/), or a bare component as shorthand for a theme with nothing but a catch-all. The rest are optional:
 
-- `document` is the `<head>` descriptor: `title`, `titleTemplate`, `meta`, `link`, `script`, plus attributes for `<html>` and `<body>`, and `canonical: false` for a page that should carry [no canonical link](#opting-a-page-out-of-the-canonical). A template can merge its own fragment over it per render.
+- `document` is the `<head>` descriptor: `title`, `titleTemplate`, `meta`, `link`, `script`, plus attributes for `<html>` and `<body>`, `canonical: false` for a page that should carry [no canonical link](#opting-a-page-out-of-the-canonical), and `viewport` for [the viewport, theme-color and color-scheme tags](#setting-the-viewport). A template can merge its own fragment over it per render.
 - `tokens` are named design values grouped by CSS property, and they are a registry rather than a stylesheet. Plumix emits no CSS for them. Picking a token in the editor writes `var(--plumix-<group>-<slug>, <value>)` into the block's style, where `<group>` is the group name in kebab-case and `<value>` is the token's registered literal, used as the inline fallback. A token registered without a `value` gets the bare reference and no fallback. Your own stylesheet declares the custom property. The known groups are `color`, `spacing`, `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `borderWidth`, `borderRadius`, `boxShadow`, `textShadow`, `backgroundImage` and `maxWidth`, and a theme may add a group for any other CSS property.
 - `breakpoints` sets the `tablet` and `mobile` max-widths in pixels, defaulting to 991 and 640. The server style emitter and the editor canvas read the same two numbers, so what an author previews is what ships.
 - `blocks` and `shortcodes` are presentation components the theme owns. They merge into the per-app registries at boot at the highest precedence, so a theme shortcode replaces a plugin or core shortcode of the same name. A theme block only ever settles against a plugin block, because the `core/` namespace is reserved and `defineTheme` throws on a theme block that claims it.
@@ -131,6 +131,37 @@ export const shortlist = defineTemplate<EntryData>({
 ```
 
 A function decides it per entry, so other entries the same template renders keep their canonical. Set on the theme's `document`, it covers every page, and a template that leaves it unset inherits it. The only value is `false`: a template cannot turn the tag back on with `true`. It stops the automatic tag only. A `<link rel="canonical">` the page declares in `link` still renders, and so does an [SEO plugin](/plugins/seo/) canonical override. A `noindex` page still gets the automatic canonical unless it opts out too.
+
+### Setting the viewport
+
+Every page carries one `<meta name="viewport" content="width=device-width, initial-scale=1">`. The `viewport` field of `document` changes it, along with the `theme-color` and `color-scheme` tags the browser also reads before first paint. It merges field by field, so a template can add one field and keep the rest of the theme's. The renderer writes those three tags itself, once each, so a `meta` entry named `viewport`, `theme-color` or `color-scheme` throws a `DocumentManifestError` naming the field to use.
+
+Set `viewportFit: "cover"` to lay the page under a phone's notch and home indicator. `env(safe-area-inset-*)` then has values, and a fixed panel pads itself clear of them:
+
+```ts
+defineTheme({
+  templates: [fallback(Page)],
+  document: {
+    viewport: {
+      viewportFit: "cover",
+      interactiveWidget: "resizes-content",
+      themeColor: [
+        { color: "#ffffff", media: "(prefers-color-scheme: light)" },
+        { color: "#0b0b0c", media: "(prefers-color-scheme: dark)" },
+      ],
+      colorScheme: "light dark",
+    },
+  },
+});
+```
+
+```css
+.bottom-sheet {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+```
+
+The fields are `width`, `height`, `initialScale`, `minimumScale`, `maximumScale`, `userScalable`, `viewportFit` and `interactiveWidget` for the viewport tag, which keeps `width=device-width` and `initial-scale=1` unless you set them. `themeColor` is a color, or a list with one tag per `media` query, and a later list replaces an earlier one whole. `colorScheme` renders only when set.
 
 ## The welcome theme
 

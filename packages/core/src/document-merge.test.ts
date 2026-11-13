@@ -17,11 +17,11 @@ describe("mergeDocumentManifest", () => {
 
   test("concats meta[] in theme-then-template order", () => {
     const merged = mergeDocumentManifest(
-      { meta: [{ name: "theme-color", content: "#fff" }] },
+      { meta: [{ name: "description", content: "Site" }] },
       { meta: [{ name: "robots", content: "noindex" }] },
     );
     expect(merged.meta).toEqual([
-      { name: "theme-color", content: "#fff" },
+      { name: "description", content: "Site" },
       { name: "robots", content: "noindex" },
     ]);
   });
@@ -40,7 +40,7 @@ describe("mergeDocumentManifest", () => {
   test("theme-only merge (no template fragment) preserves theme arrays", () => {
     const theme = {
       link: [{ rel: "icon", href: "/x.svg" }],
-      meta: [{ name: "theme-color", content: "#000" }],
+      meta: [{ name: "description", content: "Site" }],
     };
     const merged = mergeDocumentManifest(theme, undefined);
     expect(merged.link).toEqual(theme.link);
@@ -94,5 +94,47 @@ describe("mergeDocumentManifest", () => {
     expectTypeOf<DocumentManifest["canonical"]>().toEqualTypeOf<
       false | undefined
     >();
+  });
+
+  test("viewport merges field by field, the fragment winning", () => {
+    const merged = mergeDocumentManifest(
+      { viewport: { viewportFit: "cover", initialScale: 1 } },
+      { viewport: { interactiveWidget: "resizes-content", initialScale: 2 } },
+    );
+    expect(merged.viewport).toEqual({
+      viewportFit: "cover",
+      initialScale: 2,
+      interactiveWidget: "resizes-content",
+    });
+  });
+
+  test("a viewport themeColor list is replaced whole, not concatenated", () => {
+    const merged = mergeDocumentManifest(
+      {
+        viewport: {
+          themeColor: [
+            { color: "#fff", media: "(prefers-color-scheme: light)" },
+            { color: "#000", media: "(prefers-color-scheme: dark)" },
+          ],
+        },
+      },
+      { viewport: { themeColor: [{ color: "#f00" }] } },
+    );
+    expect(merged.viewport?.themeColor).toEqual([{ color: "#f00" }]);
+  });
+
+  test("a viewport field set to undefined keeps the earlier value", () => {
+    const merged = mergeDocumentManifest(
+      { viewport: { viewportFit: "cover", colorScheme: "light dark" } },
+      { viewport: { viewportFit: undefined, colorScheme: "dark" } },
+    );
+    expect(merged.viewport).toEqual({
+      viewportFit: "cover",
+      colorScheme: "dark",
+    });
+  });
+
+  test("viewport stays absent when neither side sets it", () => {
+    expect(mergeDocumentManifest({}, {}).viewport).toBeUndefined();
   });
 });

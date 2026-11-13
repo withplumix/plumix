@@ -1,4 +1,8 @@
-import type { DocumentAttrs, DocumentManifest } from "./document-manifest.js";
+import type {
+  DocumentAttrs,
+  DocumentManifest,
+  DocumentViewport,
+} from "./document-manifest.js";
 
 /**
  * Base first, fragment last, so the fragment wins (a template over the theme,
@@ -18,7 +22,21 @@ export function mergeDocumentManifest(
     title: fragment?.title ?? theme.title,
     titleTemplate: fragment?.titleTemplate ?? theme.titleTemplate,
     canonical: fragment?.canonical ?? theme.canonical,
+    viewport: mergeViewport(theme.viewport, fragment?.viewport),
   };
+}
+
+/** A field set to `undefined` keeps the earlier value. */
+export function mergeViewport(
+  theme: DocumentViewport | undefined,
+  fragment: DocumentViewport | undefined,
+): DocumentViewport | undefined {
+  if (!theme || !fragment) return fragment ?? theme;
+  const merged: Record<string, unknown> = { ...theme };
+  for (const [key, value] of Object.entries(fragment)) {
+    if (value !== undefined) merged[key] = value;
+  }
+  return merged;
 }
 
 function concatArrays<T>(
