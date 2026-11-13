@@ -142,7 +142,6 @@ export interface BlockTransforms {
  * or runs on the server, which the editor bundle must not load eagerly.
  */
 export interface BlockViewModule<Attrs = MaterializedAttrs> {
-  /** Renders the block. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- a module's own loaders and deps types are checked where it declares them
   readonly default: BlockView<Attrs, any, any>;
   readonly loaders?: BlockLoaderRecord;

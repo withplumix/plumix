@@ -412,10 +412,7 @@ export function EditorCanvas({
   );
 }
 
-/**
- * Runs `task` once the browser is idle, or on a timer where it has no
- * `requestIdleCallback`. Returns a cancel.
- */
+/** The timer covers browsers with no `requestIdleCallback`, such as Safari. */
 function whenIdle(task: () => void): () => void {
   if (typeof requestIdleCallback === "function") {
     const handle = requestIdleCallback(task);

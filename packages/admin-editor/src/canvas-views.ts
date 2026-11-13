@@ -89,7 +89,6 @@ export interface LoaderBlocksReporter {
   readonly resend: () => void;
 }
 
-/** Reports which loaded blocks declare loaders. */
 export function createLoaderBlocksReporter(
   registry: BlockRegistry,
   report: (names: readonly string[]) => void,

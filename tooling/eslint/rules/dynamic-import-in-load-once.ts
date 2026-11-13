@@ -60,11 +60,11 @@ export const dynamicImportInLoadOnce: Rule.RuleModule = {
     type: "problem",
     docs: {
       description:
-        "Require every dynamic `import()` to sit in a `loadOnce` factory.",
+        "Require every dynamic `import()` to sit in a `loadOnce` factory, `lazy`, or a block's `view` function.",
     },
     messages: {
       outsideLoadOnce:
-        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried.",
+        "Load this module through `loadOnce(() => import(…))` from `plumix/support`, or as a block's `view: () => import(…)`, so every caller in the isolate awaits one fully evaluated module and a failed load is retried.",
     },
     schema: [],
   },

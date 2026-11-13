@@ -27,6 +27,18 @@ warning, and it grew with every block a theme added. Tracing the imports from
 > `errorFallback`. A module is loaded before anything renders it, on the server
 > and in the canvas, so nothing suspends and nothing flickers.**
 
+## Measurements
+
+| Site        | When                  | Editor entry chunk | Eager editor JS         |
+| ----------- | --------------------- | ------------------ | ----------------------- |
+| eduscope.uk | before, Plumix 0.26.0 | —                  | 1080 kB                 |
+| apps/demo   | after this change     | 32.85 kB           | 263 kB across 12 chunks |
+
+The before figure is eduscope.uk's, traced through the five chains above. The
+after figures are measured on the repo's demo site (`apps/demo`), where every
+one of its 16 block views is a dynamically imported chunk. The demo wasn't
+measured before the change, so the two rows are different sites.
+
 ## Precedent
 
 Surveyed 2026-10-31.
