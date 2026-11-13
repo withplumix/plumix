@@ -4,8 +4,10 @@
 
 import type { ComponentType, ReactElement, ReactNode } from "react";
 import { createContext, createElement, useContext } from "react";
+import { renderToString } from "react-dom/server";
 
 import type { SerializedProps } from "./serialize.js";
+import { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
 import { serializeProps } from "./serialize.js";
 
 /**
@@ -13,6 +15,22 @@ import { serializeProps } from "./serialize.js";
  * component renders inline.
  */
 export const InsideIslandContext = createContext(false);
+
+/** One per page render: hands each server-rendered island the next index. */
+export interface IslandCounter {
+  readonly take: () => number;
+}
+
+export function createIslandCounter(): IslandCounter {
+  let next = 0;
+  return { take: () => next++ };
+}
+
+/**
+ * The page render's island counter. Without one an island renders inline,
+ * with no id scope of its own.
+ */
+export const IslandRenderContext = createContext<IslandCounter | null>(null);
 
 /**
  * Default prefetch trigger per hydration trigger — the chunk warms before
@@ -52,6 +70,8 @@ function isReactElementValue(value: unknown): value is ReactElement {
 export function IslandShim(shim: IslandShimProps): ReactNode {
   const { Component, exportName, chunkUrl, props } = shim;
   const insideIsland = useContext(InsideIslandContext);
+  const counter = useContext(IslandRenderContext);
+  const allowlist = useHtmlAllowlist();
   const { client: rawClient, prefetch, ...forwarded } = props;
   const client = typeof rawClient === "string" ? rawClient : undefined;
   const hasDirective = client !== undefined;
@@ -103,17 +123,34 @@ export function IslandShim(shim: IslandShimProps): ReactNode {
         createElement(Component, wrapped),
       );
 
-  return createElement(
-    "plumix-island",
-    {
-      "chunk-url": chunkUrl,
-      "component-export": exportName,
-      client: when,
-      prefetch: pf,
-      props: serialized,
-      slots: slots.length ? slots.join(",") : null,
-      ssr: only ? null : "",
-    },
-    child,
+  const attributes = {
+    "chunk-url": chunkUrl,
+    "component-export": exportName,
+    client: when,
+    prefetch: pf,
+    props: serialized,
+    slots: slots.length ? slots.join(",") : null,
+    ssr: only ? null : "",
+  };
+
+  if (counter === null || child === null) {
+    return createElement("plumix-island", attributes, child);
+  }
+
+  // The client mounts each island as its own root, so `useId` matches only
+  // when the server renders it as one too. Context stays outside that render.
+  const idPrefix = `i${String(counter.take())}-`;
+  const html = renderToString(
+    createElement(
+      HtmlAllowlistProvider,
+      { value: allowlist },
+      createElement(IslandRenderContext.Provider, { value: counter }, child),
+    ),
+    { identifierPrefix: idPrefix },
   );
+  return createElement("plumix-island", {
+    ...attributes,
+    "id-prefix": idPrefix,
+    dangerouslySetInnerHTML: { __html: html },
+  });
 }

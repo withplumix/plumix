@@ -160,4 +160,29 @@ test.describe("islands", () => {
       0,
     );
   });
+
+  test("islands calling useId hydrate without a mismatch and keep distinct ids", async ({
+    page,
+  }) => {
+    const hydrationErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error" && message.text().includes("hydrat")) {
+        hydrationErrors.push(message.text());
+      }
+    });
+    await page.goto("/islands-ids");
+
+    const ids: string[] = [];
+    for (const testId of ["id-probe-first", "id-probe-second"]) {
+      const probe = page.getByTestId(testId);
+      await expect(probe).toHaveAttribute("data-live");
+      const server = await probe.locator("input").getAttribute("id");
+      await expect(probe.locator("output")).toHaveText(server ?? "");
+      ids.push(server ?? "");
+    }
+
+    expect(ids[0]).not.toBe(ids[1]);
+    expect(hydrationErrors).toEqual([]);
+    expect(await islandEvents(page)).toEqual([]);
+  });
 });

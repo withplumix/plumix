@@ -1,9 +1,15 @@
 import type { ReactElement, ReactNode } from "react";
-import { createContext, createElement as h } from "react";
+import { createContext, createElement as h, useId } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { InsideIslandContext, IslandShim } from "./island-shim.js";
+import { HtmlAllowlistProvider, useHtmlAllowlist } from "./html/context.js";
+import {
+  createIslandCounter,
+  InsideIslandContext,
+  IslandRenderContext,
+  IslandShim,
+} from "./island-shim.js";
 import { IslandPropSerializationError } from "./serialize.js";
 
 type Props = Readonly<Record<string, unknown>>;
@@ -175,5 +181,67 @@ describe("IslandShim boundary", () => {
     // prop still is.
     expect(html).toContain("&quot;n&quot;:[0,2]");
     expect(html).not.toContain("&quot;children&quot;");
+  });
+});
+
+/** Renders `tree` as the page render does: one island counter per render. */
+function renderPage(tree: ReactNode): string {
+  return renderToStaticMarkup(
+    h(IslandRenderContext.Provider, { value: createIslandCounter() }, tree),
+  );
+}
+
+function UseIdProbe(): ReactNode {
+  return h("span", { id: useId() });
+}
+
+describe("IslandShim id scope", () => {
+  test("two islands calling useId render ids scoped to their own prefix, written to `id-prefix`", () => {
+    const html = renderPage(
+      h(
+        "main",
+        null,
+        h("p", null, "before"),
+        island(UseIdProbe, "First"),
+        island(UseIdProbe, "Second"),
+      ),
+    );
+
+    expect(html).toMatch(
+      /<plumix-island[^>]*component-export="First"[^>]*id-prefix="i0-"[^>]*><span id="_i0-R_[^"]+"><\/span><\/plumix-island>/,
+    );
+    expect(html).toMatch(
+      /<plumix-island[^>]*component-export="Second"[^>]*id-prefix="i1-"[^>]*><span id="_i1-R_[^"]+"><\/span><\/plumix-island>/,
+    );
+  });
+
+  test("an island passed into another island's slot takes the next index from the same counter", () => {
+    const Parent = (props: Props) =>
+      h("section", null, props.children as ReactNode);
+    const html = renderPage(
+      island(Parent, "Parent", { children: island(UseIdProbe, "Child") }),
+    );
+
+    expect(html).toMatch(/component-export="Parent"[^>]*id-prefix="i0-"/);
+    expect(html).toMatch(
+      /component-export="Child"[^>]*id-prefix="i1-"[^>]*><span id="_i1-R_[^"]+">/,
+    );
+  });
+
+  test("an `only` island renders an empty shell with no `id-prefix`", () => {
+    const html = renderPage(island(UseIdProbe, "Widget", { client: "only" }));
+
+    expect(html).not.toContain("id-prefix");
+    expect(html).not.toContain("<span");
+  });
+
+  test("an island keeps the page's HTML allowlist in its own render", () => {
+    const allowlist = { allowedTags: ["marquee"], allowedAttributes: {} };
+    const Reader = () => h("i", null, useHtmlAllowlist().allowedTags.join());
+    const html = renderPage(
+      h(HtmlAllowlistProvider, { value: allowlist }, island(Reader, "Reader")),
+    );
+
+    expect(html).toContain("<i>marquee</i>");
   });
 });

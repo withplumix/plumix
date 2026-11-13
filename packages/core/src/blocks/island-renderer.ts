@@ -29,13 +29,18 @@ export interface MountOptions {
    * which has no server output.
    */
   readonly hydrate?: boolean;
+  /**
+   * The island's `id-prefix`: the server rendered it as its own root under this
+   * `useId` prefix, so the client root takes the same one.
+   */
+  readonly identifierPrefix?: string;
 }
 
 export function mount(
   element: HTMLElement,
   options: MountOptions = {},
 ): IslandRoot {
-  const hydrate = options.hydrate ?? true;
+  const { hydrate = true, identifierPrefix } = options;
   // Lazy: `hydrateRoot` needs the first node, and a later `props` change must
   // re-render, never re-hydrate.
   let root: Root | null = null;
@@ -56,6 +61,7 @@ export function mount(
         // `hydrateRoot` renders `node` itself; there is no follow-up
         // `root.render`.
         root = hydrateRoot(element, node, {
+          identifierPrefix,
           onUncaughtError: reportIslandError(element),
           onRecoverableError: reportIslandMismatch(element, server),
         });
@@ -63,8 +69,11 @@ export function mount(
       }
       root =
         process.env.PLUMIX_DEV && kind === "create-reporting"
-          ? createRoot(element, { onUncaughtError: reportIslandError(element) })
-          : createRoot(element);
+          ? createRoot(element, {
+              identifierPrefix,
+              onUncaughtError: reportIslandError(element),
+            })
+          : createRoot(element, { identifierPrefix });
       root.render(node);
     },
     unmount() {

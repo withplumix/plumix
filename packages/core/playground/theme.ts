@@ -15,6 +15,7 @@ import {
   Suppressed,
   ThrowOnClick,
 } from "./islands/dev-faults.js";
+import { IdProbe } from "./islands/id-probe.js";
 import { LoadProbe } from "./islands/load-probe.js";
 import { NestParent } from "./islands/nest-parent.js";
 import { DivergeParent, DropParent } from "./islands/parents.js";
@@ -92,6 +93,15 @@ function islandsNested(): ReactNode {
         label: "diverge child",
       }),
     ),
+  ];
+}
+
+/** Content first, so the page tree's `useId` position differs from an island root's. */
+function islandsIds(): ReactNode {
+  return [
+    h("p", { key: "before" }, "content before the islands"),
+    h(IdProbe, { key: "first", client: "load", testId: "id-probe-first" }),
+    h(IdProbe, { key: "second", client: "load", testId: "id-probe-second" }),
   ];
 }
 
@@ -186,6 +196,7 @@ const FIXTURES: Readonly<Record<string, () => ReactNode>> = {
   auth,
   islands,
   "islands-nested": islandsNested,
+  "islands-ids": islandsIds,
   "islands-raw": islandsRaw,
   sanitizer,
   strategies,
