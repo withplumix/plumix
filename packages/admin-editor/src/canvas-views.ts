@@ -90,16 +90,21 @@ export function createLoaderBlocksReporter(
   registry: BlockRegistry,
   report: (names: readonly string[]) => void,
 ): LoaderBlocksReporter {
-  let reported: string | null = null;
-  const send = (): void => {
-    const names = loadedBlocksWithLoaders(registry);
-    reported = names.join("\n");
+  let reported: readonly string[] | null = null;
+  const send = (names: readonly string[]): void => {
+    reported = names;
     report(names);
   };
   return {
     update: () => {
-      if (loadedBlocksWithLoaders(registry).join("\n") !== reported) send();
+      const names = loadedBlocksWithLoaders(registry);
+      const unchanged =
+        reported?.length === names.length &&
+        names.every((name, i) => name === reported?.[i]);
+      if (!unchanged) send(names);
     },
-    resend: send,
+    resend: () => {
+      send(loadedBlocksWithLoaders(registry));
+    },
   };
 }
