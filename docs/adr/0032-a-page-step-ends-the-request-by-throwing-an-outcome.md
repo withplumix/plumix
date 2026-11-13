@@ -1,5 +1,9 @@
 # A page step ends the request by throwing an outcome
 
+Amended by [ADR 0071](0071-a-blocks-definition-is-editor-metadata-and-its-view-module-holds-what-renders.md):
+a block's loaders live in its view module, and their return types flow into
+the view's `BlockViewProps` rather than a `render` prop.
+
 Server code that builds a public page sometimes finds that there is no page to
 build. A block loader looks up a share id nobody issued, or a token that was
 already spent. An archive's `resolve` serves `/login` to a visitor who is

@@ -225,8 +225,8 @@ A named, registered content component. The registered _definition_ is the block 
 _Avoid_: Gutenberg, Builder.io (these are the reference models, not plumix terms)
 
 **View module**:
-The module a block spec's `view` imports lazily, holding what renders or runs on the server: the block's view (its default export) and its `loaders`, `deps` and `errorFallback`. The block spec itself holds only what the editor needs before anything renders. See ADR 0071.
-_Avoid_: render function, block component
+The module a block spec's `view` imports lazily, holding what renders or runs on the server: the block's view (its default export) and its `loaders`, `deps` and `errorFallback`. The block spec itself holds only what the editor needs before anything renders. Distinct from a view, the per-visitor app page a plugin registers with `registerView`. See ADR 0071.
+_Avoid_: render function, block component, view (alone, for this module)
 
 **Block input**:
 A single editable control declared on a block — an attribute, a style-bound property, or a slot input.
@@ -310,7 +310,9 @@ templates by name without knowing what it lists.
 A per-visitor app page a plugin registers with `registerView`, such as a sign-in
 form, an account page or a shared comparison. It renders through the theme like
 any page but lists nothing, so it is not an archive. It is never stored by the
-CDN unless it opts in, and claims no automatic canonical link. See ADR 0035.
+CDN unless it opts in, and claims no automatic canonical link. Distinct from
+a block's view module, which `defineBlock`'s `view` imports to render a block.
+See ADR 0035.
 _Avoid_: unlisted archive (for a per-visitor page), app route
 
 **Listing**:

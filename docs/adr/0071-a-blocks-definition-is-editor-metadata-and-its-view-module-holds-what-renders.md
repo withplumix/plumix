@@ -96,6 +96,11 @@ Surveyed 2026-10-31.
 This amends [ADR 0040](0040-a-block-declares-its-deps-like-a-template.md): a
 block's `deps` is exported from its view module rather than declared on the
 definition.
+It also amends
+[ADR 0016](0016-a-render-context-resolves-descriptors.md) and
+[ADR 0032](0032-a-page-step-ends-the-request-by-throwing-an-outcome.md), whose
+block `render` is now a view module's default export, typed by
+`BlockViewProps`.
 
 ## Considered options
 
