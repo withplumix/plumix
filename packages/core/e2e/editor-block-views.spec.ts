@@ -37,41 +37,61 @@ test("a view's stylesheet and island render in the canvas", async ({
   await expect(block.getByTestId("showcase-clicker")).toHaveText("0");
 });
 
-test("the public page serves the view's text and hydrates its island", async ({
-  page,
-  request,
-  seed,
-}) => {
+test("a view's island responds in the canvas", async ({ editor, seed }) => {
+  await openPost(editor, seed, [SHOWCASE]);
+  const clicker = editor.canvas
+    .block("playground/showcase")
+    .getByTestId("showcase-clicker");
+
+  await clicker.click();
+
+  await expect(clicker).toHaveText("1");
+});
+
+test("the public page serves the view's text", async ({ request, seed }) => {
   const path = await publishedPost(seed, [SHOWCASE]);
 
   const served = await (await request.get(path)).text();
+
+  expect(served).toContain("Showcase view");
+});
+
+test("the public page hydrates the view's island", async ({ page, seed }) => {
+  const path = await publishedPost(seed, [SHOWCASE]);
   await page.goto(path);
   const clicker = page.getByTestId("showcase-clicker");
 
   // An interaction island: the click that hydrates it lands once.
   await clicker.click();
 
-  expect(served).toContain("Showcase view");
   await expect(clicker).toHaveAttribute("data-live");
   await expect(clicker).toHaveText("1");
 });
 
-test("a block's loader data shows, and Refresh re-runs the loader", async ({
-  editor,
-  page,
-  seed,
-}) => {
-  await openPost(editor, seed, [SHOWCASE]);
+/** A showcase whose loader counts the posts of the test's own author. */
+function authorShowcase(seed: Seed): BlockNode {
+  return { ...SHOWCASE, attrs: { authorId: seed.authorId } };
+}
+
+test("a block's loader data shows in the canvas", async ({ editor, seed }) => {
+  await openPost(editor, seed, [authorShowcase(seed)]);
+
+  await expect(
+    editor.canvas.block("playground/showcase").getByTestId("showcase-posts"),
+  ).toHaveText("1 posts");
+});
+
+test("Refresh re-runs a block's loader", async ({ editor, page, seed }) => {
+  await openPost(editor, seed, [authorShowcase(seed)]);
   const block = editor.canvas.block("playground/showcase");
   const posts = block.getByTestId("showcase-posts");
-  await expect(posts).toHaveText(/^\d+ posts$/);
-  const before = Number((await posts.textContent())?.split(" ")[0]);
+  await expect(posts).toHaveText("1 posts");
   await seed.factories.entry.create({ type: "post", authorId: seed.authorId });
-
   await editor.select(block);
+
   await page.getByTestId("refresh-block-loader").click();
 
-  await expect(posts).toHaveText(`${String(before + 1)} posts`);
+  await expect(posts).toHaveText("2 posts");
 });
 
 test("a block inserted from the catalog shows its view at once", async ({
