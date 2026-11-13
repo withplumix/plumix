@@ -273,6 +273,8 @@ function EditTermRoute(): ReactNode {
         ...orpc.term.get.queryOptions({ input: { id: termId } }),
         staleTime: 0,
       });
+      setServerError(null);
+      setServerFieldErrors(null);
       setReseedNonce((n) => n + 1);
       return saved.etag;
     },
