@@ -17,7 +17,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { SubmittedValues } from "../answers.js";
 import type { FormDefinition, FormHandler } from "../define-form.js";
-import type { FormsHarness } from "../test/harness.js";
+import type { FormsHarness, FormsHarnessOptions } from "../test/harness.js";
 import type { FormSubmissionCandidate } from "../types.js";
 import { writeSubmittedValues } from "../answers.js";
 import {
@@ -1558,6 +1558,101 @@ describe("a form guarded by Turnstile", () => {
       errors: [CAPTCHA_ERROR],
     });
     expect(await rows(harness)).toHaveLength(0);
+  });
+
+  describe("when Cloudflare never answers", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    // Rejects with its signal's reason once it aborts, as the platform does.
+    // Resolves once asked, so the clock starts with the call in flight.
+    function stubSilentSiteverify(): Promise<void> {
+      let ask = (): void => undefined;
+      const asked = new Promise<void>((resolve) => {
+        ask = resolve;
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+        ask();
+        await new Promise((resolve) => {
+          init?.signal?.addEventListener("abort", resolve, { once: true });
+        });
+        init?.signal?.throwIfAborted();
+        return Response.json({ success: true });
+      });
+      return asked;
+    }
+
+    // Node's `AbortSignal.timeout` runs on an internal timer the fake clock
+    // can't reach, so the clock stub rebuilds it on the faked `setTimeout`.
+    function useFakeClock(): void {
+      vi.useFakeTimers();
+      vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+        const controller = new AbortController();
+        setTimeout(() => {
+          controller.abort(
+            new DOMException("The operation timed out.", "TimeoutError"),
+          );
+        }, ms);
+        return controller.signal;
+      });
+    }
+
+    // The logger is where a timeout shows: it is written the moment the call
+    // gives up, while the refusal that follows waits on the database.
+    function captureErrors(): {
+      logged: { message: string; meta?: unknown }[];
+      logger: FormsHarnessOptions["logger"];
+    } {
+      const logged: { message: string; meta?: unknown }[] = [];
+      return {
+        logged,
+        logger: {
+          debug: () => undefined,
+          info: () => undefined,
+          warn: () => undefined,
+          error: (message, meta) => logged.push({ message, meta }),
+        },
+      };
+    }
+
+    test("refuses the submission after 5s, logging the timeout", async () => {
+      const { logged, logger } = captureErrors();
+      const harness = await createFormsHarness([forms({ forms: [guarded] })], {
+        logger,
+      });
+      const asked = stubSilentSiteverify();
+      useFakeClock();
+
+      const response = solve(harness);
+      await asked;
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(logged).toMatchObject([
+        {
+          message: "forms: verifying a Turnstile challenge failed",
+          meta: {
+            error: { name: "TimeoutError", message: "timed out after 5s" },
+          },
+        },
+      ]);
+      (await response).assertStatus(422);
+    });
+
+    test("is still checking 1ms before 5s", async () => {
+      const { logged, logger } = captureErrors();
+      const harness = await createFormsHarness([forms({ forms: [guarded] })], {
+        logger,
+      });
+      const asked = stubSilentSiteverify();
+      useFakeClock();
+
+      void solve(harness);
+      await asked;
+      await vi.advanceTimersByTimeAsync(4999);
+
+      expect(logged).toEqual([]);
+    });
   });
 
   test("refuses one Cloudflare answered with something else entirely", async () => {
