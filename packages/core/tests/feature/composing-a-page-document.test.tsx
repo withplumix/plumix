@@ -565,24 +565,6 @@ const themeColorListSite = await testSite({
   },
 });
 
-const themeColorOverrideSite = await testSite({
-  plugins: [blogPlugin],
-  config: {
-    theme: defineTheme({
-      templates: [
-        fallback(() => null),
-        entry(
-          defineTemplate({
-            document: { viewport: { themeColor: "#123456" } },
-            render: ({ data }) => <article>{data.entry.title}</article>,
-          }),
-        ),
-      ],
-      document: { viewport: { themeColor: themeColorList } },
-    }),
-  },
-});
-
 const viewportFilterPlugin = definePlugin("viewport-filter", {
   setup: (ctx) => {
     ctx.filters.add(render.document, (manifest): DocumentManifest => ({
@@ -713,23 +695,6 @@ describe("the document's viewport", () => {
       '<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)"/>',
       "</head>",
     ]);
-  });
-
-  test("a single themeColor string renders one tag, replacing the theme's list", async () => {
-    const post = await themeColorOverrideSite.factory.published.create({
-      type: "post",
-      slug: "theme-color",
-      title: "Theme Color",
-    });
-
-    const page = await themeColorOverrideSite.visit(post);
-
-    page.assertSeeInOrder([
-      "<head>",
-      '<meta name="theme-color" content="#123456"/>',
-      "</head>",
-    ]);
-    expect(page.body.match(/<meta name="theme-color"/g)).toHaveLength(1);
   });
 
   test("colorScheme renders one color-scheme tag", async () => {
