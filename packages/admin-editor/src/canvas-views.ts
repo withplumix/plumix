@@ -49,10 +49,7 @@ export function createTreeCommitter(
 const VIEW_LOAD_FAILED =
   "[plumix:editor] A block view failed to load; the canvas keeps what it shows and retries on the next update.";
 
-/**
- * A failed import, such as a chunk gone after a deploy, must not break the
- * canvas: it is logged, and the next load naming it retries it.
- */
+/** A chunk lost after a deploy must not break the canvas. */
 export function settleViewLoad(
   load: Promise<void>,
   afterLoad: () => void,
