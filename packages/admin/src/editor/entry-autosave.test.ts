@@ -322,6 +322,52 @@ describe("createEntryAutosave", () => {
     ]);
   });
 
+  test("after Keep mine lands, a group that held nothing back is not sent, even one that always writes", async () => {
+    const title = titleField();
+    // Like the plain form's, whose every write sends its title and status.
+    const status = {
+      initial: "draft",
+      snapshot: () => "draft",
+      diff: () => ({ status: "draft" as const }),
+      commit: () => "draft",
+    };
+    const { autosave, copy, sent } = openAutosave(
+      { title: title.group, status },
+      [row({ etag: "e1" }), staleCopy(), row({ etag: "e2" })],
+    );
+    autosave.schedule.status();
+    await autosave.flush();
+    title.value = "Mine";
+    autosave.schedule.title();
+    await autosave.flush();
+
+    await copy.keepMine();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sent).toHaveLength(3);
+  });
+
+  test("an edit that lands sends no edit another group's failed write left unsaved", async () => {
+    const title = titleField();
+    const excerpt = titleField();
+    const { autosave, sent } = openAutosave(
+      { title: title.group, excerpt: excerpt.group },
+      [new Error("offline"), new Error("offline"), row({ etag: "e1" })],
+    );
+    title.value = "a";
+    excerpt.value = "Failed";
+    autosave.schedule.title();
+    autosave.schedule.excerpt();
+    await autosave.flush();
+    title.value = "ab";
+    autosave.schedule.title();
+
+    await autosave.flush();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(sent).toHaveLength(3);
+  });
+
   test("a failure that repeats on the next write is reported once", async () => {
     const first = new Error("first");
     const title = titleField();
