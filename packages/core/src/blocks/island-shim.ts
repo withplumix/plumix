@@ -19,9 +19,7 @@ export const InsideIslandContext = createContext(false);
  * that import this module.
  */
 export interface IslandRender {
-  /** The next island's index, counted per page render. */
   readonly take: () => number;
-  /** Renders `node` as its own root, re-providing the page's contexts. */
   readonly render: (node: ReactNode, identifierPrefix: string) => string;
 }
 
@@ -41,7 +39,6 @@ class IslandRenderError extends Error {
   }
 }
 
-/** The page render provides it; an island rendered without it throws. */
 export const IslandRenderContext = createContext<IslandRender | null>(null);
 
 /**

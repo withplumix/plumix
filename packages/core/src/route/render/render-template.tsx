@@ -518,7 +518,6 @@ async function renderTree({
         context: blockContext,
       }),
   };
-  // One object: an island's own render provides it again, `user` getter intact.
   const plumix: PlumixContextValue = {
     registry: ctx.blocks,
     mode: editMode.mode,

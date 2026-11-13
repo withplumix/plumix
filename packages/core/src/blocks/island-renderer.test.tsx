@@ -59,7 +59,6 @@ describe("islandRootOptions", () => {
     vi.unstubAllEnvs();
   });
 
-  // The reporters only close over the element; nothing here touches it.
   const element = {} as HTMLElement;
 
   test("a hydrated root takes the island's id prefix and reports errors and mismatches in dev", () => {

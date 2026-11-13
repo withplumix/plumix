@@ -8,7 +8,6 @@ import { HtmlAllowlistProvider } from "../../blocks/html/context.js";
 import { IslandRenderContext } from "../../blocks/island-shim.js";
 import { PlumixProvider } from "../../blocks/renderer/index.js";
 
-/** The page contexts an island's own render provides again. */
 export interface IslandRenderContexts {
   readonly htmlAllowlist: HtmlAllowlist;
   /** Passed as is: its `user` is a getter, read only on demand. */

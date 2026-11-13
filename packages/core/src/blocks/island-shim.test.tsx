@@ -1,11 +1,9 @@
 import type { ReactElement, ReactNode } from "react";
 import { createContext, createElement as h, useId } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { createIslandRender } from "../route/render/island-render.js";
-import { createBlockRegistry } from "./block-registry.js";
-import { BASELINE_HTML_ALLOWLIST } from "./html/sanitize.js";
+import type { IslandRender } from "./island-shim.js";
 import {
   InsideIslandContext,
   IslandRenderContext,
@@ -179,19 +177,18 @@ describe("IslandShim boundary", () => {
   });
 });
 
-/** Renders `tree` as the page render does: one island counter per render. */
 function renderPage(tree: ReactNode): string {
+  let next = 0;
+  const islandRender: IslandRender = {
+    take: () => next++,
+    render: (node, identifierPrefix) =>
+      renderToString(
+        h(IslandRenderContext.Provider, { value: islandRender }, node),
+        { identifierPrefix },
+      ),
+  };
   return renderToStaticMarkup(
-    h(
-      IslandRenderContext.Provider,
-      {
-        value: createIslandRender({
-          htmlAllowlist: BASELINE_HTML_ALLOWLIST,
-          plumix: { registry: createBlockRegistry([]) },
-        }),
-      },
-      tree,
-    ),
+    h(IslandRenderContext.Provider, { value: islandRender }, tree),
   );
 }
 

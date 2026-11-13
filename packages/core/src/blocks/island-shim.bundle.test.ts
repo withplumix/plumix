@@ -2,7 +2,6 @@ import path from "node:path";
 import { build } from "esbuild";
 import { describe, expect, test } from "vitest";
 
-/** Every module a browser bundle of the island shim reaches. */
 async function bundledModules(): Promise<readonly string[]> {
   const { metafile } = await build({
     entryPoints: [path.join(import.meta.dirname, "island-shim.ts")],

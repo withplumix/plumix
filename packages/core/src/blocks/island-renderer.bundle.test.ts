@@ -2,7 +2,6 @@ import path from "node:path";
 import { build } from "esbuild";
 import { describe, expect, test } from "vitest";
 
-/** The island renderer as a production client build emits it. */
 async function productionBundle(): Promise<string> {
   const { outputFiles } = await build({
     entryPoints: [path.join(import.meta.dirname, "island-renderer.ts")],

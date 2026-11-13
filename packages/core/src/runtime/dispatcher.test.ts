@@ -1076,7 +1076,7 @@ describe("dispatcher — theme reads the auth client's render context", () => {
 });
 
 describe("dispatcher — island id scopes", () => {
-  test("each page render numbers its islands from i0-, so the ids match the client's", async () => {
+  async function twoIslandSite(): Promise<DispatcherHarness> {
     const blog = definePlugin("test-blog", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
@@ -1102,20 +1102,32 @@ describe("dispatcher — island id scopes", () => {
       config: { plugins: [blog], theme },
     });
     await seedHelloWorldPost(h);
+    return h;
+  }
 
-    const first = await h.dispatch(
+  test("a page render numbers its islands i0-, i1- in order", async () => {
+    const h = await twoIslandSite();
+
+    const response = await h.dispatch(
       new Request("https://cms.example/post/hello-world"),
     );
-    const firstHtml = await first.text();
-    const second = await h.dispatch(
+
+    const html = await response.text();
+    expect(html).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
+    expect(html).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
+  });
+
+  test("a second page render numbers its islands from i0- again", async () => {
+    const h = await twoIslandSite();
+    await h.dispatch(new Request("https://cms.example/post/hello-world"));
+
+    const response = await h.dispatch(
       new Request("https://cms.example/post/hello-world"),
     );
-    const secondHtml = await second.text();
 
-    expect(firstHtml).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
-    expect(firstHtml).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
-    expect(secondHtml).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
-    expect(secondHtml).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
+    const html = await response.text();
+    expect(html).toMatch(/component-export="First"[^>]*id-prefix="i0-"/);
+    expect(html).toMatch(/component-export="Second"[^>]*id-prefix="i1-"/);
   });
 });
 
