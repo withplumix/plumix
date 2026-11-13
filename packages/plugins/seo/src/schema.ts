@@ -68,8 +68,15 @@ export interface SchemaInputs {
   readonly image: OgImage | null;
   readonly published: Date | null;
   readonly modified: Date | null;
-  /** The byline, on an entry page that has one. */
-  readonly author: { readonly slug: string; readonly name: string } | null;
+  /**
+   * The byline, on an entry page that has one. `url` is its author archive,
+   * null on a site that serves none.
+   */
+  readonly author: {
+    readonly slug: string;
+    readonly name: string;
+    readonly url: string | null;
+  } | null;
   /** The entry's schema type, or null on a page that is not an entry. */
   readonly articleType: SchemaType | null;
   readonly represents: SiteRepresents;
@@ -206,7 +213,10 @@ function buildSchemaGraph(
   if (inputs.author && inputs.articleType !== null) {
     pieces.set(
       "author",
-      piece("Person", id.author, { name: inputs.author.name }),
+      piece("Person", id.author, {
+        name: inputs.author.name,
+        url: inputs.author.url ?? undefined,
+      }),
     );
   }
   return pieces;

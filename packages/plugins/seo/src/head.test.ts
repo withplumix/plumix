@@ -2,7 +2,7 @@ import type { DocumentManifest, DocumentMeta } from "plumix";
 import { describe, expect, test } from "vitest";
 
 import type { HeadInputs } from "./head.js";
-import { seoHeadMeta } from "./head.js";
+import { entryTypePageType, resolvePageType, seoHeadMeta } from "./head.js";
 
 const baseInputs: HeadInputs = {
   verification: [],
@@ -227,7 +227,7 @@ describe("seoHeadMeta — article facts", () => {
     ...baseInputs,
     published: new Date("2026-01-02T03:04:05.000Z"),
     modified: new Date("2026-02-03T04:05:06.000Z"),
-    author: "Ada Lovelace",
+    author: "https://cms.example/authors/ada",
   };
 
   test("an entry page carries its timestamps and byline", () => {
@@ -239,7 +239,9 @@ describe("seoHeadMeta — article facts", () => {
     expect(byProperty(out, "article:modified_time")?.content).toBe(
       "2026-02-03T04:05:06.000Z",
     );
-    expect(byProperty(out, "article:author")?.content).toBe("Ada Lovelace");
+    expect(byProperty(out, "article:author")?.content).toBe(
+      "https://cms.example/authors/ada",
+    );
   });
 
   test("a website page carries none of them", () => {
@@ -310,5 +312,65 @@ describe("seoHeadMeta gap-fills the document, not just the meta", () => {
         { ...baseInputs, searchTitle: "For the SERP" },
       ).title,
     ).toBe("From the template");
+  });
+});
+
+describe("resolvePageType", () => {
+  const entry = { override: null, typeDefault: "article" } as const;
+
+  test("a template's own og:type of website outranks an article type", () => {
+    expect(
+      resolvePageType([{ property: "og:type", content: "website" }], entry),
+    ).toBe("website");
+  });
+
+  test("a page that is not an entry is a website whatever its template says", () => {
+    expect(
+      resolvePageType([{ property: "og:type", content: "article" }], {
+        override: null,
+        typeDefault: null,
+      }),
+    ).toBe("website");
+  });
+
+  test("a template's other tags leave the type to decide", () => {
+    expect(
+      resolvePageType([{ property: "og:site_name", content: "Theme" }], entry),
+    ).toBe("article");
+  });
+
+  test("a template's own og:type of article outranks a website type", () => {
+    expect(
+      resolvePageType([{ property: "og:type", content: "article" }], {
+        override: "WebPage",
+        typeDefault: "website",
+      }),
+    ).toBe("article");
+  });
+
+  test("an editor's Web page answer outranks an article type", () => {
+    expect(
+      resolvePageType([], { override: "WebPage", typeDefault: "article" }),
+    ).toBe("website");
+  });
+
+  test("an editor's Article subtype outranks a website type", () => {
+    expect(
+      resolvePageType([], { override: "NewsArticle", typeDefault: "website" }),
+    ).toBe("article");
+  });
+});
+
+describe("entryTypePageType", () => {
+  test("a flat type is an article and a hierarchical one a website", () => {
+    expect(entryTypePageType({})).toBe("article");
+    expect(entryTypePageType({ isHierarchical: true })).toBe("website");
+  });
+
+  test("a type's own seoType outranks its shape", () => {
+    expect(entryTypePageType({ seoType: "website" })).toBe("website");
+    expect(
+      entryTypePageType({ isHierarchical: true, seoType: "article" }),
+    ).toBe("article");
   });
 });

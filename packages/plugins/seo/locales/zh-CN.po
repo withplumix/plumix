@@ -126,7 +126,12 @@ msgstr "内容类型"
 #. js-lingui-explicit-id
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
-msgstr "结构化数据如何归类此条目。默认为文章。"
+msgstr "此条目被分享和归类的方式。默认为其类型的设置。"
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.web_page"
+msgstr "网页"
 
 #. js-lingui-explicit-id
 #: src/settings.ts

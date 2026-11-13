@@ -61,6 +61,7 @@ async function seedPost(
   const author = await h.factory.user.create({
     role: "admin",
     name: "Ada Lovelace",
+    slug: "ada",
   });
   await h.factory.entry.create({
     type: "post",
@@ -194,6 +195,7 @@ describe("the structured-data graph", () => {
 
     const person = byType(graph, "Person");
     expect(person?.name).toBe("Ada Lovelace");
+    expect(person?.url).toBe("https://cms.example/authors/ada");
     expect(byType(graph, "Article")?.author).toEqual({
       "@id": person?.["@id"],
     });

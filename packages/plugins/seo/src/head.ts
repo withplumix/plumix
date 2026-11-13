@@ -3,16 +3,19 @@ import type {
   DocumentManifest,
   DocumentMeta,
   DocumentScript,
+  EntryTypeOptions,
   TemplateData,
 } from "plumix";
 import type { AppContext, OgImage } from "plumix/plugin";
 import { canonicalUrl, loadSiteSettings, pageFacts } from "plumix/plugin";
 
+import type { SeoOverrides } from "./overrides.js";
+import type { SchemaType } from "./schema.js";
 import type { VerificationTag } from "./settings.js";
-import { breadcrumbTrail, siteRoot } from "./breadcrumbs.js";
+import { absolute, breadcrumbTrail, siteRoot } from "./breadcrumbs.js";
 import { indexable } from "./indexable.js";
 import { resolveOgImage } from "./og-image.js";
-import { readPageOverrides } from "./overrides.js";
+import { readPageOverrides, WEB_PAGE } from "./overrides.js";
 import { patternTitle } from "./page-title.js";
 import { DEFAULT_SCHEMA_TYPE, schemaGraph, schemaScript } from "./schema.js";
 import { loadSeoSettings, loadVerificationTags, nonEmpty } from "./settings.js";
@@ -62,6 +65,7 @@ export interface HeadInputs {
   /** Only ever emitted on an `article`, and only when set. */
   readonly published: Date | null;
   readonly modified: Date | null;
+  /** The byline's profile URL: its author archive. */
   readonly author: string | null;
   /** Whether to write the `article:*` tags at all; a site can turn them off. */
   readonly articleTags: boolean;
@@ -83,6 +87,46 @@ function hasProperty(
   property: string,
 ): boolean {
   return meta?.some((entry) => entry.property === property) ?? false;
+}
+
+export type PageType = "article" | "website";
+
+/** How a page's type is decided, below whatever its template wrote itself. */
+export interface PageTypeSources {
+  /** The editor's answer in the SEO box; null when they gave none. */
+  readonly override: SchemaType | typeof WEB_PAGE | null;
+  /** The entry type's default; null on a page that is not an entry. */
+  readonly typeDefault: PageType | null;
+}
+
+/**
+ * A type's own `seoType`, else its shape: a flat type holds posts, a
+ * hierarchical one holds pages.
+ */
+export function entryTypePageType(
+  type: Pick<EntryTypeOptions, "isHierarchical" | "seoType">,
+): PageType {
+  return type.seoType ?? (type.isHierarchical === true ? "website" : "article");
+}
+
+/**
+ * One answer, so `og:type`, the `article:*` tags and the graph cannot
+ * disagree. Only an entry has article facts; on one, a template's `og:type`
+ * wins.
+ */
+export function resolvePageType(
+  meta: readonly DocumentMeta[] | undefined,
+  sources: PageTypeSources,
+): PageType {
+  if (sources.typeDefault === null) return "website";
+  const declared = meta?.find((entry) => entry.property === "og:type");
+  if (declared !== undefined) {
+    return declared.content === "article" ? "article" : "website";
+  }
+  if (sources.override !== null) {
+    return sources.override === WEB_PAGE ? "website" : "article";
+  }
+  return sources.typeDefault;
 }
 
 function hasCanonical(link: readonly DocumentLink[] | undefined): boolean {
@@ -222,6 +266,11 @@ function hasJsonLd(scripts: readonly DocumentScript[] | undefined): boolean {
   );
 }
 
+function articleSubtype(overrides: SeoOverrides): SchemaType {
+  const chosen = overrides.schemaType;
+  return chosen === null || chosen === WEB_PAGE ? DEFAULT_SCHEMA_TYPE : chosen;
+}
+
 /** What the site turned off when it installed the plugin. */
 export interface SeoHeadOptions {
   readonly articleTags: boolean;
@@ -277,16 +326,27 @@ export async function applySeoHead(
   // `pageFacts` also carries an author archive's author, which is not the
   // byline of anything — only an entry has one.
   const byline = isEntry && author ? author : null;
+  // Open Graph wants the author's profile, so a site without author archives
+  // has no address to give.
+  const authorUrl =
+    byline && ctx.config.routes.author
+      ? absolute(ctx, `/authors/${byline.slug}`)
+      : null;
   const ogImage = await resolveOgImage(ctx, data, {
     override: overrides.ogImage,
     siteDefault: seoSettings.defaultOgImage,
+  });
+  const registered = entry ? ctx.plugins.entryTypes.get(entry.type) : undefined;
+  const pageType = resolvePageType(manifest.meta, {
+    override: overrides.schemaType,
+    typeDefault: isEntry ? entryTypePageType(registered ?? {}) : null,
   });
   const withMeta = seoHeadMeta(manifest, {
     canonical,
     title: nonEmpty(title),
     searchTitle,
     description,
-    ogType: isEntry ? "article" : "website",
+    ogType: pageType,
     ogImage,
     siteName,
     ogLocale: toOgLocale(ctx.locale.code),
@@ -296,7 +356,7 @@ export async function applySeoHead(
     nofollow: !seoSettings.indexable || overrides.nofollow,
     published,
     modified,
-    author: byline ? (byline.name ?? byline.slug) : null,
+    author: authorUrl,
     articleTags: options.articleTags,
     errorPage: kind === "error",
     verification,
@@ -330,9 +390,9 @@ export async function applySeoHead(
     published,
     modified,
     author: byline
-      ? { slug: byline.slug, name: byline.name ?? byline.slug }
+      ? { slug: byline.slug, name: byline.name ?? byline.slug, url: authorUrl }
       : null,
-    articleType: isEntry ? (overrides.schemaType ?? DEFAULT_SCHEMA_TYPE) : null,
+    articleType: pageType === "article" ? articleSubtype(overrides) : null,
     represents: seoSettings.represents,
     breadcrumbs: breadcrumbTrail(ctx, data),
   });

@@ -75,7 +75,7 @@ Every option is optional. Three of them switch off a default, for a site whose h
 | Option           | `false` removes                                                                                                                                                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `llmsTxt`        | The [`/llms.txt`](#llmstxt) route. The path falls through to the content router and 404s, or a site plugin can register its own `/llms.txt` without a conflict. `seo.llmsTxt` is never applied.                                                                    |
-| `articleTags`    | `article:published_time`, `article:modified_time` and `article:author` on an entry page. `og:type` still says `article`.                                                                                                                                           |
+| `articleTags`    | `article:published_time`, `article:modified_time` and `article:author` on an [article page](#article-or-website). Its `og:type` still says `article`.                                                                                                              |
 | `structuredData` | The [structured-data graph](#structured-data). It is never built, no `application/ld+json` script is appended, and none of the `seo.schema` filters is applied. [`Breadcrumbs` and `breadcrumbTrail`](#breadcrumbs) still work, because a theme calls them itself. |
 
 ```ts no-typecheck title="plumix.config.ts"
@@ -94,7 +94,26 @@ Every public page gets:
 - `twitter:card` — `summary_large_image` when a social image resolved, `summary` when none did.
 - One `<script type="application/ld+json">` holding the page's [structured-data graph](#structured-data), on every page that is indexable, unless the site set [`structuredData: false`](#options).
 
-A single entry additionally gets `article:published_time`, `article:modified_time` and `article:author`, unless the site set [`articleTags: false`](#options). An archive, a term page, an author page, a date page and the front page are `og:type: website` and carry none of the three.
+A single entry that is an [article](#article-or-website) additionally gets `article:published_time`, `article:modified_time` and `article:author`, unless the site set [`articleTags: false`](#options). `article:author` is the absolute URL of the author's archive (`/authors/<slug>`, under the site's base path), because Open Graph reads it as a profile; a site that turned the author route off gets no `article:author`. Every other page is `og:type: website` and carries none of the three.
+
+### Article or website
+
+Each page is one of two kinds, and that one answer decides its `og:type`, whether it carries the `article:*` tags, and whether its [graph](#structured-data) has an article piece, so the three never disagree. It is resolved in this order:
+
+1. **The template's own `og:type`.** A `document` that declares `og:type` keeps it, and the page is an article only when that value is `article`.
+2. **The editor's [Content type](#per-entry-and-per-term-overrides).** **Web page** makes the entry a website; an Article subtype makes it an article.
+3. **The entry type's `seoType`**, `"article"` or `"website"`.
+4. **The entry type's shape.** A flat type, such as blog posts, is an article; a hierarchical one, such as pages, is a website.
+
+A page that is not an entry (an archive, a term page, an author page, a date page, the front page) is always a website. To make a hierarchical type an article, or a flat one a website, set `seoType` where the type is registered:
+
+```ts no-typecheck
+ctx.registerEntryType("guide", {
+  label: "Guides",
+  isHierarchical: true,
+  seoType: "article",
+});
+```
 
 A page that was not found is the exception: it carries the `robots` directive and nothing else from this plugin — no description, no `og:*`, no `twitter:*`, no verification tags and no structured data. The URL resolved to nothing, so there is no page to describe or share. The directive still follows **Index pages that were not found**.
 
@@ -148,9 +167,9 @@ Every publicly-visible entry type and taxonomy gets a **Search & social** box:
 | Social image URL                 | `seo_og_image`    | Link 2 of the chain above.                                                                 |
 | Hide from search engines         | `seo_noindex`     | `noindex` in the head **and** out of the sitemap.                                          |
 | Do not follow links on this page | `seo_nofollow`    | `nofollow` in the head.                                                                    |
-| Content type                     | `seo_schema_type` | The schema.org type of the entry's article piece. Entry box only.                          |
+| Content type                     | `seo_schema_type` | Web page, or the schema.org type of the entry's article piece. Entry box only.             |
 
-**Content type** is on the entry box and not the term box: only an entry has an article piece in the [structured-data graph](#structured-data) for the choice to retype, so a term box carrying the control would offer an answer nothing reads. The other six fields are on both.
+**Content type** is on the entry box and not the term box: only an entry can be an [article](#article-or-website), so a term box carrying the control would offer an answer nothing reads. The other six fields are on both.
 
 A search title is the page's title, so a theme's `titleTemplate` still composes it — `How to knead dough · Demo` under `"%s · Demo"`. A page with no override sets no title at all and keeps whatever core resolved.
 
@@ -282,7 +301,7 @@ An entry page carries all seven pieces:
 | `image`      | `ImageObject`              | `<canonical>#primaryimage`                |
 | `author`     | `Person`                   | `<site>/#/schema/person/<slug>`           |
 
-Every identifier is derived from the site root and the page's canonical URL, so two renders of one URL produce the same graph. Under a base path the site root is the prefix itself, so `<site>` reads `https://example.com/blog` and the identifiers follow it. A page that is not an entry — an archive, a term, an author, a date — carries the site-level pieces and no `article` or `author`. A piece with nothing to say is absent rather than empty: a page with no social image has no `ImageObject` and no `primaryImageOfPage` pointing at one, and a site that never set a title publishes no `name` rather than its own URL.
+Every identifier is derived from the site root and the page's canonical URL, so two renders of one URL produce the same graph. Under a base path the site root is the prefix itself, so `<site>` reads `https://example.com/blog` and the identifiers follow it. A page that is not an [article](#article-or-website) (a website entry, an archive, a term, an author, a date) carries the site-level pieces and no `article` or `author`. The `author` piece carries the byline's `name` and, where the site serves author archives, the archive's `url`. A piece with nothing to say is absent rather than empty: a page with no social image has no `ImageObject` and no `primaryImageOfPage` pointing at one, and a site that never set a title publishes no `name` rather than its own URL.
 
 The `ImageObject` is the page's own image — an entry's explicit choice, a generated card, or its featured photo. The site-wide **Default social image URL** is deliberately not used: it is a sharing fallback, so every article would otherwise claim the same bytes as its own `#primaryimage`, and `Article.image` is read as representative of the article it hangs off. The page is still shared with it.
 
@@ -327,7 +346,7 @@ ctx.filters.add(seo.schema.graph, (graph, { facts }, appCtx) => [
 
 ### Picking the type
 
-An entry's article piece is an `Article` unless the editor says otherwise. The **Content type** field on the SEO box offers `Article`, `BlogPosting`, `NewsArticle` and `TechArticle`; a stored value outside that roster is not an answer and the inferred type stands. The choice retypes the piece and nothing else — the `@id` and every reference to it stay where they were.
+An article entry's article piece is an `Article` unless the editor says otherwise. The **Content type** field on the SEO box offers **Web page**, which makes the entry a [website](#article-or-website) with no article piece, then `Article`, `BlogPosting`, `NewsArticle` and `TechArticle`, which make it an article of that type. Left unset, the entry follows its type. A stored value outside that roster is not an answer and the type's own answer stands. An Article subtype retypes the piece and nothing else: the `@id` and every reference to it stay where they were.
 
 ### Serialization
 

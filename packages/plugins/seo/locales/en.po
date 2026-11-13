@@ -126,7 +126,12 @@ msgstr "Content type"
 #. js-lingui-explicit-id
 #: src/overrides.ts
 msgid "plugin.seo.box.schema_type.description"
-msgstr "How structured data files this entry. Defaults to an article."
+msgstr "What this entry is shared and filed as. Defaults to its type's own."
+
+#. js-lingui-explicit-id
+#: src/overrides.ts
+msgid "plugin.seo.box.schema_type.web_page"
+msgstr "Web page"
 
 #. js-lingui-explicit-id
 #: src/settings.ts

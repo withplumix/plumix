@@ -11,6 +11,9 @@ import { nonEmpty } from "./settings.js";
 export type { SeoMetaBag } from "./meta-keys.js";
 export { SEO_META_KEYS } from "./meta-keys.js";
 
+/** The box's answer that the page is not an article: schema.org's own name. */
+export const WEB_PAGE = "WebPage" as const;
+
 /** What an editor answered for one entry or term. Every arm optional. */
 export interface SeoOverrides {
   /** Replaces the page title in `<title>` and `og:title`. */
@@ -23,8 +26,11 @@ export interface SeoOverrides {
   readonly ogImage: string | null;
   readonly noindex: boolean;
   readonly nofollow: boolean;
-  /** Replaces the schema.org type the structured-data graph inferred. */
-  readonly schemaType: SchemaType | null;
+  /**
+   * Replaces what the entry's type says the page is: {@link WEB_PAGE}, or the
+   * Article subtype the graph's article piece takes.
+   */
+  readonly schemaType: SchemaType | typeof WEB_PAGE | null;
 }
 
 const D = {
@@ -77,8 +83,10 @@ const D = {
   },
   schemaTypeDescription: {
     id: "plugin.seo.box.schema_type.description",
-    message: "How structured data files this entry. Defaults to an article.",
+    message:
+      "What this entry is shared and filed as. Defaults to its type's own.",
   },
+  webPage: { id: "plugin.seo.box.schema_type.web_page", message: "Web page" },
 } as const satisfies Record<string, Label>;
 
 /**
@@ -140,7 +148,7 @@ export const SEO_META_FIELDS: readonly MetaBoxFieldInput[] = [
   },
 ];
 
-/** Adds the schema type, which only an entry's article piece reads. */
+/** Adds the content type, which only an entry page reads. */
 export const SEO_ENTRY_FIELDS: readonly MetaBoxFieldInput[] = [
   ...SEO_META_FIELDS,
   {
@@ -149,9 +157,13 @@ export const SEO_ENTRY_FIELDS: readonly MetaBoxFieldInput[] = [
     inputType: "select",
     label: D.schemaType,
     description: D.schemaTypeDescription,
-    // schema.org type names, not prose — the same word in every language, so
-    // they are spelled here rather than sent through the catalogs.
-    options: SCHEMA_TYPES.map((type) => ({ value: type, label: type })),
+    // The Article subtypes are schema.org type names, not prose — the same word
+    // in every language, so they are spelled here rather than sent through the
+    // catalogs.
+    options: [
+      { value: WEB_PAGE, label: D.webPage },
+      ...SCHEMA_TYPES.map((type) => ({ value: type, label: type })),
+    ],
   },
 ];
 
@@ -160,6 +172,12 @@ export const SEO_BOX_LABELS = {
   label: D.boxLabel,
   description: D.boxDescription,
 } as const;
+
+function toPageChoice(
+  value: string | null,
+): SchemaType | typeof WEB_PAGE | null {
+  return value === WEB_PAGE ? WEB_PAGE : toSchemaType(value);
+}
 
 /** Read one entity's SEO answers off its meta bag. */
 export function readSeoOverrides(meta: SeoMetaBag): SeoOverrides {
@@ -175,7 +193,7 @@ export function readSeoOverrides(meta: SeoMetaBag): SeoOverrides {
     nofollow: bag[SEO_META_KEYS.nofollow] === true,
     // Narrowed to the roster: a stored value nothing offered is not an answer,
     // and an unvetted string would become a schema.org type on the page.
-    schemaType: toSchemaType(nonEmpty(bag[SEO_META_KEYS.schemaType])),
+    schemaType: toPageChoice(nonEmpty(bag[SEO_META_KEYS.schemaType])),
   };
 }
 

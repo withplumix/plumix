@@ -63,6 +63,17 @@ export { serializeJsonLd } from "./json-ld.js";
 export type { BreadcrumbItem } from "./breadcrumbs.js";
 export { Breadcrumbs, breadcrumbTrail } from "./breadcrumbs.js";
 
+declare module "plumix" {
+  interface EntryTypeOptions {
+    /**
+     * Drives `og:type`, the `article:*` tags and the Article piece. Default:
+     * `article` for a flat type, `website` for a hierarchical one; the
+     * entry's Content type and its template's `og:type` outrank it.
+     */
+    readonly seoType?: "article" | "website";
+  }
+}
+
 /** How the plugin is installed. Every field is optional. */
 export interface SeoOptions {
   /** Which entry types and taxonomies carry the per-entry SEO box. */
@@ -74,8 +85,8 @@ export interface SeoOptions {
   readonly llmsTxt?: boolean;
   /**
    * Write `article:published_time`, `article:modified_time` and
-   * `article:author` on an entry page. On by default; `false` drops the whole
-   * `article:*` family, while `og:type` still says `article`.
+   * `article:author` on an article page (see `seoType`). On by default;
+   * `false` drops them, while `og:type` still says `article`.
    */
   readonly articleTags?: boolean;
   /**

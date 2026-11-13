@@ -1,4 +1,9 @@
-import type { DocumentManifest, JsonValue } from "plumix";
+import type {
+  AnyPluginDescriptor,
+  DocumentManifest,
+  EntryTypeOptions,
+  JsonValue,
+} from "plumix";
 import type { DispatcherHarness, testSite } from "plumix/test";
 import {
   defineFilter,
@@ -172,6 +177,7 @@ describe("head meta", () => {
     const author = await h.factory.user.create({
       role: "admin",
       name: "Ada Lovelace",
+      slug: "ada",
     });
     await h.factory.entry.create({
       type: "post",
@@ -189,9 +195,27 @@ describe("head meta", () => {
       '<meta property="article:published_time" content="2026-01-02T03:04:05.000Z"/>',
     );
     expect(head).toContain('<meta property="article:modified_time"');
+    // A profile URL, which is what Open Graph's `article:author` takes; a
+    // name fails to parse as one.
     expect(head).toContain(
-      '<meta property="article:author" content="Ada Lovelace"/>',
+      '<meta property="article:author" content="https://cms.example/authors/ada"/>',
     );
+  });
+
+  test("a site with no author archives names no article:author", async () => {
+    const h = await createDispatcherHarness({
+      config: {
+        plugins: [blogPlugin, seo()],
+        theme: theme,
+        routes: { author: false },
+      },
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, "https://cms.example/post/hello");
+
+    expect(head).toContain('property="article:published_time"');
+    expect(head).not.toContain('property="article:author"');
   });
 
   test("with article tags off, an entry page carries none and stays an article", async () => {
@@ -354,6 +378,172 @@ describe("head meta", () => {
     expect(head).not.toContain('property="og:');
     // Core still declares where the page lives.
     expect(head).toContain('rel="canonical"');
+  });
+});
+
+describe("what a page is shared as", () => {
+  function graphTypes(head: string): readonly JsonValue[] {
+    const body =
+      /<script type="application\/ld\+json"[^>]*>(.*?)<\/script>/s.exec(
+        head,
+      )?.[1];
+    if (body === undefined) return [];
+    const doc = JSON.parse(body) as {
+      readonly "@graph": readonly Record<string, JsonValue>[];
+    };
+    return doc["@graph"].map((node) => node["@type"] ?? null);
+  }
+
+  const pagesPlugin = definePlugin("pages", {
+    setup: (ctx) => {
+      ctx.registerEntryType("page", {
+        label: "Pages",
+        isPublic: true,
+        isHierarchical: true,
+        supports: ["title", "editor"],
+      });
+    },
+  });
+
+  function sharingHarness(
+    options: {
+      readonly document?: DocumentManifest;
+      readonly extra?: readonly AnyPluginDescriptor[];
+    } = {},
+  ): Promise<DispatcherHarness> {
+    const templates = options.document
+      ? [
+          fallback(() => null),
+          entry(
+            defineTemplate({ document: options.document, render: () => null }),
+          ),
+        ]
+      : [fallback(() => null)];
+    return createDispatcherHarness({
+      config: {
+        plugins: [blogPlugin, pagesPlugin, ...(options.extra ?? []), seo()],
+        theme: defineTheme({ templates }),
+      },
+    });
+  }
+
+  async function seedPage(
+    h: DispatcherHarness,
+    meta?: Record<string, JsonValue>,
+  ): Promise<void> {
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "page",
+      slug: "about",
+      title: "About",
+      ...(meta === undefined ? {} : { meta }),
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+  }
+
+  const PAGE_URL = "https://cms.example/page/about";
+  const POST = "https://cms.example/post/hello";
+
+  test("a post is an article: its tags and its Article piece", async () => {
+    const h = await sharingHarness();
+    await seedPost(h);
+
+    const head = await dispatchHead(h, POST);
+
+    expect(head).toContain('<meta property="og:type" content="article"/>');
+    expect(head).toContain('property="article:published_time"');
+    expect(graphTypes(head)).toContain("Article");
+  });
+
+  test("a page is a website: no article tags and no Article piece", async () => {
+    const h = await sharingHarness();
+    await seedPage(h);
+
+    const head = await dispatchHead(h, PAGE_URL);
+
+    expect(head).toContain('<meta property="og:type" content="website"/>');
+    expect(head).not.toContain('property="article:');
+    expect(graphTypes(head)).toContain("WebPage");
+    expect(graphTypes(head)).not.toContain("Article");
+    expect(graphTypes(head)).not.toContain("Person");
+  });
+
+  test("a template's own og:type of website keeps a post free of article facts", async () => {
+    const h = await sharingHarness({
+      document: { meta: [{ property: "og:type", content: "website" }] },
+    });
+    await seedPost(h);
+
+    const head = await dispatchHead(h, POST);
+
+    expect(head.match(/property="og:type"/g)).toHaveLength(1);
+    expect(head).toContain('<meta property="og:type" content="website"/>');
+    expect(head).not.toContain('property="article:');
+    expect(graphTypes(head)).not.toContain("Article");
+  });
+
+  test("a template's own og:type of article makes a page one", async () => {
+    const h = await sharingHarness({
+      document: { meta: [{ property: "og:type", content: "article" }] },
+    });
+    await seedPage(h);
+
+    const head = await dispatchHead(h, PAGE_URL);
+
+    expect(head).toContain('property="article:published_time"');
+    expect(graphTypes(head)).toContain("Article");
+  });
+
+  test("a flat type that declares seoType website is not an article", async () => {
+    const notes = definePlugin("notes", {
+      setup: (ctx) => {
+        ctx.registerEntryType("note", {
+          label: "Notes",
+          isPublic: true,
+          seoType: "website",
+        });
+      },
+    });
+    const h = await sharingHarness({ extra: [notes] });
+    const author = await h.seedUser("admin");
+    await h.factory.entry.create({
+      type: "note",
+      slug: "n",
+      title: "N",
+      content: null,
+      status: "published",
+      authorId: author.id,
+      publishedAt: new Date(),
+    });
+
+    const head = await dispatchHead(h, "https://cms.example/note/n");
+
+    expect(head).toContain('<meta property="og:type" content="website"/>');
+    expect(graphTypes(head)).not.toContain("Article");
+  });
+
+  test("an editor's Web page answer makes a post a website", async () => {
+    const h = await sharingHarness();
+    await seedPost(h, { meta: { seo_schema_type: "WebPage" } });
+
+    const head = await dispatchHead(h, POST);
+
+    expect(head).toContain('<meta property="og:type" content="website"/>');
+    expect(head).not.toContain('property="article:');
+    expect(graphTypes(head)).not.toContain("Article");
+  });
+
+  test("an editor's Article subtype makes a page that article", async () => {
+    const h = await sharingHarness();
+    await seedPage(h, { seo_schema_type: "TechArticle" });
+
+    const head = await dispatchHead(h, PAGE_URL);
+
+    expect(head).toContain('<meta property="og:type" content="article"/>');
+    expect(graphTypes(head)).toContain("TechArticle");
   });
 });
 
@@ -1098,6 +1288,14 @@ describe("the plugin's procedures on a test site", () => {
     expectTypeOf<Rpc["seo"]["preview"]>()
       .parameter(0)
       .toEqualTypeOf<{ entryId: number }>();
+  });
+});
+
+describe("seoType on an entry type", () => {
+  test("is accepted on registerEntryType's options where the plugin is installed", () => {
+    expectTypeOf<EntryTypeOptions["seoType"]>().toEqualTypeOf<
+      "article" | "website" | undefined
+    >();
   });
 });
 
