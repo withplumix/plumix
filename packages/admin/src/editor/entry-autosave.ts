@@ -10,12 +10,13 @@ type EntryUpdatePatch = Omit<EntryUpdateInput, "id" | "ifMatch">;
 
 /**
  * One write from the editor's copy of an entry: a group's patch, publishing
- * the entry, or publishing its pending draft.
+ * the entry or its pending draft, or restoring a revision.
  */
 export type EntryWrite =
   | { readonly kind: "update"; readonly patch: EntryUpdatePatch }
   | { readonly kind: "publish" }
-  | { readonly kind: "publishDraft" };
+  | { readonly kind: "publishDraft" }
+  | { readonly kind: "restore"; readonly revisionId: number };
 
 /**
  * The hook owns the last-saved `S`; the group only reads, diffs and confirms.
@@ -67,9 +68,10 @@ interface GroupRunner {
   readonly pending: () => boolean;
   /** Whether the group's last write went unanswered: refused or failed. */
   readonly held: () => boolean;
-  /** Count `work` saved if this group sent it; whether it had gone unanswered,
-   *  so Keep mine is what landed it. */
-  readonly landed: (work: EntryWrite, response: EntryRow) => boolean;
+  readonly landed: (
+    work: EntryWrite,
+    response: EntryRow,
+  ) => { readonly kept: boolean };
   /** Send the group's unsaved edit now, debounced or not. */
   readonly save: () => Promise<void>;
 }
@@ -141,13 +143,13 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       pending: debouncer.pending,
       held: () => held,
       landed: (work, response) => {
-        if (sent?.work !== work) return false;
+        if (sent?.work !== work) return { kept: false };
         const kept = held;
         saved = latest.groups[key].commit(saved, sent.next, response);
         latest.groups[key].onSaved?.(sent.work.patch, response);
         sent = undefined;
         held = false;
-        return kept;
+        return { kept };
       },
       save: () => {
         debouncer.cancel();
@@ -179,9 +181,9 @@ export function createEntryAutosave<G extends Record<string, unknown>>(
       },
       wrote: (work, response) => {
         failing = false;
-        // Keep mine landed: the edits the conflict held back go out now, from
-        // the token it answered with.
-        if (runners.some((r) => r.landed(work, response))) {
+        // Never on an ordinary landing: an edit whose write failed would
+        // fail again with no new edit to fix it.
+        if (runners.some((r) => r.landed(work, response).kept)) {
           for (const r of runners) if (r.held()) void r.save();
         }
         reportUnsaved();

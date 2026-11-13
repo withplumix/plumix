@@ -1289,6 +1289,29 @@ test.describe("editor publishing & autosave", () => {
       ).toBe(0);
     });
 
+    test("Keep mine on a Publish that found the entry changed publishes it", async ({
+      page,
+    }) => {
+      const { updates, saveElsewhere } = await mockSavedEntry(page);
+      await page.goto("entries/posts/1/edit");
+      await page.getByTestId("plumix-tab-page").click();
+      await expect(page.getByTestId("entry-slug-input")).toHaveValue("entry-1");
+      saveElsewhere({ slug: "saved-elsewhere" });
+      await page.getByTestId("plumix-editor-publish-button").click();
+      await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+
+      await page.getByTestId("entry-conflict-keep-mine").click();
+
+      await expect(page.getByTestId("toast-success")).toBeVisible();
+      await expect(
+        page.getByTestId("plumix-editor-publish-button"),
+      ).toBeDisabled();
+      expect(updates.at(-1)).toMatchObject({
+        ifMatch: "e1",
+        status: "published",
+      });
+    });
+
     test("stays open on Escape and on a click outside it", async ({ page }) => {
       await openConflictDialog(page);
 
@@ -2052,7 +2075,7 @@ test.describe("editor revision preview", () => {
     expect(saved).toHaveLength(1);
   });
 
-  test("Restore from the preview banner restores the revision, and a stale restore shows the conflict inline", async ({
+  test("a stale Restore opens the conflict dialog, and Keep mine restores from the token it reported", async ({
     page,
   }) => {
     await installPreviewMocks(page);
@@ -2089,16 +2112,69 @@ test.describe("editor revision preview", () => {
 
     await expect(restore).toBeDisabled();
     release?.();
-    await expect(
-      page.getByTestId("revision-preview-restore-error"),
-    ).toBeVisible();
-    await restore.click();
+    await expect(page.getByTestId("entry-conflict-dialog")).toBeVisible();
+    await page.getByTestId("entry-conflict-keep-mine").click();
     await expect.poll(() => page.url()).not.toContain("revision=");
     await expect(page.getByTestId("revision-preview-banner")).toHaveCount(0);
     expect(restores).toEqual([
       { revisionId: 42, ifMatch: "rev0" },
-      { revisionId: 42, ifMatch: "rev0" },
+      { revisionId: 42, ifMatch: "rev1" },
     ]);
+  });
+
+  test("after a Restore, the next edit saves from the token the restore answered with", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    let current = "rev0";
+    const updates: Record<string, unknown>[] = [];
+    await page.route("**/_plumix/rpc/entry/get", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: entryBody({ ...liveEntry(), etag: current }),
+      }),
+    );
+    await page.route("**/_plumix/rpc/entry/revisions/restore", (route) => {
+      current = "rev1";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: entryBody({ ...liveEntry(), etag: current }),
+      });
+    });
+    await page.route("**/_plumix/rpc/entry/update", (route) => {
+      const { ifMatch, ...changes } = (
+        route.request().postDataJSON() as { json: Record<string, unknown> }
+      ).json;
+      updates.push({ ifMatch, ...changes });
+      if (ifMatch !== current) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: rpcEtagConflictBody(current, T_REV),
+        });
+      }
+      current = "rev2";
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: entryBody({ ...liveEntry(), etag: current }),
+      });
+    });
+    await page.goto("entries/posts/1/edit?revision=42");
+    await page.getByTestId("revision-preview-restore").click();
+    await expect.poll(() => page.url()).not.toContain("revision=");
+    await page.getByTestId("plumix-tab-page").click();
+
+    await page.getByTestId("entry-slug-input").fill("after-restore");
+
+    await expect.poll(() => updates.length).toBe(1);
+    expect(updates[0]).toMatchObject({
+      ifMatch: "rev1",
+      slug: "after-restore",
+    });
+    await expect(page.getByTestId("entry-conflict-dialog")).toHaveCount(0);
   });
 });
 

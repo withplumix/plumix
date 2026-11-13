@@ -24,6 +24,7 @@ import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { describeRpcError } from "@plumix/core/admin";
 
 import type { EntryCopyEvents, EntryRow } from "./-entry-copy.js";
+import { ENTRY_COPY_FAILED } from "./-entry-copy.js";
 
 const M = {
   saveFailed: defineMessage({
@@ -47,7 +48,6 @@ interface PlainFormRouteInnerProps {
   readonly supportsRevisions: boolean;
   readonly capabilities: readonly string[];
   readonly editing: EditingCopyState<EntryWrite, EntryRow>;
-  /** Where the form hears its copy's events while it is mounted. */
   readonly listen: (events: EntryCopyEvents | null) => void;
 }
 
@@ -114,7 +114,13 @@ export function PlainFormRouteInner({
   useEffect(() => {
     listen({
       wrote: autosave.wrote,
-      failed: autosave.failed,
+      failed: (err, cause) => {
+        if (cause !== "reload" && cause !== "takeOver") {
+          autosave.failed(err);
+          return;
+        }
+        setServerError(describeRpcError(err, {}, ENTRY_COPY_FAILED[cause]));
+      },
       discard: autosave.cancel,
     });
     return () => listen(null);

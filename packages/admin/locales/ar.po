@@ -776,14 +776,14 @@ msgid "core.adminNav.keyword.accounts"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/components/profile/connected-apps.tsx
-msgid "connectedApps.col.actions"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.actions"
 msgstr "الإجراءات"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.actions"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/$id/edit.tsx
@@ -1013,11 +1013,6 @@ msgid "userEdit.error.reassignToSelf"
 msgstr "لا يمكن إعادة التعيين للمستخدم الذي يتم حذفه."
 
 #. js-lingui-explicit-id
-#: src/components/profile/connected-apps.tsx
-msgid "connectedApps.revoke.cancel"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx
 msgid "userInvite.cancel"
 msgstr "إلغاء"
@@ -1066,6 +1061,11 @@ msgstr "إلغاء"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.cancel"
 msgstr "إلغاء"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.cancel"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/passkeys-card.tsx
@@ -1383,6 +1383,11 @@ msgid "settings.page.loadFailed"
 msgstr "تعذّر تحميل هذه الإعدادات. حاول مرة أخرى."
 
 #. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-entry-copy.ts
+msgid "editor.copy.reloadFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.loadFailed"
 msgstr "تعذّر تحميل المستخدمين. حاول مرة أخرى."
@@ -1526,6 +1531,11 @@ msgstr "تعذّر تسجيل الدخول. حاول مرة أخرى."
 #: src/components/profile/language-card.tsx
 msgid "profile.language.error"
 msgstr "تعذّر تبديل اللغة. يرجى المحاولة مرة أخرى."
+
+#. js-lingui-explicit-id
+#: src/routes/_editor/entries/$slug/$id/-entry-copy.ts
+msgid "editor.copy.takeOverFailed"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/breadcrumbs.ts
@@ -2240,14 +2250,14 @@ msgid "users.list.column.lastSignIn"
 msgstr "آخر دخول"
 
 #. js-lingui-explicit-id
-#: src/components/profile/connected-apps.tsx
-msgid "connectedApps.col.lastUsed"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.col.lastUsed"
 msgstr "آخر استخدام"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.col.lastUsed"
+msgstr ""
 
 #. date: a locale-formatted date string
 #. js-lingui-explicit-id
@@ -2563,11 +2573,6 @@ msgid "profile.passkeys.enroll.networkError"
 msgstr "خطأ شبكة. تحقق من اتصالك وحاول مرة أخرى."
 
 #. js-lingui-explicit-id
-#: src/components/profile/connected-apps.tsx
-msgid "connectedApps.never"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/routes/_authenticated/users/index.tsx
 msgid "users.list.row.lastSignIn.never"
 msgstr "أبداً"
@@ -2581,6 +2586,11 @@ msgstr "أبداً"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.never"
 msgstr "أبداً"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.never"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/lib/core-type-labels-i18n.ts
@@ -3112,16 +3122,6 @@ msgid "editor.revisions.sheet.title"
 msgstr "المراجعات"
 
 #. js-lingui-explicit-id
-#: src/components/profile/connected-apps.tsx
-msgid "connectedApps.revoke.button"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: src/components/profile/connected-apps.tsx
-msgid "connectedApps.revoke.confirm"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.button"
 msgstr "إبطال"
@@ -3132,15 +3132,19 @@ msgid "apiTokens.revoke.confirm"
 msgstr "إبطال"
 
 #. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.confirm"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.button"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/components/profile/sessions-card.tsx
 msgid "profile.sessions.revoke.button"
 msgstr "إبطال"
-
-#. name: the connected app's name, from its OAuth client metadata (e.g. 'Claude')
-#. js-lingui-explicit-id
-#: src/components/profile/connected-apps.tsx
-msgid "connectedApps.revoke.title"
-msgstr ""
 
 #. name: the user-chosen token nickname (e.g. 'CI deploy key')
 #. js-lingui-explicit-id
@@ -3148,15 +3152,21 @@ msgstr ""
 msgid "apiTokens.revoke.title"
 msgstr "إبطال \"{name}\"؟"
 
+#. name: the connected app's name, from its OAuth client metadata (e.g. 'Claude')
 #. js-lingui-explicit-id
 #: src/components/profile/connected-apps.tsx
-msgid "connectedApps.revoke.pending"
+msgid "connectedApps.revoke.title"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.revoke.pending"
 msgstr "جارٍ الإبطال…"
+
+#. js-lingui-explicit-id
+#: src/components/profile/connected-apps.tsx
+msgid "connectedApps.revoke.pending"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/users/create.tsx

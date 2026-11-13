@@ -58,6 +58,7 @@ import type { ResolvedMeta } from "@plumix/core";
 import type { BlockNode, EntryContent } from "@plumix/core/blocks";
 import type { EntryTypeManifestEntry } from "@plumix/core/manifest";
 import { PlumixEditor } from "@plumix/admin-editor";
+import { describeRpcError } from "@plumix/core/admin";
 import {
   coreBlocks,
   createBlockRegistry,
@@ -73,7 +74,12 @@ import {
 import { idPathParam } from "@plumix/core/validation";
 
 import type { EntryCopyEvents, EntryRow } from "./-entry-copy.js";
-import { readSavedEntry, writeEntry } from "./-entry-copy.js";
+import {
+  ENTRY_COPY_FAILED,
+  entryCopy,
+  readSavedEntry,
+  writeEntry,
+} from "./-entry-copy.js";
 import { PlainFormRouteInner } from "./-plain-form-route.js";
 import { restoreErrorDescriptor } from "./-restore-error.js";
 
@@ -227,12 +233,27 @@ function EditorRoute(): ReactNode {
   // leaves the source at "live", so this nonce forces it.
   const [reseedNonce, setReseedNonce] = useState(0);
   const reseed = useCallback(() => setReseedNonce((n) => n + 1), []);
-  const events = useRef<EntryCopyEvents | null>(null);
-  const listen = useCallback((next: EntryCopyEvents | null) => {
-    events.current = next;
-  }, []);
-  // The queue runs one write at a time, so a failure is the latest one's.
-  const writing = useRef<EntryWrite | undefined>(undefined);
+  // One per entry: it pairs each failure with the attempt that threw it.
+  const copy = useMemo(
+    () =>
+      entryCopy({
+        write: (ifMatch, work) => writeEntry(id, ifMatch, work),
+        reload: async () => {
+          const [saved] = await Promise.all([
+            queryClient.query({
+              ...orpc.entry.get.queryOptions({ input: { id, preview: true } }),
+              staleTime: 0,
+            }),
+            queryClient.invalidateQueries({
+              queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+            }),
+          ]);
+          reseed();
+          return saved.etag;
+        },
+      }),
+    [id, queryClient, reseed],
+  );
   // Held across reseeds, so remounting the editor never gives the lease up.
   const editing = useEditingCopy({
     kind: "entry",
@@ -240,29 +261,10 @@ function EditorRoute(): ReactNode {
     etag: entry.etag,
     userId: user.id,
     copy: ENTRY_EDITING_COPY,
-    save: async (ifMatch, work: EntryWrite) => {
-      writing.current = work;
-      const saved = await writeEntry(id, ifMatch, work);
-      events.current?.wrote(work, saved);
-      return saved;
-    },
+    save: copy.save,
     readSaved: () => readSavedEntry(id),
-    reload: async () => {
-      writing.current = undefined;
-      events.current?.discard();
-      const [saved] = await Promise.all([
-        queryClient.query({
-          ...orpc.entry.get.queryOptions({ input: { id, preview: true } }),
-          staleTime: 0,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
-        }),
-      ]);
-      reseed();
-      return saved.etag;
-    },
-    onFailed: (err) => events.current?.failed(err, writing.current),
+    reload: copy.reload,
+    onFailed: copy.onFailed,
     onBack: () => {
       void navigate({
         to: "/entries/$slug",
@@ -281,6 +283,8 @@ function EditorRoute(): ReactNode {
         id={id}
         revisionId={revision}
         capabilities={user.capabilities}
+        editing={editing}
+        listen={copy.listen}
       />
     );
   }
@@ -298,7 +302,7 @@ function EditorRoute(): ReactNode {
         supportsRevisions={supportsRevisions(entryType)}
         capabilities={user.capabilities}
         editing={editing}
-        listen={listen}
+        listen={copy.listen}
       />
     );
   }
@@ -314,7 +318,7 @@ function EditorRoute(): ReactNode {
       userId={user.id}
       onReseed={reseed}
       editing={editing}
-      listen={listen}
+      listen={copy.listen}
     />
   );
 }
@@ -325,7 +329,6 @@ interface EntryEditorProps {
   readonly userId: number;
   readonly onReseed: () => void;
   readonly editing: EditingCopyState<EntryWrite, EntryRow>;
-  /** Where the editor hears its copy's events while it is mounted. */
   readonly listen: (events: EntryCopyEvents | null) => void;
 }
 
@@ -920,20 +923,12 @@ function EntryEditor({
     [id, entryTypeName, queryClient],
   );
   // Flushing first, then queueing behind autosave, means a publish neither
-  // drops the last edit nor races it for the token. A refused one resolves
-  // empty.
+  // drops the last edit nor races it for the token. It finishes in `wrote`,
+  // where Keep mine lands one too.
   const publish = useMutation({
     mutationFn: async () => {
       await autosave.flush();
       return editing.save({ kind: "publish" });
-    },
-    onSuccess: (published) => {
-      if (!published) return;
-      // The promoted bag passed the strict gate, so clear any field pins a
-      // prior failed publish left behind.
-      setMetaFieldErrors(null);
-      toastSuccess(renderLabel(M.published));
-      return invalidateEntry();
     },
   });
   const publishDraft = useMutation({
@@ -941,21 +936,25 @@ function EntryEditor({
       await autosave.flush();
       return editing.save({ kind: "publishDraft" });
     },
-    onSuccess: async (published) => {
-      if (!published) return;
-      // The promoted bag passed the strict gate, so clear any field pins a
-      // prior failed publish left behind.
-      setMetaFieldErrors(null);
-      toastSuccess(renderLabel(M.published));
-      setHasLocalDraft(false);
-      await invalidateEntry();
-    },
   });
   useEffect(() => {
     listen({
-      wrote: autosave.wrote,
-      failed: (err, work) => {
-        if (work?.kind !== "publish" && work?.kind !== "publishDraft") {
+      wrote: (work, response) => {
+        autosave.wrote(work, response);
+        if (work.kind !== "publish" && work.kind !== "publishDraft") return;
+        // The promoted bag passed the strict gate, so clear any field pins a
+        // prior failed publish left behind.
+        setMetaFieldErrors(null);
+        toastSuccess(renderLabel(M.published));
+        if (work.kind === "publishDraft") setHasLocalDraft(false);
+        void invalidateEntry();
+      },
+      failed: (err, cause) => {
+        if (cause === "reload" || cause === "takeOver") {
+          toastError(renderLabel(ENTRY_COPY_FAILED[cause]));
+          return;
+        }
+        if (cause !== "publish" && cause !== "publishDraft") {
           autosave.failed(err);
           return;
         }
@@ -967,7 +966,7 @@ function EntryEditor({
       discard: autosave.cancel,
     });
     return () => listen(null);
-  }, [listen, autosave, renderLabel]);
+  }, [listen, autosave, renderLabel, invalidateEntry]);
   const discardDraft = useMutation({
     mutationFn: () => orpc.entry.discardDraft.call({ id }),
     onSuccess: async () => {
@@ -1163,10 +1162,14 @@ function RevisionPreview({
   id,
   revisionId,
   capabilities,
+  editing,
+  listen,
 }: {
   readonly id: number;
   readonly revisionId: number;
   readonly capabilities: readonly string[];
+  readonly editing: EditingCopyState<EntryWrite, EntryRow>;
+  readonly listen: (events: EntryCopyEvents | null) => void;
 }): ReactNode {
   const navigate = Route.useNavigate();
   const queryClient = useQueryClient();
@@ -1177,7 +1180,9 @@ function RevisionPreview({
   const revisionQuery = useQuery(
     orpc.entry.revisions.get.queryOptions({ input: { revisionId } }),
   );
-  const liveQuery = useQuery(orpc.entry.get.queryOptions({ input: { id } }));
+  const [restoreError, setRestoreError] = useState<MessageDescriptor | null>(
+    null,
+  );
 
   const handleBackToLive = useCallback(
     () =>
@@ -1185,38 +1190,47 @@ function RevisionPreview({
     [navigate],
   );
 
+  // Through the entry's copy, so the editor this returns to saves from the
+  // token the restore answered with.
   const restore = useMutation({
-    // The live row's `etag`: restoring is an edit from the copy this preview
-    // loaded.
-    mutationFn: (ifMatch: string) =>
-      orpc.entry.revisions.restore.call({ revisionId, ifMatch }),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
-        }),
-        queryClient.invalidateQueries({
-          queryKey: orpc.entry.get.queryOptions({
-            input: { id, preview: true },
-          }).queryKey,
-        }),
-      ]);
-      handleBackToLive();
+    mutationFn: () => {
+      setRestoreError(null);
+      return editing.save({ kind: "restore", revisionId });
     },
   });
+  useEffect(() => {
+    listen({
+      wrote: (work) => {
+        if (work.kind !== "restore") return;
+        void Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: orpc.entry.get.queryOptions({ input: { id } }).queryKey,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: orpc.entry.get.queryOptions({
+              input: { id, preview: true },
+            }).queryKey,
+          }),
+        ]).then(handleBackToLive);
+      },
+      failed: (err, cause) => {
+        setRestoreError(
+          cause === "reload" || cause === "takeOver"
+            ? describeRpcError(err, {}, ENTRY_COPY_FAILED[cause])
+            : restoreErrorDescriptor(err),
+        );
+      },
+      discard: () => undefined,
+    });
+    return () => listen(null);
+  }, [listen, queryClient, id, handleBackToLive]);
 
   const revision = revisionQuery.data;
-  // The restore sends the live row's `etag`, so wait for it.
-  if (!revision || !liveQuery.data) return <PendingScreen />;
-  const liveEtag = liveQuery.data.etag;
+  if (!revision) return <PendingScreen />;
 
   const target = new URL(previewLink.url, window.location.origin);
   target.searchParams.set("plumix.edit", "");
 
-  const restoreError =
-    restore.error === null
-      ? null
-      : renderLabel(restoreErrorDescriptor(restore.error));
   const revisionAuthor =
     revision.authorName ?? revision.authorEmail ?? `#${String(revisionId)}`;
 
@@ -1232,16 +1246,20 @@ function RevisionPreview({
       breakpoints={breakpoints}
       readOnly
       previewBanner={
-        <PreviewBanner
-          revisionUpdatedAt={revision.updatedAt}
-          revisionAuthor={revisionAuthor}
-          relativeTime={formatRelative}
-          onBackToLive={handleBackToLive}
-          onRestore={() => restore.mutate(liveEtag)}
-          isRestoring={restore.isPending}
-          restoreError={restoreError}
-        />
+        <>
+          {editing.banner}
+          <PreviewBanner
+            revisionUpdatedAt={revision.updatedAt}
+            revisionAuthor={revisionAuthor}
+            relativeTime={formatRelative}
+            onBackToLive={handleBackToLive}
+            onRestore={() => restore.mutate()}
+            isRestoring={restore.isPending}
+            restoreError={restoreError ? renderLabel(restoreError) : null}
+          />
+        </>
       }
+      overlay={editing.dialog}
     />
   );
 }
