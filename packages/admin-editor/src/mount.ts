@@ -2,10 +2,9 @@ import { createElement } from "react";
 import { createRoot } from "react-dom/client";
 
 import type { BlockRegistry, ShortcodeRegistry } from "@plumix/core/blocks";
-import { loadBlockViews } from "@plumix/core/blocks";
 
 import { parseCanvasSeed } from "./canvas-seed.js";
-import { treeBlockNames } from "./canvas-views.js";
+import { seedTree } from "./canvas-views.js";
 import { EditorCanvas } from "./editor-canvas.js";
 
 interface MountEditorOptions {
@@ -38,10 +37,16 @@ export async function mountEditorRuntime({
     renderEnv: embed("[data-plumix-render-env]"),
     loaderData: embed("[data-plumix-loader-data]"),
   });
-  await loadBlockViews(registry, treeBlockNames(seed.initialTree, registry));
+  const initialTree = await seedTree(registry, seed.initialTree);
   const reactRoot = createRoot(root);
   reactRoot.render(
-    createElement(EditorCanvas, { ...seed, registry, shortcodes, origin }),
+    createElement(EditorCanvas, {
+      ...seed,
+      initialTree,
+      registry,
+      shortcodes,
+      origin,
+    }),
   );
   return () => reactRoot.unmount();
 }

@@ -160,6 +160,38 @@ describe("runCommand", () => {
     ]);
   });
 
+  test("dev's migration builds the app without importing a block view", async () => {
+    const withContributor: RuntimeMigrations = {
+      ...recordingRuntime([]),
+      open: async (options) => {
+        const db = await recordingRuntime([]).open(options);
+        // A contributor and no `contributor` role: the check builds the app
+        // to name the role's plugin capabilities.
+        return {
+          ...db,
+          all: (sql: string) =>
+            Promise.resolve(
+              sql.includes("sqlite_master") ? [{ name: "users" }] : [{ n: 1 }],
+            ),
+        };
+      },
+    };
+
+    const dev = runCommand("dev", command({ deferApp: true }), {
+      cwd: process.cwd(),
+      argv: [],
+      loaded: { config: testConfig(), configPath: "/site/plumix.config.ts" },
+      runtimeMigrations: withContributor,
+      runtimeDiagnose: undefined,
+      runtimeSync: undefined,
+    });
+
+    await expect(dev).rejects.toMatchObject({
+      code: "migrate_contributor_role_missing",
+    });
+    expect(registrations).toEqual(["probe"]);
+  });
+
   test("another command runs without migrating", async () => {
     const events: string[] = [];
 

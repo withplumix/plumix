@@ -211,3 +211,49 @@ describe("loadedBlocksWithLoaders", () => {
     expect(loadedBlocksWithLoaders(registry)).toEqual(["site/feed"]);
   });
 });
+
+/** Runs every queued promise job, so a rejection that is ready has landed. */
+function drainPromiseJobs(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+describe("a view module that fails to import", () => {
+  test("rejects only once the other views have loaded, and a later call retries it", async () => {
+    let attempts = 0;
+    const flaky = defineBlock({
+      name: "site/flaky",
+      view: () => {
+        attempts += 1;
+        return attempts === 1
+          ? Promise.reject(new Error("chunk 404"))
+          : Promise.resolve({ default: () => "flaky" });
+      },
+    });
+    let release = (): void => undefined;
+    const slow = defineBlock({
+      name: "site/slow",
+      view: () =>
+        new Promise<BlockViewModule>((resolve) => {
+          release = () => resolve({ default: () => "slow" });
+        }),
+    });
+    const registry = createBlockRegistry([flaky, slow]);
+    let settledEarly = false;
+
+    const first = loadBlockViews(registry).finally(() => {
+      settledEarly = true;
+    });
+    await drainPromiseJobs();
+    const beforeRelease = settledEarly;
+    release();
+    await expect(first).rejects.toThrow("chunk 404");
+    await loadBlockViews(registry);
+
+    expect([beforeRelease, attempts, blockViewModule(slow).default]).toEqual([
+      false,
+      2,
+      expect.any(Function),
+    ]);
+    expect(blockViewModule(flaky).default).toEqual(expect.any(Function));
+  });
+});

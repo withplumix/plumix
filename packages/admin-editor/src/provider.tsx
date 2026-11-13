@@ -109,9 +109,8 @@ export function useLoaderPushRef(): RefObject<LoaderDataPush | null> | null {
   return useContext(LoaderPushContext);
 }
 
-/** The view-module prefetch channel ref. CanvasFrame sets `.current` when its
- *  bridge connects; a catalog item calls it on hover or focus. Null outside an
- *  EditorProvider — callers no-op then. */
+/** Null outside an EditorProvider, and `.current` null until the canvas
+ *  bridge connects; a call then has no canvas to prefetch into. */
 export function useBlockPrefetchRef(): RefObject<BlockPrefetch | null> | null {
   return useContext(BlockPrefetchContext);
 }

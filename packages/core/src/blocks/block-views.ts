@@ -44,8 +44,8 @@ function loadOne(spec: BlockSpec): Promise<void> {
 }
 
 /**
- * Imports the view modules of the named blocks, or of every block, each at
- * most once. A name the registry doesn't hold is skipped.
+ * Imports the named blocks' view modules, or every block's, each at most
+ * once. A failure rejects only after the other imports settle.
  */
 export async function loadBlockViews(
   registry: BlockRegistry,
@@ -60,7 +60,9 @@ export async function loadBlockViews(
       if (spec) specs.push(spec);
     }
   }
-  await Promise.all(specs.map(loadOne));
+  const settled = await Promise.allSettled(specs.map(loadOne));
+  const failed = settled.find((result) => result.status === "rejected");
+  if (failed) throw failed.reason;
 }
 
 /**

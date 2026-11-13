@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { BlockNode, BlockViewModule } from "@plumix/core/blocks";
 import {
@@ -10,6 +10,8 @@ import {
 import {
   createLoaderBlocksReporter,
   createTreeCommitter,
+  seedTree,
+  settleViewLoad,
   treeBlockNames,
 } from "./canvas-views.js";
 
@@ -125,5 +127,114 @@ describe("createLoaderBlocksReporter", () => {
     reporter.resend();
 
     expect(reports).toEqual([[], []]);
+  });
+});
+
+/** A block whose first import fails, as a chunk 404 after a deploy does. */
+function failsOnceBlock(name: string) {
+  let attempts = 0;
+  return defineBlock({
+    name,
+    view: () => {
+      attempts += 1;
+      return attempts === 1
+        ? Promise.reject(new Error("chunk 404"))
+        : Promise.resolve(blank);
+    },
+  });
+}
+
+describe("a view that fails to load in the canvas", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("keeps the previous tree and still reports the views that loaded", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const feed = defineBlock({
+      name: "site/feed",
+      view: () =>
+        Promise.resolve({
+          default: () => null,
+          loaders: { posts: () => Promise.resolve([]) },
+        }),
+    });
+    const registry = createBlockRegistry([failsOnceBlock("site/hero"), feed]);
+    const committed: (readonly BlockNode[])[] = [];
+    const reports: (readonly string[])[] = [];
+    const reporter = createLoaderBlocksReporter(registry, (names) =>
+      reports.push(names),
+    );
+    const offer = createTreeCommitter(registry, (names) =>
+      loadBlockViews(registry, names),
+    );
+
+    await settleViewLoad(
+      offer(
+        [
+          { id: "a", name: "site/hero" },
+          { id: "b", name: "site/feed" },
+        ],
+        (next) => committed.push(next),
+      ),
+      reporter.update,
+    );
+
+    expect([committed, reports]).toEqual([[], [["site/feed"]]]);
+  });
+
+  test("offering the tree again retries the import and commits it", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const registry = createBlockRegistry([failsOnceBlock("site/hero")]);
+    const committed: (readonly BlockNode[])[] = [];
+    const offer = createTreeCommitter(registry, (names) =>
+      loadBlockViews(registry, names),
+    );
+    const tree = [{ id: "a", name: "site/hero" }];
+    await settleViewLoad(
+      offer(tree, (next) => committed.push(next)),
+      () => undefined,
+    );
+
+    await settleViewLoad(
+      offer(tree, (next) => committed.push(next)),
+      () => undefined,
+    );
+
+    expect(committed).toEqual([tree]);
+  });
+
+  test("reports the failure on the console", async () => {
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const registry = createBlockRegistry([failsOnceBlock("site/hero")]);
+
+    await settleViewLoad(loadBlockViews(registry), () => undefined);
+
+    expect(logged).toHaveBeenCalledWith(
+      "[plumix:editor] A block view failed to load; the canvas keeps what it shows and retries on the next update.",
+      new Error("chunk 404"),
+    );
+  });
+
+  test("mounts an empty seed when its views fail, so the host's tree push retries them", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const registry = createBlockRegistry([failsOnceBlock("site/hero")]);
+
+    const seed = await seedTree(registry, [{ id: "a", name: "site/hero" }]);
+
+    expect(seed).toEqual([]);
+  });
+
+  test("mounts the seed itself once its views load", async () => {
+    const registry = createBlockRegistry([
+      defineBlock({ name: "site/hero", view: () => Promise.resolve(blank) }),
+    ]);
+    const tree = [{ id: "a", name: "site/hero" }];
+
+    const seed = await seedTree(registry, tree);
+
+    expect(seed).toBe(tree);
   });
 });

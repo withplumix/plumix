@@ -176,7 +176,6 @@ export function CanvasFrame({
     });
     // Expose the loader-data push to the inspector's refresh control.
     if (loaderPushRef) loaderPushRef.current = connection.pushLoaderData;
-    // Expose the view-module prefetch to the catalog's items.
     if (prefetchRef) prefetchRef.current = connection.prefetchBlocks;
     void connection.whenReady.then(() => {
       if (!disposed) setCanvasReady(true);

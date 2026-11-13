@@ -2,6 +2,7 @@ import type { BlockNode, BlockRegistry } from "@plumix/core/blocks";
 import {
   blockSlotKeys,
   isBlockNodeArray,
+  loadBlockViews,
   loadedBlocksWithLoaders,
 } from "@plumix/core/blocks";
 
@@ -44,6 +45,41 @@ export function createTreeCommitter(
     await load(treeBlockNames(tree, registry));
     if (offered === latest) commit(tree);
   };
+}
+
+const VIEW_LOAD_FAILED =
+  "[plumix:editor] A block view failed to load; the canvas keeps what it shows and retries on the next update.";
+
+/**
+ * Settles a view load without rejecting. A failed import, such as a chunk gone
+ * after a deploy, is logged, and the next load naming it retries it.
+ */
+export function settleViewLoad(
+  load: Promise<void>,
+  afterLoad: () => void,
+): Promise<void> {
+  return load
+    .catch((error: unknown) => {
+      console.error(VIEW_LOAD_FAILED, error);
+    })
+    .finally(afterLoad);
+}
+
+/**
+ * The tree the canvas first renders: the seed once its views load, or an empty
+ * tree when they fail, which the host's first tree push then retries.
+ */
+export async function seedTree(
+  registry: BlockRegistry,
+  tree: readonly BlockNode[],
+): Promise<readonly BlockNode[]> {
+  try {
+    await loadBlockViews(registry, treeBlockNames(tree, registry));
+    return tree;
+  } catch (error) {
+    console.error(VIEW_LOAD_FAILED, error);
+    return [];
+  }
 }
 
 export interface LoaderBlocksReporter {

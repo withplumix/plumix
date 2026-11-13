@@ -1,13 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import {
-  coreBlocks,
-  createBlockRegistry,
-  loadBlockViews,
-} from "@plumix/core/blocks";
+import { coreBlocks, createBlockRegistry } from "@plumix/core/blocks";
 
-import { treeBlockNames } from "../src/canvas-views.js";
+import { seedTree } from "../src/canvas-views.js";
 import { EditorCanvas } from "../src/editor-canvas.js";
 import { copySpec } from "./copy-block.js";
 import { feedSpec } from "./feed-block.js";
@@ -27,8 +23,8 @@ const registry = createBlockRegistry([
   searchSpec,
 ]);
 
-// As `mountEditorRuntime` does: the seed's views load before the first render.
-await loadBlockViews(registry, treeBlockNames(SEED_BLOCKS, registry));
+/** As `mountEditorRuntime` does, the seed's views load before the first render. */
+const initialTree = await seedTree(registry, SEED_BLOCKS);
 
 const root = document.getElementById("root");
 if (root) {
@@ -37,7 +33,7 @@ if (root) {
       <EditorCanvas
         registry={registry}
         origin={window.location.origin}
-        initialTree={SEED_BLOCKS}
+        initialTree={initialTree}
       />
     </StrictMode>,
   );

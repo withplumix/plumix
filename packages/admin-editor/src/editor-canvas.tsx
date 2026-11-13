@@ -40,6 +40,7 @@ import { canvasContextValue } from "./canvas-context.js";
 import {
   createLoaderBlocksReporter,
   createTreeCommitter,
+  settleViewLoad,
 } from "./canvas-views.js";
 import { clipboardOpFromEvent } from "./clipboard-ops.js";
 import { connectRuntime } from "./connect-runtime.js";
@@ -132,26 +133,24 @@ export function EditorCanvas({
     const loaded = (): void => {
       if (!disposed) reporter.update();
     };
+    const loadViews = (names?: Iterable<string>): void =>
+      void settleViewLoad(loadBlockViews(registry, names), loaded);
     const connection = connectRuntime({
       parentWindow: window.parent,
       origin,
-      onTree: (next) => void offerTree(next, commitTree).then(loaded),
+      onTree: (next) =>
+        void settleViewLoad(offerTree(next, commitTree), loaded),
       onLoaderData: (data) =>
         setLoaderData((prior) => mergeLoaderData(prior, data)),
       onDeps: (resolved) => setDeps((prior) => mergeDeps(prior, resolved)),
       onConfig: setConfig,
       onXray: setXray,
-      // A hovered catalog item: load its view so the insert renders at once.
-      onPrefetchBlocks: (names) =>
-        void loadBlockViews(registry, names).then(loaded),
+      onPrefetchBlocks: loadViews,
       onConnect: () => reporter.resend(),
     });
     connectionRef.current = connection;
-    // The seed tree's views loaded before mount; the rest load while idle.
     reporter.update();
-    const cancelIdle = whenIdle(
-      () => void loadBlockViews(registry).then(loaded),
-    );
+    const cancelIdle = whenIdle(() => loadViews());
     return () => {
       disposed = true;
       cancelIdle();

@@ -16,6 +16,7 @@ import type {
   SyncContractSite,
 } from "plumix/test/conformance";
 import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { defineBlock } from "plumix/blocks";
 import { definePlugin, sync as syncEvents } from "plumix/plugin";
 import { buildApp, createRuntimeHandler } from "plumix/runtime";
 import { createDispatcherHarness, factoriesFor } from "plumix/test";
@@ -390,5 +391,34 @@ describe("bun sync — a plugin scope", () => {
       },
       { id: 8, body: "remote only", data: null, email: "operator@remote.test" },
     ]);
+  });
+});
+
+describe("bun sync — settling the local site", () => {
+  test("builds the site without importing a block view, which only a render needs", async () => {
+    const imported: string[] = [];
+    const probe = definePlugin("probe", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "probe/chart",
+            view: () => {
+              imported.push("probe/chart");
+              return Promise.resolve({ default: () => null });
+            },
+          }),
+        );
+      },
+    });
+    const local = siteConfig("local", [...base.config.plugins, probe]);
+    await migrated(local);
+    const end = await sync.open(
+      options("local", "http://127.0.0.1:9", "unused", local),
+    );
+
+    await end.settle({ scopes: ["content"], direction: "pull" });
+    await end.close();
+
+    expect(imported).toEqual([]);
   });
 });

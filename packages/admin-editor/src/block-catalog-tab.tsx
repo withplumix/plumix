@@ -56,6 +56,7 @@ export function BlockCatalog({
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
   const startBlockDrag = useEditorStore((s) => s.startBlockDrag);
   const prefetchRef = useBlockPrefetchRef();
+  const prefetchView = (name: string): void => prefetchRef?.current?.([name]);
   const insertAt = useEditorStore((s) =>
     topLevelIndexAfter(s.tree, s.activeId, registry),
   );
@@ -154,8 +155,7 @@ export function BlockCatalog({
               // The slot inserter floats over the canvas, where a drag
               // started here would drop a second copy on release.
               onPointerDown={target ? undefined : () => startBlockDrag(entry)}
-              // Loads the block's view in the canvas before the insert lands.
-              onIntent={() => prefetchRef?.current?.([entry.name])}
+              onIntent={() => prefetchView(entry.name)}
               onClick={() => insertEntry(createNodeFromEntry(registry, entry))}
             />
           ))}

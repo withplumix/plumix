@@ -85,7 +85,9 @@ export function blockDepKeys(spec: BlockSpec, node: BlockNode): DepKeys {
   if (deps === undefined) return {};
   const declared: unknown =
     typeof deps === "function"
-      ? (deps as (attrs: JsonObject) => TemplateDepDeclarations)(
+      ? // Safety: `BlockViewModule.deps` types a function form as taking the
+        // block's attrs, and the walker hands it the node's stored ones.
+        (deps as (attrs: JsonObject) => TemplateDepDeclarations)(
           node.attrs ?? {},
         )
       : deps;
