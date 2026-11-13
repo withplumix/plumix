@@ -29,7 +29,6 @@ type LoaderDataPush = (data: SerializedLoaderData) => void;
 const LoaderPushContext =
   createContext<RefObject<LoaderDataPush | null> | null>(null);
 
-/** Asks the canvas to load blocks' view modules ahead of an insert. */
 type BlockPrefetch = (names: readonly string[]) => void;
 
 const BlockPrefetchContext =

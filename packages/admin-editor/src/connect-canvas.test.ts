@@ -303,16 +303,16 @@ describe("connectCanvas", () => {
       origin: ORIGIN,
       messageTarget: bus,
     });
-
     fromCanvas({ type: "canvas:loader-blocks", names: ["acme/feed"] });
+
     fromCanvas({
       type: "canvas:loader-blocks",
-      names: ["acme/feed", "acme/search"],
+      names: ["acme/search", "acme/nav"],
     });
 
     expect([...store.getState().loaderBlocks]).toEqual([
-      "acme/feed",
       "acme/search",
+      "acme/nav",
     ]);
     conn.dispose();
   });

@@ -24,7 +24,6 @@ export interface CanvasConnection {
   readonly pushLoaderData: (data: SerializedLoaderData) => void;
   /** Push deps resolved for a `canvas:requestDeps` to the canvas. */
   readonly pushDeps: (deps: LoadedDeps) => void;
-  /** Ask the canvas to load these blocks' view modules ahead of an insert. */
   readonly prefetchBlocks: (names: readonly string[]) => void;
   readonly dispose: () => void;
 }

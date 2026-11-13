@@ -67,8 +67,6 @@ export function inspectorView(
   const tableId = layout.editsLayout
     ? enclosingTableId(tree, block.id, registry)
     : null;
-  // A block with no loader data yet, such as one just inserted, still shows
-  // it: refresh is how it gets its data.
   const showRefresh = canRefresh && loaderBlocks.has(block.name);
   const showAddColumn = layout.editsLayout && block.name === "core/columns";
 

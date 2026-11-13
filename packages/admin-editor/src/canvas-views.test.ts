@@ -172,8 +172,8 @@ describe("createLoaderBlocksReporter", () => {
     const reporter = createLoaderBlocksReporter(registry, (names) =>
       reports.push(names),
     );
-
     reporter.update();
+
     reporter.resend();
 
     expect(reports).toEqual([[], []]);
