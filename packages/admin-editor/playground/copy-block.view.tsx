@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 
 import type { BlockViewProps, LoadedDeps } from "@plumix/core/blocks";
 
-export const deps = (attrs: { readonly group?: unknown }) => ({
-  settings: [String(attrs.group)],
-});
+export function deps(attrs: { readonly group?: unknown }): {
+  readonly settings: readonly string[];
+} {
+  return { settings: [String(attrs.group)] };
+}
 
 export default function CopyView({
   attrs,

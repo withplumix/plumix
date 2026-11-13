@@ -15,8 +15,9 @@ import { FormRender } from "./form-render.js";
  * The block's own attr bag, read the same way by the loader — handed the
  * stored JSON, which is narrower — and by the view.
  */
-const slugOf = (attrs: MaterializedAttrs): string =>
-  typeof attrs.slug === "string" ? attrs.slug : "";
+function slugOf(attrs: MaterializedAttrs): string {
+  return typeof attrs.slug === "string" ? attrs.slug : "";
+}
 
 export function formBlockView(registry: FormRegistry): BlockViewModule {
   // A loader because signing is async and the view isn't. The result depends
