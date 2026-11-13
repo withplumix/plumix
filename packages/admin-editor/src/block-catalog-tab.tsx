@@ -13,6 +13,7 @@ import { resolveLabel } from "@plumix/core/i18n";
 
 import type { InserterPattern } from "./block-catalog.js";
 import {
+  catalogCardBlockNames,
   catalogIsEmpty,
   createNodeFromEntry,
   entryKey,
@@ -22,7 +23,6 @@ import {
 } from "./block-catalog.js";
 import { BlockIcon } from "./block-icon.js";
 import { topLevelIndexAfter } from "./block-tree-ops.js";
-import { treeBlockNames } from "./canvas-views.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useBlockPrefetchRef, useEditorStore } from "./provider.js";
 
@@ -157,7 +157,9 @@ export function BlockCatalog({
               // The slot inserter floats over the canvas, where a drag
               // started here would drop a second copy on release.
               onPointerDown={target ? undefined : () => startBlockDrag(entry)}
-              onIntent={() => prefetchViews([entry.name])}
+              onIntent={() =>
+                prefetchViews(catalogCardBlockNames(registry, entry))
+              }
               onClick={() => insertEntry(createNodeFromEntry(registry, entry))}
             />
           ))}
@@ -178,7 +180,7 @@ export function BlockCatalog({
               testId={`block-catalog-pattern-${pattern.name}`}
               label={resolveLabel(pattern.title, i18n)}
               onIntent={() =>
-                prefetchViews(treeBlockNames(pattern.content, registry))
+                prefetchViews(catalogCardBlockNames(registry, pattern))
               }
               onClick={() => insertPattern(expandPattern(pattern, registry))}
             />

@@ -19,6 +19,7 @@ import {
 } from "@plumix/core/blocks";
 
 import {
+  catalogCardBlockNames,
   catalogIsEmpty,
   createNodeFromEntry,
   expandPattern,
@@ -689,5 +690,52 @@ describe("the inserter under a tokens-only style policy", () => {
         (p) => p.name,
       ),
     ).toEqual(["card"]);
+  });
+});
+
+describe("catalogCardBlockNames", () => {
+  const registry = createBlockRegistry([
+    spec({ name: "site/heading" }),
+    spec({
+      name: "site/group",
+      inputs: [{ name: "content", type: "slot", label: "Content" }],
+    }),
+  ]);
+
+  test("a block card names its block", () => {
+    const names = catalogCardBlockNames(registry, {
+      name: "site/heading",
+      slug: "site/heading",
+      title: "Heading",
+    });
+
+    expect(names).toEqual(["site/heading"]);
+  });
+
+  test("a variation card names the blocks it seeds into its content slot", () => {
+    const names = catalogCardBlockNames(registry, {
+      name: "site/group",
+      slug: "site/group/intro",
+      title: "Intro group",
+      innerBlocks: [{ id: "h", name: "site/heading" }],
+    });
+
+    expect(names).toEqual(["site/group", "site/heading"]);
+  });
+
+  test("a pattern card names every block in its content", () => {
+    const names = catalogCardBlockNames(registry, {
+      name: "intro",
+      title: "Intro",
+      content: [
+        {
+          id: "g",
+          name: "site/group",
+          attrs: { content: [{ id: "h", name: "site/heading" }] },
+        },
+      ],
+    });
+
+    expect(names).toEqual(["site/group", "site/heading"]);
   });
 });
