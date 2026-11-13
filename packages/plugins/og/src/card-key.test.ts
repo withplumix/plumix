@@ -5,18 +5,12 @@ import { cardKey } from "./card-key.js";
 const entry = { id: 12, updatedAt: new Date("2026-08-01T00:00:00Z") };
 
 describe("the key helpers", () => {
-  test("emit the card's id and the cache tag from one call", () => {
-    expect(cardKey.of("home", "en")).toEqual({
-      id: "home--en",
-      tag: "og:home--en",
-    });
+  test("emit the card's id from its parts", () => {
+    expect(cardKey.of("home", "en")).toEqual({ id: "home--en" });
   });
 
-  test("give an entry card the tag that purges that entry", () => {
-    const key = cardKey.entry(entry);
-
-    expect(key.tag).toBe("e:12");
-    expect(key.id).toContain("12");
+  test("name the entry in an entry card's id", () => {
+    expect(cardKey.entry(entry).id).toContain("12");
   });
 
   test("reduce a part to what a URL path and a cache tag both accept", () => {
@@ -37,10 +31,9 @@ describe("the key helpers", () => {
     expect(cardKey.entry(edited).id).not.toBe(cardKey.entry(entry).id);
   });
 
-  test("fold what else a card read into the id, leaving the tag alone", () => {
+  test("fold what else a card read into the id", () => {
     const withSite = cardKey.entry(entry, "Example Site");
 
     expect(withSite.id).not.toBe(cardKey.entry(entry).id);
-    expect(withSite.tag).toBe(cardKey.entry(entry).tag);
   });
 });

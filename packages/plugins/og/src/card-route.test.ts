@@ -1,5 +1,5 @@
 import type { Logger, TelemetrySpan } from "plumix";
-import type { DispatcherHarness, TestResponse } from "plumix/test";
+import type { TestResponse } from "plumix/test";
 import { ACCESS_POLICY_META_KEY } from "plumix/auth";
 import { eq } from "plumix/db";
 import { definePlugin, render, settings } from "plumix/plugin";
@@ -507,23 +507,8 @@ describe("a card at the edge", () => {
     },
   });
 
-  async function trashEntry(harness: DispatcherHarness, id: number) {
-    const trashed = await harness.fetch("/_plumix/rpc/entry/trash", {
-      as: await harness.seedUser("admin"),
-      json: { json: { id } },
-    });
-    trashed.assertStatus(200);
-  }
-
-  async function saveSite(harness: DispatcherHarness) {
-    (await harness.fetch("/save-site-settings")).assertStatus(200);
-  }
-
-  // The `site` write is there because the card prints the site name.
-  test.each([
-    ["its entry is trashed", trashEntry],
-    ["the site settings are saved", saveSite],
-  ])("is retired when %s", async (_what, write) => {
+  // The card prints the site name.
+  test("is retired when the site settings are saved", async () => {
     const cdn = fakeCdn();
     const harness = await createHarness({ cdn, before: [siteSaver] });
     const id = await seedEntry(harness);
@@ -532,10 +517,39 @@ describe("a card at the edge", () => {
     await harness.drainDeferred();
     cdn.assertStored(path);
 
-    await write(harness, id);
+    (await harness.fetch("/save-site-settings")).assertStatus(200);
     await harness.drainDeferred();
 
     cdn.assertNotStored(path);
+  });
+
+  test("stays stored when its entry is edited, which moves the entry's card to a new URL", async () => {
+    const cdn = fakeCdn();
+    const harness = await createHarness({ cdn });
+    const admin = await harness.seedUser("admin");
+    const id = await seedEntry(harness, { title: "First Title" });
+    const before = await cardPath(harness, id);
+    (await harness.fetch(before)).assertStatus(200);
+    await harness.drainDeferred();
+    cdn.assertStored(before);
+
+    const saved = await harness.fetch("/_plumix/rpc/entry/update", {
+      as: admin,
+      json: {
+        json: {
+          id,
+          ifMatch: await currentEtag(harness, id, admin),
+          title: "Second Title",
+          saveAs: "live",
+        },
+        meta: [],
+      },
+    });
+    saved.assertStatus(200);
+    await harness.drainDeferred();
+
+    cdn.assertStored(before);
+    expect(await cardPath(harness, id)).not.toBe(before);
   });
 
   test("renders once, then answers the next request from the edge", async () => {

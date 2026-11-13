@@ -307,7 +307,14 @@ function createContextBase({
       assertValidPublicRoutePath(pluginId, options.path);
       // Collisions are a boot check, not a registration one: a plugin registers
       // from `afterSetup`, so the full set exists only once every plugin has.
-      registry.publicRoutes.push({ ...options, pluginId });
+      registry.publicRoutes.push({
+        ...options,
+        pluginId,
+        handler: (request, appCtx, params) =>
+          pluginStore.run(pluginId, () =>
+            options.handler(request, appCtx, params),
+          ),
+      });
     },
 
     registerRestResource: (options) => {
