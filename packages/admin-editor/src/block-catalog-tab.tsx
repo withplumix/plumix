@@ -22,6 +22,7 @@ import {
 } from "./block-catalog.js";
 import { BlockIcon } from "./block-icon.js";
 import { topLevelIndexAfter } from "./block-tree-ops.js";
+import { treeBlockNames } from "./canvas-views.js";
 import { useEditorConfig } from "./editor-config-context.js";
 import { useBlockPrefetchRef, useEditorStore } from "./provider.js";
 
@@ -56,7 +57,8 @@ export function BlockCatalog({
   const insertBlocks = useEditorStore((s) => s.insertBlocks);
   const startBlockDrag = useEditorStore((s) => s.startBlockDrag);
   const prefetchRef = useBlockPrefetchRef();
-  const prefetchView = (name: string): void => prefetchRef?.current?.([name]);
+  const prefetchViews = (names: Iterable<string>): void =>
+    prefetchRef?.current?.([...names]);
   const insertAt = useEditorStore((s) =>
     topLevelIndexAfter(s.tree, s.activeId, registry),
   );
@@ -155,7 +157,7 @@ export function BlockCatalog({
               // The slot inserter floats over the canvas, where a drag
               // started here would drop a second copy on release.
               onPointerDown={target ? undefined : () => startBlockDrag(entry)}
-              onIntent={() => prefetchView(entry.name)}
+              onIntent={() => prefetchViews([entry.name])}
               onClick={() => insertEntry(createNodeFromEntry(registry, entry))}
             />
           ))}
@@ -175,6 +177,9 @@ export function BlockCatalog({
               key={pattern.name}
               testId={`block-catalog-pattern-${pattern.name}`}
               label={resolveLabel(pattern.title, i18n)}
+              onIntent={() =>
+                prefetchViews(treeBlockNames(pattern.content, registry))
+              }
               onClick={() => insertPattern(expandPattern(pattern, registry))}
             />
           ))}

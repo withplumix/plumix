@@ -15,6 +15,19 @@ const PREFETCH_GESTURES = [
   ["focusing", (item: Locator) => item.focus()],
 ] as const;
 
+const PREFETCH_ITEMS = [
+  [
+    "a block",
+    "block-catalog-item-playground/showcase",
+    ["playground/showcase"],
+  ],
+  [
+    "a pattern",
+    "block-catalog-pattern-playground/showcase-intro",
+    ["core/rich-text", "playground/showcase"],
+  ],
+] as const;
+
 /** Records the block names each `host:prefetch-blocks` message names. */
 async function recordPrefetches(page: Page): Promise<() => Promise<unknown>> {
   const handle = await page.getByTestId("plumix-canvas-iframe").elementHandle();
@@ -37,19 +50,21 @@ async function recordPrefetches(page: Page): Promise<() => Promise<unknown>> {
 }
 
 for (const [gesture, act] of PREFETCH_GESTURES) {
-  test(`${gesture} a catalog item prefetches its block's view`, async ({
-    editor,
-    page,
-    seed,
-  }) => {
-    await openPost(editor, seed, [{ id: "code", name: "core/code" }]);
-    const prefetched = await recordPrefetches(page);
-    await page.getByTestId("plumix-tab-blocks").click();
+  for (const [item, testId, names] of PREFETCH_ITEMS) {
+    test(`${gesture} ${item} in the catalog prefetches its blocks' views`, async ({
+      editor,
+      page,
+      seed,
+    }) => {
+      await openPost(editor, seed, [{ id: "code", name: "core/code" }]);
+      const prefetched = await recordPrefetches(page);
+      await page.getByTestId("plumix-tab-blocks").click();
 
-    await act(page.getByTestId("block-catalog-item-playground/showcase"));
+      await act(page.getByTestId(testId));
 
-    await expect.poll(prefetched).toEqual([["playground/showcase"]]);
-  });
+      await expect.poll(prefetched).toEqual([names]);
+    });
+  }
 }
 
 /** A published post of `blocks`, and the path its public page serves at. */

@@ -45,6 +45,18 @@ const content = definePlugin("core-playground-content", {
         ],
       },
     });
+    setup.registerPattern({
+      name: "playground/showcase-intro",
+      title: "Showcase intro",
+      content: [
+        {
+          id: "intro",
+          name: "core/rich-text",
+          attrs: { body: "<p>Intro</p>" },
+        },
+        { id: "showcase", name: "playground/showcase" },
+      ],
+    });
     setup.registerTermTaxonomy("topic", {
       label: "Topics",
       entryTypes: ["article"],
