@@ -81,6 +81,7 @@ import {
   writeEntry,
 } from "./-entry-copy.js";
 import { PlainFormRouteInner } from "./-plain-form-route.js";
+import { isPublished } from "./-publish-receipt.js";
 import { restoreErrorDescriptor } from "./-restore-error.js";
 
 const M = {
@@ -879,7 +880,8 @@ function EntryEditor({
     capabilities: capabilitySet,
   });
   const isEditWithDraft = editorMode === "edit-with-draft";
-  const isPublished = entry.status === "published";
+  const [landedPublish, setLandedPublish] = useState<EntryRow | null>(null);
+  const published = isPublished(entry, landedPublish);
   const hasPendingDraft =
     entry._preview?.source === "autosave" || hasLocalDraft;
   const staleState = entry._preview
@@ -941,6 +943,7 @@ function EntryEditor({
         // prior failed publish left behind.
         setMetaFieldErrors(null);
         toastSuccess(renderLabel(M.published));
+        if (work.kind === "publish") setLandedPublish(response);
         if (work.kind === "publishDraft") setHasLocalDraft(false);
         void invalidateEntry();
       },
@@ -1014,7 +1017,7 @@ function EntryEditor({
         : {
             isSaving,
             onPublish: handlePublish,
-            isPublished,
+            isPublished: published,
             isPublishing: publish.isPending,
           },
     [
@@ -1027,7 +1030,7 @@ function EntryEditor({
       publishDraft.isPending,
       discardDraft.isPending,
       handlePublish,
-      isPublished,
+      published,
       publish.isPending,
     ],
   );
@@ -1074,7 +1077,7 @@ function EntryEditor({
   // "View live entry" only once the entry has actually been published.
   const liveTarget = new URL(previewLink.url, window.location.origin);
   liveTarget.search = "";
-  const liveUrl = isPublished ? liveTarget.toString() : undefined;
+  const liveUrl = published ? liveTarget.toString() : undefined;
 
   if (editing.mode === "readOnly") {
     return (
