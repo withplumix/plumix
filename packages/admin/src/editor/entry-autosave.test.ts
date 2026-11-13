@@ -97,9 +97,8 @@ function titleField(): {
 const opened: { dispose: () => void }[] = [];
 
 /**
- * Autosave writing through core's editing copy, wired as the entry routes
- * wire it: each reply answers the next write in order, a row lands and an
- * error is refused.
+ * Through the real copy and `entryCopy`, since only they know which write was
+ * held back or failed. Each reply answers the next write in order.
  */
 function openAutosave<G extends Record<string, unknown>>(
   groups: EntryAutosaveOptions<G>["groups"],
@@ -449,6 +448,41 @@ describe("createEntryAutosave", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(sent).toHaveLength(3);
+  });
+
+  test("after Load theirs, an edit still waiting out its debounce is never sent", async () => {
+    const title = titleField();
+    const { autosave, copy, sent, unsaved } = openAutosave(
+      { title: title.group },
+      [staleCopy()],
+    );
+    title.value = "a";
+    autosave.schedule.title();
+    await autosave.flush();
+    title.value = "ab";
+    autosave.schedule.title();
+
+    await copy.loadTheirs();
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
+
+    expect(sent).toHaveLength(1);
+    expect(unsaved()).toBe(false);
+  });
+
+  test("after Take over, an edit still waiting out its debounce is never sent", async () => {
+    const title = titleField();
+    const { autosave, copy, sent, unsaved } = openAutosave(
+      { title: title.group },
+      [],
+    );
+    title.value = "Typed before the take over";
+    autosave.schedule.title();
+
+    await copy.takeOver();
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
+
+    expect(sent).toEqual([]);
+    expect(unsaved()).toBe(false);
   });
 
   test("a failure that repeats on the next write is reported once", async () => {
