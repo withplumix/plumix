@@ -68,6 +68,9 @@ type PlumixCliErrorCode =
   | "mail_remote_refused"
   | "device_authorization_failed";
 
+const RELATIVE_SPEC_HINT =
+  "Relative paths resolve from the folder holding plumix.config.ts: check the file exists there.";
+
 /**
  * The errors only this package throws. Internal: a runtime adapter declares
  * its own subclass rather than borrowing these codes.
@@ -346,7 +349,9 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "migrate_schema_module_unresolved",
       `Could not resolve the schemaModule "${ctx.spec}" from this site`,
-      "Install the package that provides it, so Plumix can find the migration history it ships.",
+      ctx.spec.startsWith(".")
+        ? RELATIVE_SPEC_HINT
+        : "Install the package that provides it, so Plumix can find the migration history it ships.",
       ctx.cause,
     );
   }
@@ -392,7 +397,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "migrate_data_module_unresolved",
       `Could not resolve the dataMigrations module "${ctx.spec}" from this site`,
-      "A plugin's `dataMigrations` resolves like its `schemaModule`; the config's resolves relative to the config file. Nothing was applied.",
+      `${ctx.spec.startsWith(".") ? RELATIVE_SPEC_HINT : "Install the package that provides it."} Nothing was applied.`,
       ctx.cause,
     );
   }

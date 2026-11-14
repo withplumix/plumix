@@ -42,7 +42,7 @@ export default {
     },
   },
   // A local plugin, so the site owns a table for \`migrate generate\`.
-  plugins: [{ id: "local", setup: () => {}, schemaModule: "../schema.ts" }],
+  plugins: [{ id: "local", setup: () => {}, schemaModule: "./schema.ts" }],
   theme: { templates: () => null },
 };
 `;
@@ -56,6 +56,7 @@ describe("plumix CLI dispatch", () => {
     dir = mkdtempSync(join(tmpdir(), "plumix-cli-dispatch-"));
     writeFileSync(join(dir, "plumix.config.mjs"), VALID_CONFIG, "utf8");
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
+    writeFileSync(join(dir, "schema.ts"), "export {};\n");
     exitCode = undefined;
     process.exit = ((code?: number) => {
       exitCode = code ?? 0;

@@ -1,4 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -175,5 +181,40 @@ describe("emitPlumixSources — the config's roles", () => {
     await expect(emitPlumixSources(dir, configPath)).resolves.toMatchObject({
       configPath,
     });
+  });
+});
+
+describe("emitPlumixSources — the site's schema module", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "plumix-emit-schema-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("imports a relative schemaModule from the folder holding the config", async () => {
+    mkdirSync(join(dir, "app"));
+    const configPath = join(dir, "app/plumix.config.mjs");
+    writeFileSync(
+      configPath,
+      `export default {
+        runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+        database: { kind: 'x' },
+        auth: { passkey: {} },
+        theme: { templates: () => null },
+        plugins: [{ id: 'local', setup: () => {}, schemaModule: './schema.ts' }],
+        i18n: { defaultLocale: { code: 'en' }, locales: [] },
+      };`,
+      "utf8",
+    );
+
+    await emitPlumixSources(dir, configPath);
+
+    expect(readFileSync(join(dir, ".plumix/schema.ts"), "utf8")).toContain(
+      'export * from "../app/schema.ts";',
+    );
   });
 });

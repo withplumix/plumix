@@ -1,3 +1,5 @@
+import { join, relative, resolve } from "node:path";
+
 import type { PlumixConfig } from "../config.js";
 
 export const CORE_SCHEMA_MODULE = "plumix/schema";
@@ -7,14 +9,32 @@ export interface SchemaSource {
   readonly modules: readonly string[];
 }
 
-export function generateSchemaSource(config: PlumixConfig): SchemaSource {
+/**
+ * How a module in `outDir` imports `spec`: a relative spec names a path from
+ * `siteRoot`, a bare one a package.
+ */
+export function schemaModuleImport(
+  spec: string,
+  siteRoot: string,
+  outDir: string,
+): string {
+  if (!spec.startsWith(".")) return spec;
+  return relative(outDir, resolve(siteRoot, spec)).replace(/\\/g, "/");
+}
+
+/** `siteRoot` is the folder holding `plumix.config.ts`. */
+export function generateSchemaSource(
+  config: PlumixConfig,
+  siteRoot: string,
+  outDir: string = join(siteRoot, ".plumix"),
+): SchemaSource {
   const modules = [CORE_SCHEMA_MODULE];
   const seen = new Set<string>(modules);
   for (const plugin of config.plugins) {
     const spec = plugin.schemaModule;
     if (spec && !seen.has(spec)) {
       seen.add(spec);
-      modules.push(spec);
+      modules.push(schemaModuleImport(spec, siteRoot, outDir));
     }
   }
 

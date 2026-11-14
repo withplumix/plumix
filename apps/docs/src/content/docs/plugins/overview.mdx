@@ -341,7 +341,7 @@ A plugin that owns tables ships its own history, so a site never generates migra
 3. Add `migrations` to the `files` of `package.json`, so the history reaches npm with the package.
 4. Point `schemaModule` at a subpath of the package that exports the schema, such as `"@acme/plugin-bookmarks/schema"`, so `plumix migrate` can find the package.
 
-A plugin that lives in the site's own folder, rather than in a package, declares the site's own tables. [`plumix migrate generate`](/deployment/cli/#migrate) writes their history to the site's `migrations/`.
+A plugin that lives in the site's own folder, rather than in a package, declares the site's own tables. Its `schemaModule` is a path relative to the folder holding `plumix.config.ts`, such as `"./src/plugins/bookmarks/schema.ts"`. The path may leave off `.ts`, `.tsx` or `.js`, or name a folder with an `index.ts` or `index.js`. A path that names no file fails `plumix migrate` and `plumix dev` with `migrate_schema_module_unresolved`, naming the file it looked for. [`plumix migrate generate`](/deployment/cli/#migrate) writes their history to the site's `migrations/`.
 
 ## Schema drizzle cannot express
 
@@ -379,7 +379,7 @@ export const flags = definePlugin("acme_flags", {
 });
 ```
 
-Export that subpath from the package's `exports`, as you would `./schema`. A site lists its own in `plumix.config.ts`, as `dataMigrations: "./data-migrations.ts"`, a path relative to the config file.
+Export that subpath from the package's `exports`, as you would `./schema`. A plugin in the site's own folder points `dataMigrations` at a path relative to the folder holding `plumix.config.ts`, as its `schemaModule` does; one that names no file fails with `migrate_data_module_unresolved`. A site lists its own in `plumix.config.ts`, as `dataMigrations: "./data-migrations.ts"`, a path relative to the config file.
 
 ### Recipes
 

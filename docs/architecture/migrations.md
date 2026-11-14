@@ -54,9 +54,11 @@ Where migrations run on each runtime:
 
 `resolveOwners` lists the owners in application order: core first, then plugins in config order,
 then the site. A plugin owns a history when its `schemaModule` resolves into an installed package;
-one that resolves inside the site's package counts as the site's (`sitePlugins`). Each history
-applies through drizzle's own migrator under `__drizzle_migrations_<owner>`. Plumix chooses only
-folders, tracking tables and order (ADR 0027). Data migrations then run in the same owner order.
+one that resolves inside the site's package counts as the site's (`sitePlugins`). A relative
+`schemaModule` or `dataMigrations` resolves from the folder holding `plumix.config.ts`, and must
+name a file there; a bare one resolves as a package. The generated schema module imports a relative
+one by its path from `.plumix/`. Each history applies through drizzle's own migrator under
+`__drizzle_migrations_<owner>`. Plumix chooses only folders, tracking tables and order (ADR 0027). Data migrations then run in the same owner order.
 Each is recorded by owner and name in `__plumix_data_migrations` once `up` resolves. A failure
 stops the run and is not recorded, so the next run retries it (ADR 0044).
 

@@ -155,7 +155,7 @@ describe("plumix migrate generate on a site's own tables", () => {
             {
               id: "bookmarks",
               setup: () => undefined,
-              schemaModule: "../src/schema.ts",
+              schemaModule: "./src/schema.ts",
             },
           ],
         },

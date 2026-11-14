@@ -42,8 +42,8 @@ const EMAIL = /^[^\s@]+@[^\s@]+$/;
  */
 export const emailCode = definePlugin("email-code", {
   schema,
-  // Resolved from `.plumix/`, inside the site, so the tables are the site's.
-  schemaModule: "../auth/email-code/schema.ts",
+  // Inside the site, so the tables are the site's.
+  schemaModule: "./auth/email-code/schema.ts",
   mails: [emailCodeMail],
   setup: () => undefined,
   authMethods: [
