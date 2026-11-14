@@ -1,6 +1,7 @@
 import type { AppContext } from "../context/app-context.js";
 import type { RequestMemo } from "../context/memo.js";
 import { declareThrough } from "../cdn/contract/page-tags.js";
+import { ANONYMOUS_PRINCIPAL } from "../context/anonymous-principal.js";
 import { resolveLocale } from "../i18n/resolve-locale.js";
 
 /**
@@ -16,11 +17,7 @@ export function anonymousContext(ctx: AppContext): AppContext {
     Object.getOwnPropertyDescriptors(ctx),
   ) as AppContext;
   return Object.defineProperties(anonymous, {
-    user: { value: null, enumerable: true },
-    tokenScopes: { value: null, enumerable: true },
-    apiToken: { value: null, enumerable: true },
-    credential: { value: null, enumerable: true },
-    auth: { value: { can: () => false }, enumerable: true },
+    ...Object.getOwnPropertyDescriptors(ANONYMOUS_PRINCIPAL),
     locale: {
       value: resolveLocale({
         request: ctx.request,
