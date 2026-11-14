@@ -21,11 +21,6 @@ export interface SitemapSource {
     ctx: AppContext,
     page: number,
   ) => Promise<readonly SitemapUrl[]> | readonly SitemapUrl[];
-  /**
-   * With none, the scope's pages are never purged and ride their cache-control
-   * window.
-   */
-  readonly tags?: readonly string[];
   /** ISO-8601 `<lastmod>` for one 1-based page; `undefined` writes none. */
   readonly lastmod?: (
     ctx: AppContext,

@@ -4,6 +4,8 @@ import type {
   ArchiveTypeData,
   ListingArchiveData,
 } from "../../src/route/contract/resolved-entry.js";
+import { entries } from "../../src/db/schema/entries.js";
+import { compileEntryQuery, entryQuery } from "../../src/entries/query.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import {
   fallback,
@@ -347,5 +349,50 @@ describe("a listed archive's resolver", () => {
     const page = await lostSite.visit("/tracks/no-such-track");
 
     page.assertNotFound();
+  });
+});
+
+const tallyPlugin = definePlugin("tally", {
+  setup: (ctx) => {
+    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+    ctx.registerArchiveType("tally", {
+      routes: ["/tally"],
+      cacheable: true,
+      resolve: async (appCtx) => {
+        const where = await compileEntryQuery(appCtx, entryQuery());
+        if (where === null) return null;
+        const rows = await appCtx.db
+          .select({ id: entries.id })
+          .from(entries)
+          .where(where);
+        return {
+          data: { kind: "archiveType", name: "tally", count: rows.length },
+          title: "Tally",
+        };
+      },
+    });
+  },
+});
+
+const tallySite = await testSite({
+  plugins: [tallyPlugin],
+  config: {
+    theme: defineTheme({ templates: [fallback(() => <main>Tally</main>)] }),
+  },
+});
+
+describe("a cacheable archive whose resolver reads entries", () => {
+  test("is no longer stored after an entry it could list is published", async () => {
+    (await tallySite.visit("/tally")).assertOk();
+    tallySite.cdn.assertStored("/tally");
+
+    await tallySite.actingAs("editor").rpc.entry.create({
+      type: "talk",
+      title: "Fresh",
+      slug: "fresh",
+      status: "published",
+    });
+
+    tallySite.cdn.assertNotStored("/tally");
   });
 });

@@ -2487,8 +2487,6 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
     ],
   });
 
-  // A plugin-registered archive that opted into caching and contributes the
-  // type tags of the content it lists.
   const cacheableSchools = definePlugin("schools-archive", {
     setup: (ctx) => {
       ctx.registerArchiveType("schools", {
@@ -2501,7 +2499,6 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
             location: params.location,
           },
           title: `Schools in ${params.location}`,
-          tags: ["t:school", "t:location"],
         }),
       });
     },
@@ -2538,21 +2535,6 @@ describe("dispatcher — archive-type CDN (#1693)", () => {
 
     expect(response.status).toBe(200);
     expect(put).toHaveBeenCalledOnce();
-  });
-
-  test("stores it under the type tags the resolver contributed", async () => {
-    const { cdn, put } = cdnStub();
-    const h = await createDispatcherHarness({
-      cdn,
-      config: { plugins: [cacheableSchools], theme: customTheme },
-    });
-
-    await h.dispatch(new Request("https://cms.example/schools/london"));
-    await h.drainDeferred();
-
-    const tags = (put.mock.calls[0] as unknown[])[2] as readonly string[];
-    expect(tags).toContain("t:school");
-    expect(tags).toContain("t:location");
   });
 
   test("bypasses an archive type that did not opt into caching", async () => {

@@ -297,7 +297,7 @@ The target names the page by the route parameters it was matched with, keys sort
 | Carries an `access` policy | The policy grants an anonymous visitor the page                 |
 | Declares `entries`         | It lists something; the card renders from page one              |
 
-The stored card carries the page's own tags at the edge: core's tags for what a listing archive lists, or the `tags` an unlisted archive's `resolve` returns. Purging the page purges its card.
+The stored card is stored at the edge under what resolving its page read: the entries a listing archive lists, and whatever an archive's `resolve` read through core's read helpers or `ctx.cache.reads`. A write that purges the page purges its card.
 
 ## Building a card
 

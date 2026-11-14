@@ -6,7 +6,7 @@ import type { RouteMatch } from "./match.js";
 import type { ResolvedListingPage } from "./render/page-data.js";
 import type { RenderEnv } from "./render/render-env.js";
 import { withBasePath } from "../base-path.js";
-import { declarePageTags } from "../cdn/contract/page-tags.js";
+import { pluginStore } from "../context/stores.js";
 import { and, inArray } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entrySearchCondition } from "../db/search-conditions.js";
@@ -294,10 +294,6 @@ async function resolveCustom(
   const page = await archiveTypePage(ctx, archive, params);
   if ("missing" in page) return notFound(page.missing);
 
-  // Declared through the read-through's tag accumulator, so a publish of any
-  // listed type purges this page, as for built-in archives.
-  declarePageTags(ctx, page.tags);
-
   const html = await renderThroughTheme({
     ctx,
     renderEnv,
@@ -323,11 +319,10 @@ async function resolveView(
   // a defensive 404 rather than a throw if the two ever drift.
   if (!view) return notFound("public-view-not-registered");
 
-  const result = await view.resolve(ctx, params);
+  const result = await pluginStore.run(view.registeredBy, () =>
+    view.resolve(ctx, params),
+  );
   if (result === null) return notFound("public-view-not-found");
-
-  // Only stored when the view opted into the CDN (`cacheable`).
-  if (result.tags) declarePageTags(ctx, result.tags);
 
   const data: ViewData = {
     kind: "view",

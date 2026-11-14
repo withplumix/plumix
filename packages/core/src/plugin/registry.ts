@@ -428,11 +428,6 @@ export interface RegisteredRewriteRule {
 export interface CustomArchiveResolution {
   readonly data: ArchiveTypeData;
   readonly title: string;
-  /**
-   * CDN tags for the content this archive lists, typically {@link typeTag} per
-   * entry type. Ignored unless the archive is `cacheable`.
-   */
-  readonly tags?: readonly string[];
 }
 
 /**
@@ -474,9 +469,8 @@ export interface ArchiveTypeOptions {
   /** Route priority (lower wins); defaults to the rewrite-rule priority. */
   readonly priority?: number;
   /**
-   * Off by default: core can't know a custom archive's dependencies. An archive
-   * with `entries` is tagged by core; one without must return {@link
-   * CustomArchiveResolution.tags}.
+   * Off by default: core can't know a custom archive's dependencies. A stored
+   * page is purged by what its listing and resolver read.
    */
   readonly cacheable?: boolean;
   /** A policied archive always renders live, bypassing the CDN. */
@@ -544,14 +538,11 @@ export type RegisteredArchiveType = ArchiveTypeDeclaration & {
 
 /**
  * What a view's resolver produces: the `data` its template receives under
- * `data.data`, the document title, and — for a view that opted into the CDN —
- * the tags that purge it.
+ * `data.data`, and the document title.
  */
 export interface ViewResolution<TData = unknown> {
   readonly data: TData;
   readonly title: string;
-  /** Ignored unless the view is `cacheable`. */
-  readonly tags?: readonly string[];
 }
 
 /**
@@ -563,8 +554,8 @@ export interface ViewOptions<TData = unknown> {
   readonly routes: readonly string[];
   readonly access?: AccessPolicyFor<AppContext>;
   /**
-   * Off by default because a view usually differs per visitor. Pair it with
-   * {@link ViewResolution.tags}.
+   * Off by default because a view usually differs per visitor. A stored page
+   * is purged by what its resolver read.
    */
   readonly cacheable?: boolean;
   /**

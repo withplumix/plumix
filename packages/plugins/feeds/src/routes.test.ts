@@ -16,7 +16,7 @@ import {
   render,
 } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
-import { createDispatcherHarness, fakeCdn } from "plumix/test";
+import { createDispatcherHarness, fakeCdn, testSite } from "plumix/test";
 import { describe, expect, test, vi } from "vitest";
 
 import { feed, feeds } from "./index.js";
@@ -2255,5 +2255,50 @@ describe("without the plugin installed", () => {
     expect(await (await h.fetch("/")).text()).not.toContain(
       'type="application/rss+xml"',
     );
+  });
+});
+
+const postsAndPages = definePlugin("posts-and-pages", {
+  setup: (ctx) => {
+    ctx.registerEntryType("post", {
+      label: "Posts",
+      isPublic: true,
+      hasArchive: true,
+    });
+    ctx.registerEntryType("page", { label: "Pages", isPublic: true });
+  },
+});
+
+const postsAndPagesSite = await testSite({
+  plugins: [postsAndPages, feeds()],
+});
+
+describe("a type's feed at the edge", () => {
+  test("is no longer stored after an entry of its type is published", async () => {
+    (await postsAndPagesSite.visit("/post/feed")).assertOk();
+    postsAndPagesSite.cdn.assertStored("/post/feed");
+
+    await postsAndPagesSite.actingAs("editor").rpc.entry.create({
+      type: "post",
+      title: "Fresh",
+      slug: "fresh",
+      status: "published",
+    });
+
+    postsAndPagesSite.cdn.assertNotStored("/post/feed");
+  });
+
+  test("is still stored after an entry of a type it doesn't list is published", async () => {
+    (await postsAndPagesSite.visit("/post/feed")).assertOk();
+    postsAndPagesSite.cdn.assertStored("/post/feed");
+
+    await postsAndPagesSite.actingAs("editor").rpc.entry.create({
+      type: "page",
+      title: "About",
+      slug: "about",
+      status: "published",
+    });
+
+    postsAndPagesSite.cdn.assertStored("/post/feed");
   });
 });

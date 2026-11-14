@@ -212,7 +212,7 @@ export const talks = definePlugin("talks", {
 });
 ```
 
-Core then lists that query, pages it, and reads the order it carries. It derives `/talks/:track/page/:page` from each declared route — you do not register the paginated form — and answers 404 past the last page. The theme receives `data.entries` and `data.pagination`, the same two fields a built-in archive hands over, so its pagination and entry components work unchanged. With `cacheable: true`, core tags the stored page with the entry types the query can list, and a publish of any of them purges it.
+Core then lists that query, pages it, and reads the order it carries. It derives `/talks/:track/page/:page` from each declared route — you do not register the paginated form — and answers 404 past the last page. The theme receives `data.entries` and `data.pagination`, the same two fields a built-in archive hands over, so its pagination and entry components work unchanged. With `cacheable: true`, the stored page carries the type tag of each entry type the query can list, and a publish of any of them purges it. An archive whose `resolve` reads entries itself gets the same through `compileEntryQuery`, and one that reads its plugin's own data calls `ctx.cache.reads(key)`.
 
 `perPage` defaults to 20. `title` takes a string or a function of the route params. `resolve` becomes optional once `entries` is declared, and is left with what only it can do — load a subject the route names, add fields of its own. It is handed the finished page as a third argument, and what it returns is merged under core's `entries` and `pagination`:
 
@@ -301,7 +301,7 @@ export const login = definePlugin("login", {
 
 A view is per-visitor by default:
 
-- **The CDN never stores it** unless you pass `cacheable: true`. A cacheable view's `resolve` returns `tags` too, and a purge of any of them drops the stored page. A view with `access` always renders live.
+- **The CDN never stores it** unless you pass `cacheable: true`. A cacheable view is stored under what its `resolve` read: entries it lists through `compileEntryQuery`, and its plugin's own data through `ctx.cache.reads(key)`. A write to any of them drops the stored page. A view with `access` always renders live.
 - **It claims no canonical address.** The page carries no automatic `<link rel="canonical">`; a view template whose `document()` declares one renders that one.
 - **`@plumix/plugin-seo` marks it `noindex`**, and lists it in no sitemap or `llms.txt`. A site offers a view to search engines with [`indexViews`](/plugins/seo/#views).
 

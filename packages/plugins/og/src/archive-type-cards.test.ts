@@ -1,21 +1,21 @@
-import type {
-  AnyPluginDescriptor,
-  ArchiveTypeData,
-  ListingArchiveData,
-} from "plumix";
-import type { DispatcherHarness } from "plumix/test";
+import type { ArchiveTypeData, ListingArchiveData } from "plumix";
+import type { AppContext } from "plumix/plugin";
+import type { TestSite } from "plumix/test";
 import { anonymousPolicy, authenticatedPolicy } from "plumix/auth";
-import { enqueuePurgeTags } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
 import { pageNotFound } from "plumix/support";
-import { fakeCdn } from "plumix/test";
+import { testSite } from "plumix/test";
+import { defineTheme, fallback } from "plumix/theme";
 import { describe, expect, test } from "vitest";
+
+import { seo } from "@plumix/plugin-seo";
 
 import type { CardRenderer } from "./renderer.js";
 import type { HarnessOptions } from "./test/harness.js";
 import { cardKey } from "./card-key.js";
 import { card } from "./card.js";
+import { og } from "./index.js";
 import { createFakeRenderer } from "./test/fake-renderer.js";
 import {
   createHarness,
@@ -67,21 +67,10 @@ const directory = definePlugin("test_directory", {
       routes: ["/:location", "/:location/:catalogue"],
       resolve: resolveLocation("location"),
     });
-  },
-});
-
-/** The directory's own data: a place's page is stored under its tag. */
-function placeTag(slug: string): string {
-  return `place:${slug}`;
-}
-
-/** Stands in for the directory's own edit of a place, which purges its tag. */
-const relocate: AnyPluginDescriptor = definePlugin("test_relocate", {
-  setup: (ctx) => {
     ctx.registerPublicRoute({
       path: "/relocate/london",
       handler: (_request, appCtx) => {
-        enqueuePurgeTags(appCtx, [placeTag("london")]);
+        appCtx.cache.changed("london");
         return new Response("ok");
       },
     });
@@ -89,17 +78,18 @@ const relocate: AnyPluginDescriptor = definePlugin("test_relocate", {
 });
 
 function resolveLocation(name: "location" | "members" | "open") {
-  return (_ctx: unknown, params: Record<string, string>) => {
+  return (ctx: AppContext, params: Record<string, string>) => {
     if (params.location === "atlantis") throw pageNotFound();
     const place = PLACES[params.location ?? ""];
     if (place === undefined) return null;
+    ctx.cache.reads(params.location);
     const data: LocationData = {
       kind: "archiveType",
       name,
       place,
       catalogue: params.catalogue ?? null,
     };
-    return { data, title: place, tags: [placeTag(params.location ?? "")] };
+    return { data, title: place };
   };
 }
 
@@ -135,26 +125,6 @@ function directoryHarness(options: HarnessOptions = {}) {
     cards: [locationCard, membersCard, seriesCard],
     ...options,
   });
-}
-
-async function editLondon(harness: DispatcherHarness): Promise<void> {
-  (await harness.fetch("/relocate/london")).assertStatus(200);
-}
-
-async function publishPost(harness: DispatcherHarness): Promise<void> {
-  const published = await harness.fetch("/_plumix/rpc/entry/create", {
-    as: await harness.seedUser("admin"),
-    json: {
-      json: {
-        type: "post",
-        title: "Fresh",
-        slug: "fresh",
-        status: "published",
-      },
-      meta: [],
-    },
-  });
-  published.assertStatus(200);
 }
 
 /** The path of the card a page's head advertises. */
@@ -316,32 +286,6 @@ describe("a plugin archive's card", () => {
   });
 
   test.each([
-    ["a write to what its resolver read", "/london", editLondon],
-    [
-      "a publish of what a listing archive lists",
-      "/series/design",
-      publishPost,
-    ],
-  ])("is retired at the edge by %s", async (_what, page, write) => {
-    const cdn = fakeCdn();
-    const harness = await directoryHarness({
-      cdn,
-      before: [directory, relocate],
-    });
-    const entryId = await seedEntry(harness);
-    await seedTerm(harness, { slug: "design", entryIds: [entryId] });
-    const path = (await advertisedCard(harness, page)) ?? "";
-    await harness.fetch(path);
-    await harness.drainDeferred();
-    cdn.assertStored(path);
-
-    await write(harness);
-    await harness.drainDeferred();
-
-    cdn.assertNotStored(path);
-  });
-
-  test.each([
     ["only the plugin's default card", []],
     [
       "a theme's own fallback card",
@@ -365,4 +309,70 @@ describe("a plugin archive's card", () => {
       ).assertStatus(404);
     },
   );
+});
+
+const cardSite = await testSite({
+  plugins: [
+    definePlugin("test_posts", {
+      setup: (ctx) => {
+        ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+        ctx.registerTermTaxonomy("category", {
+          label: "Categories",
+          entryTypes: ["post"],
+        });
+      },
+    }),
+    seo(),
+    directory,
+    og({ renderer: rasterRenderer() }),
+  ],
+  config: {
+    storage: memoryStorage(),
+    theme: defineTheme({
+      templates: [fallback(() => null)],
+      ogCards: [locationCard, seriesCard],
+    }),
+  },
+});
+
+async function editLondon(site: TestSite): Promise<void> {
+  (await site.visit("/relocate/london")).assertOk();
+}
+
+async function publishPost(site: TestSite): Promise<void> {
+  await site.actingAs("editor").rpc.entry.create({
+    type: "post",
+    title: "Fresh",
+    slug: "fresh",
+    status: "published",
+  });
+}
+
+describe("a plugin archive's card at the edge", () => {
+  test.each([
+    ["a write to what its resolver read", "/london", editLondon],
+    [
+      "a publish of what a listing archive lists",
+      "/series/design",
+      publishPost,
+    ],
+  ])("is no longer stored after %s", async (_what, page, write) => {
+    const post = await cardSite.factory.published.create({ type: "post" });
+    const design = await cardSite.factory.term.create({
+      taxonomy: "category",
+      slug: "design",
+    });
+    await cardSite.factory.entryTerm.create({
+      entryId: post.id,
+      termId: design.id,
+    });
+    const head = await cardSite.visit(page);
+    const path = new URL(ogImageOf(head.body) ?? "").pathname;
+    (await cardSite.visit(path)).assertOk();
+    cardSite.cdn.assertStored(path);
+
+    await write(cardSite);
+
+    cardSite.cdn.assertNotStored(path);
+  });
 });

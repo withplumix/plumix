@@ -14,10 +14,10 @@ import {
   definePolicy,
   grant,
 } from "plumix/auth";
-import { eq, etagOf } from "plumix/db";
+import { compileEntryQuery, entryQuery, eq, etagOf } from "plumix/db";
 import { definePlugin, entry as entryEvents, settings } from "plumix/plugin";
 import { entries } from "plumix/schema";
-import { createDispatcherHarness, fakeCdn } from "plumix/test";
+import { createDispatcherHarness, fakeCdn, testSite } from "plumix/test";
 import { defineTheme, fallback } from "plumix/theme";
 import { afterEach, describe, expect, expectTypeOf, test, vi } from "vitest";
 
@@ -159,7 +159,6 @@ const eventsPlugin = definePlugin("events", {
           lastmod: "2026-08-01T00:00:00.000Z",
         },
       ],
-      tags: ["events"],
     });
   },
 });
@@ -2849,5 +2848,64 @@ describe("the robots.txt editor", () => {
     await seedRobots(h, "User-agent: *\nAllow: /\n");
 
     expect(await bodyOf(h, "/robots.txt")).toBe("User-agent: *\nDisallow: /\n");
+  });
+});
+
+const talksPlugin = definePlugin("talks", {
+  setup: (ctx) => {
+    ctx.registerEntryType("talk", { label: "Talks", isPublic: true });
+    ctx.registerSitemap("talks", {
+      count: async (appCtx) => (await talkSlugs(appCtx)).length,
+      urls: async (appCtx) =>
+        (await talkSlugs(appCtx)).map((slug) => ({
+          loc: `${appCtx.origin}/talks/${slug}`,
+        })),
+    });
+  },
+});
+
+async function talkSlugs(
+  ctx: Parameters<SitemapSource["count"]>[0],
+): Promise<string[]> {
+  const where = await compileEntryQuery(ctx, entryQuery().ofTypes("talk"));
+  if (where === null) return [];
+  const rows = await ctx.db
+    .select({ slug: entries.slug })
+    .from(entries)
+    .where(where);
+  return rows.map((row) => row.slug);
+}
+
+const talksSite = await testSite({ plugins: [talksPlugin, seo()] });
+
+describe("a contributed sitemap source that lists entries", () => {
+  test("is no longer stored after an entry it lists is published", async () => {
+    (await talksSite.visit("/sitemap-talks-1.xml")).assertOk();
+    talksSite.cdn.assertStored("/sitemap-talks-1.xml");
+
+    await talksSite.actingAs("editor").rpc.entry.create({
+      type: "talk",
+      title: "Fresh",
+      slug: "fresh",
+      status: "published",
+    });
+
+    talksSite.cdn.assertNotStored("/sitemap-talks-1.xml");
+  });
+});
+
+describe("the sitemap index at the edge", () => {
+  test("is no longer stored after the first entry of a type is published", async () => {
+    (await talksSite.visit("/sitemap.xml")).assertOk();
+    talksSite.cdn.assertStored("/sitemap.xml");
+
+    await talksSite.actingAs("editor").rpc.entry.create({
+      type: "talk",
+      title: "First",
+      slug: "first",
+      status: "published",
+    });
+
+    talksSite.cdn.assertNotStored("/sitemap.xml");
   });
 });

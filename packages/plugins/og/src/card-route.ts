@@ -7,7 +7,6 @@ import {
   resolveEntryData,
   resolveListingPage,
   serveRenderedAsset,
-  tagCdnEntry,
 } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { withBasePath } from "plumix/support";
@@ -122,7 +121,6 @@ export function createCardRoute(
       return redirect(cardUrl(ctx, asked.target, identity.digest, extension));
     }
     ctx.cache.reads(identity.key.id);
-    tagCdnEntry(ctx, page.tags);
 
     let response: Response;
     try {
@@ -169,11 +167,10 @@ function redirect(location: string): Response {
   });
 }
 
+/** Stored under what resolving it read, so a purge of the page purges it. */
 interface CardPage {
   readonly node: ResolvedNode;
   readonly data: TemplateData;
-  /** The page's own purge tags, which the stored card is purged with. */
-  readonly tags: readonly string[];
 }
 
 async function resolveCardPage(
@@ -218,7 +215,7 @@ async function cardTargetPage(
   switch (target.kind) {
     case "entry": {
       const data = await entryData(ctx, target.id);
-      return data === null ? null : { data, tags: [] };
+      return data === null ? null : { data };
     }
     // A plugin's resolver may read who is asking, so it is asked as the
     // stranger a public card is shown to.
@@ -226,7 +223,7 @@ async function cardTargetPage(
       return resolveArchiveTypePage(anonymousContext(ctx), target);
     default: {
       const page = await resolveListingPage(ctx, target);
-      return page === null ? null : { data: page.data, tags: [] };
+      return page === null ? null : { data: page.data };
     }
   }
 }

@@ -1,13 +1,11 @@
-import type { AppContext, ArchiveAtPath, PluginRegistry } from "plumix/plugin";
-import { typeTag } from "plumix/db";
-import { loadSiteSettings, tagCdnEntry } from "plumix/plugin";
+import type { AppContext } from "plumix/plugin";
+import { loadSiteSettings } from "plumix/plugin";
 import { nonEmpty, now, withBasePath } from "plumix/support";
 
 import type { FeedRoute } from "./routes.js";
 import type { FeedChannel, FeedFormat } from "./serialize.js";
 import { collectFeedItems } from "./items.js";
 import { feedAt } from "./routes.js";
-import { syndicatableEntryTypeNames } from "./scope.js";
 import { renderAtom, renderRss2 } from "./serialize.js";
 
 const CONTENT_TYPE: Record<FeedFormat, string> = {
@@ -21,17 +19,6 @@ const CONTENT_TYPE: Record<FeedFormat, string> = {
  */
 const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
-/** The `t:<type>` tags an entry mutation purges. */
-function typeTags(
-  plugins: PluginRegistry,
-  target: ArchiveAtPath | null,
-): string[] {
-  if (target?.archive.kind === "entryType") {
-    return [typeTag(target.archive.entryType)];
-  }
-  return syndicatableEntryTypeNames(plugins).map(typeTag);
-}
-
 export async function handleFeed(
   ctx: AppContext,
   format: FeedFormat,
@@ -41,7 +28,6 @@ export async function handleFeed(
   // archive lookup reads a path too.
   const pathname = new URL(ctx.request.url).pathname;
   const target = feedAt(ctx, route, pathname);
-  tagCdnEntry(ctx, typeTags(ctx.plugins, target));
   const site = await loadSiteSettings(ctx);
   // A private site is held out of syndication. (The sitemap returns an empty
   // 200 instead — there's no "valid but empty because private" feed idiom, so

@@ -471,14 +471,13 @@ ctx.filters.add(seo.sitemap.urls, (urls, { scope }) =>
 
 ### Contributing a sitemap
 
-A plugin adds a URL space of its own to the index with `ctx.registerSitemap(name, source)`, called during `setup`. The URLs need no archive behind them, so a plugin that serves pages from routes of its own lists them here. `count` drives the index's pagination without a URL scan, `urls` answers one 1-based page, `tags` names the cache tags its pages are stored under, and `lastmod`, if given, answers the ISO-8601 time of the newest URL on a page for that page's index entry:
+A plugin adds a URL space of its own to the index with `ctx.registerSitemap(name, source)`, called during `setup`. The URLs need no archive behind them, so a plugin that serves pages from routes of its own lists them here. `count` drives the index's pagination without a URL scan, `urls` answers one 1-based page, and `lastmod`, if given, answers the ISO-8601 time of the newest URL on a page for that page's index entry:
 
 ```ts no-typecheck
 ctx.registerSitemap("locations", {
   count: (appCtx) => countLocations(appCtx),
   urls: (appCtx, page) => locationUrls(appCtx, page),
   lastmod: (appCtx, page) => newestLocationUpdate(appCtx, page),
-  tags: ["locations"],
 });
 ```
 
@@ -496,9 +495,9 @@ Seo asks that policy for an anonymous visitor, whoever requests the sitemap. Whe
 
 ### Caching
 
-Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope stores under its own tags — `t:<type>` for an entry type, the taxonomy's `tx:<taxonomy>` for a taxonomy — so publishing a post retires the post scope, and creating or deleting a category retires the category scope, and each leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all. `/llms.txt` declares the same header and is stored under the `t:<type>` tag of every public entry type, so an entry write, a change of access choice included, retires it with the sitemap page that lists the entry. A `seo.sitemap.urls` subscriber that adds rows from its own data reads them with `ctx.cache.reads(key)`, so its `ctx.cache.changed(key)` retires the sitemap pages those rows joined.
+Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope is stored under what it read — an entry type's entries through `compileEntryQuery`, a taxonomy's terms through `taxonomyTermRows` — so publishing a post retires the post scope, and creating or deleting a category retires the category scope, and each leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all. `/llms.txt` declares the same header and reads each entry type it lists through `compileEntryQuery` too, so an entry write, a change of access choice included, retires it with the sitemap page that lists the entry. A `seo.sitemap.urls` subscriber that adds rows from its own data reads them with `ctx.cache.reads(key)`, so its `ctx.cache.changed(key)` retires the sitemap pages those rows joined.
 
-A scope with no tags to contribute rides the one-hour window instead of a purge, as a contributed source that omits `tags` does. Declare `tags` on a source whose content changes more often than that.
+A contributed source is stored under whatever its `count`, `urls` and `lastmod` read: entries through `compileEntryQuery`, a taxonomy's terms through `taxonomyTermRows`. A source that reads neither rides the one-hour window instead of a purge.
 
 With no CDN configured, every sitemap is generated per request.
 
