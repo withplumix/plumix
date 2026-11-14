@@ -17,8 +17,8 @@ import type { assertTermMetaCapabilities } from "./meta/term.js";
 import type { RPC_ERRORS, RpcErrors } from "./rpc-errors.js";
 import type { assertLookupOk } from "./rpc/procedures/auth/device-flow/lookup-helpers.js";
 import type {
-  assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
+  settleContentAgainstRegistries,
 } from "./rpc/procedures/entry/content.js";
 import type { entryDeletableGuards } from "./rpc/procedures/entry/lifecycle.js";
 import type { previewableEntry } from "./rpc/procedures/entry/previewable.js";
@@ -63,7 +63,7 @@ describe("RPC_ERRORS subsets", () => {
       Parameters<typeof assertContentWithinByteCap>[1]
     >().toEqualTypeOf<Pick<RpcErrors, "CONFLICT">>();
     expectTypeOf<
-      Parameters<typeof assertContentValidAgainstRegistries>[3]
+      Parameters<typeof settleContentAgainstRegistries>[3]
     >().toEqualTypeOf<Pick<RpcErrors, "INVALID_BLOCK_CONTENT">>();
     expectTypeOf<Parameters<typeof sanitizeMetaForRpc>[2]>().toEqualTypeOf<
       Pick<RpcErrors, "CONFLICT">

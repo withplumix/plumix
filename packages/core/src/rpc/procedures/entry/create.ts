@@ -30,8 +30,8 @@ import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryRpc } from "../../filters.js";
 import {
-  assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
+  settleContentAgainstRegistries,
 } from "./content.js";
 import {
   applyEntryBeforeSave,
@@ -118,13 +118,20 @@ export async function createEntry(
 
   assertContentWithinByteCap(filtered.content, errors);
   // A new entry starts from an empty tree, so any block in it is layout.
-  assertContentValidAgainstRegistries(filtered.content, [], context, errors, {
-    capability: namespacedEntryCapability(
-      entryCapabilityNamespace(context.plugins, filtered.type),
-      "edit_layout",
-    ),
-    from: [],
-  });
+  const content = await settleContentAgainstRegistries(
+    filtered.content,
+    [],
+    context,
+    errors,
+    {
+      capability: namespacedEntryCapability(
+        entryCapabilityNamespace(context.plugins, filtered.type),
+        "edit_layout",
+      ),
+      from: [],
+    },
+    goesLive ? "publish" : "draft",
+  );
 
   // A new entry starts from its fields' defaults (ADR 0026); the meta the
   // caller sends lands on top of them.
@@ -187,7 +194,7 @@ export async function createEntry(
     // render their own localized fallback for the empty title.
     title: filtered.title ?? "",
     slug: filtered.slug,
-    content: filtered.content ?? null,
+    content: content ?? null,
     excerpt: filtered.excerpt ?? null,
     status: filtered.status,
     parentId: filtered.parentId ?? null,

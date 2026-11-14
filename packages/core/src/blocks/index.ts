@@ -12,12 +12,16 @@ export { isJsonArray, isJsonObject } from "../json.js";
 
 // ─── Block registry primitives ──────────────────────────────────────────────
 export {
+  contentInput,
   createBlockRegistry,
   CORE_BLOCK_NAMESPACE,
   defineBlock,
   isReservedBlockName,
 } from "./block-registry.js";
 export type {
+  BlockDefinition,
+  BlockField,
+  BlockFieldDeclaration,
   BlockInput,
   BlockInputOption,
   BlockRegistry,
@@ -134,6 +138,7 @@ export { validateEntryContent } from "./validate-content.js";
 export type { BlockContentValidationResult } from "./validate-content.js";
 export { BlockContentValidationError } from "./validation-errors.js";
 export type {
+  BlockAttributeError,
   BlockContentValidationCode,
   BlockContentValidationIssue,
 } from "./validation-errors.js";

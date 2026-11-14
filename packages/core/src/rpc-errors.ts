@@ -1,6 +1,23 @@
 import type { ORPCErrorConstructorMap } from "@orpc/server";
 import * as v from "valibot";
 
+/**
+ * A meta-box field's `{ path, message }` errors. `message` is a plain string or
+ * a catalog descriptor; `looseObject` keeps the descriptor's `values` on the wire.
+ */
+const FIELD_ERRORS = v.array(
+  v.object({
+    path: v.string(),
+    message: v.union([
+      v.string(),
+      v.looseObject({
+        id: v.string(),
+        message: v.optional(v.string()),
+      }),
+    ]),
+  }),
+);
+
 export const RPC_ERRORS = {
   UNAUTHORIZED: {
     message: "Authentication required",
@@ -37,22 +54,7 @@ export const RPC_ERRORS = {
       etag: v.optional(v.string()),
       updatedAt: v.optional(v.date()),
       holder: v.optional(v.object({ id: v.number(), name: v.string() })),
-      // `message` is a plain string or a catalog descriptor; `looseObject`
-      // keeps the descriptor's `values` on the wire.
-      errors: v.optional(
-        v.array(
-          v.object({
-            path: v.string(),
-            message: v.union([
-              v.string(),
-              v.looseObject({
-                id: v.string(),
-                message: v.optional(v.string()),
-              }),
-            ]),
-          }),
-        ),
-      ),
+      errors: v.optional(FIELD_ERRORS),
     }),
   },
   LOCKED: {
@@ -91,6 +93,7 @@ export const RPC_ERRORS = {
           markName: v.optional(v.string()),
           property: v.optional(v.string()),
           breakpoint: v.optional(v.string()),
+          errors: v.optional(FIELD_ERRORS),
         }),
       ),
     }),

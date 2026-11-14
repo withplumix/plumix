@@ -18,6 +18,7 @@ import { apiTokens } from "../db/schema/api_tokens.js";
 import { entries } from "../db/schema/entries.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 import { definePlugin } from "../plugin/define.js";
+import { repeater, text, url } from "../plugin/fields/index.js";
 import { fallback } from "../route/render/template-builders.js";
 import { trustRequest } from "../runtime/request-trust.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
@@ -98,6 +99,7 @@ const hero = defineBlock({
       rawSlot: true,
       defaultChildren: [{ id: "d1", name: "core/rich-text", attrs: {} }],
     },
+    repeater("links").fields([text("label"), url("url")]),
   ],
 });
 
@@ -669,7 +671,35 @@ describe("MCP endpoint — schema_describe", () => {
         rawSlot: true,
         defaultChildren: [{ id: "d1", name: "core/rich-text", attrs: {} }],
       },
+      { name: "links" },
     ]);
+  });
+
+  test("a meta-box field input describes its field, sub-fields and all", async () => {
+    const h = await themedMcpHarness();
+    const secret = await mintPat(h);
+
+    const { json } = await callTool(h, secret, 12, "schema_describe", {});
+
+    const { blocks } = parseToolResult<BuildingModel>(json);
+    const links = blocks
+      .find((b) => b.name === "site/hero")
+      ?.inputs.find((input) => input.name === "links");
+    expect(links).toEqual({
+      name: "links",
+      type: "repeater",
+      label: "Links",
+      field: {
+        key: "links",
+        label: "Links",
+        type: "json",
+        inputType: "repeater",
+        subFields: [
+          { key: "label", label: "Label", type: "string", inputType: "text" },
+          { key: "url", label: "Url", type: "string", inputType: "url" },
+        ],
+      },
+    });
   });
 
   test("a block lists its default styles", async () => {

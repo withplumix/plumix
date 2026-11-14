@@ -8,12 +8,14 @@ import type {
   StylePolicy,
 } from "../blocks/styles/style-policy.js";
 import type { AppContext } from "../context/app-context.js";
+import type { MetaBoxFieldManifestEntry } from "../plugin/fields/manifest-entry.js";
 import {
   styleCategoryForProperty,
   tokenCssVar,
 } from "../blocks/styles/style-emitter.js";
 import { STYLE_KEYWORDS } from "../blocks/styles/style-policy.js";
 import { labelSourceText } from "../i18n/label.js";
+import { toMetaBoxFieldEntry } from "../plugin/fields/manifest-entry.js";
 
 type BlockCatalog = Pick<AppContext, "blocks" | "allowedBlocks" | "auth">;
 
@@ -28,6 +30,7 @@ interface DescribedInput {
   readonly accept: BlockInput["accept"];
   readonly rawSlot: boolean | undefined;
   readonly defaultChildren: BlockInput["defaultChildren"];
+  readonly field: MetaBoxFieldManifestEntry | undefined;
 }
 
 interface DescribedBlock {
@@ -101,6 +104,7 @@ function describeInput(
     accept: input.accept,
     rawSlot: input.rawSlot,
     defaultChildren: input.defaultChildren,
+    field: input.field && toMetaBoxFieldEntry(input.field),
   };
 }
 

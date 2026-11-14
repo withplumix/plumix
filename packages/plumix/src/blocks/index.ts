@@ -20,6 +20,7 @@ export {
   coreBlocks,
   coreMarks,
   coreShortcodes,
+  contentInput,
   createBlockRegistry,
   CSRF_HEADER_NAME,
   CSRF_HEADER_VALUE,
@@ -50,6 +51,9 @@ export type {
 } from "@plumix/core/blocks";
 export type {
   BlockContext,
+  BlockDefinition,
+  BlockField,
+  BlockFieldDeclaration,
   BlockInput,
   BlockInputOption,
   BlockLoaderArgs,

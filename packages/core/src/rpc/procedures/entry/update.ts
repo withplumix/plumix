@@ -3,6 +3,7 @@ import type { Entry, NewEntry } from "../../../db/schema/entries.js";
 import type { EntryEditErrors } from "../../../entries/editability.js";
 import type { JsonObject, JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
+import type { FieldAttrCheck } from "./content.js";
 import type { EntryUpdate, EntryWritten } from "./writes-shared.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
@@ -48,8 +49,9 @@ import { assertLeaseAllows } from "../../concurrency.js";
 import { entryRpc } from "../../filters.js";
 import { entryRows } from "./concurrency.js";
 import {
-  assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
+  settleContentAgainstRegistries,
+  settleContentFieldAttrs,
 } from "./content.js";
 import { stripUndefined } from "./helpers.js";
 import {
@@ -141,6 +143,19 @@ async function writeGuarded(
   return row;
 }
 
+/** The mode meta's patch and whole-bag checks run in for the same save. */
+function fieldAttrCheck(
+  saveAs: "draft" | "live",
+  publishes: boolean,
+  targetStatus: string,
+): FieldAttrCheck {
+  if (saveAs === "draft") return "draft";
+  if (publishes) return "publish";
+  return targetStatus === "published" || targetStatus === "scheduled"
+    ? "strict"
+    : "draft";
+}
+
 /**
  * Where a procedure checks capabilities inside the save: `edit` once the row is
  * loaded, `publish` or `trash` once the save is known to make that move.
@@ -154,14 +169,14 @@ interface EntryUpdateGates {
 /** `entry.update` and `ctx.entries.update`, each with its own gates. */
 export async function updateEntry(
   context: AuthenticatedAppContext,
-  filtered: EntryUpdate,
+  input: EntryUpdate,
   gates: EntryUpdateGates = {},
 ): Promise<EntryWritten> {
-  assertContentWithinByteCap(filtered.content, errors);
+  assertContentWithinByteCap(input.content, errors);
 
-  const existing = await loadAuthoredEntry(context, filtered.id);
+  const existing = await loadAuthoredEntry(context, input.id);
   if (!existing) {
-    throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
+    throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
   }
 
   gates.edit?.(existing);
@@ -173,10 +188,30 @@ export async function updateEntry(
     entryId: existing.id,
     authorId: context.user.id,
   });
+  // Writes stay on live unless the type supports autosave AND the row is
+  // published.
+  const typeSupportsAutosave =
+    context.plugins.entryTypes
+      .get(existing.type)
+      ?.supports?.includes("autosave") ?? false;
+  const effectiveSaveAs: "draft" | "live" =
+    input.saveAs ??
+    (typeSupportsAutosave && existing.status === "published"
+      ? "draft"
+      : "live");
+  const isPublishTransition =
+    input.status === "published" && existing.status !== "published";
+  const nowScheduled =
+    input.status === "scheduled" && existing.status !== "scheduled";
+  const check = fieldAttrCheck(
+    effectiveSaveAs,
+    isPublishTransition || nowScheduled,
+    input.status ?? existing.status,
+  );
   // Validated against what the save starts from, so a block whose plugin is
   // gone survives the save while a new instance of it is refused.
-  assertContentValidAgainstRegistries(
-    filtered.content,
+  const content = await settleContentAgainstRegistries(
+    input.content,
     [existing.content, currentEdits?.content],
     context,
     errors,
@@ -188,7 +223,19 @@ export async function updateEntry(
       ),
       from: [existing.content, currentEdits?.content],
     },
+    check,
   );
+  // Publishing checks the content it makes live, as it checks meta's whole bag.
+  if (check === "publish" && input.content === undefined) {
+    await settleContentFieldAttrs(
+      existing.content,
+      [existing.content],
+      context.blocks,
+      check,
+      errors,
+    );
+  }
+  const filtered = { ...input, content };
 
   // Checked before either write path so an undeclared key is rejected
   // regardless of the save target.
@@ -207,17 +254,6 @@ export async function updateEntry(
   );
   entryRows(context.db).assertCopyCurrent(filtered.ifMatch, existing);
 
-  // Writes stay on live unless the type supports autosave AND the row is
-  // published.
-  const typeSupportsAutosave =
-    context.plugins.entryTypes
-      .get(existing.type)
-      ?.supports?.includes("autosave") ?? false;
-  const effectiveSaveAs: "draft" | "live" =
-    filtered.saveAs ??
-    (typeSupportsAutosave && existing.status === "published"
-      ? "draft"
-      : "live");
   if (effectiveSaveAs === "draft") {
     if (!typeSupportsAutosave) {
       throw errors.BAD_REQUEST({
@@ -311,10 +347,6 @@ export async function updateEntry(
     };
   }
 
-  const isPublishTransition =
-    filtered.status === "published" && existing.status !== "published";
-  const nowScheduled =
-    filtered.status === "scheduled" && existing.status !== "scheduled";
   if (isPublishTransition || nowScheduled) {
     gates.publish?.(existing);
   }
