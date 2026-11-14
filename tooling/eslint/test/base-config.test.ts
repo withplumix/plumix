@@ -878,6 +878,39 @@ describe("lingui/no-unlocalized-strings under the strict config", () => {
   });
 });
 
+describe("raw timers in React UI source", () => {
+  const withReact = new ESLint({
+    cwd: fixturesDir,
+    overrideConfigFile: true,
+    overrideConfig: [...baseConfig, ...reactConfig],
+  });
+  it("rejects setTimeout and setInterval in a component", async () => {
+    const [result] = await withReact.lintFiles(["src/raw-timer.tsx"]);
+    expect(
+      (result?.messages ?? [])
+        .filter((message) => message.ruleId === "no-restricted-globals")
+        .map((message) => message.line),
+    ).toEqual([2, 3]);
+  });
+
+  it("names the hooks that replace a raw timer", async () => {
+    const [result] = await withReact.lintFiles(["src/use-raw-timer.ts"]);
+    const [report] = (result?.messages ?? []).filter(
+      (message) => message.ruleId === "no-restricted-globals",
+    );
+    expect(report?.message).toMatch(/useTimedFlag.*useDebouncedValue/);
+  });
+
+  it("leaves a timer in a module that is neither a component nor a hook", async () => {
+    const [result] = await withReact.lintFiles(["src/retry-timer.ts"]);
+    expect(
+      (result?.messages ?? []).filter(
+        (message) => message.ruleId === "no-restricted-globals",
+      ),
+    ).toEqual([]);
+  });
+});
+
 describe("the react config's automatic JSX runtime", () => {
   it("reports a React import that only JSX would have used", async () => {
     const withReact = new ESLint({

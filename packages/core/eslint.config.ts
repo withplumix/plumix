@@ -105,6 +105,13 @@ export default defineConfig(
     ...config,
     files: ["src/blocks/**/*.{ts,tsx}"],
   })),
+  // The remap widens the React timer ban from components and hooks to the
+  // island runtime, whose timers schedule hydration rather than set state.
+  {
+    files: ["src/blocks/**/*.ts"],
+    ignores: ["src/blocks/**/use-*.ts"],
+    rules: { "no-restricted-globals": "off" },
+  },
   layerDirection(),
   // The capability vocabulary — core's baked-in `entry:post:*` set and the
   // spellers every reference resolves through.

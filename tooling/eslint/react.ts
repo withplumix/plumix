@@ -68,6 +68,21 @@ export const reactConfig = defineConfig(
       ],
     },
   },
+  // Components and hooks only: an imperative module such as a debouncer with
+  // `flush` or a handshake retry owns its timer and has no state to set.
+  {
+    files: ["src/**/*.tsx", "src/**/use-*.ts"],
+    ignores: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        ...["setTimeout", "setInterval"].map((name) => ({
+          name,
+          message: `A raw ${name} in a component or hook leaks past unmount and races a second trigger. Use \`useTimedFlag\` or \`useDebouncedValue\` from @plumix/admin-ui (plumix/admin/ui in a plugin).`,
+        })),
+      ],
+    },
+  },
   // theme.css's layout utilities are named because plugins have no stylesheet
   // to discover them in. `no-restyle` allows sizing families by prefix: a
   // named entry warns where the theme is unseen.
