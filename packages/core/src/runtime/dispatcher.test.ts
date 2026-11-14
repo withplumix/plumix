@@ -23,9 +23,9 @@ import { withUser } from "../auth/with-user.js";
 import { defineBlock } from "../blocks/index.js";
 import { IslandShim } from "../blocks/island-shim.js";
 import { entryPurgeTags, termTag } from "../cdn/contract/tags.js";
-import { tagCdnEntry } from "../cdn/route-tags.js";
 import { getContext } from "../context/stores.js";
 import { etagOf } from "../db/concurrency.js";
+import { compileEntryQuery, entryQuery } from "../entries/query.js";
 import { render } from "../events-and-filters/render.js";
 import { defineAuthMethod } from "../plugin/auth-method.js";
 import { definePlugin } from "../plugin/define.js";
@@ -2109,22 +2109,22 @@ describe("dispatcher — public read-through CDN", () => {
     );
   });
 
-  // A sessioned render runs through `withUser`, so a plugin's tag must reach
-  // the stored page from a derived context.
-  test("a page render's tagCdnEntry from a derived context tags the stored page", async () => {
+  // A sessioned render runs through `withUser`, so a read through a derived
+  // context must still tag the stored page.
+  test("a page render's read through a derived context tags the stored page", async () => {
     const { cdn, put } = cdnStub();
     const author = { id: 1, email: "a@example.com", role: "admin" } as const;
     const tagging = definePlugin("tagging", {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
-        ctx.filters.add(render.document, (document, _input, appCtx) => {
-          tagCdnEntry(
+        ctx.filters.add(render.document, async (document, _input, appCtx) => {
+          await compileEntryQuery(
             withUser(
               appCtx,
               { ...author, name: null, avatarUrl: null, meta: {} },
               { kind: "session" },
             ),
-            ["x:1"],
+            entryQuery().ofTypes("note"),
           );
           return document;
         });
@@ -2150,9 +2150,9 @@ describe("dispatcher — public read-through CDN", () => {
     await h.drainDeferred();
 
     const tags = put.mock.calls[0]?.[2];
-    expect(tags).toContain("x:1");
+    expect(tags).toContain("t:note");
     expect(tags).toContain(`e:${String(entry.id)}`);
-    expect(response.headers.get("cache-tag")?.split(",")).toContain("x:1");
+    expect(response.headers.get("cache-tag")?.split(",")).toContain("t:note");
   });
 
   // Every render reads the `site` group for its `<title>` fallback, so saving
@@ -2786,8 +2786,8 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
 
   test("stores under the tags the handler declared while it ran", async () => {
     const { cdn, put } = cdnStub();
-    // What a card route does: it resolves the entry it is answering for, then
-    // names that entry in the vocabulary the publish purge already sweeps.
+    // What a card route does: it reads what it answers for through core, which
+    // declares the tags the publish purge already sweeps.
     const taggedCards = definePlugin("og", {
       setup: (ctx) => {
         ctx.registerRoute({
@@ -2795,8 +2795,8 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
           path: "/card/*",
           auth: "public",
           cacheable: true,
-          handler: (_request, appCtx) => {
-            tagCdnEntry(appCtx, entryPurgeTags("post", 7));
+          handler: async (_request, appCtx) => {
+            await compileEntryQuery(appCtx, entryQuery().ofTypes("post"));
             return new Response("PNG", { status: 200 });
           },
         });
@@ -2812,7 +2812,7 @@ describe("dispatcher — plugin-route CDN (#1959)", () => {
     );
     await h.drainDeferred();
 
-    expect(put.mock.calls[0]?.[2]).toEqual(["t:post", "e:7"]);
+    expect(put.mock.calls[0]?.[2]).toEqual(["t:post"]);
   });
 
   test("a route that did not opt in never touches the CDN", async () => {
@@ -2958,13 +2958,13 @@ describe("dispatcher — telemetry consumers", () => {
       (span) => span.name === "db: select",
     );
     expect(selects.length).toBeGreaterThanOrEqual(2);
-    const entryQuery = selects.find((s) => {
+    const entrySelect = selects.find((s) => {
       const sqlAttr = s.attributes["db.sql"];
       return typeof sqlAttr === "string" && sqlAttr.includes("entries");
     });
-    expect(entryQuery).toBeDefined();
-    expect(Array.isArray(entryQuery?.attributes["db.params"])).toBe(true);
-    expect(entryQuery?.attributes["db.rows"]).toBeTypeOf("number");
+    expect(entrySelect).toBeDefined();
+    expect(Array.isArray(entrySelect?.attributes["db.params"])).toBe(true);
+    expect(entrySelect?.attributes["db.rows"]).toBeTypeOf("number");
   });
 
   test("phase spans carry attributes: dispatch status, resolve entity+template, render node", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { entryPurgeTags, termPurgeTags, typeTag } from "./contract/tags.js";
+import { entryPurgeTags, typeTag } from "./contract/tags.js";
 import { pageTags } from "./tags.js";
 
 describe("entryPurgeTags", () => {
@@ -21,20 +21,6 @@ describe("typeTag", () => {
   // entry type would be two tags on one vendor and one on another.
   it("lowercases the entry type at construction", () => {
     expect(typeTag("EventSeries")).toBe("t:eventseries");
-  });
-});
-
-describe("termPurgeTags", () => {
-  it("purges a type tag for each of the taxonomy's entry types", () => {
-    expect(termPurgeTags(["post", "note"])).toEqual(["t:post", "t:note"]);
-  });
-
-  it("purges nothing for a taxonomy with no entry types", () => {
-    expect(termPurgeTags([])).toEqual([]);
-  });
-
-  it("carries lowercased type tags", () => {
-    expect(termPurgeTags(["Post"])).toEqual(["t:post"]);
   });
 });
 

@@ -24,11 +24,6 @@ export function entryPurgeTags(entryType: string, entryId: number): string[] {
   return [typeTag(entryType), entryTag(entryId)];
 }
 
-/** The `t:<type>` tags of the entry types a taxonomy lists. */
-export function termPurgeTags(taxonomyEntryTypes: readonly string[]): string[] {
-  return taxonomyEntryTypes.map(typeTag);
-}
-
 /** A page that rendered a term, its archive or an entry's chip, carries it. */
 export function termTag(termId: number): string {
   return `tm:${String(termId)}`;

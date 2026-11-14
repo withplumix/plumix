@@ -1,5 +1,5 @@
 import type { testSite } from "plumix/test";
-import { eq, etagOf, typeTag } from "plumix/db";
+import { compileEntryQuery, entryQuery, eq, etagOf } from "plumix/db";
 import { text } from "plumix/fields";
 import {
   buildManifest,
@@ -7,7 +7,6 @@ import {
   entry,
   HandlerRegistry,
   installPlugins,
-  tagCdnEntry,
 } from "plumix/plugin";
 import { memoryStorage } from "plumix/runtime";
 import { entries } from "plumix/schema";
@@ -2323,8 +2322,8 @@ const publicLibrary = definePlugin("public-library", {
     ctx.registerPublicRoute({
       path: "/library",
       cacheable: true,
-      handler: (_request, appCtx) => {
-        tagCdnEntry(appCtx, [typeTag("media")]);
+      handler: async (_request, appCtx) => {
+        await compileEntryQuery(appCtx, entryQuery().ofTypes("media"));
         return new Response("library", { status: 200 });
       },
     });

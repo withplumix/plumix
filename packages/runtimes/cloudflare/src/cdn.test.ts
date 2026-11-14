@@ -1,6 +1,5 @@
 import type { ConnectedCdn, Logger, TelemetrySnapshot } from "plumix";
 import type { CloudflareCdnConfig } from "plumix/cdn/cloudflare";
-import { entryPurgeTags } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
 import { runScheduledTasks } from "plumix/runtime";
 import { entries } from "plumix/schema";
@@ -112,7 +111,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
 
     const id = await publishPost(connect());
 
-    const tags = entryPurgeTags("post", id);
+    const tags = ["t:post", `e:${String(id)}`];
     expect(purge.mock.calls).toEqual([[{ tags }]]);
     expect(zonePurges()).toEqual([{ tags }]);
   });
@@ -121,7 +120,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
     const id = await publishPost(connect());
 
     expect(purge).not.toHaveBeenCalled();
-    expect(zonePurges()).toEqual([{ tags: entryPurgeTags("post", id) }]);
+    expect(zonePurges()).toEqual([{ tags: ["t:post", `e:${String(id)}`] }]);
   });
 
   test("purgeAll purges the cached entrypoint of everything, beside the zone", async () => {
@@ -160,7 +159,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
     await Promise.all(deferred);
 
     expect(purge.mock.calls).toEqual([
-      [{ tags: entryPurgeTags("post", due.id) }],
+      [{ tags: ["t:post", `e:${String(due.id)}`] }],
     ]);
   });
 
