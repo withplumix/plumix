@@ -5,9 +5,17 @@ import type {
   CdnBypassReason,
   PageKind,
   RequestFacts,
+  RouteRenderFacts,
+  RouteRequestFacts,
+  RouteSharingDecision,
   SharingDecision,
 } from "./sharing-verdict.js";
-import { sharingAfterRender, sharingBeforeRender } from "./sharing-verdict.js";
+import {
+  routeSharingAfterRender,
+  routeSharingBeforeRender,
+  sharingAfterRender,
+  sharingBeforeRender,
+} from "./sharing-verdict.js";
 
 beforeEach(() => {
   vi.stubEnv("PLUMIX_BUILD_ID", "b1");
@@ -356,7 +364,7 @@ describe("sharingAfterRender", () => {
     {
       name: "an anonymous 200 is stored, decorated and leaves as a page",
       decision: readThrough("anonymous"),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: true,
         decorate: true,
@@ -367,7 +375,7 @@ describe("sharingAfterRender", () => {
     {
       name: "an anonymous 404 is neither stored nor decorated",
       decision: readThrough("anonymous"),
-      render: { status: 404, personal: false },
+      render: { status: 404, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -378,7 +386,7 @@ describe("sharingAfterRender", () => {
     {
       name: "an anonymous redirect is neither stored nor decorated",
       decision: readThrough("anonymous"),
-      render: { status: 301, personal: false },
+      render: { status: 301, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -389,7 +397,7 @@ describe("sharingAfterRender", () => {
     {
       name: "an anonymous 500 is neither stored nor decorated",
       decision: readThrough("anonymous"),
-      render: { status: 500, personal: false },
+      render: { status: 500, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -400,7 +408,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a personal anonymous 200 is neither stored nor decorated",
       decision: readThrough("anonymous"),
-      render: { status: 200, personal: true },
+      render: { status: 200, personal: true, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -409,9 +417,20 @@ describe("sharingAfterRender", () => {
       },
     },
     {
+      name: "an anonymous 200 that sets a cookie is stored but not decorated",
+      decision: readThrough("anonymous"),
+      render: { status: 200, personal: false, setsCookie: true },
+      expected: {
+        store: true,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
+    },
+    {
       name: "a shared segment's 200 is stored but leaves private",
       decision: readThrough("authenticated"),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: true,
         decorate: false,
@@ -422,7 +441,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a shared segment's personal 200 is not stored and leaves private",
       decision: readThrough("authenticated"),
-      render: { status: 200, personal: true },
+      render: { status: 200, personal: true, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -433,7 +452,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a shared segment's 404 is not stored and leaves private",
       decision: readThrough("capability:briefing:read"),
-      render: { status: 404, personal: false },
+      render: { status: 404, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -444,7 +463,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a private bypass leaves private",
       decision: bypass("private", "private"),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -455,7 +474,7 @@ describe("sharingAfterRender", () => {
     {
       name: "an anonymous bypass is not stored and leaves as a page",
       decision: bypass("anonymous", "intent"),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -466,7 +485,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a shared segment the CDN cannot key leaves private",
       decision: bypass("authenticated", "segment-unsupported"),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -477,7 +496,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a policied plugin route's anonymous response leaves as rendered",
       decision: bypass("anonymous", "intent", { kind: "policied-route" }),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -488,7 +507,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a policied plugin route's private response leaves private",
       decision: bypass("private", "private", { kind: "policied-route" }),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -521,7 +540,7 @@ describe("sharingAfterRender", () => {
     {
       name: "an unpolicied anonymous 200 is stored as the universal copy",
       decision: readThrough("anonymous", true),
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: true,
         decorate: true,
@@ -532,7 +551,7 @@ describe("sharingAfterRender", () => {
     {
       name: "an unpolicied anonymous 404 is not stored as the universal copy",
       decision: readThrough("anonymous", true),
-      render: { status: 404, personal: false },
+      render: { status: 404, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -543,7 +562,7 @@ describe("sharingAfterRender", () => {
     {
       name: "a session's render of the universal page is never stored",
       decision: READ_UNIVERSAL,
-      render: { status: 200, personal: false },
+      render: { status: 200, personal: false, setsCookie: false },
       expected: {
         store: false,
         decorate: false,
@@ -553,5 +572,252 @@ describe("sharingAfterRender", () => {
     },
   ])("$name", ({ decision, render, expected }) => {
     expect(sharingAfterRender(decision, render)).toEqual(expected);
+  });
+});
+
+const CARD = "https://site.test/_plumix/og/card.png?v=2";
+
+/** An anonymous GET to a public plugin route. */
+function routeFacts(overrides: Partial<RouteRequestFacts> = {}) {
+  return {
+    request: new Request(CARD, { headers: { cookie: "plumix_locale=fr" } }),
+    privileged: false,
+    ephemeralGrant: false,
+    route: "public",
+    ...overrides,
+  } satisfies RouteRequestFacts;
+}
+
+function routeOutcome(decision: RouteSharingDecision) {
+  return decision.kind === "bypass"
+    ? { bypass: decision.reason }
+    : { key: decision.key.url, shareable: decision.shareable };
+}
+
+describe("routeSharingBeforeRender", () => {
+  it.each([
+    {
+      name: "an unprivileged GET is read through under the route's own URL",
+      facts: routeFacts(),
+      expected: { key: `${CARD}&__plumix_build=b1`, shareable: true },
+    },
+    {
+      name: "a HEAD is read through",
+      facts: routeFacts({ request: new Request(CARD, { method: "HEAD" }) }),
+      expected: { key: `${CARD}&__plumix_build=b1`, shareable: true },
+    },
+    {
+      name: "a write method bypasses",
+      facts: routeFacts({ request: new Request(CARD, { method: "POST" }) }),
+      expected: { bypass: "method" },
+    },
+    {
+      name: "a privileged request to a public route renders privately",
+      facts: routeFacts({ privileged: true }),
+      expected: { bypass: "private" },
+    },
+    {
+      name: "an ephemeral grant to a public route renders privately",
+      facts: routeFacts({ ephemeralGrant: true }),
+      expected: { bypass: "private" },
+    },
+    {
+      name: "a privileged write to a public route renders privately",
+      facts: routeFacts({
+        privileged: true,
+        request: new Request(CARD, { method: "POST" }),
+      }),
+      expected: { bypass: "private" },
+    },
+    {
+      name: "a privileged request to a raw route reads the shared copy but never fills it",
+      facts: routeFacts({ route: "raw", privileged: true }),
+      expected: { key: `${CARD}&__plumix_build=b1`, shareable: false },
+    },
+    {
+      name: "an ephemeral grant to a raw route reads the shared copy but never fills it",
+      facts: routeFacts({ route: "raw", ephemeralGrant: true }),
+      expected: { key: `${CARD}&__plumix_build=b1`, shareable: false },
+    },
+    {
+      name: "a privileged write to a raw route bypasses on its method",
+      facts: routeFacts({
+        route: "raw",
+        privileged: true,
+        request: new Request(CARD, { method: "POST" }),
+      }),
+      expected: { bypass: "method" },
+    },
+  ])("$name", ({ facts: given, expected }) => {
+    expect(routeOutcome(routeSharingBeforeRender(given))).toEqual(expected);
+  });
+
+  it("drops the visitor's cookie from the key", () => {
+    const decision = routeSharingBeforeRender(routeFacts());
+
+    expect(decision).toMatchObject({ kind: "read-through" });
+    const { key } = decision as Extract<
+      RouteSharingDecision,
+      { kind: "read-through" }
+    >;
+    expect(key.headers.has("cookie")).toBe(false);
+  });
+});
+
+function routeReadThrough(shareable = true): RouteSharingDecision {
+  return { kind: "read-through", key: new Request(CARD), shareable };
+}
+
+/** A 200 that sets no cookie and declares no cache-control. */
+function routeRender(overrides: Partial<RouteRenderFacts> = {}) {
+  return {
+    status: 200,
+    setsCookie: false,
+    cacheControl: null,
+    ...overrides,
+  } satisfies RouteRenderFacts;
+}
+
+describe("routeSharingAfterRender", () => {
+  it.each([
+    {
+      name: "a 200 is stored and decorated",
+      decision: routeReadThrough(),
+      render: routeRender(),
+      expected: {
+        store: true,
+        decorate: true,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a 200 declaring public freshness is stored and decorated",
+      decision: routeReadThrough(),
+      render: routeRender({ cacheControl: "public, max-age=60" }),
+      expected: {
+        store: true,
+        decorate: true,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a privileged request's 200 is neither stored nor decorated",
+      decision: routeReadThrough(false),
+      render: routeRender(),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a 404 is neither stored nor decorated",
+      decision: routeReadThrough(),
+      render: routeRender({ status: 404 }),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a redirect is neither stored nor decorated",
+      decision: routeReadThrough(),
+      render: routeRender({ status: 302 }),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a 200 that sets a cookie is neither stored nor decorated",
+      decision: routeReadThrough(),
+      render: routeRender({ setsCookie: true }),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a 200 the handler declared private is neither stored nor decorated",
+      decision: routeReadThrough(),
+      render: routeRender({ cacheControl: "private" }),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a 200 the handler declared no-store is neither stored nor decorated",
+      decision: routeReadThrough(),
+      render: routeRender({ cacheControl: "public, No-Store" }),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a 200 private to its cookie is neither stored nor decorated",
+      decision: routeReadThrough(),
+      render: routeRender({ cacheControl: 'private="set-cookie"' }),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a write-method bypass leaves as rendered",
+      decision: { kind: "bypass", reason: "method" },
+      render: routeRender(),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+    {
+      name: "a private bypass leaves private",
+      decision: { kind: "bypass", reason: "private" },
+      render: routeRender(),
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
+    },
+    {
+      name: "a hit leaves as rendered",
+      decision: routeReadThrough(),
+      render: undefined,
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
+    },
+  ] satisfies {
+    name: string;
+    decision: RouteSharingDecision;
+    render: RouteRenderFacts | undefined;
+    expected: unknown;
+  }[])("$name", ({ decision, render, expected }) => {
+    expect(routeSharingAfterRender(decision, render)).toEqual(expected);
   });
 });

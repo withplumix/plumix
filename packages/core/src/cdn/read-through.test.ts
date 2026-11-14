@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TelemetryCollector } from "../context/telemetry.js";
 import type { CdnStore, ConnectedCdn } from "../runtime/contract/slots.js";
-import type { RequestFacts, SharingDecision } from "./sharing-verdict.js";
+import type {
+  RequestFacts,
+  RouteRequestFacts,
+  SharingDecision,
+} from "./sharing-verdict.js";
 import { createTelemetryCollector } from "../context/collector.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { responseAllowsSharedStorage, SEGMENT_KEY_PARAM } from "./decision.js";
@@ -11,7 +15,10 @@ import {
   readThrough,
   readThroughRoute,
 } from "./read-through.js";
-import { sharingBeforeRender } from "./sharing-verdict.js";
+import {
+  routeSharingBeforeRender,
+  sharingBeforeRender,
+} from "./sharing-verdict.js";
 import { isUniversalCopy, UNIVERSAL_COPY_HEADER } from "./universal-copy.js";
 
 /**
@@ -69,6 +76,17 @@ function decide(
     principalIsPersonal: false,
     accessSegment: null,
     canKeySegments: cdnCanKeySegments(cdn),
+    ...facts,
+  });
+}
+
+/** An unprivileged request to a raw route, as the dispatcher asks it. */
+function decideRoute(request: Request, facts: Partial<RouteRequestFacts> = {}) {
+  return routeSharingBeforeRender({
+    request,
+    privileged: false,
+    ephemeralGrant: false,
+    route: "raw",
     ...facts,
   });
 }
@@ -705,8 +723,7 @@ describe("readThroughRoute", () => {
     );
 
     const result = await readThroughRoute({
-      request: GET("https://site.test/_plumix/og/card/abc.png"),
-      hasSession: false,
+      decision: decideRoute(GET("https://site.test/_plumix/og/card/abc.png")),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -732,8 +749,7 @@ describe("readThroughRoute", () => {
     });
 
     await readThroughRoute({
-      request: GET("https://site.test/_plumix/og/card/abc.png"),
-      hasSession: false,
+      decision: decideRoute(GET("https://site.test/_plumix/og/card/abc.png")),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -752,8 +768,7 @@ describe("readThroughRoute", () => {
     const render = vi.fn(() => Promise.resolve(new Response("fresh")));
 
     const result = await readThroughRoute({
-      request: GET("https://site.test/_plumix/og/card/abc.png"),
-      hasSession: false,
+      decision: decideRoute(GET("https://site.test/_plumix/og/card/abc.png")),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -775,10 +790,11 @@ describe("readThroughRoute", () => {
     await readThroughRoute({
       // A cookie that isn't a session — this visitor is not privileged, so the
       // render is storable, and the entry it fills is the one everyone reads.
-      request: new Request("https://site.test/_plumix/og/card/abc.png", {
-        headers: { cookie: "plumix_locale=fr" },
-      }),
-      hasSession: false,
+      decision: decideRoute(
+        new Request("https://site.test/_plumix/og/card/abc.png", {
+          headers: { cookie: "plumix_locale=fr" },
+        }),
+      ),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -800,10 +816,11 @@ describe("readThroughRoute", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThroughRoute({
-      request: new Request("https://site.test/_plumix/og/card/abc.png", {
-        method: "POST",
-      }),
-      hasSession: false,
+      decision: decideRoute(
+        new Request("https://site.test/_plumix/og/card/abc.png", {
+          method: "POST",
+        }),
+      ),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -828,8 +845,7 @@ describe("readThroughRoute", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThroughRoute({
-      request: GET("https://site.test/_plumix/og/card/abc.png"),
-      hasSession: false,
+      decision: decideRoute(GET("https://site.test/_plumix/og/card/abc.png")),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -847,8 +863,7 @@ describe("readThroughRoute", () => {
     const telemetry = createTelemetryCollector();
 
     await readThroughRoute({
-      request: GET("https://site.test/_plumix/og/card/abc.png"),
-      hasSession: false,
+      decision: decideRoute(GET("https://site.test/_plumix/og/card/abc.png")),
       cdn: spies().cdn,
       defer: immediateDefer,
       telemetry,
@@ -868,10 +883,11 @@ describe("readThroughRoute", () => {
     );
 
     await readThroughRoute({
-      request: new Request("https://site.test/_plumix/og/card/abc.png", {
-        method: "HEAD",
-      }),
-      hasSession: false,
+      decision: decideRoute(
+        new Request("https://site.test/_plumix/og/card/abc.png", {
+          method: "HEAD",
+        }),
+      ),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -886,23 +902,8 @@ describe("readThroughRoute", () => {
 
   it.each([
     {
-      case: "the request carries a bearer credential",
-      request: GET("https://site.test/_plumix/og/card/abc.png", {
-        authorization: "Bearer token",
-      }),
-      hasSession: false,
-      fresh: new Response("card", { status: 200 }),
-    },
-    {
-      case: "the authenticator reports a session",
-      request: GET("https://site.test/_plumix/og/card/abc.png"),
-      hasSession: true,
-      fresh: new Response("card", { status: 200 }),
-    },
-    {
       case: "the response sets a cookie",
-      request: GET("https://site.test/_plumix/og/card/abc.png"),
-      hasSession: false,
+      decision: decideRoute(GET("https://site.test/_plumix/og/card/abc.png")),
       fresh: new Response("card", {
         status: 200,
         headers: { "set-cookie": "csrf=abc" },
@@ -910,13 +911,12 @@ describe("readThroughRoute", () => {
     },
   ])(
     "serves but neither stores nor decorates when $case",
-    async ({ request, hasSession, fresh }) => {
+    async ({ decision, fresh }) => {
       const { cdn, match, put, decorate } = spies();
       const render = vi.fn(() => Promise.resolve(fresh));
 
       const result = await readThroughRoute({
-        request,
-        hasSession,
+        decision,
         cdn,
         defer: immediateDefer,
         telemetry: NOOP_TELEMETRY,

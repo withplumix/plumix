@@ -91,7 +91,12 @@ export function methodIsCacheable(method: string): boolean {
  * segment variant's client copy while its segment-keyed edge copy is shared.
  */
 export function responseAllowsSharedStorage(response: Response): boolean {
-  const declared = response.headers.get("cache-control");
+  return cacheControlAllowsSharedStorage(response.headers.get("cache-control"));
+}
+
+export function cacheControlAllowsSharedStorage(
+  declared: string | null,
+): boolean {
   if (declared === null) return true;
   return !declared.split(",").some((directive) => {
     // The directive name is the token before any argument: `private` may carry

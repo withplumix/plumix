@@ -242,6 +242,17 @@ describe("public route dispatch — CDN", () => {
     cached.cdn.assertNotStored("/sitemap.xml");
   });
 
+  test("an editor-grant request renders live and forbids downstream caches from storing it", async () => {
+    await storeCached("/sitemap.xml?plumix.edit");
+
+    const page = await cached.visit("/sitemap.xml?plumix.edit");
+
+    page
+      .assertSee("<urlset/>")
+      .assertDontSee("CACHED")
+      .assertHeader("cache-control", "private, no-store");
+  });
+
   test("a route that did not opt in never reads the CDN", async () => {
     await storeCached("/feed");
 

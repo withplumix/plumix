@@ -2,14 +2,14 @@ import type { Segment } from "../access/contract/access.js";
 import type { DeferFn } from "../context/app-context.js";
 import type { TelemetryCollector } from "../context/telemetry.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
-import type { SharingDecision } from "./sharing-verdict.js";
+import type {
+  RouteSharingDecision,
+  SharingDecision,
+} from "./sharing-verdict.js";
 import {
-  methodIsCacheable,
-  requestIsPrivileged,
-  responseAllowsSharedStorage,
-  routeCdnKey,
-} from "./decision.js";
-import { responseIsShareable, sharingAfterRender } from "./sharing-verdict.js";
+  routeSharingAfterRender,
+  sharingAfterRender,
+} from "./sharing-verdict.js";
 import { isUniversalCopy, markUniversalCopy } from "./universal-copy.js";
 
 export function cdnCanKeySegments(cdn: ConnectedCdn): boolean {
@@ -61,6 +61,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
       const verdict = sharingAfterRender(decision, {
         status: fresh.status,
         personal: isPersonal,
+        setsCookie: fresh.headers.has("set-cookie"),
       });
       return { ...verdict, personal: isPersonal };
     },
@@ -68,8 +69,7 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
 }
 
 interface ReadThroughRouteArgs {
-  readonly request: Request;
-  readonly hasSession: boolean;
+  readonly decision: RouteSharingDecision;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
@@ -81,59 +81,37 @@ interface ReadThroughRouteArgs {
   readonly tags: () => readonly string[];
 }
 
-/**
- * No segment axis: `cacheable: true` claims every anonymous visitor gets the
- * same document. Freshness and tags stay the handler's to declare.
- */
 export async function readThroughRoute(
   args: ReadThroughRouteArgs,
 ): Promise<Response> {
-  const { request, hasSession, cdn, defer, telemetry, render, tags } = args;
+  const { decision, cdn, defer, telemetry, render, tags } = args;
 
-  if (!methodIsCacheable(request.method)) {
+  if (decision.kind === "bypass") {
     telemetry.record("cdn", {
       decision: "bypass",
-      reason: "method",
+      reason: decision.reason,
       originStore: cdn.store !== undefined,
     });
     return render();
   }
 
   return lookupOrRender({
-    key: routeCdnKey(request),
+    key: decision.key,
     cdn,
     defer,
     telemetry,
     fact: {},
     tags,
-    settle: (fresh) => {
-      const shared =
-        responseIsShareable(fresh.status) &&
-        routeResponseIsShareable(request, hasSession, fresh);
-      return {
-        store: shared,
-        decorate: shared,
-        universal: false,
-        personal: false,
-      };
-    },
+    settle: (fresh) => ({
+      ...routeSharingAfterRender(decision, {
+        status: fresh.status,
+        setsCookie: fresh.headers.has("set-cookie"),
+        cacheControl: fresh.headers.get("cache-control"),
+      }),
+      personal: false,
+    }),
     render,
   });
-}
-
-/**
- * `auth: "public"` only means core doesn't gate the route; a handler may still
- * personalize. The store would strip `Set-Cookie` and overwrite
- * `private`/`no-store` with the page TTL.
- */
-function routeResponseIsShareable(
-  request: Request,
-  hasSession: boolean,
-  fresh: Response,
-): boolean {
-  if (requestIsPrivileged(request, hasSession)) return false;
-  if (fresh.headers.has("set-cookie")) return false;
-  return responseAllowsSharedStorage(fresh);
 }
 
 interface Settled {
@@ -207,8 +185,6 @@ async function lookupOrRender(args: LookupArgs): Promise<Response> {
       ),
     );
   }
-  // Core refuses a `Set-Cookie` response regardless of whether the provider
-  // does.
-  if (!settled.decorate || fresh.headers.has("set-cookie")) return fresh;
+  if (!settled.decorate) return fresh;
   return cdn.decorate(fresh, entryTags);
 }

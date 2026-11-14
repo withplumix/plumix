@@ -28,11 +28,7 @@ import { AUTHORIZE_PATH, TOKEN_PATH } from "../auth/oauth-server/urls.js";
 import { resolvePrincipal } from "../auth/principal.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
-import {
-  applyClientCopy,
-  pageClientCopy,
-  privateClientCopy,
-} from "../cdn/client-copy.js";
+import { applyClientCopy, pageClientCopy } from "../cdn/client-copy.js";
 import { declaredPageTags } from "../cdn/contract/page-tags.js";
 import {
   requestCarriesEphemeralGrant,
@@ -45,6 +41,8 @@ import {
   readThroughRoute,
 } from "../cdn/read-through.js";
 import {
+  routeSharingAfterRender,
+  routeSharingBeforeRender,
   sharingAfterRender,
   sharingBeforeRender,
 } from "../cdn/sharing-verdict.js";
@@ -813,21 +811,27 @@ async function servePublicRoute(
   match: PublicRouteMatch,
   ctx: AppContext,
 ): Promise<Response> {
-  if (requestIsPrivileged(ctx.request, ctxHasSession(ctx))) {
+  const decision = routeSharingBeforeRender({
+    ...requestSharingFacts(ctx),
+    route: "public",
+  });
+  if (decision.kind === "bypass" && decision.reason === "private") {
     const reader = await withPublicReader(ctx);
     const response = await match.route.handler(
       reader.request,
       reader,
       match.params,
     );
-    return privateClientCopy(response);
+    return applyClientCopy(
+      response,
+      routeSharingAfterRender(decision).clientCopy,
+    );
   }
   const run = async () => match.route.handler(ctx.request, ctx, match.params);
   const cdn = ctx.cdn;
   if (match.route.cacheable !== true || cdn === undefined) return run();
   return readThroughRoute({
-    request: ctx.request,
-    hasSession: ctxHasSession(ctx),
+    decision,
     cdn,
     defer: ctx.defer,
     telemetry: ctx.telemetry,
@@ -944,8 +948,10 @@ function serveRawRoute(
     return runPluginRawRoute(route, ctx);
   }
   return readThroughRoute({
-    request: ctx.request,
-    hasSession: ctxHasSession(ctx),
+    decision: routeSharingBeforeRender({
+      ...requestSharingFacts(ctx),
+      route: "raw",
+    }),
     cdn,
     defer: ctx.defer,
     telemetry: ctx.telemetry,
