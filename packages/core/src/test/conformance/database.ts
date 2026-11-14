@@ -6,6 +6,7 @@ import type { Db } from "../../context/app-context.js";
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type { DatabaseAdapter } from "../../runtime/contract/slots.js";
 import type { ContractCase } from "./case.js";
+import { runBatch } from "../../db/batch.js";
 import { D1_MAX_BOUND_PARAMETERS } from "../../db/d1-chunk.js";
 import { rowsAffected } from "../../db/rows-affected.js";
 import { authTokens } from "../../db/schema/auth_tokens.js";
@@ -316,6 +317,53 @@ export const databaseContractCases: readonly Case[] = [
             .select({ entryId: entryChanges.entryId, kind: entryChanges.kind })
             .from(entryChanges),
         ).toEqual([{ entryId: entry.id, kind: "upsert" }]);
+      }),
+  },
+  {
+    name: "a batch answers each statement's result in order",
+    run: (options) =>
+      withCoreSchema(options, async (db) => {
+        const [inserted, renamed, removed, listed] = await runBatch(db, [
+          db
+            .insert(users)
+            .values([
+              { email: "ada@example.test", slug: "ada" },
+              { email: "grace@example.test", slug: "grace" },
+            ])
+            .returning({ id: users.id, slug: users.slug }),
+          db
+            .update(users)
+            .set({ name: "Ada" })
+            .where(eq(users.slug, "ada"))
+            .returning({ name: users.name }),
+          db.delete(users).where(eq(users.slug, "grace")),
+          db.select({ slug: users.slug, name: users.name }).from(users),
+        ]);
+
+        expect(inserted).toEqual([
+          { id: 1, slug: "ada" },
+          { id: 2, slug: "grace" },
+        ]);
+        expect(renamed).toEqual([{ name: "Ada" }]);
+        expect(rowsAffected(removed)).toBe(1);
+        expect(listed).toEqual([{ slug: "ada", name: "Ada" }]);
+      }),
+  },
+  {
+    // A half-applied batch can change an email and keep its old sessions.
+    name: "a batch whose last statement fails writes nothing",
+    run: (options) =>
+      withCoreSchema(options, async (db) => {
+        await expect(
+          runBatch(db, [
+            db.insert(users).values({ email: "ada@example.test", slug: "ada" }),
+            db
+              .insert(users)
+              .values({ email: "ada@example.test", slug: "ada-again" }),
+          ]),
+        ).rejects.toThrow();
+
+        expect(await db.select().from(users)).toEqual([]);
       }),
   },
   {

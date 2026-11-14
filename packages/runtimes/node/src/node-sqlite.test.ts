@@ -62,6 +62,26 @@ describe("nodeSqlite", () => {
   });
 });
 
+describe("a batch", () => {
+  // RAISE(ROLLBACK) ends the transaction itself, so a second ROLLBACK would
+  // throw "no transaction is active" in place of the trigger's error.
+  test("a statement that rolls the transaction back rejects with its own error", async () => {
+    const db = open(join(dir, "site.sqlite"));
+    await applyCoreTestSchema(db);
+    db.run(
+      sql`CREATE TRIGGER refuse BEFORE INSERT ON users WHEN NEW.slug = 'grace' BEGIN SELECT RAISE(ROLLBACK, 'grace is refused'); END`,
+    );
+
+    await expect(
+      db.batch([
+        db.insert(users).values({ email: "ada@example.test", slug: "ada" }),
+        db.insert(users).values({ email: "grace@example.test", slug: "grace" }),
+      ]),
+    ).rejects.toThrow("grace is refused");
+    expect(db.select().from(users).all()).toEqual([]);
+  });
+});
+
 describe("queries through the shim", () => {
   test("insert-returning, join, count and rowsAffected", async () => {
     const db = open(join(dir, "site.sqlite"));

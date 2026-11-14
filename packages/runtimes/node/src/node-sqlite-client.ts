@@ -5,6 +5,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
+import type { BatchItem, BatchResponse } from "drizzle-orm/batch";
 import type {
   SQLInputValue,
   SQLOutputValue,
@@ -37,12 +38,33 @@ interface NodeSqliteStatement {
 
 export interface NodeSqliteClient {
   prepare(sql: string): NodeSqliteStatement;
+  immediate<T>(work: () => T): T;
   close(): void;
 }
 
 export type NodeSqliteDatabase<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
-> = BaseSQLiteDatabase<"sync", StatementResultingChanges, TSchema>;
+> = BaseSQLiteDatabase<"sync", StatementResultingChanges, TSchema> & {
+  /** Commits the statements together or not at all, as D1's `batch` does. */
+  batch<U extends BatchItem<"sqlite">, T extends Readonly<[U, ...U[]]>>(
+    statements: T,
+  ): Promise<BatchResponse<T>>;
+};
+
+type Result<S extends BatchItem<"sqlite">> = S["_"]["result"];
+
+interface SyncStatement<R> {
+  prepare(): { execute(): { sync(): R } };
+}
+
+function runNow<S extends BatchItem<"sqlite">>(statement: S): Result<S> {
+  // Safety: every SQLite query builder has `prepare`, and its prepared query
+  // on a "sync" database returns an `ExecuteResultSync`.
+  return (statement as unknown as SyncStatement<Result<S>>)
+    .prepare()
+    .execute()
+    .sync();
+}
 
 /**
  * `setReturnArrays(true)` is not reflected in `node:sqlite`'s signatures, so
@@ -125,6 +147,20 @@ export function openNodeSqlite(path: string): NodeSqliteClient {
   database.exec("PRAGMA synchronous = NORMAL");
   return {
     prepare: (sql) => statement(database.prepare(sql), sql),
+    // Nothing yields between BEGIN and COMMIT: another connection's write
+    // would wait out its sync busy timeout. `RAISE(ROLLBACK)` may already
+    // have ended the transaction; a second ROLLBACK would hide its error.
+    immediate: (work) => {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const result = work();
+        database.exec("COMMIT");
+        return result;
+      } catch (error) {
+        if (database.isTransaction) database.exec("ROLLBACK");
+        throw error;
+      }
+    },
     close: () => database.close(),
   };
 }
@@ -146,10 +182,20 @@ export function drizzleNodeSqlite<TSchema extends Record<string, unknown>>(
     TSchema,
     ExtractTablesWithRelations<TSchema>
   >(client, dialect, relational);
-  return new BaseSQLiteDatabase<"sync", StatementResultingChanges, TSchema>(
+  const db = new BaseSQLiteDatabase<"sync", StatementResultingChanges, TSchema>(
     "sync",
     dialect,
     session,
     relational,
   );
+  return Object.assign(db, {
+    batch: <U extends BatchItem<"sqlite">, T extends Readonly<[U, ...U[]]>>(
+      statements: T,
+    ) =>
+      new Promise<BatchResponse<T>>((resolve) => {
+        resolve(
+          client.immediate(() => statements.map(runNow)) as BatchResponse<T>,
+        );
+      }),
+  });
 }
