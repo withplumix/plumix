@@ -14,6 +14,11 @@ import { matchPublicRoute } from "./contract/public-route-table.js";
  */
 const PLATFORM_PREFIX = "/_plumix";
 
+/** Whether core answers `path` (root-relative) itself. */
+export function isPlatformPath(path: string): boolean {
+  return path === PLATFORM_PREFIX || path.startsWith(`${PLATFORM_PREFIX}/`);
+}
+
 /**
  * A path without URLPattern syntax is a literal, the common case, and gets a
  * map lookup instead of an exec.
@@ -37,10 +42,7 @@ export function compilePublicRoutes(
   const owners = new Map<string, string>();
 
   for (const route of routes) {
-    if (
-      route.path === PLATFORM_PREFIX ||
-      route.path.startsWith(`${PLATFORM_PREFIX}/`)
-    ) {
+    if (isPlatformPath(route.path)) {
       throw AppBootError.publicRouteShadowsCore({
         pluginId: route.pluginId,
         path: route.path,

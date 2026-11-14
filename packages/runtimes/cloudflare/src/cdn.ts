@@ -1,12 +1,13 @@
 import type { CdnProvider } from "plumix";
 import type { CloudflareCdnConfig } from "plumix/cdn/cloudflare";
 import { cloudflare as zoneCloudflare } from "plumix/cdn/cloudflare";
+import { tryGetContext } from "plumix/plugin";
 
 import { WorkersCachePurgeError } from "./errors.js";
 
 /**
- * The `cache` export of `cloudflare:workers`, typed locally: jiti loads this
- * module in Node with the config, so the generated entry imports it instead.
+ * The cached entrypoint's `purge`, typed locally: jiti loads this module in
+ * Node with the config, so the generated entry binds it instead.
  */
 export interface WorkersCache {
   purge(options: { tags?: string[]; purgeEverything?: boolean }): Promise<{
@@ -22,15 +23,15 @@ let workersCache: WorkersCache | null = null;
 
 /**
  * Must run before the app connects its slots, which read the binding. `null` is
- * a deploy with Workers Caching off.
+ * a deploy whose wrangler config does not cache the shared entrypoint.
  */
 export function bindWorkersCache(cache: WorkersCache | null): void {
   workersCache = cache;
 }
 
 /**
- * A refusal resolves rather than rejects, so it is turned into a rejection the
- * caller's deferral logs.
+ * A refusal resolves rather than rejects, so it is recorded on the request's
+ * `cdn` telemetry and turned into a rejection the caller's deferral logs.
  */
 async function purge(
   cache: WorkersCache,
@@ -38,6 +39,11 @@ async function purge(
 ): Promise<void> {
   const result = await cache.purge(options);
   if (!result.success) {
+    tryGetContext()?.telemetry.record("cdn", {
+      purge: "workers-caching",
+      success: false,
+      errors: result.errors,
+    });
     throw WorkersCachePurgeError.purgeFailed({ errors: result.errors });
   }
 }

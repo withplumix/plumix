@@ -397,6 +397,10 @@ export type { AutosavePairInput } from "./revisions/repository.js";
 // Which responses a shared cache may hold is framework policy, so a provider's
 // `put` reads core's rule.
 export { responseAllowsSharedStorage } from "./cdn/decision.js";
+// Which requests a runtime's gateway may hand to a shared cache, built from
+// the app's authenticator so no entry repeats the rules.
+export { mayServeFromSharedCache } from "./runtime/shared-cache.js";
+export type { SharedCacheSite } from "./runtime/shared-cache.js";
 export {
   author,
   date,

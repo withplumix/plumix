@@ -59,8 +59,26 @@ export interface LoadedWranglerConfig {
   readonly accountId?: string;
   /** Whether Workers Logs keeps the deployed Worker's logs. */
   readonly observabilityEnabled: boolean;
-  /** Whether Workers Caching (`cache.enabled`) sits in front of the Worker. */
-  readonly workersCachingEnabled: boolean;
+  readonly workersCaching: WorkersCachingConfig;
+}
+
+/**
+ * Workers Caching as wrangler config sets it: `cache.enabled` for the Worker,
+ * and `exports.<name>.cache.enabled` overriding it for one entrypoint.
+ */
+interface WorkersCachingConfig {
+  readonly enabled: boolean;
+  /** Keyed by entrypoint name, `default` being the default export. */
+  readonly entrypoints: Readonly<Record<string, boolean>>;
+}
+
+/** Whether Workers Caching sits in front of the named entrypoint. */
+export function entrypointCached(
+  config: Pick<LoadedWranglerConfig, "workersCaching">,
+  entrypoint: string,
+): boolean {
+  const { enabled, entrypoints } = config.workersCaching;
+  return entrypoints[entrypoint] ?? enabled;
 }
 
 /**
@@ -81,10 +99,7 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
     const previews = previewsOf(parsed);
     const { compatibility_date: compatibilityDate, account_id: accountId } =
       parsed as { compatibility_date?: unknown; account_id?: unknown };
-    const { observability, cache } = parsed as {
-      observability?: unknown;
-      cache?: unknown;
-    };
+    const { observability } = parsed as { observability?: unknown };
     return {
       filename,
       d1Databases: d1DatabasesOf(parsed),
@@ -93,7 +108,7 @@ export function loadWranglerConfig(cwd: string): LoadedWranglerConfig | null {
       ...(previews === undefined ? {} : { previews }),
       environments: environmentsOf(parsed),
       observabilityEnabled: isEnabled(observability),
-      workersCachingEnabled: isEnabled(cache),
+      workersCaching: workersCachingOf(parsed),
       ...(typeof compatibilityDate === "string" ? { compatibilityDate } : {}),
       ...(typeof accountId === "string" ? { accountId } : {}),
     };
@@ -133,6 +148,19 @@ function environmentsOf(parsed: unknown): WranglerEnvironment[] {
       ...(previews === undefined ? {} : { previews }),
     };
   });
+}
+
+function workersCachingOf(parsed: unknown): WorkersCachingConfig {
+  const block = isObject(parsed) ? parsed : {};
+  const entrypoints: Record<string, boolean> = {};
+  if (isObject(block.exports)) {
+    for (const [name, entry] of Object.entries(block.exports)) {
+      if (isObject(entry) && isObject(entry.cache)) {
+        entrypoints[name] = isEnabled(entry.cache);
+      }
+    }
+  }
+  return { enabled: isEnabled(block.cache), entrypoints };
 }
 
 function isEnabled(block: unknown): boolean {

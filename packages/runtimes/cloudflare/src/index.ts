@@ -13,5 +13,6 @@ export { kv } from "./kv.js";
 export type { KVConfig, KVInstance } from "./kv.js";
 export { r2 } from "./r2.js";
 export type { R2Config, R2ObjectStorage, R2S3Credentials } from "./r2.js";
+export { sharedCacheRequest } from "./shared-cache.js";
 export { surfaceScheduledFailure } from "./scheduled.js";
 export type { ScheduledFiring } from "./scheduled.js";

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
-import { loadWranglerConfig } from "./wrangler-config.js";
+import { entrypointCached, loadWranglerConfig } from "./wrangler-config.js";
 
 describe("loadWranglerConfig", () => {
   let dir: string;
@@ -87,5 +87,83 @@ database_id = "abc"
   test("throws when wrangler.jsonc has a syntax error", () => {
     writeFileSync(join(dir, "wrangler.jsonc"), "{ not: valid json", "utf8");
     expect(() => loadWranglerConfig(dir)).toThrow(/Failed to parse/);
+  });
+
+  describe("Workers Caching", () => {
+    function workersCaching(text: string, filename = "wrangler.jsonc") {
+      writeFileSync(join(dir, filename), text, "utf8");
+      return loadWranglerConfig(dir)?.workersCaching;
+    }
+
+    test("is off with no cache block", () => {
+      expect(workersCaching('{ "name": "app" }')).toEqual({
+        enabled: false,
+        entrypoints: {},
+      });
+    });
+
+    test("reads each entrypoint's cache block beside the top level's", () => {
+      expect(
+        workersCaching(`{
+  "cache": { "enabled": true },
+  "exports": {
+    "default": { "type": "worker", "cache": { "enabled": false } },
+    "Counter": { "type": "durable_object", "storage": "sqlite" },
+  },
+}`),
+      ).toEqual({ enabled: true, entrypoints: { default: false } });
+    });
+
+    test("reads the per-entrypoint shape from wrangler.toml", () => {
+      expect(
+        workersCaching(
+          `[cache]
+enabled = true
+
+[exports.default]
+type = "worker"
+
+  [exports.default.cache]
+  enabled = false
+`,
+          "wrangler.toml",
+        ),
+      ).toEqual({ enabled: true, entrypoints: { default: false } });
+    });
+
+    test("the scaffold caches the shared entrypoint and not the gateway", () => {
+      const scaffold = new URL("../scaffold", import.meta.url).pathname;
+
+      expect(loadWranglerConfig(scaffold)?.workersCaching).toEqual({
+        enabled: true,
+        entrypoints: { default: false, PlumixSharedCache: true },
+      });
+    });
+  });
+});
+
+describe("entrypointCached", () => {
+  const caching = (
+    enabled: boolean,
+    entrypoints: Record<string, boolean> = {},
+  ) => ({ workersCaching: { enabled, entrypoints } });
+
+  test("an entrypoint with no cache block of its own takes the top level's", () => {
+    expect(entrypointCached(caching(true), "PlumixSharedCache")).toBe(true);
+  });
+
+  test("an entrypoint's own cache block overrides the top level's", () => {
+    expect(entrypointCached(caching(true, { default: false }), "default")).toBe(
+      false,
+    );
+  });
+
+  test("an entrypoint listed alone is cached with no top-level cache block", () => {
+    expect(
+      entrypointCached(
+        caching(false, { PlumixSharedCache: true }),
+        "PlumixSharedCache",
+      ),
+    ).toBe(true);
   });
 });
