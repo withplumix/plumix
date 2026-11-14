@@ -224,6 +224,8 @@ export function definePlumixE2EConfig(
     ...(seedAdmin ? { globalSetup: "./globalSetup.ts" } : {}),
     use: {
       baseURL,
+      // A spec's expected dates are written in UTC, as CI's clock runs.
+      timezoneId: "UTC",
       trace: "on-first-retry",
       ...(seedAdmin ? { storageState: "./storageState.json" } : {}),
       // Read by the `plumixDbBaseline` fixture, which re-resolves this relative
