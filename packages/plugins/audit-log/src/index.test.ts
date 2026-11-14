@@ -18,10 +18,10 @@ beforeAll(async () => {
 });
 
 function emittedSchema(storage?: AuditLogStorage): string {
-  return generateSchemaSource({
-    ...app.config,
-    plugins: [auditLog({ storage })],
-  }).source;
+  return generateSchemaSource(
+    { ...app.config, plugins: [auditLog({ storage })] },
+    "/site",
+  ).source;
 }
 
 function sink(schema?: AuditLogStorage["schema"]): AuditLogStorage {

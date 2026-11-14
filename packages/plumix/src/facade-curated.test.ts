@@ -312,6 +312,8 @@ const CORE_WITHHELD: readonly Withholding[] = [
       "configuredSlotsOf",
       "roleEntries",
       "CORE_SCHEMA_MODULE",
+      "schemaModuleImport",
+      "resolveSiteModule",
       "createPluginSetupContext",
       "createPluginAfterSetupContext",
       "createPluginProvidesContext",
@@ -408,6 +410,8 @@ const CURATED: Readonly<Record<string, Curated>> = {
         names: [
           "CORE_SCHEMA_MODULE",
           "generateSchemaSource",
+          "schemaModuleImport",
+          "resolveSiteModule",
           "CORE_MIGRATIONS_FOLDER",
         ],
       },

@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import type { PlumixConfig } from "@plumix/core";
 
@@ -9,7 +8,7 @@ import {
   isSitePackage,
   nearestPackageRoot,
   readPackageName,
-  SITE_SCHEMA_OUT,
+  resolveModuleSpec,
   siteRootOf,
 } from "./owners.js";
 
@@ -20,16 +19,20 @@ export interface DataMigrationModules {
   readonly files: readonly string[];
 }
 
-/** A plugin's spec resolves from where the site imports its `schemaModule`s. */
-function resolvePluginModule(cwd: string, spec: string): string {
-  try {
-    return createRequire(join(cwd, SITE_SCHEMA_OUT)).resolve(spec);
-  } catch (cause) {
-    throw PlumixCliError.migrateDataModuleUnresolved({ spec, cause });
-  }
+function resolvePluginModule(
+  cwd: string,
+  configPath: string,
+  spec: string,
+): string {
+  const resolved = resolveModuleSpec(cwd, configPath, spec);
+  if ("file" in resolved) return resolved.file;
+  throw PlumixCliError.migrateDataModuleUnresolved({
+    spec,
+    cause: resolved.cause,
+  });
 }
 
-function resolveSiteModule(configPath: string, spec: string): string {
+function resolveConfigModule(configPath: string, spec: string): string {
   const file = resolve(dirname(configPath), spec);
   if (!existsSync(file)) {
     throw PlumixCliError.migrateDataModuleUnresolved({
@@ -61,7 +64,7 @@ export function resolveDataMigrationModules(
   };
   for (const plugin of config.plugins) {
     if (!plugin.dataMigrations) continue;
-    const file = resolvePluginModule(cwd, plugin.dataMigrations);
+    const file = resolvePluginModule(cwd, configPath, plugin.dataMigrations);
     const root = nearestPackageRoot(file);
     if (root === null || isSitePackage(root, siteRoot)) {
       add(site, file);
@@ -73,7 +76,7 @@ export function resolveDataMigrationModules(
     add(files, file);
   }
   if (config.dataMigrations) {
-    add(site, resolveSiteModule(configPath, config.dataMigrations));
+    add(site, resolveConfigModule(configPath, config.dataMigrations));
   }
   return [
     ...[...packages].map(([owner, files]) => ({ owner, files })),

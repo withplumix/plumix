@@ -109,7 +109,7 @@ describe("migrate generate", () => {
   const LOCAL = {
     id: "local",
     setup: () => undefined,
-    schemaModule: "../src/schema.ts",
+    schemaModule: "./src/schema.ts",
   };
   const PACKAGED = {
     id: "widgets",
@@ -154,6 +154,8 @@ describe("migrate generate", () => {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "plumix-migrate-gen-"));
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src/schema.ts"), "export {};\n");
     installWidgets();
     lines = [];
     vi.spyOn(report, "info").mockImplementation((line) => lines.push(line));
@@ -171,7 +173,11 @@ describe("migrate generate", () => {
     await migrateCommand.run(generateCtx([PACKAGED]));
 
     expect(spawn).not.toHaveBeenCalled();
-    expect(readdirSync(dir).sort()).toEqual(["node_modules", "package.json"]);
+    expect(readdirSync(dir).sort()).toEqual([
+      "node_modules",
+      "package.json",
+      "src",
+    ]);
     expect(lines).toEqual([
       "This site owns no tables: no plugin's schemaModule resolves inside it, so there is nothing to generate.",
     ]);
@@ -525,6 +531,8 @@ async up({ db }) {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "plumix-migrate-apply-"));
     writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "site" }));
+    mkdirSync(join(dir, "src"));
+    writeFileSync(join(dir, "src/schema.ts"), "export {};\n");
     opened = [];
     drizzleKitWrites({});
     // What each owner applied is the command's own output; a test that reads
@@ -714,7 +722,7 @@ async up({ db }) {
         [],
         [
           dataPlugin("b", "@acme/plugin-b/data-migrations"),
-          dataPlugin("local", "../local-data.mjs"),
+          dataPlugin("local", "./local-data.mjs"),
           dataPlugin("a", "@acme/plugin-a/data-migrations"),
         ],
       );
@@ -757,7 +765,7 @@ async up({ db }) {
           applyCtx(
             [],
             [
-              dataPlugin("local", "../local-data.mjs"),
+              dataPlugin("local", "./local-data.mjs"),
               dataPlugin("a", "@acme/plugin-a/data-migrations"),
             ],
           ),
@@ -1458,9 +1466,11 @@ export default [
       mkdirSync(app);
       writeFileSync(join(app, "package.json"), JSON.stringify({ name: "app" }));
       cpSync(WIDGETS_MIGRATIONS, join(app, "migrations"), { recursive: true });
+      mkdirSync(join(app, "src"));
+      writeFileSync(join(app, "src/schema.ts"), "export {};\n");
 
       await migrateCommand.run({
-        ...applyCtx([], [plugin("local", "../app/src/schema.ts")]),
+        ...applyCtx([], [plugin("local", "./src/schema.ts")]),
         configPath: join(app, "plumix.config.ts"),
       });
 
@@ -1926,7 +1936,7 @@ export default [
       const local = {
         id: "local",
         setup: () => undefined,
-        schemaModule: "../src/schema.ts",
+        schemaModule: "./src/schema.ts",
         schema: {
           bookmarks: sqliteTable("bookmarks", (t) => ({
             id: t.integer().primaryKey(),

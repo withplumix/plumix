@@ -89,10 +89,14 @@ export interface PluginDescriptor<
   /** The filters this plugin declares with `defineFilter`; see `events`. */
   readonly filters?: readonly AnyFilterDefinition[];
   readonly schema?: SchemaModule;
+  /**
+   * A package subpath, or a path relative to the folder holding
+   * `plumix.config.ts`.
+   */
   readonly schemaModule?: string;
   /**
    * A module whose default export is this plugin's ordered data migrations,
-   * resolved from the site like `schemaModule`. Needs no tables.
+   * resolved like `schemaModule`. Needs no tables.
    */
   readonly dataMigrations?: string;
   /** Translation catalog declaration — opts the plugin into the i18n

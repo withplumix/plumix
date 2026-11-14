@@ -467,7 +467,11 @@ async function regenerate(
 ): Promise<Regenerated> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);
 
-  const schemaSource = generateSchemaSource(config).source;
+  const schemaSource = generateSchemaSource(
+    config,
+    dirname(configPath),
+    resolve(cwd, ".plumix"),
+  ).source;
   writeIfChanged(resolve(cwd, ".plumix/schema.ts"), schemaSource);
 
   const entrySource = config.runtime.generateEntry({

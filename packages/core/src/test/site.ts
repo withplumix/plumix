@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { afterEach, beforeEach, vi } from "vitest";
@@ -193,7 +193,7 @@ export async function testSite<
       ? await loadProjectConfig(cwd)
       : testConfig({ ...options.config, plugins: options.plugins ?? [] });
   const { db, reset } = await createSiteDatabase(
-    migrationFolders(siteRootOf(cwd), config.plugins),
+    migrationFolders(cwd, config.plugins),
     { d1: config.database.kind === "d1" },
   );
   const { defer, drainDeferred } = createDeferQueue();
@@ -425,13 +425,6 @@ function rpcClient<TRpc extends PluginRpcRouters>(
     fetch: (request) => dispatch(request),
   });
   return createORPCClient<AppRouterClient & PluginRpcClient<TRpc>>(link);
-}
-
-function siteRootOf(dir: string): string {
-  for (let current = dir; ; current = dirname(current)) {
-    if (existsSync(join(current, "package.json"))) return current;
-    if (dirname(current) === current) return dir;
-  }
 }
 
 const PROJECT_CONFIGS = [

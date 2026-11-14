@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 
 import type { MigrationOwner, PlumixConfig } from "@plumix/core";
-import { CORE_MIGRATIONS_FOLDER } from "@plumix/core/cli";
+import { CORE_MIGRATIONS_FOLDER, resolveSiteModule } from "@plumix/core/cli";
 
 import { PlumixCliError } from "../errors.js";
 
@@ -11,7 +11,7 @@ export const TRACKING_TABLE_PREFIX = "__drizzle_migrations_";
 
 /**
  * Where `plumix migrate generate` writes the module that re-exports the
- * site's `schemaModule`s, so a spec resolves from here the way it imports them.
+ * site's `schemaModule`s, so a bare spec resolves from here the way it imports them.
  */
 export const SITE_SCHEMA_OUT = ".plumix/site-schema.ts";
 
@@ -33,16 +33,40 @@ export function nearestPackageRoot(file: string): string | null {
   }
 }
 
-function resolveSchemaModule(cwd: string, spec: string): string {
-  const base = join(cwd, SITE_SCHEMA_OUT);
-  // A relative spec need not exist with its extension to name the folder it
-  // sits in; a bare one is the package its resolution lands in.
-  if (spec.startsWith(".")) return resolve(dirname(base), spec);
-  try {
-    return createRequire(base).resolve(spec);
-  } catch (cause) {
-    throw PlumixCliError.migrateSchemaModuleUnresolved({ spec, cause });
+/**
+ * A relative spec resolves from the folder holding `plumix.config.ts`, a bare
+ * one as the generated schema imports it.
+ */
+export function resolveModuleSpec(
+  cwd: string,
+  configPath: string,
+  spec: string,
+): { readonly file: string } | { readonly cause: unknown } {
+  if (spec.startsWith(".")) {
+    const configDir = dirname(configPath);
+    const file = resolveSiteModule(configDir, spec);
+    return file === undefined
+      ? { cause: `${resolve(configDir, spec)} does not exist` }
+      : { file };
   }
+  try {
+    return { file: createRequire(join(cwd, SITE_SCHEMA_OUT)).resolve(spec) };
+  } catch (cause) {
+    return { cause };
+  }
+}
+
+function resolveSchemaModule(
+  cwd: string,
+  configPath: string,
+  spec: string,
+): string {
+  const resolved = resolveModuleSpec(cwd, configPath, spec);
+  if ("file" in resolved) return resolved.file;
+  throw PlumixCliError.migrateSchemaModuleUnresolved({
+    spec,
+    cause: resolved.cause,
+  });
 }
 
 export function readPackageName(root: string): string {
@@ -68,10 +92,13 @@ export function isSitePackage(root: string, siteRoot: string): boolean {
 /** `null` for the site itself. */
 function schemaOwnerRoot(
   cwd: string,
-  siteRoot: string,
+  configPath: string,
   schemaModule: string,
 ): string | null {
-  const root = nearestPackageRoot(resolveSchemaModule(cwd, schemaModule));
+  const siteRoot = siteRootOf(configPath);
+  const root = nearestPackageRoot(
+    resolveSchemaModule(cwd, configPath, schemaModule),
+  );
   return root === null || isSitePackage(root, siteRoot) ? null : root;
 }
 
@@ -84,11 +111,10 @@ export function sitePlugins(
   configPath: string,
   config: PlumixConfig,
 ): PlumixConfig["plugins"] {
-  const siteRoot = siteRootOf(configPath);
   return config.plugins.filter(
     (plugin) =>
       plugin.schemaModule &&
-      schemaOwnerRoot(cwd, siteRoot, plugin.schemaModule) === null,
+      schemaOwnerRoot(cwd, configPath, plugin.schemaModule) === null,
   );
 }
 
@@ -113,7 +139,7 @@ export function resolveOwners(
   let siteOwnsTables = false;
   for (const plugin of config.plugins) {
     if (!plugin.schemaModule) continue;
-    const root = schemaOwnerRoot(cwd, siteRoot, plugin.schemaModule);
+    const root = schemaOwnerRoot(cwd, configPath, plugin.schemaModule);
     if (root === null) {
       siteOwnsTables = true;
       continue;
