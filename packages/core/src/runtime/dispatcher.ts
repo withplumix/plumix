@@ -26,7 +26,6 @@ import { matchAuthMethodRoute } from "../auth/declared-methods.js";
 import { loadAuthFlowRoutes } from "../auth/flow-routes-loader.js";
 import { AUTHORIZE_PATH, TOKEN_PATH } from "../auth/oauth-server/urls.js";
 import { resolvePrincipal } from "../auth/principal.js";
-import { getCapabilityResolver } from "../auth/rbac.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import {
   applyClientCopy,
@@ -1029,13 +1028,7 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
 
   const auth = await resolvePrincipal(ctx, { kind: "session-gated" });
   // Anonymous visitors still need the SPA's login screen.
-  if (
-    auth?.user &&
-    !getCapabilityResolver(ctx.plugins).hasCapability(
-      auth.user.role,
-      "admin:access",
-    )
-  ) {
+  if (auth && !auth.auth.can("admin:access")) {
     return redirect(withBasePath("/", ctx.config.basePath), 302);
   }
   const locale = resolveLocale({

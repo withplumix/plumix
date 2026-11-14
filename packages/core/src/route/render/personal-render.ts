@@ -3,7 +3,6 @@ import type {
   AuthenticatedUser,
 } from "../../context/app-context.js";
 import type { RequestMemo } from "../../context/memo.js";
-import { getCapabilityResolver } from "../../auth/rbac.js";
 import { rebindDispatch } from "../../events-and-filters/dispatch.js";
 import { resolveLocale } from "../../i18n/resolve-locale.js";
 
@@ -70,7 +69,7 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
 
 /** Decided before the render, so a read the render makes can't change it. */
 export function principalIsPersonal(
-  ctx: Pick<AppContext, "user" | "plugins" | "request" | "config" | "locale">,
+  ctx: Pick<AppContext, "user" | "auth" | "request" | "config" | "locale">,
 ): boolean {
   const user = ctx.user;
   if (user === null) return false;
@@ -86,15 +85,10 @@ function personalFromTheStart(
 
 /** The bar has nothing to offer a user who cannot open the admin. */
 function adminAccessViewer(
-  ctx: Pick<AppContext, "plugins">,
+  ctx: Pick<AppContext, "auth">,
   user: AuthenticatedUser,
 ): AuthenticatedUser | null {
-  return getCapabilityResolver(ctx.plugins).hasCapability(
-    user.role,
-    "admin:access",
-  )
-    ? user
-    : null;
+  return ctx.auth.can("admin:access") ? user : null;
 }
 
 /**
@@ -125,7 +119,7 @@ export function renderIsPersonal(ctx: Pick<AppContext, "memo">): boolean {
  * directly; such a page is never stored.
  */
 export function adminBarViewer(
-  ctx: Pick<AppContext, "memo" | "user" | "plugins">,
+  ctx: Pick<AppContext, "memo" | "user" | "auth">,
 ): AuthenticatedUser | null {
   const verdict = verdicts.get(ctx.memo);
   if (verdict !== undefined) return verdict.adminBarViewer;

@@ -498,6 +498,39 @@ describe("dispatcher — routing", () => {
     expect(response.headers.get("location")).toBe("/");
   });
 
+  test("bounces a visitor whose token scopes leave out admin:access, though their role holds it", async () => {
+    const db = await createTestDb();
+    const admin = await userFactory.transient({ db }).create({ role: "admin" });
+    const h = await createDispatcherHarness({
+      db,
+      assets: htmlAssets("<!doctype html><title>admin</title>"),
+      config: {
+        auth: {
+          authenticator: {
+            authenticate: () =>
+              Promise.resolve({
+                user: admin,
+                credential: "api-token",
+                tokenScopes: ["entry:post:read"],
+                apiToken: { id: "token-1", name: "scoped" },
+              }),
+            hasSession: (request) => request.headers.has(TENANT_HEADER),
+          },
+        },
+      },
+    });
+
+    const response = await h.dispatch(
+      plumixRequest("/_plumix/admin", {
+        method: "GET",
+        headers: { [TENANT_HEADER]: "whoever" },
+      }),
+    );
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("/");
+  });
+
   test("a custom authenticator's signed-in visitor's locale preference reaches the admin shell", async () => {
     const assets = htmlAssets(
       '<!doctype html><html lang="en"><head></head><body></body></html>',
