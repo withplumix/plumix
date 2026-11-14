@@ -59,6 +59,7 @@ import { bindEntryWrites } from "../rpc/procedures/entry/writes.js";
 import { bindTermWrites } from "../rpc/procedures/term/writes.js";
 import { resolveEnvInput } from "../runtime/contract/env-input.js";
 import { settingsWrites } from "../settings/write.js";
+import { ANONYMOUS_PRINCIPAL } from "./anonymous-principal.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
 import { loggableMeta } from "./log-meta.js";
@@ -256,10 +257,15 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     request: args.request,
     config: args.config,
     clientAddress: normalizeClientAddress(args.clientAddress),
-    user,
-    tokenScopes,
-    apiToken: null,
-    credential: null,
+    ...(user === null
+      ? ANONYMOUS_PRINCIPAL
+      : {
+          user,
+          tokenScopes,
+          apiToken: null,
+          credential: null,
+          auth: { can: makeAuthCan(args.plugins, user, tokenScopes) },
+        }),
     ...bindDispatch(args.handlers, () => coreSchemaView),
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
@@ -270,9 +276,6 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     logger,
     memo: createRequestMemo(),
     cache: createPluginCache(() => base),
-    auth: {
-      can: makeAuthCan(args.plugins, user, tokenScopes),
-    },
     defer: wrapDefer(logger, args.defer, () => collector),
     // I/O slots wrapped once here so every consumer gets spans; the getters
     // read `base.telemetry` per call like `fetch` below.

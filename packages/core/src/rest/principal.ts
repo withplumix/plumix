@@ -1,23 +1,25 @@
-import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
+import type { AppContext } from "../context/app-context.js";
 import { hasBearerToken } from "../auth/bearer.js";
 import { resolvePrincipal } from "../auth/principal.js";
 import { makeAuthCan } from "../auth/with-user.js";
+import { ANONYMOUS_PRINCIPAL } from "../context/anonymous-principal.js";
 import { rebindSettings } from "../context/settings-namespace.js";
 import { rebindDispatch } from "../events-and-filters/dispatch.js";
 
 /**
- * Anonymous requests hold the `member` role's capabilities, so the entry
- * services' clamping applies unchanged. The principal stays nobody, which an
- * access policy reads.
+ * Asked as a `member`, so the entry services clamp it like any reader; an
+ * access policy still sees nobody.
  */
-const PUBLIC_PRINCIPAL: AuthenticatedUser = {
-  id: 0,
-  email: "",
-  name: null,
-  avatarUrl: null,
-  role: "member",
-  meta: {},
-};
+function anonymousReadsAsMember(ctx: AppContext): AppContext {
+  const anonymous: AppContext = {
+    ...ctx,
+    ...ANONYMOUS_PRINCIPAL,
+    auth: { can: makeAuthCan(ctx.plugins, { role: "member" }, null) },
+    settings: rebindSettings(ctx.settings, () => anonymous),
+    ...rebindDispatch(ctx, () => anonymous),
+  };
+  return anonymous;
+}
 
 export type RestPrincipal =
   | { readonly kind: "authed"; readonly ctx: AppContext }
@@ -32,15 +34,7 @@ export async function resolveRestPrincipal(
   ctx: AppContext,
 ): Promise<RestPrincipal> {
   if (!hasBearerToken(ctx.request)) {
-    const anonymous: AppContext = {
-      ...ctx,
-      user: null,
-      tokenScopes: null,
-      auth: { can: makeAuthCan(ctx.plugins, PUBLIC_PRINCIPAL, null) },
-      settings: rebindSettings(ctx.settings, () => anonymous),
-      ...rebindDispatch(ctx, () => anonymous),
-    };
-    return { kind: "anonymous", ctx: anonymous };
+    return { kind: "anonymous", ctx: anonymousReadsAsMember(ctx) };
   }
   const authed = await resolvePrincipal(ctx, {
     kind: "bearer",

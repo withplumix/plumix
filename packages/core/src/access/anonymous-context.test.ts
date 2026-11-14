@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../context/app-context.js";
+import { principalOf } from "../auth/principal.js";
 import { withUser } from "../auth/with-user.js";
 import {
   declaredPageTags,
@@ -16,8 +17,13 @@ import { createTestContext } from "../test/context.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
 import { anonymousContext } from "./anonymous-context.js";
+import { CORE_CAPABILITIES } from "./contract/capability.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
-import { anonymousPolicy, authenticatedPolicy } from "./policy.js";
+import {
+  anonymousPolicy,
+  authenticatedPolicy,
+  resolveAccess,
+} from "./policy.js";
 
 const pagesWithAccess = definePlugin("pages-with-access", {
   setup: (ctx) => {
@@ -69,6 +75,11 @@ async function listedSlugs(ctx: AppContext): Promise<string[]> {
   return rows.map((row) => row.slug);
 }
 
+function principalFields(ctx: AppContext) {
+  const { user, tokenScopes, apiToken, credential, auth } = ctx;
+  return { user, tokenScopes, apiToken, credential, auth };
+}
+
 describe("anonymousContext", () => {
   test("publicEntryRows asked through it leaves out members entries whoever is signed in", async () => {
     const ctx = await editorContext();
@@ -88,6 +99,38 @@ describe("anonymousContext", () => {
     expect(anonymous.auth.can("entry:page:read")).toBe(false);
     expect(anonymous.db).toBe(ctx.db);
     expect(anonymous.plugins).toBe(ctx.plugins);
+  });
+
+  test("holds the principal of a request no one is signed in to", async () => {
+    const ctx = await editorContext();
+    const signedOut = createTestContext({ db: ctx.db, plugins: ctx.plugins });
+
+    expect(principalFields(anonymousContext(ctx))).toEqual(
+      principalFields(signedOut),
+    );
+  });
+
+  test("holds no capability the site knows, even from an admin's request", async () => {
+    const ctx = await editorContext();
+    const admin = await factoriesFor(ctx.db).user.create({ role: "admin" });
+    const adminCtx = withUser(ctx, principalOf(admin), { kind: "session" });
+    const known = [
+      ...Object.keys(CORE_CAPABILITIES),
+      ...ctx.plugins.capabilities.keys(),
+    ];
+
+    const anonymous = anonymousContext(adminCtx);
+
+    expect(known.filter((name) => anonymous.auth.can(name))).toEqual([]);
+    expect(known.every((name) => adminCtx.auth.can(name))).toBe(true);
+  });
+
+  test("is sent to sign-in by a policy that wants a signed-in user", async () => {
+    const anonymous = anonymousContext(await editorContext());
+
+    const access = await resolveAccess(anonymous, authenticatedPolicy);
+
+    expect(access.gate).toEqual({ type: "redirect" });
   });
 
   test("drops the API token the request authenticated with", async () => {
