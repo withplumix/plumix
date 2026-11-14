@@ -695,7 +695,7 @@ describe("createNodeSite — shutdown", () => {
     const error = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const stdout = captureStdout();
     const probe = probes();
     const { site } = await siteFor({ plugins: [probe.plugin] });
     await site.handler.fetch(new Request("https://cms.example/defer-stuck"));
@@ -711,6 +711,15 @@ describe("createNodeSite — shutdown", () => {
     expect(error).toHaveBeenCalledWith(
       "plumix: exiting with 1 deferred task(s) abandoned",
     );
+    const warnings = stdout.mock.calls
+      .map(([chunk]) => JSON.parse(String(chunk)) as { level: string })
+      .filter(({ level }) => level === "warn");
+    expect(warnings).toEqual([
+      expect.objectContaining({
+        message:
+          "[plumix] deferred_work_abandoned: 1 deferred task(s) still running after 600ms",
+      }),
+    ]);
     await draining;
   });
 });
