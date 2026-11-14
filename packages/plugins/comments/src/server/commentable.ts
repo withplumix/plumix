@@ -30,7 +30,7 @@ export async function resolveCommentableEntry(
   entryId: number,
   config: ResolvedCommentsConfig,
 ): Promise<CommentableResult> {
-  const entry = await loadAuthoredEntry(ctx.db, entryId);
+  const entry = await loadAuthoredEntry(ctx, entryId);
   if (entry?.status !== "published") {
     return { ok: false, reason: "entry_not_found" };
   }

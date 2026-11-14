@@ -159,7 +159,7 @@ export async function updateEntry(
 ): Promise<EntryWritten> {
   assertContentWithinByteCap(filtered.content, errors);
 
-  const existing = await loadAuthoredEntry(context.db, filtered.id);
+  const existing = await loadAuthoredEntry(context, filtered.id);
   if (!existing) {
     throw errors.NOT_FOUND({ data: { kind: "entry", id: filtered.id } });
   }

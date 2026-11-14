@@ -27,7 +27,7 @@ export const duplicate = base
       input,
     );
 
-    const source = await loadAuthoredEntry(context.db, filtered.id);
+    const source = await loadAuthoredEntry(context, filtered.id);
     // 404 reserved rows so duplicate can't copy a revision or autosave
     // snapshot.
     if (!source) {

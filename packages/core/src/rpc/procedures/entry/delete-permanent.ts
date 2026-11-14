@@ -21,7 +21,7 @@ export async function deleteEntry(
   id: number,
   gate?: (existing: Entry) => void,
 ): Promise<Entry> {
-  const existing = await loadAuthoredEntry(context.db, id);
+  const existing = await loadAuthoredEntry(context, id);
   if (!existing) throw errors.NOT_FOUND({ data: { kind: "entry", id } });
   gate?.(existing);
 

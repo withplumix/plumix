@@ -19,7 +19,7 @@ export const resolveBlockDeps = base
   .use(authenticated)
   .input(entryResolveBlockDepsInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const live = await loadAuthoredEntry(context.db, input.id);
+    const live = await loadAuthoredEntry(context, input.id);
     if (!live || !(await canReadEntry(context, live))) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }

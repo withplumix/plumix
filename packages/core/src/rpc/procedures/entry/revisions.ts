@@ -72,7 +72,7 @@ export const list = base
   .handler(async ({ input, context, errors }) => {
     // Look the live entry up first so an unknown id returns NOT_FOUND
     // rather than leaking "you're missing this capability".
-    const live = await loadAuthoredEntry(context.db, input.entryId);
+    const live = await loadAuthoredEntry(context, input.entryId);
     if (!live) {
       throw errors.NOT_FOUND({
         data: { kind: "entry", id: input.entryId },
@@ -133,7 +133,7 @@ export const get = base
     // entry's type from the slug to gate on its `read_revisions` cap.
     const decoded = decodeRevisionSlug(revision.slug);
     if (!decoded) throw notFound();
-    const live = await loadAuthoredEntry(context.db, decoded.entryId);
+    const live = await loadAuthoredEntry(context, decoded.entryId);
     if (!live) throw notFound();
 
     const capability = entryCapabilityByName(
@@ -172,7 +172,7 @@ export const restore = base
 
     const decoded = decodeRevisionSlug(revision.slug);
     if (!decoded) throw notFound();
-    const live = await loadAuthoredEntry(context.db, decoded.entryId);
+    const live = await loadAuthoredEntry(context, decoded.entryId);
     if (!live) throw notFound();
 
     const namespace = entryCapabilityNamespace(context.plugins, live.type);
@@ -341,7 +341,7 @@ export const setMessage = base
 
     const decoded = decodeRevisionSlug(revision.slug);
     if (!decoded) throw notFound();
-    const live = await loadAuthoredEntry(context.db, decoded.entryId);
+    const live = await loadAuthoredEntry(context, decoded.entryId);
     if (!live) throw notFound();
 
     const namespace = entryCapabilityNamespace(context.plugins, live.type);

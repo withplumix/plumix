@@ -6,6 +6,7 @@ import type { Entry, EntryStatus } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import type { WithResolvedMeta } from "../meta/contract/bags.js";
 import { entryCapabilityByName } from "../access/contract/entry-capabilities.js";
+import { declarePageTags } from "../cdn/contract/page-tags.js";
 import { entryTag } from "../cdn/contract/tags.js";
 import { and, asc, desc, eq, inArray, isNull, not } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
@@ -26,12 +27,15 @@ import {
 const PUBLIC_STATUS: EntryStatus = "published";
 const TRASH_STATUS: EntryStatus = "trash";
 
-/** Request-memoized, so consumers gating on one entry's type share a query. */
+/**
+ * Request-memoized, so consumers gating on one entry's type share a query. A
+ * hit tags the page with the entry, so its edit purges it.
+ */
 export async function readEntryType(
   ctx: AppContext,
   id: number,
 ): Promise<string | null> {
-  return ctx.memo(
+  const type = await ctx.memo(
     `core:entry-type:${String(id)}`,
     async () => {
       const [row] = await ctx.db
@@ -42,6 +46,8 @@ export async function readEntryType(
     },
     [entryTag(id)],
   );
+  if (type !== null) declarePageTags(ctx, [entryTag(id)]);
+  return type;
 }
 
 /**
@@ -172,7 +178,7 @@ export async function findReadableEntry(
   ctx: AppContext,
   input: GetEntryInput,
 ): Promise<Entry> {
-  const row = await loadAuthoredEntry(ctx.db, input.id);
+  const row = await loadAuthoredEntry(ctx, input.id);
   if (!row) throw EntryReadError.notFound(input.id);
   if (!(await canReadEntry(ctx, row))) {
     throw EntryReadError.notFound(input.id);

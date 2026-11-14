@@ -1,6 +1,8 @@
-import type { Db } from "../context/app-context.js";
+import type { AppContext, Db } from "../context/app-context.js";
 import type { SQL } from "../db/index.js";
 import type { Entry } from "../db/schema/entries.js";
+import { declarePageTags } from "../cdn/contract/page-tags.js";
+import { entryTag } from "../cdn/contract/tags.js";
 import { and, eq, inArray, notInArray, sql } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { isReservedType, RESERVED_TYPES } from "../revisions/slug-codec.js";
@@ -22,16 +24,18 @@ export function authoredEntryRows(): SQL {
 }
 
 /**
- * The authored entry with this id, or `undefined` — for a missing id and a
- * revision or autosave id alike, so a caller answers both with one not-found.
+ * `undefined` for a missing id and a revision or autosave id alike, so a
+ * caller answers both with one not-found. A hit tags the page with the entry.
  */
 export async function loadAuthoredEntry(
-  db: Db,
+  ctx: Pick<AppContext, "db" | "memo">,
   id: number,
 ): Promise<Entry | undefined> {
-  return db.query.entries.findFirst({
+  const row = await ctx.db.query.entries.findFirst({
     where: and(eq(entries.id, id), authoredEntryRows()),
   });
+  if (row !== undefined) declarePageTags(ctx, [entryTag(row.id)]);
+  return row;
 }
 
 /** A missing or reserved id is simply absent from the result. */

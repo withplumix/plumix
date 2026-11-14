@@ -19,7 +19,7 @@ export const list = base
   .use(authenticated)
   .input(listInput)
   .handler(async ({ input, context, errors }) => {
-    const live = await loadAuthoredEntry(context.db, input.entryId);
+    const live = await loadAuthoredEntry(context, input.entryId);
     if (!live) {
       throw errors.NOT_FOUND({
         data: { kind: "entry", id: input.entryId },
