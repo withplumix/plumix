@@ -57,6 +57,13 @@
       "when": 1794648047952,
       "tag": "0007_entry_term_covering_index",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794654089164,
+      "tag": "0008_entries_status_published_index",
+      "breakpoints": true
     }
   ]
 }
