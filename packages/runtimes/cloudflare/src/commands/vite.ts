@@ -2,6 +2,7 @@ import type { CommandContext } from "plumix";
 import type { Plugin } from "vite";
 import { loadOnce } from "plumix/support";
 
+import { hashedAssetHeaders } from "./hashed-asset-headers.js";
 import { workersCaching } from "./workers-caching.js";
 
 /** Loaded on first use, so a command that never builds skips Vite. */
@@ -37,6 +38,7 @@ export async function createCloudflareVite(
   const plugins: Plugin[] = [
     plumix({ configFile: ctx.configPath }),
     workersCaching(ctx.cwd),
+    hashedAssetHeaders(),
   ];
   if (Array.isArray(cfResult)) {
     plugins.push(...(cfResult as Plugin[]));

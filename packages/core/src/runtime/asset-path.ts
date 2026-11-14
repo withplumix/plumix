@@ -7,6 +7,15 @@ const EXTRA_CONTENT_TYPES: Readonly<Record<string, string>> = {
 
 const IMMUTABLE = "public, max-age=31536000, immutable";
 
+/**
+ * Where the build writes content-hashed output, the only files that may be
+ * cached forever. A runtime that serves static files itself marks these too.
+ */
+export const HASHED_ASSET_PREFIXES: readonly string[] = [
+  "/assets/",
+  "/_plumix/admin/assets/",
+];
+
 export interface AssetPath {
   /** The file under the root, which the runtime still has to find is one. */
   readonly file: string;
@@ -62,9 +71,7 @@ export function resolveAssetPath(
     file: `${root.replace(/[/\\]$/, "")}${relative}`,
     headers: {
       "content-type": contentType(segments.at(-1) ?? ""),
-      // Hashed build output lives under `/assets/`; nothing else is content
-      // addressed, so nothing else may be cached forever.
-      ...(relative.startsWith("/assets/")
+      ...(HASHED_ASSET_PREFIXES.some((prefix) => relative.startsWith(prefix))
         ? { "cache-control": IMMUTABLE }
         : {}),
     },
