@@ -1,5 +1,75 @@
 # @plumix/plugin-forms
 
+## 0.4.0
+
+### Minor Changes
+
+- [#3635](https://github.com/withplumix/plumix/pull/3635) [`e975b8b`](https://github.com/withplumix/plumix/commit/e975b8b29f06c3664560bb56a838da24271b6cc2) Thanks [@nasyrov](https://github.com/nasyrov)! - Changes how a block is defined, so the editor no longer loads every block's code up front. A block's definition now holds only what the editor needs, and everything that renders or runs on the server moves into a view module the definition imports lazily. This is a breaking change for every block.
+
+  Before:
+
+  ```tsx
+  export const hero = defineBlock({
+    name: "acme/hero",
+    title: "Hero",
+    loaders: { posts: loadPosts },
+    deps: { settings: ["site"] },
+    errorFallback: () => <p>Unavailable</p>,
+    render: ({ attrs, loaders, deps }) => <Hero {...attrs} />,
+  });
+  ```
+
+  After:
+
+  ```tsx
+  // hero.tsx
+  export const hero = defineBlock({
+    name: "acme/hero",
+    title: "Hero",
+    view: () => import("./hero.view"),
+  });
+
+  // hero.view.tsx
+  export const loaders = { posts: loadPosts };
+  export const deps = { settings: ["site"] } as const;
+  export const errorFallback = () => <p>Unavailable</p>;
+  export default function HeroView({
+    attrs,
+  }: BlockViewProps<HeroAttrs, typeof loaders, typeof deps>) {
+    return <Hero {...attrs} />;
+  }
+  ```
+
+  - `BlockNodeComponent` is now `BlockView` and `BlockNodeRenderProps` is now `BlockViewProps`. A view also receives the block's `name`, so one module can serve several blocks.
+  - `BlockSpec` takes only the attrs type: write `BlockSpec<HeroAttrs>` where you wrote `BlockSpec<HeroAttrs, typeof loaders, typeof deps>`. A view types its loaders and deps through `BlockViewProps` instead.
+  - `defineBlock` no longer rejects a dep kind no plugin registered at compile time, because a block's `deps` moved into its view module. A view still can't read a dep key its `BlockViewProps` doesn't declare.
+  - The server loads every view when the site boots, so pages render the same HTML as before, except that a highlighted code block's `<code>` now carries `data-testid="code-highlighted"` and the HTML block's wrapper `<div>` carries `data-testid="html-block"`. In the editor, the placeholder for a block no plugin registers now carries `data-testid="block-unregistered"`. The editor canvas loads a document's views before showing it, a catalog item's views when you hover or focus it, and the rest when idle, so a block never shows a loading state.
+  - `renderBlockSpecToHtml` and `renderBlockTreeToHtml` from `plumix/test` now return a promise, and `loadBlockViews` loads the views a test renders outside a site.
+  - The code block's syntax highlighter and the HTML block's sanitizer leave the editor's eager chunk graph, and the editor's canvas no longer loads the admin's UI kit, which shrinks the editor's initial JavaScript for every site.
+  - `plumix sync` and every other CLI command no longer import block views, so a view may import CSS.
+
+- [#3569](https://github.com/withplumix/plumix/pull/3569) [`8f67976`](https://github.com/withplumix/plumix/commit/8f679764db9522e3c1403ebe7ae1a78e1ae5ea5a) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `form`, exported from `@plumix/plugin-forms`, holding the plugin's `submitted` event, so another plugin subscribes with `ctx.events.on(form.submitted, ({ submission, candidate }, ctx) => …)` with no `declare module`. It is still emitted once per accepted submission, after the row is stored and the form's own handler ran. The plugin now needs `plumix` 0.27.0 or later.
+
+  Breaking: the `form:submitted` string name is removed from `ActionRegistry`. Replace `addAction("form:submitted", (submission, candidate) => …)` with `ctx.events.on(form.submitted, ({ submission, candidate }) => …)`.
+
+- [#3421](https://github.com/withplumix/plumix/pull/3421) [`106675a`](https://github.com/withplumix/plumix/commit/106675a4cb7a7dc4fe78526989c4de4eae216ec7) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `ctx.registerFormValidator({ id, forms?, validate })` for validating submissions across forms, and removes the `form:validate` filter it replaces. Every registered validator's errors are collected, so no validator can drop another's; `forms` limits one to the listed slugs, and a validator that throws is logged and refuses nothing. A slug no form declares, or a second validator with a taken `id`, fails boot. Move a `ctx.addFilter("form:validate", …)` handler to a validator that returns its own errors.
+
+- [#3491](https://github.com/withplumix/plumix/pull/3491) [`65a1e0c`](https://github.com/withplumix/plumix/commit/65a1e0c275d5d163584f3183362ad4c3dcac757c) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the plugin's RPC router in its descriptor's type, so a test site that installs it lists its procedures on `site.rpc.forms`. `@orpc/server` moves to the plugin's dependencies, since its published types now name it.
+
+### Patch Changes
+
+- [#3506](https://github.com/withplumix/plumix/pull/3506) [`2284a0b`](https://github.com/withplumix/plumix/commit/2284a0b71cc85d43a5575a077fcc5c5f8fd45245) Thanks [@nasyrov](https://github.com/nasyrov)! - Capabilities now name the default roles that receive them. `registerCapability(name, { grantTo: ["editor"] })` grants a plugin capability to exactly those roles plus `admin`, and one registered without `grantTo` goes to `admin` alone. An entry type's or taxonomy's `capabilities` override maps an action to a list of roles, such as `{ delete: ["author", "editor"] }`. Two types that pool one `capabilityType` with different grants now boot and combine them, where they used to throw. The registered capability carries `grantTo` in place of `minRole` and `defaultGrants`. The first-party plugins use the new form, with every role's rights unchanged.
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3555](https://github.com/withplumix/plumix/pull/3555) [`bcec2f0`](https://github.com/withplumix/plumix/commit/bcec2f03e5e34009ac8f967e1ff00cbec0d9cffe) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.105.0 and `@orpc/server` to 1.16.1 in the framework and the first-party plugins, `@tanstack/react-router` to 1.170.46 in the framework, `plugin-og` and `plugin-seo`, the other `@orpc/*` packages to 1.16.1, the `@tiptap/*` packages to 3.32.0, `vitest` to 5.0.5 and `@playwright/test` to 1.64.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.66.0, `wrangler` 4.154) in `@plumix/runtime-cloudflare`.
+
+- [#3611](https://github.com/withplumix/plumix/pull/3611) [`1cbb204`](https://github.com/withplumix/plumix/commit/1cbb204d5c15dd605c67c419cf4e7c2cd6e74764) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `react` and `react-dom` to 19.3.1 and `@tanstack/react-query` to 5.105.2 in the framework and the first-party plugins, the `@lingui/*` packages to 6.11.0 in the framework and `plugin-forms`, `radix-ui` to 1.8.1, `react-hook-form` to 7.91.0 and `@hookform/resolvers` to 7 in the framework, `vite` to 8.3.5 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.67.0, `wrangler` 4.156.1) in `@plumix/runtime-cloudflare`.
+
+- [#3631](https://github.com/withplumix/plumix/pull/3631) [`2e79e2f`](https://github.com/withplumix/plumix/commit/2e79e2f76e4fe81550420f3d05b3f75e04ed3acc) Thanks [@nasyrov](https://github.com/nasyrov)! - Checks a Turnstile challenge through `ctx.fetch`, so the call to Cloudflare shows as a span in the debug bar, and a check Cloudflare never answers is logged as `timed out after 5s`. It still fails closed after 5 seconds.
+
+- [#3559](https://github.com/withplumix/plumix/pull/3559) [`3a597f9`](https://github.com/withplumix/plumix/commit/3a597f9e1ae6114df5ed8f1fd5a7e12e8ff7b25f) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads every current time in core, the first-party plugins and the runtimes through `now()`, so a test site's `site.travel` and `site.freezeTime` now move token and invite expiry, edit leases, retention cutoffs, rate-limit windows and `updatedAt` stamps too. A column's SQL `unixepoch()` default, such as `createdAt`, still stamps real time.
+
 ## 0.3.0
 
 ### Minor Changes

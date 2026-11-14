@@ -1,5 +1,13 @@
 # @plumix/admin-editor
 
+## 0.27.0
+
+### Patch Changes
+
+- Updated dependencies [[`f739142`](https://github.com/withplumix/plumix/commit/f739142caf44f5b5d0a90fb990203ef90fc344d4), [`8e96243`](https://github.com/withplumix/plumix/commit/8e96243b57b305e3f04dc6eefe0e7396c8250dd6), [`e77381c`](https://github.com/withplumix/plumix/commit/e77381c6350fbeab8f7b666869e3fd1e3e016694), [`0c65af0`](https://github.com/withplumix/plumix/commit/0c65af0985a0ac8fdd5c5781c957976fddb58772), [`bdb8718`](https://github.com/withplumix/plumix/commit/bdb8718c76b553b5da40e9668a766406db9d2fd9), [`b51fb6b`](https://github.com/withplumix/plumix/commit/b51fb6b174bef266e152c5b7888cd1593c4ad4a4), [`6da672a`](https://github.com/withplumix/plumix/commit/6da672a8c60e414fbb72208fd4b3d211b62acd24), [`89add8f`](https://github.com/withplumix/plumix/commit/89add8fcc43d089f758e197df45ce5fbfd05b4dc), [`70f05ce`](https://github.com/withplumix/plumix/commit/70f05ce8be11f3bf3209b9a6e5293c76004c6560), [`67d7d7e`](https://github.com/withplumix/plumix/commit/67d7d7e8faad6a028b425af8a5b6c5123683b26e), [`6bf712c`](https://github.com/withplumix/plumix/commit/6bf712cef2854b194ac08665c4b2985e5a4cc024), [`484d78a`](https://github.com/withplumix/plumix/commit/484d78a1baff570b72b4415dc73531d3f301587b), [`acf797b`](https://github.com/withplumix/plumix/commit/acf797ba9b7f8361d82b35eff41c76d9979a7067), [`9fdbef9`](https://github.com/withplumix/plumix/commit/9fdbef94f5c415d48ce8f0bb7cf77068d8074fb3), [`b7a19c2`](https://github.com/withplumix/plumix/commit/b7a19c2822b9b8bff7d4eea034af048af1d490ac), [`4598b09`](https://github.com/withplumix/plumix/commit/4598b09d1dc0d47494d199fcfe573d94f00c37e6), [`f8fe302`](https://github.com/withplumix/plumix/commit/f8fe302958700d3fcbdba553c4d0d5707de3e475), [`96492be`](https://github.com/withplumix/plumix/commit/96492be50debcb4baf00bb4aae55c36cccb22e0f), [`fff1361`](https://github.com/withplumix/plumix/commit/fff13613a4d8190639c94d750fc2c043ac7f7c3d)]:
+  - @plumix/core@0.27.0
+  - @plumix/admin-ui@0.27.0
+
 ## 0.26.0
 
 ### Patch Changes
