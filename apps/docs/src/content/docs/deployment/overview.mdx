@@ -119,6 +119,14 @@ This is the path from a scaffolded recipe site to a live one. It assumes a site 
 
 Three more entries are emitted on every build and each becomes its own client chunk. `.plumix/islands-entry.ts` imports the island runtime that registers the `<plumix-island>` custom element, and the server injects it only on a page that contains one. `.plumix/islands-renderer-entry.ts` is the React half of that runtime, dynamically imported on first hydration so React is never fetched for a page whose islands all defer. `.plumix/editor-entry.ts` carries the editor canvas and the block modules it renders, and the server injects it only when the edit gate authorizes the request.
 
+Each deploy removes the previous build's chunks, so a tab opened before it can fail to import an island's chunk or the renderer. The island retries the import once, then dispatches a cancelable `plumix:hydration-error` on `window`. If no listener cancels it, the page reloads and loads the current build. It reloads at most once per URL in a browser session, and never when `sessionStorage` is blocked, so a chunk missing from the new build too can't loop. Any other hydration error never reloads, and neither does `plumix dev`, which serves source and shows the failure in its island overlay. To keep the server HTML instead, cancel the event:
+
+```ts
+window.addEventListener("plumix:hydration-error", (event) => {
+  event.preventDefault();
+});
+```
+
 `.plumix/public` holds the static half: your `public/` directory copied in, and the precompiled admin SPA staged under `_plumix/admin/`.
 
 Vite then builds twice, client first and worker second, because the worker bakes the client's asset manifest into its own bundle. The output is a `dist/client` directory of static assets and a `dist/<worker-name>/` directory holding the worker bundle and a `wrangler.json` the Cloudflare Vite plugin writes from your `wrangler.jsonc`. The plugin also drops a `.wrangler/deploy/config.json` redirect pointing at that copy, so `plumix deploy` ships the built snapshot rather than re-reading the file you edited.

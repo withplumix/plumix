@@ -8,7 +8,7 @@ import type { IslandRoot, MountOptions } from "./island-renderer.js";
 import type { SerializedProps } from "./serialize.js";
 import { loadOnce } from "../load-once.js";
 import { islandStrategy } from "./island-global.js";
-import { importWithRetry } from "./island-import.js";
+import { importWithRetry, reloadOnImportFailure } from "./island-import.js";
 import {
   clientOnlyPlaceholderLabel,
   isForbiddenIslandExport,
@@ -276,12 +276,22 @@ export class PlumixIslandElement extends HTMLElement {
   }
 
   private dispatchHydrationError(err: unknown): void {
-    window.dispatchEvent(
-      new CustomEvent("plumix:hydration-error", {
-        detail: { error: err, element: this },
-        cancelable: true,
-      }),
-    );
+    const event = new CustomEvent("plumix:hydration-error", {
+      detail: { error: err, element: this },
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+    // Dev serves source, so no chunk goes stale, and the lazily installed dev
+    // overlay may not be listening yet: a reload would hide the failure.
+    if (!process.env.PLUMIX_DEV) {
+      reloadOnImportFailure(event, {
+        url: location.href,
+        storage: () => sessionStorage,
+        reload: () => {
+          location.reload();
+        },
+      });
+    }
   }
 }
 
