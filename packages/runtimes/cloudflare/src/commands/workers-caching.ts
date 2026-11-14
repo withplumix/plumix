@@ -6,13 +6,13 @@ const VIRTUAL_ID = "virtual:plumix-cloudflare/workers-caching";
 const RESOLVED_ID = "\0" + VIRTUAL_ID;
 
 /**
- * The module-level `exports` reaches the cached entrypoint's purge from
- * `fetch` and `scheduled` alike, with no invocation to thread through.
+ * The module-level `exports` reaches the cached entrypoint from `fetch` and
+ * `scheduled` alike, with no invocation to thread through.
  */
 const GATEWAY_ON = [
   'import { exports } from "cloudflare:workers";',
   'import { bindWorkersCache } from "@plumix/runtime-cloudflare/cdn";',
-  `bindWorkersCache({ purge: (options) => exports.${SHARED_CACHE_ENTRYPOINT}.purge(options) });`,
+  `bindWorkersCache({ fetch: (request) => exports.${SHARED_CACHE_ENTRYPOINT}.fetch(request), purge: (options) => exports.${SHARED_CACHE_ENTRYPOINT}.purge(options) });`,
   "export const sharedEntrypointCached = true;",
   "",
 ].join("\n");

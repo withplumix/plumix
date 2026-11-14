@@ -402,6 +402,8 @@ export { responseAllowsSharedStorage } from "./cdn/decision.js";
 // the app's authenticator so no entry repeats the rules.
 export { mayServeFromSharedCache } from "./runtime/shared-cache.js";
 export type { SharedCacheSite } from "./runtime/shared-cache.js";
+// A front cache's own responses keep the marker, so its gateway strips it.
+export { withoutUniversalMarker } from "./cdn/universal-copy.js";
 export {
   author,
   date,

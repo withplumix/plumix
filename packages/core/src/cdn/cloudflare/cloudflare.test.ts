@@ -391,6 +391,7 @@ describe("an origin store across builds", () => {
     const writes: Promise<unknown>[] = [];
     const cdn = connect();
     const response = await readThrough({
+      requestAsItArrived: () => new Request("https://site.test/"),
       decision: sharingBeforeRender({
         request: new Request("https://site.test/"),
         privileged: false,
@@ -400,6 +401,7 @@ describe("an origin store across builds", () => {
         accessSegment: null,
         page: { kind: "content", intent: "frontPage" },
         canKeySegments: cdnCanKeySegments(cdn),
+        forwarded: false,
       }),
       cdn,
       defer: (write) => {
@@ -472,8 +474,10 @@ describe("the client copy of a segment page served from the origin store", () =>
       accessSegment: segment,
       page: { kind: "content", intent: "entry" },
       canKeySegments: cdnCanKeySegments(cdn),
+      forwarded: false,
     });
     const response = await readThrough({
+      requestAsItArrived: () => new Request("https://site.test/"),
       decision,
       cdn,
       defer: (write) => {

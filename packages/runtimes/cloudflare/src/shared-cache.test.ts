@@ -1,6 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import { sharedCacheRequest } from "./shared-cache.js";
+import {
+  forwardedByGateway,
+  sharedCacheRequest,
+  visitorRequest,
+} from "./shared-cache.js";
 
 function forwarded(url: string, init: RequestInit = {}): Request {
   return sharedCacheRequest(new Request(url, init));
@@ -38,5 +42,39 @@ describe("sharedCacheRequest", () => {
 
     expect(request.method).toBe("HEAD");
     expect(request.url).toBe("https://site.example/recipes/soup?a=1&b=2");
+  });
+});
+
+describe("the gateway's internal header", () => {
+  test("marks a request the gateway forwards", () => {
+    expect(forwardedByGateway(forwarded("https://site.example/soup"))).toBe(
+      true,
+    );
+  });
+
+  test("is not on a request the gateway did not forward", () => {
+    expect(forwardedByGateway(new Request("https://site.example/soup"))).toBe(
+      false,
+    );
+  });
+
+  test("is stripped from a visitor's request, so a client cannot forge it", () => {
+    const forged = sharedCacheRequest(new Request("https://site.example/soup"));
+
+    expect(forwardedByGateway(visitorRequest(forged))).toBe(false);
+  });
+
+  test("leaves the rest of a visitor's request as it arrived", () => {
+    const request = visitorRequest(
+      new Request("https://site.example/soup?utm_source=x", {
+        method: "POST",
+        headers: { cookie: "plumix_session=abc" },
+        body: "form",
+      }),
+    );
+
+    expect(request.url).toBe("https://site.example/soup?utm_source=x");
+    expect(request.method).toBe("POST");
+    expect(request.headers.get("cookie")).toBe("plumix_session=abc");
   });
 });

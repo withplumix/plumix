@@ -38,6 +38,7 @@ export {
   traceDbQuery,
   traceDbQuerySync,
   trustRequest,
+  withoutUniversalMarker,
 } from "@plumix/core";
 
 export type {
@@ -58,6 +59,7 @@ export type {
   DisposeOptions,
   DisposeResult,
   EntrySourceOptions,
+  FrontCache,
   GetOptions,
   GetResult,
   HeadResult,

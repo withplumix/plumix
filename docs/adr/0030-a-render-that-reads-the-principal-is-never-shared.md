@@ -90,6 +90,13 @@ renders `private`, since its anonymous copy may be a teaser. An API-token
 request never reads the shared copy. The marker is internal: it is never on a
 response that leaves.
 
+Where a cache sits in front of the app in the same deploy, as Workers Caching
+does behind the Cloudflare gateway, the copy is read from that front cache,
+under the key anonymous traffic uses. A request the front cache forwarded keeps
+the marker on its response so the gateway can tell; the gateway strips it, and
+strips the header that names a forwarded request from every request a client
+sends.
+
 Signed-in UI on such a page loads the session on the client, as islands
 already do through `authClient`; the server stays the gate for anything that
 needs the principal.

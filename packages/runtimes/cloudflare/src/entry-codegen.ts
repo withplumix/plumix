@@ -12,10 +12,10 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "// Regenerated from plumix.config.ts on each build.",
     "",
     'import { WorkerEntrypoint } from "cloudflare:workers";',
-    'import { buildApp, createRuntimeHandler, mayServeFromSharedCache, renderDevBootErrorResponse } from "plumix/runtime";',
+    'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
     // Imported rather than spelled out: string-literal code is unreachable to
     // the compiler, linter and tests.
-    'import { sharedCacheRequest, surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
+    'import { serveThroughGateway, surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
     // `{}` in dev; in build, the client environment's parsed
     // `.vite/manifest.json`.
     'import assetManifest from "virtual:plumix/asset-manifest";',
@@ -24,8 +24,8 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     'import pluginCatalogs from "virtual:plumix/plugin-catalogs";',
     'import catalogLocales from "virtual:plumix/catalog-locales";',
     `import config from ${JSON.stringify(configModule)};`,
-    // It binds the shared entrypoint's purge, so it must evaluate before the
-    // app connects its slots.
+    // It binds the shared entrypoint, so it must evaluate before the app
+    // connects its slots.
     'import { sharedEntrypointCached } from "virtual:plumix-cloudflare/workers-caching";',
     "",
     // Empty when no config slot contributes a worker export, such as a Durable
@@ -77,13 +77,11 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "      }",
     "      throw bootError;",
     "    }",
-    // The gateway runs on every request. Only a visitor with no session
-    // reaches the cached copy, and without cookies, so one copy per URL
-    // serves them all.
-    "    if (sharedEntrypointCached && mayServeFromSharedCache(app, request)) {",
-    `      return ctx.exports.${SHARED_CACHE_ENTRYPOINT}.fetch(sharedCacheRequest(request));`,
-    "    }",
-    "    return serve(app, request, env, ctx);",
+    "    return serveThroughGateway(request, {",
+    "      app,",
+    `      sharedCache: sharedEntrypointCached ? (forwarded) => ctx.exports.${SHARED_CACHE_ENTRYPOINT}.fetch(forwarded) : null,`,
+    "      serve: (visitor) => serve(app, visitor, env, ctx),",
+    "    });",
     "  },",
     "  async scheduled(event, env, ctx) {",
     "    const app = await appPromise;",

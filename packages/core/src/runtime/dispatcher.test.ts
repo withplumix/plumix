@@ -24,6 +24,7 @@ import { defineBlock } from "../blocks/index.js";
 import { IslandShim } from "../blocks/island-shim.js";
 import { entryPurgeTags, termTag } from "../cdn/contract/tags.js";
 import { tagCdnEntry } from "../cdn/route-tags.js";
+import { UNIVERSAL_COPY_HEADER } from "../cdn/universal-copy.js";
 import { getContext } from "../context/stores.js";
 import { etagOf } from "../db/concurrency.js";
 import { render } from "../events-and-filters/render.js";
@@ -2373,6 +2374,85 @@ describe("dispatcher — public read-through CDN", () => {
 
     expect(await response.text()).toBe("CACHED");
     expect(match).toHaveBeenCalledOnce();
+  });
+
+  describe("with a front cache", () => {
+    const FORWARDED = "x-test-forwarded";
+
+    function frontCached(copy: Response) {
+      const { cdn, put } = cdnStub();
+      const read = vi.fn((_request: Request) => Promise.resolve(copy));
+      const fronted: ConnectedCdn = {
+        ...cdn,
+        frontCache: {
+          read,
+          forwarded: (request) => request.headers.has(FORWARDED),
+        },
+      };
+      return { cdn: fronted, read, put };
+    }
+
+    async function publishedPost(h: DispatcherHarness): Promise<void> {
+      const author = await h.seedUser("admin");
+      await h.factory.entry.create({
+        type: "post",
+        slug: "hello",
+        title: "Hello",
+        status: "published",
+        authorId: author.id,
+        publishedAt: new Date(),
+      });
+    }
+
+    test("a page it forwarded leaves for it marked universal", async () => {
+      const { cdn } = frontCached(new Response("unused"));
+      const h = await createDispatcherHarness({
+        cdn,
+        config: { plugins: [blog] },
+      });
+      await publishedPost(h);
+
+      const response = await h.dispatch(
+        new Request("https://cms.example/post/hello", {
+          headers: { [FORWARDED]: "1" },
+        }),
+      );
+
+      expect(response.headers.get(UNIVERSAL_COPY_HEADER)).toBe("1");
+    });
+
+    test("a signed-in reader is served the universal copy it holds for the URL the request arrived on", async () => {
+      const { cdn, read, put } = frontCached(
+        new Response("SHARED", {
+          headers: {
+            "cache-control": "public, s-maxage=60",
+            "cache-tag": "t:post",
+            [UNIVERSAL_COPY_HEADER]: "1",
+          },
+        }),
+      );
+      const h = await createDispatcherHarness({
+        cdn,
+        config: { plugins: [blog], basePath: "/blog" },
+      });
+      await publishedPost(h);
+      const member = await h.seedUser("member");
+
+      const response = await h.dispatch(
+        await h.authenticateRequest(
+          new Request("https://cms.example/blog/post/hello"),
+          member.id,
+        ),
+      );
+
+      expect(await response.text()).toBe("SHARED");
+      expect(response.headers.get("cache-control")).toBe("private, no-cache");
+      expect(response.headers.has(UNIVERSAL_COPY_HEADER)).toBe(false);
+      expect(read.mock.calls[0]?.[0].url).toBe(
+        "https://cms.example/blog/post/hello",
+      );
+      expect(put).not.toHaveBeenCalled();
+    });
   });
 
   test("a request carrying a ?preview= draft grant bypasses the CDN", async () => {
