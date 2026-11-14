@@ -1,10 +1,9 @@
-import { readSessionCookie } from "../../../../auth/cookies.js";
-import { hashToken } from "../../../../auth/tokens.js";
 import { and, eq } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
 import { auth } from "../../../../events-and-filters/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
+import { currentSessionId } from "./current.js";
 import { sessionsRevokeInputSchema } from "./schemas.js";
 
 /**
@@ -15,12 +14,8 @@ export const revoke = base
   .use(authenticated)
   .input(sessionsRevokeInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const cookieToken = readSessionCookie(context.request);
-    if (cookieToken) {
-      const currentId = await hashToken(cookieToken);
-      if (currentId === input.id) {
-        throw errors.CONFLICT({ data: { reason: "current_session" } });
-      }
+    if (currentSessionId(context.credential) === input.id) {
+      throw errors.CONFLICT({ data: { reason: "current_session" } });
     }
 
     const [row] = await context.db

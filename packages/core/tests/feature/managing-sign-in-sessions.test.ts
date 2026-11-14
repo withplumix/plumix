@@ -1,12 +1,34 @@
+import { createRouterClient } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
 import type { RequestAuthenticator } from "../../src/auth/authenticator.js";
+import type { User } from "../../src/db/schema/users.js";
+import type { TestSite } from "../../src/test/site.js";
 import { eq } from "../../src/db/index.js";
 import { sessions } from "../../src/db/schema/sessions.js";
 import { users } from "../../src/db/schema/users.js";
+import { appRouter } from "../../src/rpc/router.js";
 import { testSite } from "../../src/test/site.js";
 
 const site = await testSite({ plugins: [] });
+
+/** Signs `caller` in, and returns the one session that sign-in made. */
+async function currentSessionOf(caller: TestSite, user: User): Promise<string> {
+  await caller.rpc.auth.session({});
+  const [only, ...more] = await sessionIdsOf(user.id);
+  if (only === undefined || more.length > 0) {
+    throw new Error("expected the sign-in to be the user's one session");
+  }
+  return only;
+}
+
+async function sessionIdsOf(userId: number): Promise<string[]> {
+  const rows = await site.context.db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(eq(sessions.userId, userId));
+  return rows.map((row) => row.id);
+}
 
 describe("revoking a user's other sessions", () => {
   test("is refused to a visitor", async () => {
@@ -17,19 +39,28 @@ describe("revoking a user's other sessions", () => {
 
   test("deletes the caller's other sessions and keeps the current one", async () => {
     const editor = await site.factory.editor.create();
+    const caller = site.actingAs(editor);
+    const current = await currentSessionOf(caller, editor);
     await site.factory.session.create({ userId: editor.id });
     await site.factory.session.create({ userId: editor.id });
 
-    const result = await site
-      .actingAs(editor)
-      .rpc.auth.sessions.revokeOthers({});
+    const result = await caller.rpc.auth.sessions.revokeOthers({});
 
     expect(result.revoked).toBe(2);
-    const remaining = await site.context.db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.userId, editor.id));
-    expect(remaining).toHaveLength(1);
+    expect(await sessionIdsOf(editor.id)).toEqual([current]);
+  });
+
+  test("keeps the current session for a principal already on the context, with no cookie", async () => {
+    const editor = await site.factory.editor.create();
+    const caller = site.actingAs(editor);
+    const current = await currentSessionOf(caller, editor);
+    await site.factory.session.create({ userId: editor.id });
+    const client = createRouterClient(appRouter, { context: caller.context });
+
+    const result = await client.auth.sessions.revokeOthers({});
+
+    expect(result.revoked).toBe(1);
+    expect(await sessionIdsOf(editor.id)).toEqual([current]);
   });
 
   test("leaves other users' sessions alone", async () => {
@@ -46,6 +77,29 @@ describe("revoking a user's other sessions", () => {
       .from(sessions)
       .where(eq(sessions.userId, other.id));
     expect(theirs).toHaveLength(2);
+  });
+
+  test("revokes none for a caller holding only an API token", async () => {
+    const editor = await site.factory.editor.create();
+    await site.factory.session.create({ userId: editor.id });
+    const { secret } = await site.factory.apiToken.create({
+      userId: editor.id,
+      name: "agent",
+      scopes: ["entry:post:read"],
+    });
+
+    const page = await site.visit("/_plumix/rpc/auth/sessions/revokeOthers", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify({ json: {} }),
+    });
+
+    expect(page.status).toBe(200);
+    expect(page.body).toContain('"revoked":0');
+    expect(await sessionIdsOf(editor.id)).toHaveLength(1);
   });
 
   test("revokes none when the caller has no other session", async () => {
@@ -77,7 +131,7 @@ const signedInElsewhere = await testSite({
 });
 
 describe("revoking other sessions for a caller signed in by an external identity provider", () => {
-  test("revokes none and leaves the caller's sessions alone", async () => {
+  test("revokes every one of the caller's sessions, none being current", async () => {
     const editor = await signedInElsewhere.factory.editor.create({
       email: "sso@cms.example",
     });
@@ -86,12 +140,12 @@ describe("revoking other sessions for a caller signed in by an external identity
 
     const result = await signedInElsewhere.rpc.auth.sessions.revokeOthers({});
 
-    expect(result.revoked).toBe(0);
+    expect(result.revoked).toBe(2);
     const remaining = await signedInElsewhere.context.db
       .select()
       .from(sessions)
       .where(eq(sessions.userId, editor.id));
-    expect(remaining).toHaveLength(2);
+    expect(remaining).toHaveLength(0);
   });
 });
 
@@ -128,6 +182,20 @@ describe("listing a user's sessions", () => {
         .map((session) => session.id)
         .sort(),
     ).toEqual(["desktop", "phone"]);
+  });
+
+  test("marks the current session for a principal already on the context, with no cookie", async () => {
+    const editor = await site.factory.editor.create();
+    const caller = site.actingAs(editor);
+    const current = await currentSessionOf(caller, editor);
+    const client = createRouterClient(appRouter, { context: caller.context });
+
+    const listed = await client.auth.sessions.list({});
+
+    expect(caller.context.request.headers.get("cookie")).toBeNull();
+    expect(
+      listed.filter((session) => session.current).map((session) => session.id),
+    ).toEqual([current]);
   });
 
   test("leaves out other users' sessions", async () => {
@@ -167,6 +235,21 @@ describe("revoking a session", () => {
       code: "CONFLICT",
       data: { reason: "current_session" },
     });
+  });
+
+  test("refuses the current session of a principal already on the context, with no cookie", async () => {
+    const editor = await site.factory.editor.create();
+    const caller = site.actingAs(editor);
+    const current = await currentSessionOf(caller, editor);
+    const client = createRouterClient(appRouter, { context: caller.context });
+
+    const revoking = client.auth.sessions.revoke({ id: current });
+
+    await expect(revoking).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "current_session" },
+    });
+    expect(await sessionIdsOf(editor.id)).toEqual([current]);
   });
 
   test("answers NOT_FOUND for another user's session, so it is no oracle", async () => {
