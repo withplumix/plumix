@@ -36,7 +36,17 @@ describe("createTimedFlag", () => {
     expect(states).toEqual([true]);
   });
 
-  test("resetting turns the flag off at once and drops the pending reset", () => {
+  test("resetting turns the flag off at once", () => {
+    const states: boolean[] = [];
+    const flag = createTimedFlag(1000, (on) => states.push(on));
+    flag.trigger();
+
+    flag.reset();
+
+    expect(states).toEqual([true, false]);
+  });
+
+  test("resetting drops the pending reset", () => {
     const states: boolean[] = [];
     const flag = createTimedFlag(1000, (on) => states.push(on));
     flag.trigger();
