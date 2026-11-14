@@ -1,8 +1,8 @@
 import { and, eq } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
 import { auth } from "../../../../events-and-filters/auth.js";
-import { authenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { sessionAuthenticated } from "../../../authenticated.js";
+import { coreBase } from "../../../base.js";
 import { currentSessionId } from "./current.js";
 import { sessionsRevokeInputSchema } from "./schemas.js";
 
@@ -10,8 +10,9 @@ import { sessionsRevokeInputSchema } from "./schemas.js";
  * Refuses the current session: signing out here goes through
  * `/_plumix/auth/signout`, which also handles the IdP logout redirect.
  */
-export const revoke = base
-  .use(authenticated)
+export const revoke = coreBase
+  .meta({ removesCredential: true })
+  .use(sessionAuthenticated)
   .input(sessionsRevokeInputSchema)
   .handler(async ({ input, context, errors }) => {
     if (currentSessionId(context.credential) === input.id) {

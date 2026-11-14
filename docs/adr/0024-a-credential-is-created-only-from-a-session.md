@@ -16,9 +16,9 @@ login that survives revoking the token.
 The route needs to know what kind of credential resolved the caller, and only
 the authenticator knows that.
 
-> **A surface that creates a credential or a session, for the caller or for
-> another user, admits only a session credential. An API-token caller counts
-> as anonymous there.**
+> **A surface that creates, revokes or removes a credential or a session, for
+> the caller or for another user, admits only a session credential. An
+> API-token caller counts as anonymous there.**
 
 ## What this means
 
@@ -53,6 +53,14 @@ the authenticator knows that.
   core's `coreBase` (`rpc/base.ts`), and
   `tests/feature/creating-a-credential-from-a-session.test.ts` reads the
   marked procedures from the router and checks each refuses an API token.
+  A procedure that revokes or removes a credential, a session, an OAuth link
+  or a grant uses the same middleware and carries
+  `meta({ removesCredential: true })`, which
+  `tests/feature/removing-a-credential-with-an-api-token.test.ts` reads the
+  same way: `auth.apiTokens.revoke`, `auth.apiTokens.adminRevoke`,
+  `auth.sessions.revoke`, `auth.sessions.revokeOthers`,
+  `auth.credentials.delete`, `auth.oauthAccounts.unlink`,
+  `auth.oauthGrants.revoke` and `auth.oauthGrants.adminRevoke`.
   Passkey add-device and OAuth's `/authorize`, which need the whole user
   row, call `authenticateSession(ctx)` in `auth/authenticator.ts`, which
   applies the same key.

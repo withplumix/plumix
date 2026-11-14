@@ -12,6 +12,8 @@ export interface CoreProcedureMeta {
   readonly modifiesUser?: true;
   /** Creates or redirects a credential, for the caller or another user. */
   readonly createsCredential?: true;
+  /** Revokes or removes a credential, a session, an OAuth link or a grant. */
+  readonly removesCredential?: true;
 }
 
 /**
