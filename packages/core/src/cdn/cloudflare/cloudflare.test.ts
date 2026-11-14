@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { Segment } from "../../access/contract/access.js";
 import type { PlumixEnv } from "../../runtime/contract/bindings.js";
 import type { CdnStore, ConnectedCdn } from "../../runtime/contract/slots.js";
 import type { CloudflareCdnConfig } from "./cloudflare.js";
@@ -434,6 +435,80 @@ describe("an origin store across builds", () => {
     await purgeTags(["e:1"]);
 
     expect(await serveFrontAfterStoreWrite("after")).toBe("after");
+  });
+});
+
+describe("the client copy of a segment page served from the origin store", () => {
+  beforeEach(() => {
+    const zone = purgeableZone();
+    (globalThis as { caches?: unknown }).caches = { default: zone.cache };
+    globalThis.fetch = zone.purgeEndpoint;
+  });
+
+  // Stands in for the dispatcher's render, which already marks a non-anonymous
+  // segment's page for its audience.
+  async function visit(
+    segment: Segment,
+    headers?: Record<string, string>,
+  ): Promise<Response> {
+    const writes: Promise<unknown>[] = [];
+    const response = await readThrough({
+      request: new Request("https://site.test/members", { headers }),
+      segment,
+      intentKind: "entry",
+      cdn: connect(),
+      defer: (write) => {
+        writes.push(write);
+      },
+      telemetry: NOOP_TELEMETRY,
+      render: () =>
+        Promise.resolve(
+          new Response("page", {
+            headers:
+              segment === "anonymous"
+                ? { "content-type": "text/html" }
+                : {
+                    "content-type": "text/html",
+                    "cache-control": "private, no-store",
+                    vary: "cookie",
+                  },
+          }),
+        ),
+      tags: () => ["e:7"],
+      personal: () => false,
+    });
+    await Promise.all(writes);
+    return response;
+  }
+
+  it("a member's hit leaves as the segment's private copy, untagged", async () => {
+    await visit("authenticated", { cookie: "session=a" });
+
+    const hit = await visit("authenticated", { cookie: "session=b" });
+
+    expect(hit.headers.get("cache-control")).toBe("private, no-store");
+    expect(hit.headers.get("vary")).toBe("cookie");
+    expect(hit.headers.has("cache-tag")).toBe(false);
+  });
+
+  it("a member whose session rides in a header gets the same copy on a hit", async () => {
+    const member = { authorization: "Bearer member-token" };
+    await visit("authenticated", member);
+
+    const hit = await visit("authenticated", member);
+
+    expect(hit.headers.get("cache-control")).toBe("private, no-store");
+    expect(hit.headers.get("vary")).toContain("cookie");
+    expect(hit.headers.has("cache-tag")).toBe(false);
+  });
+
+  it("an anonymous hit keeps the shared freshness and its tags", async () => {
+    await visit("anonymous");
+
+    const hit = await visit("anonymous");
+
+    expect(hit.headers.get("cache-control")).toBe(PAGE_FRESHNESS);
+    expect(hit.headers.get("cache-tag")).toBe("e:7");
   });
 });
 

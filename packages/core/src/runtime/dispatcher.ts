@@ -29,6 +29,7 @@ import { AUTHORIZE_PATH, TOKEN_PATH } from "../auth/oauth-server/urls.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
+import { pageClientCopy, segmentClientCopy } from "../cdn/client-copy.js";
 import { declaredPageTags } from "../cdn/contract/page-tags.js";
 import {
   requestCarriesEphemeralGrant,
@@ -577,9 +578,9 @@ async function dispatchPublicRoute(
     // A `private` segment still goes through the read-through, which bypasses
     // internally so telemetry stays uniform.
     if (cdn === undefined) {
-      return await renderPublicRoute(app, ctx, routed, segment);
+      return pageClientCopy(await renderPublicRoute(app, ctx, routed, segment));
     }
-    return await readThrough({
+    const response = await readThrough({
       request: ctx.request,
       segment,
       intentKind: intent?.kind ?? null,
@@ -609,8 +610,9 @@ async function dispatchPublicRoute(
       },
       personal: () => renderIsPersonal(ctx),
     });
+    return pageClientCopy(response);
   } catch (err) {
-    return renderPublicError(app, ctx, url, err);
+    return pageClientCopy(await renderPublicError(app, ctx, url, err));
   }
 }
 
@@ -621,7 +623,7 @@ async function renderPublicRoute(
   segment: Segment,
 ): Promise<Response> {
   const renderEnv = app.renderEnv;
-  const response = await ctx.telemetry.span("resolve", async (s) => {
+  let response = await ctx.telemetry.span("resolve", async (s) => {
     try {
       return await routed.render(ctx);
     } finally {
@@ -634,7 +636,7 @@ async function renderPublicRoute(
       }
     }
   });
-  markAudience(response, ctx, segment);
+  response = markAudience(response, ctx, segment);
   if (response.status === 404 && acceptsHtml(ctx.request)) {
     const html = await renderErrorThroughTheme({
       ctx,
@@ -657,19 +659,14 @@ function markAudience(
   response: Response,
   ctx: AppContext,
   segment: Segment,
-): void {
+): Response {
   // Gives a client-side unlock the hard gate's signal. Skipped on a 404, where
   // the teaser resolved to nothing.
   const gate = ctx.access?.gate;
   if (gate?.type === "challenge" && gate.soft && response.status !== 404) {
     response.headers.set("x-plumix-challenge", gate.kind);
   }
-  // Downstream caches don't know the segment axis, so only the anonymous
-  // document may be stored under the plain URL.
-  if (segment !== "anonymous") {
-    response.headers.set("cache-control", "private, no-store");
-    response.headers.append("vary", "cookie");
-  }
+  return segmentClientCopy(response, segment);
 }
 
 async function renderPublicError(
@@ -814,8 +811,7 @@ async function servePublicRoute(
       reader,
       match.params,
     );
-    markAudience(response, reader, PRIVATE_SEGMENT);
-    return response;
+    return markAudience(response, reader, PRIVATE_SEGMENT);
   }
   const run = async () => match.route.handler(ctx.request, ctx, match.params);
   const cdn = ctx.cdn;
@@ -849,8 +845,7 @@ async function servePoliciedPublicRoute(
   if (gated !== null) return gated;
   ctx.access = access;
   const response = await match.route.handler(ctx.request, ctx, match.params);
-  markAudience(response, ctx, segmentForAudience(ctx, access.segment));
-  return response;
+  return markAudience(response, ctx, segmentForAudience(ctx, access.segment));
 }
 
 /**

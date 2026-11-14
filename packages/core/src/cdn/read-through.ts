@@ -3,6 +3,7 @@ import type { DeferFn } from "../context/app-context.js";
 import type { TelemetryCollector } from "../context/telemetry.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
+import { segmentClientCopy } from "./client-copy.js";
 import {
   cdnBypassReason,
   methodIsCacheable,
@@ -167,7 +168,10 @@ async function lookupOrRender(args: LookupArgs): Promise<Response> {
   const hit = await store?.match(key);
   if (hit) {
     telemetry.record("cdn", { ...fact, decision: "hit", originStore });
-    return hit;
+    // The edge copy is widened for storage; a page's segment narrows it again.
+    return fact.segment === undefined
+      ? hit
+      : segmentClientCopy(hit, fact.segment);
   }
 
   const fresh = await render();

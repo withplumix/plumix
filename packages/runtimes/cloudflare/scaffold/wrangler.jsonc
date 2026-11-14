@@ -31,7 +31,8 @@
   // a busy site to log a share of requests.
   "observability": { "enabled": true },
   // Workers Caching serves the anonymous public page without running the
-  // Worker. The `cdn` provider purges it on publish; it stays inert, caching
-  // nothing, until CF_ZONE_ID and CF_CACHE_PURGE_TOKEN are set.
+  // Worker. The `cdn` provider purges it on publish. Until CF_ZONE_ID and
+  // CF_CACHE_PURGE_TOKEN are set it is inert: public pages leave
+  // `private, no-cache`, so Workers Caching stores none of them.
   "cache": { "enabled": true },
 }
