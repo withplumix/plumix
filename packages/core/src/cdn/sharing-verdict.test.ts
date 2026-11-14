@@ -36,6 +36,7 @@ function facts(overrides: Partial<RequestFacts> = {}): RequestFacts {
     accessSegment: null,
     page: { kind: "content", intent: "entry" },
     canKeySegments: true,
+    forwarded: false,
     ...overrides,
   };
 }
@@ -330,17 +331,29 @@ describe("sharingBeforeRender", () => {
     >;
     expect(key.headers.has("cookie")).toBe(false);
   });
+
+  it("reads through for the front cache that forwarded the request", () => {
+    expect(sharingBeforeRender(facts({ forwarded: true }))).toMatchObject({
+      kind: "read-through",
+      forwarded: true,
+    });
+  });
 });
 
 const ENTRY: PageKind = { kind: "content", intent: "entry" };
 
-function readThrough(segment: Segment, universal = false): SharingDecision {
+function readThrough(
+  segment: Segment,
+  universal = false,
+  forwarded = false,
+): SharingDecision {
   return {
     kind: "read-through",
     segment,
     page: ENTRY,
     key: new Request("https://site.test/post"),
     universal,
+    forwarded,
   };
 }
 
@@ -370,6 +383,28 @@ describe("sharingAfterRender", () => {
         decorate: true,
         universal: false,
         clientCopy: "page",
+      },
+    },
+    {
+      name: "a 200 the front cache forwarded is stored, decorated and leaves for it",
+      decision: readThrough("anonymous", true, true),
+      render: { status: 200, personal: false, setsCookie: false },
+      expected: {
+        store: true,
+        decorate: true,
+        universal: true,
+        clientCopy: "front-cache",
+      },
+    },
+    {
+      name: "a 200 the front cache forwarded that sets a cookie is stored but not decorated",
+      decision: readThrough("anonymous", true, true),
+      render: { status: 200, personal: false, setsCookie: true },
+      expected: {
+        store: true,
+        decorate: false,
+        universal: true,
+        clientCopy: "front-cache",
       },
     },
     {

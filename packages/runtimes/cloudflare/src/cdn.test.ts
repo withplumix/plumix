@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { WorkersCache } from "./cdn.js";
 import { bindWorkersCache, cloudflare } from "./cdn.js";
+import { forwardedByGateway, sharedCacheRequest } from "./shared-cache.js";
 
 const CONFIG: CloudflareCdnConfig = {
   ttl: 60,
@@ -28,12 +29,16 @@ const blog = definePlugin("blog", {
  * the stubbed `fetch`. The cached entrypoint's `purge` is a recording fake.
  */
 let purge: ReturnType<typeof vi.fn<WorkersCache["purge"]>>;
+let entrypointFetch: ReturnType<typeof vi.fn<WorkersCache["fetch"]>>;
 let zoneFetch: ReturnType<typeof vi.fn<typeof fetch>>;
 const originalFetch = globalThis.fetch;
 
 beforeEach(() => {
   purge = vi.fn<WorkersCache["purge"]>(() =>
     Promise.resolve({ success: true, errors: [] }),
+  );
+  entrypointFetch = vi.fn<WorkersCache["fetch"]>(() =>
+    Promise.resolve(new Response("from the cached entrypoint")),
   );
   zoneFetch = vi.fn<typeof fetch>(() =>
     Promise.resolve(new Response(null, { status: 200 })),
@@ -108,7 +113,7 @@ async function publishPost(
 
 describe("cloudflare() from the Cloudflare runtime", () => {
   test("publishing an entry purges the cached entrypoint once with its tags, beside the zone", async () => {
-    bindWorkersCache({ purge });
+    bindWorkersCache({ purge, fetch: entrypointFetch });
 
     const id = await publishPost(connect());
 
@@ -125,7 +130,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
   });
 
   test("purgeAll purges the cached entrypoint of everything, beside the zone", async () => {
-    bindWorkersCache({ purge });
+    bindWorkersCache({ purge, fetch: entrypointFetch });
 
     await connect().purgeAll?.();
 
@@ -134,7 +139,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
   });
 
   test("a scheduled publish purges the cached entrypoint with the entry's tags", async () => {
-    bindWorkersCache({ purge });
+    bindWorkersCache({ purge, fetch: entrypointFetch });
     const h = await createDispatcherHarness({
       config: { plugins: [blog] },
     });
@@ -172,7 +177,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
   });
 
   test("1,500 tags become two Workers Caching purges, the most it takes being 1,000", async () => {
-    bindWorkersCache({ purge });
+    bindWorkersCache({ purge, fetch: entrypointFetch });
     const tags = Array.from({ length: 1500 }, (_, i) => `e:${String(i)}`);
 
     await connect().purgeTags?.(tags);
@@ -185,6 +190,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
 
   test("a refused Workers Caching purge is logged with its errors and the publish still succeeds", async () => {
     bindWorkersCache({
+      fetch: entrypointFetch,
       purge: () =>
         Promise.resolve({
           success: false,
@@ -209,6 +215,7 @@ describe("cloudflare() from the Cloudflare runtime", () => {
   test("a refused Workers Caching purge lands on the request's cdn telemetry record", async () => {
     const errors = [{ code: 1134, message: "rate limited" }];
     bindWorkersCache({
+      fetch: entrypointFetch,
       purge: () => Promise.resolve({ success: false, errors }),
     });
     const snapshots: TelemetrySnapshot[] = [];
@@ -226,9 +233,46 @@ describe("cloudflare() from the Cloudflare runtime", () => {
   });
 });
 
+describe("the front cache", () => {
+  test("reads a signed-in reader's copy from the cached entrypoint, as the gateway forwards", async () => {
+    bindWorkersCache({ purge, fetch: entrypointFetch });
+
+    const copy = await connect().frontCache?.read(
+      new Request("https://site.example/soup?utm_source=x&b=2&a=1", {
+        headers: { cookie: "plumix_session=alice" },
+      }),
+    );
+
+    expect(await copy?.text()).toBe("from the cached entrypoint");
+    const forwarded = entrypointFetch.mock.calls[0]?.[0];
+    if (forwarded === undefined) throw new Error("expected a forwarded call");
+    expect(forwarded.url).toBe("https://site.example/soup?a=1&b=2");
+    expect(forwarded.headers.has("cookie")).toBe(false);
+    expect(forwardedByGateway(forwarded)).toBe(true);
+  });
+
+  test("recognizes only a request the gateway forwarded", () => {
+    bindWorkersCache({ purge, fetch: entrypointFetch });
+    const cdn = connect();
+
+    expect(
+      cdn.frontCache?.forwarded(
+        sharedCacheRequest(new Request("https://site.example/soup")),
+      ),
+    ).toBe(true);
+    expect(
+      cdn.frontCache?.forwarded(new Request("https://site.example/soup")),
+    ).toBe(false);
+  });
+
+  test("is absent with Workers Caching off", () => {
+    expect(connect().frontCache).toBeUndefined();
+  });
+});
+
 describe("with Workers Caching bound", () => {
   beforeEach(() => {
-    bindWorkersCache({ purge });
+    bindWorkersCache({ purge, fetch: entrypointFetch });
   });
 
   describeCdnContract({ connect, purgeTags: true, purgeAll: true });

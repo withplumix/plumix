@@ -76,6 +76,7 @@ function decide(
     principalIsPersonal: false,
     accessSegment: null,
     canKeySegments: cdnCanKeySegments(cdn),
+    forwarded: false,
     ...facts,
   });
 }
@@ -103,6 +104,7 @@ describe("readThrough", () => {
     );
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "entry" },
@@ -134,6 +136,7 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(new Response("fresh")));
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "frontPage" },
@@ -161,6 +164,7 @@ describe("readThrough", () => {
     );
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "entry" },
@@ -184,6 +188,7 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         accessSegment: "private",
@@ -210,6 +215,7 @@ describe("readThrough", () => {
     );
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: new Request("https://site.test/members", {
           headers: { cookie: "plumix_session=alice" },
@@ -247,6 +253,7 @@ describe("readThrough", () => {
     // Storeless and without `segmentVary`, the provider hands every visitor one
     // shared copy — so this render must not be decorated into it.
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET("https://site.test/members"),
         accessSegment: "authenticated",
@@ -281,6 +288,7 @@ describe("readThrough", () => {
     const varying = { ...cdn, segmentVary: (response: Response) => response };
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(varying, {
         request: GET("https://site.test/members"),
         accessSegment: "authenticated",
@@ -311,6 +319,7 @@ describe("readThrough", () => {
     const telemetry = createTelemetryCollector();
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET("https://site.test/members"),
         accessSegment: "authenticated",
@@ -348,6 +357,7 @@ describe("readThrough", () => {
     );
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: null },
@@ -372,6 +382,7 @@ describe("readThrough", () => {
     );
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: {
@@ -400,6 +411,7 @@ describe("readThrough", () => {
     );
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "archiveType" },
@@ -427,6 +439,7 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "entry" },
@@ -452,6 +465,7 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "entry" },
@@ -475,6 +489,7 @@ describe("readThrough", () => {
     const fresh = new Response("members", { status: 200 });
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET("https://site.test/members"),
         accessSegment: "authenticated",
@@ -500,6 +515,7 @@ describe("readThrough", () => {
     });
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET("https://site.test/members"),
         accessSegment: "authenticated",
@@ -523,6 +539,7 @@ describe("readThrough", () => {
     const { cdn } = spies();
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "entry" },
@@ -550,6 +567,7 @@ describe("readThrough", () => {
     const { cdn } = spies({ storeless: true });
 
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "entry" },
@@ -600,6 +618,7 @@ describe("readThrough for a session on a page with no policy", () => {
     const render = vi.fn(() => Promise.resolve(new Response("live")));
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: sessionDecision(cdn),
       cdn,
       defer: immediateDefer,
@@ -622,6 +641,7 @@ describe("readThrough for a session on a page with no policy", () => {
     const fresh = new Response("member body", { status: 200 });
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: sessionDecision(cdn),
       cdn,
       defer: immediateDefer,
@@ -642,6 +662,7 @@ describe("readThrough for a session on a page with no policy", () => {
     const telemetry = createTelemetryCollector();
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: sessionDecision(cdn),
       cdn,
       defer: immediateDefer,
@@ -670,6 +691,7 @@ describe("the copy an anonymous render stores", () => {
   async function storedCopy(accessSegment: RequestFacts["accessSegment"]) {
     const { cdn, put } = spies();
     await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         accessSegment,
@@ -699,6 +721,7 @@ describe("the copy an anonymous render stores", () => {
     const { cdn } = spies();
 
     const result = await readThrough({
+      requestAsItArrived: GET,
       decision: decide(cdn, {
         request: GET(),
         page: { kind: "content", intent: "entry" },
@@ -712,6 +735,101 @@ describe("the copy an anonymous render stores", () => {
     });
 
     expect(isUniversalCopy(result)).toBe(false);
+  });
+});
+
+describe("the response a forwarding front cache gets", () => {
+  async function forwardedResponse(
+    accessSegment: RequestFacts["accessSegment"],
+  ) {
+    const { cdn } = spies();
+    return readThrough({
+      requestAsItArrived: GET,
+      decision: decide(cdn, {
+        request: GET(),
+        accessSegment,
+        forwarded: true,
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render: () => Promise.resolve(new Response("page", { status: 200 })),
+      tags: noTags,
+      personal: () => false,
+    });
+  }
+
+  it("is marked universal on a page with no policy", async () => {
+    expect(isUniversalCopy(await forwardedResponse(null))).toBe(true);
+  });
+
+  it("is not marked universal on a policied page", async () => {
+    expect(isUniversalCopy(await forwardedResponse("anonymous"))).toBe(false);
+  });
+});
+
+describe("readThrough for a session, on a cdn with a front cache", () => {
+  const ARRIVED = GET("https://site.test/blog/hello?utm_source=x", {
+    cookie: "plumix_session=alice",
+  });
+
+  function frontCached(copy: Response) {
+    const { cdn, match, put } = spies();
+    const read = vi.fn((_request: Request) => Promise.resolve(copy));
+    const fronted: ConnectedCdn = {
+      ...cdn,
+      frontCache: { read, forwarded: () => false },
+    };
+    return { cdn: fronted, read, match, put };
+  }
+
+  async function readAsSession(cdn: ConnectedCdn, render = vi.fn()) {
+    return readThrough({
+      decision: decide(cdn, {
+        request: GET("https://site.test/hello", {
+          cookie: "plumix_session=alice",
+        }),
+        privileged: true,
+        page: { kind: "content", intent: "entry" },
+      }),
+      requestAsItArrived: () => ARRIVED,
+      cdn,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render,
+      tags: noTags,
+      personal: () => false,
+    });
+  }
+
+  it("serves the universal copy the front cache returns for the request as it arrived", async () => {
+    const universal = new Response("shared", {
+      headers: { [UNIVERSAL_COPY_HEADER]: "1" },
+    });
+    const { cdn, read, match, put } = frontCached(universal);
+    const render = vi.fn();
+
+    const result = await readAsSession(cdn, render);
+
+    expect(result).toBe(universal);
+    expect(read).toHaveBeenCalledWith(ARRIVED);
+    expect(match).not.toHaveBeenCalled();
+    expect(render).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("renders live over a front-cache copy that is not universal", async () => {
+    const { cdn, put } = frontCached(new Response("teaser"));
+    const fresh = new Response("member body", { status: 200 });
+
+    const result = await readAsSession(
+      cdn,
+      vi.fn(() => Promise.resolve(fresh)),
+    );
+
+    expect(result).toBe(fresh);
+    expect(put).not.toHaveBeenCalled();
   });
 });
 

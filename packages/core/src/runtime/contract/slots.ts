@@ -305,6 +305,21 @@ export interface ConnectedCdn {
    * leaves cached pages to their TTL.
    */
   readonly purgeAll?: () => Promise<void>;
+  readonly frontCache?: FrontCache;
+}
+
+/**
+ * A shared cache in front of the app, in the same deploy, that forwards it
+ * sessionless requests. A signed-in reader's universal copy is read from it.
+ */
+export interface FrontCache {
+  /** Answers as for a visitor with no session, keyed as its own requests. */
+  read(request: Request): Promise<Response>;
+  /**
+   * True only for a request the cache sent, whose response keeps the universal
+   * marker for the cache to strip.
+   */
+  forwarded(request: Request): boolean;
 }
 
 /**

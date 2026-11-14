@@ -68,3 +68,19 @@ describe("pageClientCopy", () => {
     expect(copy.headers.get("cache-control")).toBe("public, s-maxage=3600");
   });
 });
+
+describe("the front cache's client copy", () => {
+  it("keeps the universal marker for the front cache to read", () => {
+    const copy = applyClientCopy(universalCopy(), "front-cache");
+
+    expect(copy.headers.get(UNIVERSAL_COPY_HEADER)).toBe("1");
+    expect(copy.headers.get("cache-control")).toBe("public, s-maxage=3600");
+    expect(copy.headers.get("cache-tag")).toBe("e:1,t:post");
+  });
+
+  it("keeps a page that declares no Cache-Control out of the front cache", () => {
+    const copy = applyClientCopy(new Response("404"), "front-cache");
+
+    expect(copy.headers.get("cache-control")).toBe("private, no-cache");
+  });
+});

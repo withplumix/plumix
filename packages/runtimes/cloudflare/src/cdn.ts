@@ -4,12 +4,14 @@ import { cloudflare as zoneCloudflare } from "plumix/cdn/cloudflare";
 import { tryGetContext } from "plumix/plugin";
 
 import { WorkersCachePurgeError } from "./errors.js";
+import { forwardedByGateway, sharedCacheRequest } from "./shared-cache.js";
 
 /**
- * The cached entrypoint's `purge`, typed locally: jiti loads this module in
- * Node with the config, so the generated entry binds it instead.
+ * The cached entrypoint, typed locally: jiti loads this module in Node with
+ * the config, so the generated entry binds it instead.
  */
 export interface WorkersCache {
+  fetch(request: Request): Promise<Response>;
   purge(options: { tags?: string[]; purgeEverything?: boolean }): Promise<{
     success: boolean;
     errors: { code: number; message: string }[];
@@ -72,9 +74,9 @@ async function settle(calls: readonly Promise<void>[]): Promise<void> {
 }
 
 /**
- * Core's provider, plus the purge only a Worker can reach: Workers Caching
- * (`cache.enabled` in wrangler config), which the zone's `purge_cache` does not
- * clear.
+ * Core's provider, plus Workers Caching (`cache.enabled` in wrangler config):
+ * its purge, which the zone's `purge_cache` does not clear, and its copies as
+ * the front cache.
  */
 export function cloudflare(config: CloudflareCdnConfig): CdnProvider {
   const zone = zoneCloudflare(config);
@@ -87,6 +89,10 @@ export function cloudflare(config: CloudflareCdnConfig): CdnProvider {
       const { purgeTags, purgeAll } = connected;
       return {
         ...connected,
+        frontCache: {
+          read: (request) => cache.fetch(sharedCacheRequest(request)),
+          forwarded: forwardedByGateway,
+        },
         purgeTags: (tags) =>
           settle([
             ...(purgeTags === undefined ? [] : [purgeTags(tags)]),
