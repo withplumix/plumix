@@ -120,14 +120,13 @@ export {
   viewTargets,
 } from "@plumix/core";
 
-// Responses a plugin route answers with, and the CDN tag it stores one under.
+// Responses a plugin route answers with.
 export {
   forbidden,
   jsonResponse,
   methodNotAllowed,
   notFoundResponse,
   serveRenderedAsset,
-  tagCdnEntry,
 } from "@plumix/core";
 
 // Dev surfaces a plugin contributes panels to.

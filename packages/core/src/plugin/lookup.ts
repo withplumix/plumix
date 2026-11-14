@@ -114,12 +114,6 @@ export interface LookupAdapter<TScope = unknown> {
   ): Promise<readonly HydratedReference[]>;
 
   /**
-   * Must return the same tag the entity's own purge enqueues. Takes the id, not
-   * a payload: an id that hydrated to nothing still needs its tag.
-   */
-  embeddedCacheTags?(id: string): readonly string[];
-
-  /**
    * Only ever handed a payload this adapter's own `hydrate` returned, so it may
    * narrow the parameter. `null` when the payload is not a usable image.
    */
