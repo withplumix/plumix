@@ -61,6 +61,7 @@ import { resolveEnvInput } from "../runtime/contract/env-input.js";
 import { settingsWrites } from "../settings/write.js";
 import { createTelemetryCollector } from "./collector.js";
 import { ContextError } from "./errors.js";
+import { loggableMeta } from "./log-meta.js";
 import { logErrorSafely } from "./log.js";
 import { createRequestMemo } from "./memo.js";
 import { bindSettings, rebindSettings } from "./settings-namespace.js";
@@ -423,8 +424,12 @@ export function withSignal<TSchema extends Record<string, unknown>>(
 }
 
 export const consoleLogger: Logger = {
-  debug: (m, meta) => console.debug(m, meta ?? ""),
-  info: (m, meta) => console.info(m, meta ?? ""),
-  warn: (m, meta) => console.warn(m, meta ?? ""),
-  error: (m, meta) => console.error(m, meta ?? ""),
+  debug: (m, meta) => console.debug(m, consoleMeta(meta)),
+  info: (m, meta) => console.info(m, consoleMeta(meta)),
+  warn: (m, meta) => console.warn(m, consoleMeta(meta)),
+  error: (m, meta) => console.error(m, consoleMeta(meta)),
 };
+
+function consoleMeta(meta: LogMeta | undefined): LogMeta | "" {
+  return meta ? loggableMeta(meta) : "";
+}

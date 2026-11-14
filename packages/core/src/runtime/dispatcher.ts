@@ -674,10 +674,7 @@ async function renderPublicError(
   err: unknown,
 ): Promise<Response> {
   const renderEnv = app.renderEnv;
-  ctx.logger.error("dispatch_failed", {
-    url: url.href,
-    err: err instanceof Error ? err.message : String(err),
-  });
+  ctx.logger.error("dispatch_failed", { url: url.href, error: err });
   const devResponse = devFailureResponse(ctx, err, acceptsHtml(ctx.request));
   if (devResponse) return devResponse;
   // An untrusted dev request loses the stack, not the page: it still gets the
