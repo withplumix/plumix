@@ -72,7 +72,7 @@ describe("the disk layer", () => {
       (await get("/_plumix/admin/assets/index-abc123.js")).headers.get(
         "cache-control",
       ),
-    ).toBeNull();
+    ).toBe("public, max-age=31536000, immutable");
   });
 
   test("the admin shell is not cached as immutable", async () => {

@@ -177,7 +177,10 @@ export type {
   NegotiatedFormat,
   RemoteImageSourceOptions,
 } from "./runtime/image-rules.js";
-export { resolveAssetPath } from "./runtime/asset-path.js";
+export {
+  HASHED_ASSET_PREFIXES,
+  resolveAssetPath,
+} from "./runtime/asset-path.js";
 export type { AssetPath } from "./runtime/asset-path.js";
 export { trustRequest } from "./runtime/request-trust.js";
 export type {

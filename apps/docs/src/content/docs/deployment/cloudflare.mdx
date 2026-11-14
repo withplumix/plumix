@@ -172,6 +172,20 @@ Presigned uploads need S3 credentials, because an R2 binding cannot mint a presi
 
 Workers KV rejects an `expirationTtl` under 60 seconds at write time, so treat that as the floor.
 
+## Static assets
+
+Workers static assets serve the client build, and a request for one never reaches the Worker. Cloudflare serves them `public, max-age=0, must-revalidate` unless a `_headers` file says otherwise, so `plumix build` writes one at the root of the client output. It marks the content-hashed build output, `/assets/*` and `/_plumix/admin/assets/*`, `public, max-age=31536000, immutable`.
+
+To add your own rules, put a `_headers` file in `public/`. The build writes Plumix's blocks first and your file after them, as written. Cloudflare [applies `_headers` rules in file order](https://developers.cloudflare.com/workers/static-assets/headers/), every rule that matches a path adds its headers, and `! Header` removes only what an earlier rule added. So to give some hashed files a different `Cache-Control`, detach the default in your file and set a new value:
+
+```txt title="public/_headers"
+/assets/fonts/*
+  ! Cache-Control
+  Cache-Control: public, max-age=86400
+```
+
+Without the `! Cache-Control` line, Cloudflare joins the two values into one header with conflicting directives.
+
 ## The CDN
 
 The `cdn` slot's provider is core's `cloudflare()` from `plumix/cdn/cloudflare`, the one that runs behind the zone from a container or a VM. [CDN Caching](/deployment/cdn/) is that page — the slot's configuration, the tag vocabulary and what a publish purges. A Worker imports it from this package instead, with the same options, because one cache in front of a Worker is purged only from Worker code:

@@ -11,6 +11,7 @@ export {
   DRAIN_DEADLINE_MS,
   etagMatches,
   fetchRemoteImageSource,
+  HASHED_ASSET_PREFIXES,
   IMAGE_ROUTE,
   IMAGE_SOURCE_HEADERS,
   imageSourceKey,

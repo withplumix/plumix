@@ -61,7 +61,7 @@ describe("the Bun.file layer", () => {
       (await get("/_plumix/admin/assets/index-abc123.js")).headers.get(
         "cache-control",
       ),
-    ).toBeNull();
+    ).toBe("public, max-age=31536000, immutable");
   });
 
   test("HEAD answers with the headers and no body", async () => {

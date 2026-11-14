@@ -10,7 +10,10 @@ describe("resolveAssetPath", () => {
       resolveAssetPath(ROOT, "/_plumix/admin/assets/index-abc123.js"),
     ).toEqual({
       file: "/srv/site/dist/client/_plumix/admin/assets/index-abc123.js",
-      headers: { "content-type": "text/javascript; charset=utf-8" },
+      headers: {
+        "content-type": "text/javascript; charset=utf-8",
+        "cache-control": "public, max-age=31536000, immutable",
+      },
     });
   });
 
@@ -79,17 +82,17 @@ describe("resolveAssetPath", () => {
     expect(type("/favicon.ico")).toBe("image/x-icon");
   });
 
-  test("only the hashed-assets prefix is cached as immutable", () => {
-    expect(
-      resolveAssetPath(ROOT, "/assets/client-def456.js")?.headers[
-        "cache-control"
-      ],
-    ).toBe("public, max-age=31536000, immutable");
-    expect(
-      resolveAssetPath(ROOT, "/_plumix/admin/assets/index-abc123.js")?.headers[
-        "cache-control"
-      ],
-    ).toBeUndefined();
+  test("only hashed build output is cached as immutable", () => {
+    const cacheControl = (path: string) =>
+      resolveAssetPath(ROOT, path)?.headers["cache-control"];
+    expect(cacheControl("/assets/x-abc.js")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+    expect(cacheControl("/_plumix/admin/assets/x-abc.js")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+    expect(cacheControl("/_plumix/admin/index.html")).toBeUndefined();
+    expect(cacheControl("/favicon.ico")).toBeUndefined();
   });
 
   test("a root given with a trailing separator joins the same way", () => {
