@@ -191,6 +191,47 @@ export class WranglerConfigError extends Error {
   }
 }
 
+export class WorkersCachingConfigError extends Error {
+  static {
+    WorkersCachingConfigError.prototype.name = "WorkersCachingConfigError";
+  }
+
+  readonly code: "default_entrypoint_cached";
+  readonly filename: string;
+
+  private constructor(
+    code: "default_entrypoint_cached",
+    message: string,
+    filename: string,
+  ) {
+    super(message);
+    this.code = code;
+    this.filename = filename;
+  }
+
+  /**
+   * Workers Caching in front of the default export would serve its stored
+   * copy without running the gateway that keeps sessions off the cache, and no
+   * purge would reach it.
+   */
+  static defaultEntrypointCached(ctx: {
+    filename: string;
+    sharedCacheEntrypoint: string;
+  }): WorkersCachingConfigError {
+    const shape =
+      `"exports": { "default": { "type": "worker", "cache": { "enabled": false } }, ` +
+      `"${ctx.sharedCacheEntrypoint}": { "type": "worker", "cache": { "enabled": true } } }`;
+    return new WorkersCachingConfigError(
+      "default_entrypoint_cached",
+      `${ctx.filename} caches the default entrypoint, which would serve the ` +
+        `anonymous page to signed-in visitors. Opt the default entrypoint out ` +
+        `and cache the shared one instead, beside "cache": { "enabled": true }: ` +
+        shape,
+      ctx.filename,
+    );
+  }
+}
+
 export class DemoError extends Error {
   static {
     DemoError.prototype.name = "DemoError";

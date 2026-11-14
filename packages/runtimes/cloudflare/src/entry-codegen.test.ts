@@ -1,3 +1,4 @@
+import ts from "typescript";
 import { describe, expect, test } from "vitest";
 
 import { cloudflare } from "./adapter.js";
@@ -36,10 +37,30 @@ describe("cloudflare generateEntry", () => {
   test("builds one handler through core from the runtime's spec and reuses it across invocations", () => {
     const source = entry("./config.ts");
     expect(source).toContain(
-      'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
+      'import { buildApp, createRuntimeHandler, mayServeFromSharedCache, renderDevBootErrorResponse } from "plumix/runtime";',
     );
     expect(source).toContain("handler ??= createRuntimeHandler(app)");
     expect(source).not.toContain("config.runtime.createHandler");
+  });
+
+  test("emits a module that parses", () => {
+    const { diagnostics } = ts.transpileModule(entry("./config.ts"), {
+      reportDiagnostics: true,
+      compilerOptions: { module: ts.ModuleKind.ESNext },
+    });
+
+    expect(diagnostics?.map((d) => d.messageText)).toEqual([]);
+  });
+
+  test("serves every request, live or cached, through the one handler it builds on first use", () => {
+    expect(entry("./config.ts")).toContain(
+      [
+        "function serve(app, request, env, ctx) {",
+        "  handler ??= createRuntimeHandler(app);",
+        "  return handler.fetch(request, invocation(env, ctx));",
+        "}",
+      ].join("\n"),
+    );
   });
 
   test("forwards the positional Worker arguments into an invocation", () => {
@@ -48,13 +69,14 @@ describe("cloudflare generateEntry", () => {
       "{ env, waitUntil: (promise) => ctx.waitUntil(promise) }",
     );
     expect(source).toContain("handler.fetch(request, invocation(env, ctx))");
+    expect(source).toContain("return serve(app, request, env, ctx);");
   });
 
   test("hands the scheduled run report to the invocation-status rule, and branches on nothing itself", () => {
     const source = entry("./config.ts");
     expect(source).toContain("async scheduled(event, env, ctx)");
     expect(source).toContain(
-      'import { surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
+      'import { sharedCacheRequest, surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
     );
     const start = source.indexOf("async scheduled(event, env, ctx)");
     // Bounded to the handler because the `fetch` above carries a branch and a
@@ -114,7 +136,7 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain("if (process.env.PLUMIX_DEV)");
     expect(source).toContain("renderDevBootErrorResponse(bootError)");
     expect(source).toContain(
-      'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
+      'import { buildApp, createRuntimeHandler, mayServeFromSharedCache, renderDevBootErrorResponse } from "plumix/runtime";',
     );
   });
 
@@ -129,9 +151,52 @@ describe("cloudflare generateEntry", () => {
   test("imports the Workers Caching module ahead of building the app", () => {
     const source = entry("./config.ts");
     const imported = source.indexOf(
-      'import "virtual:plumix-cloudflare/workers-caching";',
+      'import { sharedEntrypointCached } from "virtual:plumix-cloudflare/workers-caching";',
     );
     expect(imported).toBeGreaterThan(-1);
     expect(imported).toBeLessThan(source.indexOf("buildApp(config, {"));
+  });
+
+  describe("the Workers Caching gateway", () => {
+    // The default export's `fetch`, up to the `scheduled` that follows it.
+    function gateway(source: string): string {
+      const start = source.indexOf("export default {");
+      return source.slice(start, source.indexOf("async scheduled(", start));
+    }
+
+    test("defines the cached entrypoint, which serves the app", () => {
+      const source = entry("./config.ts");
+
+      expect(source).toContain(
+        'import { WorkerEntrypoint } from "cloudflare:workers";',
+      );
+      expect(source).toContain(
+        "export class PlumixSharedCache extends WorkerEntrypoint {",
+      );
+      expect(source).toContain(
+        "return serve(await appPromise, request, this.env, this.ctx);",
+      );
+    });
+
+    // Workers Caching purges only what the calling entrypoint stored.
+    test("purges from inside the cached entrypoint", () => {
+      expect(entry("./config.ts")).toContain(
+        "  purge(options) {\n    return this.ctx.cache.purge(options);\n  }",
+      );
+    });
+
+    test("forwards a request the shared cache may serve, stripped, through ctx.exports", () => {
+      const fetch = gateway(entry("./config.ts"));
+
+      expect(fetch).toContain(
+        "if (sharedEntrypointCached && mayServeFromSharedCache(app, request)) {",
+      );
+      expect(fetch).toContain(
+        "return ctx.exports.PlumixSharedCache.fetch(sharedCacheRequest(request));",
+      );
+      expect(fetch.indexOf("PlumixSharedCache.fetch")).toBeLessThan(
+        fetch.indexOf("return serve(app, request, env, ctx);"),
+      );
+    });
   });
 });

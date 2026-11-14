@@ -1,9 +1,10 @@
-import type { ConnectedCdn, Logger } from "plumix";
+import type { ConnectedCdn, Logger, TelemetrySnapshot } from "plumix";
 import type { CloudflareCdnConfig } from "plumix/cdn/cloudflare";
 import { entryPurgeTags } from "plumix/db";
 import { definePlugin } from "plumix/plugin";
+import { runScheduledTasks } from "plumix/runtime";
 import { entries } from "plumix/schema";
-import { createDispatcherHarness } from "plumix/test";
+import { createDispatcherHarness, createTestContext } from "plumix/test";
 import { describeCdnContract } from "plumix/test/conformance";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -24,7 +25,7 @@ const blog = definePlugin("blog", {
 
 /**
  * The suite runs on Node, so `caches.default` is absent and the zone purge is
- * the stubbed `fetch`; Workers Caching is the recording fake bound per test.
+ * the stubbed `fetch`. The cached entrypoint's `purge` is a recording fake.
  */
 let purge: ReturnType<typeof vi.fn<WorkersCache["purge"]>>;
 let zoneFetch: ReturnType<typeof vi.fn<typeof fetch>>;
@@ -59,11 +60,31 @@ function zonePurges(): unknown[] {
 
 async function publishPost(
   cdn: ConnectedCdn,
-  logger?: Logger,
+  options: {
+    readonly logger?: Logger;
+    readonly snapshots?: TelemetrySnapshot[];
+  } = {},
 ): Promise<number> {
+  const { logger, snapshots } = options;
   const h = await createDispatcherHarness({
     cdn,
-    config: { plugins: [blog] },
+    config: {
+      plugins: [blog],
+      ...(snapshots === undefined
+        ? {}
+        : {
+            telemetry: {
+              consumers: [
+                {
+                  id: "probe",
+                  onRequestEnd: (snapshot) => {
+                    snapshots.push(snapshot);
+                  },
+                },
+              ],
+            },
+          }),
+    },
     ...(logger === undefined ? {} : { logger }),
   });
   const admin = await h.seedUser("admin");
@@ -86,7 +107,7 @@ async function publishPost(
 }
 
 describe("cloudflare() from the Cloudflare runtime", () => {
-  test("publishing an entry purges Workers Caching once with its tags, beside the zone", async () => {
+  test("publishing an entry purges the cached entrypoint once with its tags, beside the zone", async () => {
     bindWorkersCache({ purge });
 
     const id = await publishPost(connect());
@@ -103,13 +124,44 @@ describe("cloudflare() from the Cloudflare runtime", () => {
     expect(zonePurges()).toEqual([{ tags: entryPurgeTags("post", id) }]);
   });
 
-  test("purgeAll purges Workers Caching of everything, beside the zone", async () => {
+  test("purgeAll purges the cached entrypoint of everything, beside the zone", async () => {
     bindWorkersCache({ purge });
 
     await connect().purgeAll?.();
 
     expect(purge.mock.calls).toEqual([[{ purgeEverything: true }]]);
     expect(zonePurges()).toEqual([{ purge_everything: true }]);
+  });
+
+  test("a scheduled publish purges the cached entrypoint with the entry's tags", async () => {
+    bindWorkersCache({ purge });
+    const h = await createDispatcherHarness({
+      config: { plugins: [blog] },
+    });
+    const author = await h.seedUser("admin");
+    const due = await h.factory.entry.create({
+      type: "post",
+      status: "scheduled",
+      publishedAt: new Date("2020-01-01T00:00:00Z"),
+      authorId: author.id,
+    });
+    const deferred: Promise<unknown>[] = [];
+    const ctx = createTestContext({
+      db: h.db,
+      handlers: h.app.handlers,
+      plugins: h.app.plugins,
+      cdn: connect(),
+      defer: (promise) => {
+        deferred.push(promise);
+      },
+    });
+
+    await runScheduledTasks(h.app, ctx, "*/5 * * * *");
+    await Promise.all(deferred);
+
+    expect(purge.mock.calls).toEqual([
+      [{ tags: entryPurgeTags("post", due.id) }],
+    ]);
   });
 
   test("with Workers Caching off, purgeAll purges only the zone", async () => {
@@ -147,10 +199,29 @@ describe("cloudflare() from the Cloudflare runtime", () => {
       error: (message) => logged.push(message),
     };
 
-    await publishPost(connect(), logger);
+    await publishPost(connect(), { logger });
 
     expect(logged).toEqual([
       expect.stringContaining("1134 rate limited") as string,
+    ]);
+  });
+
+  test("a refused Workers Caching purge lands on the request's cdn telemetry record", async () => {
+    const errors = [{ code: 1134, message: "rate limited" }];
+    bindWorkersCache({
+      purge: () => Promise.resolve({ success: false, errors }),
+    });
+    const snapshots: TelemetrySnapshot[] = [];
+
+    await publishPost(connect(), { snapshots });
+
+    const cdnRecords = snapshots.flatMap(
+      (snapshot) => snapshot.records.cdn ?? [],
+    );
+    expect(cdnRecords).toEqual([
+      expect.objectContaining({
+        data: { purge: "workers-caching", success: false, errors },
+      }),
     ]);
   });
 });

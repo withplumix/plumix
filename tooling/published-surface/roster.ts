@@ -671,6 +671,13 @@ export const ROSTER: Readonly<
           "fail a firing whose tasks failed",
         names: ["surfaceScheduledFailure", "ScheduledFiring"],
       },
+      {
+        reason:
+          "what the generated Worker entry's gateway calls to strip a " +
+          "request's cookies and marketing parameters before it reaches " +
+          "the entrypoint Workers Caching sits in front of",
+        names: ["sharedCacheRequest"],
+      },
     ],
     "./cdn": [
       {
@@ -682,8 +689,8 @@ export const ROSTER: Readonly<
       {
         reason:
           "what the Workers Caching module the generated Worker entry " +
-          "imports calls to hand `cloudflare:workers`'s `cache` to the " +
-          "provider, and that binding's shape",
+          "imports calls to hand the provider the cached entrypoint's " +
+          "purge, and that binding's shape",
         names: ["bindWorkersCache", "WorkersCache"],
       },
     ],
