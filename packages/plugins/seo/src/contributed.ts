@@ -1,6 +1,6 @@
 import type { PluginContextExtensions } from "plumix";
 import type { AccessPolicy } from "plumix/auth";
-import type { AppContext } from "plumix/plugin";
+import type { AppContext, PluginSetupContext } from "plumix/plugin";
 
 import type { SitemapUrl } from "./sitemap.js";
 import { SeoError } from "./errors.js";
@@ -37,20 +37,25 @@ declare module "plumix" {
   interface PluginContextExtensions {
     /**
      * Serves `/sitemap-<name>-<page>.xml`. Call it on `ctx` during `setup`:
-     * `this` is how seo learns which plugin the scope came from.
+     * `this` is how seo learns which plugin the scope came from, and the
+     * frame its callbacks run in.
      */
     registerSitemap(
-      this: { readonly id: string },
+      this: Pick<PluginSetupContext, "id" | "runInFrame">,
       name: string,
       source: SitemapSource,
     ): void;
   }
 }
 
-/** One `registerSitemap` call, with the plugin that made it. */
+/**
+ * One `registerSitemap` call, with the plugin that made it and that plugin's
+ * frame, so `ctx.cache` in the source names its contributor.
+ */
 export interface ContributedSitemap {
   readonly name: string;
   readonly pluginId: string;
+  readonly runInFrame: PluginSetupContext["runInFrame"];
   readonly source: SitemapSource;
 }
 
@@ -87,6 +92,11 @@ export function createRegisterSitemap(
         existingPluginId: existing.pluginId,
       });
     }
-    contributed.push({ name, pluginId: this.id, source });
+    contributed.push({
+      name,
+      pluginId: this.id,
+      runInFrame: this.runInFrame,
+      source,
+    });
   };
 }

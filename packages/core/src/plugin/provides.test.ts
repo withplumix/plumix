@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 
+import type { PluginSetupContextBase } from "./setup-context-types.js";
 import { createAppContext } from "../context/app.js";
-import { getContext, requestStore } from "../context/stores.js";
+import { getContext, pluginStore, requestStore } from "../context/stores.js";
 import { defineEvent } from "../events-and-filters/define.js";
 import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { installPlugins } from "../runtime/install-plugins.js";
@@ -16,6 +17,10 @@ declare module "./provides-context.js" {
     media: {
       url(key: string): string;
     };
+    registerWidget(
+      this: Pick<PluginSetupContextBase, "id" | "runInFrame">,
+      render: () => void,
+    ): void;
   }
 }
 
@@ -512,5 +517,85 @@ describe("provides phase", () => {
       plugins: [selfConsumer],
     });
     expect(recorded).toEqual(["self-link"]);
+  });
+});
+
+describe("an extension's caller", () => {
+  function frameRecordingWidgetsPlugin(
+    rendered: (string | null | undefined)[],
+  ) {
+    return definePlugin("widgets", {
+      provides: (ctx) => {
+        ctx.extendPluginContext("registerWidget", function (render) {
+          this.runInFrame(() => {
+            render();
+            rendered.push(pluginStore.getStore());
+          });
+        });
+      },
+      setup: () => undefined,
+    });
+  }
+
+  test("has what it handed over run in its own frame", async () => {
+    const rendered: (string | null | undefined)[] = [];
+    const cart = definePlugin("cart", {
+      setup: (ctx) => {
+        ctx.registerWidget(() => undefined);
+      },
+    });
+
+    await installPlugins({
+      handlers: new HandlerRegistry(),
+      plugins: [frameRecordingWidgetsPlugin(rendered), cart],
+    });
+
+    expect(rendered).toEqual(["cart"]);
+  });
+
+  test("can't be forged by calling the extension with another receiver", async () => {
+    const rendered: (string | null | undefined)[] = [];
+    const cart = definePlugin("cart", {
+      setup: (ctx) => {
+        ctx.registerWidget.call(
+          { id: "widgets", runInFrame: (fn) => pluginStore.run("widgets", fn) },
+          () => undefined,
+        );
+      },
+    });
+
+    await installPlugins({
+      handlers: new HandlerRegistry(),
+      plugins: [frameRecordingWidgetsPlugin(rendered), cart],
+    });
+
+    expect(rendered).toEqual(["cart"]);
+  });
+
+  const forgeries = {
+    assigning: (ctx: object, member: string) => {
+      Object.assign(ctx, { [member]: "forged" });
+    },
+    redefining: (ctx: object, member: string) => {
+      Object.defineProperty(ctx, member, { value: "forged" });
+    },
+  };
+
+  test.each(
+    (["id", "runInFrame"] as const).flatMap((member) =>
+      (["assigning", "redefining"] as const).map(
+        (how) => [how, member] as const,
+      ),
+    ),
+  )("can't be forged by %s %s on its context", async (how, member) => {
+    const cart = definePlugin("cart", {
+      setup: (ctx) => {
+        forgeries[how](ctx, member);
+      },
+    });
+
+    await expect(
+      installPlugins({ handlers: new HandlerRegistry(), plugins: [cart] }),
+    ).rejects.toThrow(TypeError);
   });
 });

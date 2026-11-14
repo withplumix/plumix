@@ -39,9 +39,10 @@ type and a taxonomy sharing one silently lost the taxonomy's sub-sitemap.
 - **A scope is stored under what it read.** Seo's entry scopes and `llms.txt`
   read entries through `compileEntryQuery`, its term scopes through
   `taxonomyTermRows`, and a contributed source is stored under whatever its
-  `count`, `urls` and `lastmod` read through core's read helpers. A source
-  names no tags of its own, so a publish retires exactly the scopes that
-  list what it wrote.
+  `count`, `urls` and `lastmod` read through core's read helpers, and, since
+  seo runs them in the contributor's frame, under the contributor's own
+  `ctx.cache.reads`. A source names no tags of its own, so a publish retires
+  exactly the scopes that list what it wrote.
 - **Only seo-built sitemaps are listed.** The index names no outside XML; a
   sitemap seo did not build is not seo's to gate. A site advertises one with a
   `Sitemap:` line through `seo:robots-txt`.

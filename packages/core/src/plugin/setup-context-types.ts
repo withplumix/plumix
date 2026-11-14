@@ -65,6 +65,12 @@ import type { SearchProvider } from "./search-provider.js";
 
 export interface PluginSetupContextBase {
   readonly id: string;
+  /**
+   * Runs `fn` in this plugin's frame, so `ctx.cache` inside it names this
+   * plugin. An extension runs its caller's callbacks through
+   * `this.runInFrame`.
+   */
+  readonly runInFrame: <T>(fn: () => T) => T;
   /** The site's theme, so a plugin registers from what it declares. */
   readonly theme: ThemeDescriptor;
   readonly events: SetupEvents;

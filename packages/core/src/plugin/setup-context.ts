@@ -107,6 +107,7 @@ function createContextBase({
 
   const ctx: PluginSetupContextBase = {
     id: pluginId,
+    runInFrame: (fn) => pluginStore.run(pluginId, fn),
     theme,
 
     events: {
@@ -635,9 +636,15 @@ function withExtensions<TContext extends PluginSetupContextBase>(
       if (key in target || key === "plugins") {
         throw PluginContextError.extensionShadowsBuiltin({ key });
       }
-      target[key] = value;
+      // Bound, so an extension's `this` is the plugin that called it
+      // whatever receiver the call names.
+      target[key] = typeof value === "function" ? value.bind(ctx) : value;
     }
   }
+  // A bound extension trusts these to name its caller, so the plugin holding
+  // the context can't replace them.
+  const fixed = { writable: false, configurable: false };
+  Object.defineProperties(ctx, { id: fixed, runInFrame: fixed });
 
   return ctx as TContext & PluginContextExtensions;
 }
