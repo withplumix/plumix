@@ -15,7 +15,7 @@ export const createPreviewLink = base
   .use(authenticated)
   .input(entryCreatePreviewLinkInputSchema)
   .handler(async ({ input, context, errors }) => {
-    const entry = await loadAuthoredEntry(context.db, input.id);
+    const entry = await loadAuthoredEntry(context, input.id);
     if (!entry || !canEditEntry(context, entry)) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }

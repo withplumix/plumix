@@ -21,7 +21,9 @@ purge, fixed at its own call site.
 
 - **Reads declare.** Core's read helpers declare what they read: template-dep
   loaders, the entry list, author resolution, reference hydration, the
-  settings loaders, `compileEntryQuery` and `taxonomyTermRows`. A lookup
+  settings loaders, `compileEntryQuery`, `taxonomyTermRows`, and
+  `readEntryType` and `loadAuthoredEntry`, which declare the one entry they
+  find. A lookup
   adapter names the core entity its ids resolve to with `kind`, and core
   tags every id it hydrated under that kind's tag.
 - **Core's writes purge.** The write functions are the ones core's own RPC

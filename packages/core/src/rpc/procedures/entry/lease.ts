@@ -6,7 +6,7 @@ import { leaseProcedures } from "../../concurrency.js";
 export const { acquire, renew, release } = leaseProcedures(
   "entry",
   async (context, id, errors) => {
-    const entry = await loadAuthoredEntry(context.db, id);
+    const entry = await loadAuthoredEntry(context, id);
     if (!entry) throw errors.NOT_FOUND({ data: { kind: "entry", id } });
     assertCanEditEntry(context, entry, errors);
   },

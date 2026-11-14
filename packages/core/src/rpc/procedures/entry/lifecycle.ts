@@ -172,7 +172,7 @@ export async function loadDeletableEntry(
   id: number,
   guards: DeletableGuards,
 ): Promise<Entry> {
-  const existing = await loadAuthoredEntry(ctx.db, id);
+  const existing = await loadAuthoredEntry(ctx, id);
   if (!existing) guards.notFound(id);
   assertDeletable(ctx, existing, guards);
   return existing;
