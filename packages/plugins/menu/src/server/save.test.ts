@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { SaveItemInput } from "./save.js";
-import { flattenSaveItems, resolveParentIds } from "./save.js";
+import { flattenSaveItems, storedMetaChanges } from "./save.js";
 
 const item = (overrides: Partial<SaveItemInput> = {}): SaveItemInput => ({
   parentIndex: null,
@@ -147,50 +147,37 @@ describe("flattenSaveItems", () => {
   });
 });
 
-describe("resolveParentIds", () => {
-  test("empty input returns empty output", () => {
-    const result = flattenSaveItems([], { maxDepth: 5 });
-    if (!result.ok) throw new Error("flatten failed");
-    expect(resolveParentIds(result.items, [])).toEqual([]);
+describe("storedMetaChanges", () => {
+  test("a new item writes its whole meta", () => {
+    expect(storedMetaChanges(null, { kind: "custom", url: "/a" })).toEqual({
+      kind: "custom",
+      url: "/a",
+    });
   });
 
-  test("root-level items resolve to null parentId", () => {
-    const result = flattenSaveItems([item(), item()], { maxDepth: 5 });
-    if (!result.ok) throw new Error("flatten failed");
-    expect(resolveParentIds(result.items, [10, 11])).toEqual([null, null]);
-  });
+  test("an unchanged item writes nothing", () => {
+    const meta = { kind: "entry", entryId: 4, cssClasses: ["x"] } as const;
 
-  test("nested items resolve to the parent's allocated id", () => {
-    const result = flattenSaveItems(
-      [item(), item({ parentIndex: 0 }), item({ parentIndex: 0 })],
-      { maxDepth: 5 },
+    expect(storedMetaChanges(meta, { ...meta, cssClasses: ["x"] })).toBe(
+      undefined,
     );
-    if (!result.ok) throw new Error("flatten failed");
-    expect(resolveParentIds(result.items, [10, 11, 12])).toEqual([
-      null,
-      10,
-      10,
-    ]);
   });
 
-  test("deep chain resolves each level to the prior id", () => {
-    const result = flattenSaveItems(
-      [item(), item({ parentIndex: 0 }), item({ parentIndex: 1 })],
-      { maxDepth: 5 },
-    );
-    if (!result.ok) throw new Error("flatten failed");
-    expect(resolveParentIds(result.items, [10, 11, 12])).toEqual([
-      null,
-      10,
-      11,
-    ]);
+  test("writes only the keys that changed", () => {
+    expect(
+      storedMetaChanges(
+        { kind: "custom", url: "/a", rel: "nofollow" },
+        { kind: "custom", url: "/b", rel: "nofollow" },
+      ),
+    ).toEqual({ url: "/b" });
   });
 
-  test("throws when length mismatch (programmer error, not user input)", () => {
-    const result = flattenSaveItems([item()], { maxDepth: 5 });
-    if (!result.ok) throw new Error("flatten failed");
-    expect(() => resolveParentIds(result.items, [10, 11])).toThrow(
-      /does not match/,
-    );
+  test("clears a key the item no longer has", () => {
+    expect(
+      storedMetaChanges(
+        { kind: "custom", url: "/a", target: "_blank" },
+        { kind: "entry", entryId: 3 },
+      ),
+    ).toEqual({ kind: "entry", entryId: 3, url: null, target: null });
   });
 });

@@ -135,6 +135,14 @@ async function rpcStatus(
 
 const PAGE = "/post/hello";
 
+/** A save that adds it changes the menu; one that changes nothing purges nothing. */
+const HOME_ITEM = {
+  parentIndex: null,
+  sortOrder: 0,
+  title: "Home",
+  meta: { kind: "custom", url: "/" },
+};
+
 /** Render a public GET so the read-through stores it, and check it did. */
 async function render(s: Site, path: string = PAGE): Promise<void> {
   await s.h.dispatch(plumixRequest(path, { method: "GET" }));
@@ -166,7 +174,7 @@ describe("@plumix/plugin-menu — CDN invalidation", () => {
     await bind(s, "primary", "main-nav");
     await render(s);
 
-    await rpc(s, "menu/save", { termId, ifMatch: "0", items: [] });
+    await rpc(s, "menu/save", { termId, ifMatch: "0", items: [HOME_ITEM] });
 
     s.cdn.assertNotStored(PAGE);
   });
@@ -176,7 +184,7 @@ describe("@plumix/plugin-menu — CDN invalidation", () => {
     const termId = await seedMenu(s, "main-nav", []);
     await render(s, NAV);
 
-    await rpc(s, "menu/save", { termId, ifMatch: "0", items: [] });
+    await rpc(s, "menu/save", { termId, ifMatch: "0", items: [HOME_ITEM] });
 
     s.cdn.assertNotStored(NAV);
   });

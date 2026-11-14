@@ -1,8 +1,9 @@
 // Side-effect: exposes core's `TemplateDepRegistry` augmentation.
 import "./template-deps-core.js";
-// Side-effect: anchors core's `ctx.entries` augmentation into the published
-// declaration graph.
+// Side-effect: anchors core's `ctx.entries` and `ctx.terms` augmentations into
+// the published declaration graph.
 import "./rpc/procedures/entry/writes-shared.js";
+import "./rpc/procedures/term/writes-shared.js";
 // Side-effect: anchors core's `MailRegistry` entries (`magicLink`,
 // `emailChange`) into the published declaration graph, the same way.
 import "./mail/core-mails.js";

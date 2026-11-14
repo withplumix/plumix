@@ -993,14 +993,14 @@ async function resolveGroup(
     );
     const byId = new Map<string, HydratedReference>();
     for (const [index, id] of idList.entries()) {
+      // Folded here, so a batch the memo answered tags the page as the batch
+      // that loaded it did. A miss too: a draft shows once it is published.
+      declarePageTags(ctx, tagsFor(id));
       // `null` is the memoized miss: an orphan stays an orphan for the rest
       // of the request, until a write announces its id.
       const payload = payloads[index];
       if (payload === null || payload === undefined) continue;
       byId.set(id, payload);
-      // Folded here rather than at the hydrate, so a batch answered from the
-      // memo tags the page exactly as the batch that loaded it did.
-      declarePageTags(ctx, tagsFor(id));
     }
     return { kind: "hydrated", byId };
   }

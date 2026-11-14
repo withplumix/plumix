@@ -1,3 +1,5 @@
+import type { JsonObject, JsonValue } from "plumix";
+
 import type { TreeNode } from "./buildTree.js";
 import type { MenuTargetLookups } from "./resolveItemStates.js";
 import type {
@@ -5,7 +7,6 @@ import type {
   MenuItemMeta,
   MenuItemTermMeta,
 } from "./types.js";
-import { MenuPluginError } from "../errors.js";
 import { buildTree } from "./buildTree.js";
 
 /**
@@ -161,22 +162,6 @@ function depthsOf(stored: readonly StoredItem[]): Map<number, number> {
   return depths;
 }
 
-export function resolveParentIds(
-  items: readonly FlattenedItem[],
-  resolvedIds: readonly number[],
-): readonly (number | null)[] {
-  if (items.length !== resolvedIds.length) {
-    throw MenuPluginError.resolveParentIdsLengthMismatch({
-      itemsLength: items.length,
-      resolvedIdsLength: resolvedIds.length,
-    });
-  }
-  return items.map((item) => {
-    if (item.resolvedParentIndex === null) return null;
-    return resolvedIds[item.resolvedParentIndex] ?? null;
-  });
-}
-
 /**
  * A field the lookup leaves empty isn't written. An unresolved target keeps
  * `stored`'s snapshot if `stored` links the same target.
@@ -212,4 +197,27 @@ function isSameTarget<T extends MenuItemEntryMeta | MenuItemTermMeta>(
     return stored?.kind === "entry" && stored.entryId === meta.entryId;
   }
   return stored?.kind === "term" && stored.termId === meta.termId;
+}
+
+/**
+ * What a save writes into an item's stored meta: the keys whose value changed,
+ * and `null` for a key `stored` had that `next` drops. `undefined` when nothing
+ * changed.
+ */
+export function storedMetaChanges(
+  stored: MenuItemMeta | null,
+  next: MenuItemMeta,
+): JsonObject | undefined {
+  const before: Readonly<Record<string, unknown>> = stored ?? {};
+  const after: Readonly<Record<string, unknown>> = next;
+  const changes: Record<string, JsonValue> = {};
+  for (const [key, value] of Object.entries(after)) {
+    if (JSON.stringify(value) !== JSON.stringify(before[key])) {
+      changes[key] = value as JsonValue;
+    }
+  }
+  for (const key of Object.keys(before)) {
+    if (!(key in after)) changes[key] = null;
+  }
+  return Object.keys(changes).length === 0 ? undefined : changes;
 }

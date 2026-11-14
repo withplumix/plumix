@@ -1,24 +1,26 @@
 import type { JsonObject } from "plumix";
-import type { AppContext, LookupResult } from "plumix/plugin";
+import type { AppContext } from "plumix/plugin";
 import { and, eq, inArray } from "plumix/db";
 import {
   isCurrentSource,
   memoBatch,
   resolveEntryList,
-  tagCdnEntry,
+  resolveReferences,
 } from "plumix/plugin";
 import { entries, entryTerm, terms } from "plumix/schema";
 
 import type { TreeNode } from "./buildTree.js";
 import type { MenuItemMeta, ResolvedMenu, ResolvedMenuItem } from "./types.js";
 import { buildTree } from "./buildTree.js";
-import { menuTag } from "./cache-tags.js";
 import { MENU_DEPTH_HARD_CAP } from "./depth.js";
 import { isMenuEligible } from "./eligibility.js";
 import { menu } from "./events.js";
 import { itemOwnLabel } from "./label.js";
 import { parseMenuItemMeta } from "./parseMeta.js";
 import { sanitizeMenuHref } from "./url.js";
+
+export const MENU_TAXONOMY = "menu";
+const MENU_ITEM_ENTRY_TYPE = "menu_item";
 
 interface MenuItemRow {
   readonly id: number;
@@ -94,12 +96,28 @@ export async function resolveMenus(
     (slug) => `menu:data:${slug}`,
     () => loadMenuData(ctx, unique),
   );
+  // Through core, so the page carries the menu's term tag, which adding an
+  // item or deleting the menu purges, and each item's, which editing it purges.
+  const found = clusters.filter((data) => data !== null);
+  await Promise.all([
+    resolveReferences(
+      ctx,
+      "term",
+      found.map((data) => String(data.term.id)),
+      { scope: { termTaxonomies: [MENU_TAXONOMY] } },
+    ),
+    resolveReferences(
+      ctx,
+      "entry",
+      found.flatMap((data) => data.rows.map((row) => String(row.id))),
+      { scope: { entryTypes: [MENU_ITEM_ENTRY_TYPE] } },
+    ),
+  ]);
 
   return Promise.all(
     requests.map(async ({ location, maxDepth }, i) => {
       const data = clusters[i];
       if (!data) return null;
-      tagCdnEntry(ctx, [menuTag(data.term.id), ...linkedEntryTags(ctx, data)]);
       const { tree } = buildTree(data.rows);
       const resolved = await Promise.all(
         tree.map((node) => toResolvedItem(ctx, node, data.refs, maxDepth - 1)),
@@ -123,23 +141,6 @@ export async function resolveMenus(
   );
 }
 
-/**
- * Every entry the menu links, resolved or not: the label and href are the
- * entry's, and a draft that gets published has to appear in the cached nav.
- */
-function linkedEntryTags(ctx: AppContext, data: MenuData): string[] {
-  const adapter = ctx.plugins.lookupAdapters.get("entry")?.adapter;
-  if (adapter?.embeddedCacheTags === undefined) return [];
-  const tags: string[] = [];
-  for (const row of data.rows) {
-    const meta = parseMenuItemMeta(row.meta);
-    if (meta?.kind === "entry") {
-      tags.push(...adapter.embeddedCacheTags(String(meta.entryId)));
-    }
-  }
-  return tags;
-}
-
 interface MenuData {
   readonly term: {
     readonly id: number;
@@ -158,7 +159,9 @@ async function loadMenuData(
   const termRows = await ctx.db
     .select({ id: terms.id, name: terms.name, slug: terms.slug })
     .from(terms)
-    .where(and(eq(terms.taxonomy, "menu"), inArray(terms.slug, [...slugs])));
+    .where(
+      and(eq(terms.taxonomy, MENU_TAXONOMY), inArray(terms.slug, [...slugs])),
+    );
   if (termRows.length === 0) return data;
 
   const rows = await ctx.db
@@ -174,7 +177,7 @@ async function loadMenuData(
     .innerJoin(entryTerm, eq(entryTerm.entryId, entries.id))
     .where(
       and(
-        eq(entries.type, "menu_item"),
+        eq(entries.type, MENU_ITEM_ENTRY_TYPE),
         // Trashed/draft menu items must not surface in public nav. Only
         // `published` is a real lifecycle state for menu items today; if
         // the admin (slice 7+) introduces a drafting flow, revisit.
@@ -234,21 +237,26 @@ async function resolveEntryRefs(
   ctx: AppContext,
   ids: ReadonlySet<number>,
 ): Promise<Map<number, ResolvedRef>> {
-  const adapter = ctx.plugins.lookupAdapters.get("entry")?.adapter;
-  if (!adapter) return new Map();
-
   const eligibleTypes = [...ctx.plugins.entryTypes.values()]
     .filter(isMenuEligible)
     .map((t) => t.name);
   if (eligibleTypes.length === 0) return new Map();
 
-  // The entry adapter admits drafts and scheduled entries, which the picker
-  // wants but public nav must not render.
-  const results = await adapter.list(ctx, {
-    scope: { entryTypes: eligibleTypes, status: "published" },
-    ids: [...ids].map(String),
-  });
-  const refs = refMapFromResults(results);
+  // Through core, so the page is stored under each linked entry's tag. Public
+  // nav renders only published entries, whatever the reader may see.
+  const summaries = await resolveReferences(
+    ctx,
+    "entry",
+    [...ids].map(String),
+    { scope: { entryTypes: eligibleTypes, status: "published" } },
+  );
+  const refs = refMapFromSummaries(
+    summaries.map((entry) => ({
+      id: entry.id,
+      label: entry.title,
+      href: entry.url,
+    })),
+  );
   if (refs.size === 0) return refs;
 
   // The adapter label is the raw title; public nav shows the page's title with
@@ -270,29 +278,38 @@ async function resolveTermRefs(
   ctx: AppContext,
   ids: ReadonlySet<number>,
 ): Promise<Map<number, ResolvedRef>> {
-  const adapter = ctx.plugins.lookupAdapters.get("term")?.adapter;
-  if (!adapter) return new Map();
-
   const eligibleTaxonomies = [...ctx.plugins.termTaxonomies.values()]
     .filter(isMenuEligible)
     .map((t) => t.name);
   if (eligibleTaxonomies.length === 0) return new Map();
 
-  const results = await adapter.list(ctx, {
+  // Through core, so the page is stored under each linked term's tag.
+  const summaries = await resolveReferences(ctx, "term", [...ids].map(String), {
     scope: { termTaxonomies: eligibleTaxonomies },
-    ids: [...ids].map(String),
   });
-  return refMapFromResults(results);
+  return refMapFromSummaries(
+    summaries.map((term) => ({
+      id: term.id,
+      label: term.name,
+      href: term.url,
+    })),
+  );
 }
 
-function refMapFromResults(
-  results: readonly LookupResult[],
+interface RefSummary {
+  readonly id: string;
+  readonly label: string | null;
+  readonly href: string | null;
+}
+
+function refMapFromSummaries(
+  results: readonly RefSummary[],
 ): Map<number, ResolvedRef> {
   const map = new Map<number, ResolvedRef>();
   for (const result of results) {
     const numericId = Number(result.id);
     if (!Number.isFinite(numericId)) continue;
-    const href = result.href ?? null;
+    const href = result.href;
     if (!href) continue; // No public URL → can't render in nav
     // Don't ship an English "Untitled <type>" into the SSR nav.
     const label = result.label ?? "(unnamed)";

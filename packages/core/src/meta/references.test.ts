@@ -1386,7 +1386,7 @@ describe("embedded cache tags (resolution tag accounting)", () => {
     expect(declaredPageTags(h.context)).toEqual([`e:${String(target.id)}`]);
   });
 
-  test("resolving a multi entry reference accumulates a tag per live target", async () => {
+  test("resolving a multi entry reference accumulates a tag per target, an orphan included", async () => {
     const { registry, findField } = registryWithEntryListRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });
     const a = await entryFactory
@@ -1400,9 +1400,10 @@ describe("embedded cache tags (resolution tag accounting)", () => {
       related: [String(a.id), String(b.id), "999999"],
     });
 
-    // Orphan `999999` hydrates to nothing, so it contributes no tag.
+    // Orphan `999999` hydrates to nothing, yet may be a draft that gets
+    // published, so it tags the page too.
     expect([...declaredPageTags(h.context)].sort()).toEqual(
-      [`e:${String(a.id)}`, `e:${String(b.id)}`].sort(),
+      [`e:${String(a.id)}`, `e:${String(b.id)}`, "e:999999"].sort(),
     );
   });
 
@@ -1451,10 +1452,11 @@ describe("resolveReferences (theme-facing id-only helper)", () => {
       { scope: { entryTypes: ["post"] } },
     );
 
-    // Dense, in requested order, orphans dropped.
+    // Dense, in requested order, orphans dropped from the payloads but not
+    // from the tags.
     expect(resolved.map((r) => r.id)).toEqual([String(a.id), String(b.id)]);
     expect([...declaredPageTags(h.context)].sort()).toEqual(
-      [`e:${String(a.id)}`, `e:${String(b.id)}`].sort(),
+      [`e:${String(a.id)}`, `e:${String(b.id)}`, "e:999999"].sort(),
     );
   });
 
