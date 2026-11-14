@@ -19,9 +19,9 @@ interface RenderVerdict {
 const verdicts = new WeakMap<RequestMemo, RenderVerdict>();
 
 /**
- * Reading `user` or `tokenScopes`, or calling `auth.can()`, marks the render
- * personal so it is never shared-cached. A staff admin bar or a
- * principal-specific locale makes it personal up front.
+ * Reading `user`, `tokenScopes` or `credential`, or calling `auth.can()`,
+ * marks the render personal so it is never shared-cached. A staff admin bar or
+ * a principal-specific locale makes it personal up front.
  */
 export function trackPrincipalReads(ctx: AppContext): AppContext {
   const user = ctx.user;
@@ -53,6 +53,10 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
     get apiToken() {
       mark();
       return ctx.apiToken;
+    },
+    get credential() {
+      mark();
+      return ctx.credential;
     },
     auth: {
       can: (capability) => {

@@ -109,14 +109,23 @@ export type RpcHarness = RpcHarnessBase<User | null>;
 export type AuthenticatedRpcHarness = RpcHarnessBase<User>;
 
 /**
- * The context `authenticated` hands a handler; `h.context` is the base one, and
- * read surfaces answer per viewer.
+ * The context `authenticated` hands a handler signed in with a session;
+ * `h.context` is the base one, and read surfaces answer per viewer.
  */
-export function authedCtx(
+export function authedCtx(h: AuthenticatedRpcHarness): AppContext {
+  return withUser(h.context, h.user, { kind: "session" });
+}
+
+/** The context `authenticated` hands a handler called with an API token. */
+export function tokenCtx(
   h: AuthenticatedRpcHarness,
-  tokenScopes: readonly string[] | null = null,
+  scopes: readonly string[] | null,
 ): AppContext {
-  return withUser(h.context, h.user, tokenScopes);
+  return withUser(h.context, h.user, {
+    kind: "api-token",
+    token: { id: "test-token", name: "test" },
+    scopes,
+  });
 }
 
 function buildContext(

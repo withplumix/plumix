@@ -93,12 +93,15 @@ describe("anonymousContext", () => {
   test("drops the API token the request authenticated with", async () => {
     const ctx = await editorContext();
     if (!ctx.user) throw new Error("expected an editor");
-    const tokenCtx = withUser(ctx, ctx.user, null, {
-      id: "token-hash",
-      name: "Claude Desktop",
+    const tokenCtx = withUser(ctx, ctx.user, {
+      kind: "api-token",
+      token: { id: "token-hash", name: "Claude Desktop" },
+      scopes: null,
     });
 
     expect(anonymousContext(tokenCtx).apiToken).toBeNull();
+    // A spread is how a context is derived, so the copy must carry it too.
+    expect({ ...anonymousContext(tokenCtx) }.credential).toBeNull();
   });
 
   test("keeps its memo entries apart from the request's", async () => {

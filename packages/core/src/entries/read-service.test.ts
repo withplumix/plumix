@@ -20,7 +20,7 @@ import { EntryReadError } from "./errors.js";
 import { getEntry, listEntries, readEntryType } from "./read-service.js";
 
 function authedCtx(h: AuthenticatedRpcHarness): AppContext {
-  return withUser(h.context, h.user, null);
+  return withUser(h.context, h.user, { kind: "session" });
 }
 
 const listInput = (partial: Record<string, unknown> = {}) =>
@@ -498,7 +498,7 @@ describe("reference meta resolution", () => {
 
     const admin = await harness.factory.user.create({ role: "admin" });
     const rows = await run(() =>
-      listEntries(withUser(ctx, admin), listInput()),
+      listEntries(withUser(ctx, admin, { kind: "session" }), listInput()),
     );
 
     expect(rows).toHaveLength(3);

@@ -20,12 +20,11 @@ describe("withUser — locale re-resolution", () => {
     });
     expect(baseCtx.locale.code).toBe("en");
 
-    const authed = withUser(baseCtx, {
-      id: 1,
-      email: "u@cms.example",
-      role: "admin",
-      meta: { locale: "fr" },
-    });
+    const authed = withUser(
+      baseCtx,
+      { id: 1, email: "u@cms.example", role: "admin", meta: { locale: "fr" } },
+      { kind: "session" },
+    );
 
     expect(authed.locale.code).toBe("fr");
   });

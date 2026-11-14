@@ -1,4 +1,4 @@
-import type { ApiTokenRef, AppContext } from "../context/app-context.js";
+import type { AppContext } from "../context/app-context.js";
 import type {
   AuthResult,
   RequestAuthenticator,
@@ -65,19 +65,6 @@ export async function authenticateSession(
 ): Promise<AuthResult | null> {
   const result = await authenticateTraced(ctx, ctx.authenticator);
   return result?.credential === "session" ? result : null;
-}
-
-/**
- * The capability narrowing a result carries: an API token's scopes, or `null`
- * (the user's role caps verbatim) for a session.
- */
-export function tokenScopesOf(result: AuthResult): readonly string[] | null {
-  return result.credential === "api-token" ? result.tokenScopes : null;
-}
-
-/** The API token a result authenticated with; `null` for a session. */
-export function apiTokenOf(result: AuthResult): ApiTokenRef | null {
-  return result.credential === "api-token" ? result.apiToken : null;
 }
 
 /**

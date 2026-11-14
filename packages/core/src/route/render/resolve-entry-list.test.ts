@@ -897,7 +897,7 @@ describe("resolveEntryList and an entry's access policy", () => {
       });
 
       const [entry] = await run(() =>
-        resolveEntryList(withUser(ctx, viewer), [row]),
+        resolveEntryList(withUser(ctx, viewer, { kind: "session" }), [row]),
       );
 
       expect(entry?.contentGated).toBe(gated);

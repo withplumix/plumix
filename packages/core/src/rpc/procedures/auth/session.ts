@@ -1,8 +1,5 @@
 import type { AuthSessionOutput } from "./schemas.js";
-import {
-  authenticateTraced,
-  tokenScopesOf,
-} from "../../../auth/authenticator.js";
+import { authenticateTraced } from "../../../auth/authenticator.js";
 import { sessionUserOf } from "../../../auth/session-user.js";
 import { users } from "../../../db/schema/users.js";
 import { base } from "../../base.js";
@@ -19,7 +16,7 @@ export const session = base.handler(
         user: sessionUserOf(
           result.user,
           context.plugins,
-          tokenScopesOf(result),
+          result.credential === "api-token" ? result.tokenScopes : null,
         ),
         needsBootstrap: false,
       };

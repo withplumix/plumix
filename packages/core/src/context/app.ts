@@ -258,6 +258,7 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     user,
     tokenScopes,
     apiToken: null,
+    credential: null,
     ...bindDispatch(args.handlers, () => coreSchemaView),
     plugins: args.plugins,
     blocks: args.blocks ?? EMPTY_BLOCK_REGISTRY,
