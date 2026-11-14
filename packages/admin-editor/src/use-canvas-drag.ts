@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLingui } from "@lingui/react";
 
 import type { BlockRegistry } from "@plumix/core/blocks";
+import { useTimedFlag } from "@plumix/admin-ui/use-timed-flag";
 
 import type { Geometry, SlotDrop } from "./canvas-geometry.js";
 import type { FrameOffset } from "./overlay.js";
@@ -72,6 +73,7 @@ export function useCanvasDrag({
   const [refusedSlot, setRefusedSlot] = useState<SlotDrop | null>(null);
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
   const [rejection, setRejection] = useState<string | null>(null);
+  const [rejectionShown, showRejection] = useTimedFlag(2500);
 
   // An in-canvas "Add a block" click opens the slot-scoped inserter popover
   // rather than inserting a default — the author picks the block. Root has no
@@ -186,6 +188,7 @@ export function useCanvasDrag({
               message: "This block can't be placed here.",
             }),
           );
+          showRejection();
           break;
         case "insertInto":
           if (dragSpec) {
@@ -257,14 +260,8 @@ export function useCanvasDrag({
     i18n,
     iframeRef,
     geometryRef,
+    showRejection,
   ]);
-
-  // Auto-dismiss the transient rejection notice.
-  useEffect(() => {
-    if (!rejection) return;
-    const t = setTimeout(() => setRejection(null), 2500);
-    return () => clearTimeout(t);
-  }, [rejection]);
 
   return {
     dropY,
@@ -273,6 +270,6 @@ export function useCanvasDrag({
     pendingAdd,
     setPendingAdd,
     requestAdd,
-    rejection,
+    rejection: rejectionShown ? rejection : null,
   };
 }
