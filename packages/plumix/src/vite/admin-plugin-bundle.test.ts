@@ -338,6 +338,191 @@ describe("assemblePluginAdminBundle", () => {
     expect(bundle).toContain("acme/widget");
   });
 
+  test.each([
+    ["an arrow", 'view: () => import("./hero.view.js")'],
+    ["a method", 'view() { return import("./hero.view.js"); }'],
+  ])("leaves out of the bundle a view module %s imports", async (_, view) => {
+    const adminDest = resolve(workspace, "admin-dest");
+    await writeFile(
+      resolve(workspace, "src/blocks.ts"),
+      `export default [{ name: "acme/hero", ${view} }];`,
+    );
+    await writeFile(
+      resolve(workspace, "src/hero.view.ts"),
+      'export default function HeroView() { return "__hero_view__"; }',
+    );
+
+    await assemblePluginAdminBundle({
+      plugins: [],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+      blockModules: [
+        { module: resolve(workspace, "src/blocks.ts"), exportName: "default" },
+      ],
+    });
+
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain("acme/hero");
+    expect(bundle).not.toContain("__hero_view__");
+  });
+
+  test("leaves out every view module of a file that defines several blocks", async () => {
+    const adminDest = resolve(workspace, "admin-dest");
+    await writeFile(
+      resolve(workspace, "src/blocks.ts"),
+      [
+        "export default [",
+        '  { name: "acme/hero", view: () => import("./hero.view.js") },',
+        '  { name: "acme/quote", view: () => import("./quote.view.js") },',
+        "];",
+      ].join("\n"),
+    );
+    await writeFile(
+      resolve(workspace, "src/hero.view.ts"),
+      'export default function HeroView() { return "__hero_view__"; }',
+    );
+    await writeFile(
+      resolve(workspace, "src/quote.view.ts"),
+      'export default function QuoteView() { return "__quote_view__"; }',
+    );
+
+    await assemblePluginAdminBundle({
+      plugins: [],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+      blockModules: [
+        { module: resolve(workspace, "src/blocks.ts"), exportName: "default" },
+      ],
+    });
+
+    const bundle = await readFile(
+      resolve(adminDest, "plugins/site-bundle.js"),
+      "utf8",
+    );
+    expect(bundle).toContain("acme/quote");
+    expect(bundle).not.toContain("__hero_view__");
+    expect(bundle).not.toContain("__quote_view__");
+  });
+
+  test("keeps a block definition's lazy import under a key other than `view`", async () => {
+    const adminDest = resolve(workspace, "admin-dest");
+    await writeFile(
+      resolve(workspace, "src/blocks.ts"),
+      'export default [{ name: "acme/hero", view: () => import("./hero.view.js"), example: () => import("./hero.example.js") }];',
+    );
+    await writeFile(
+      resolve(workspace, "src/hero.view.ts"),
+      "export default function HeroView() { return null; }",
+    );
+    await writeFile(
+      resolve(workspace, "src/hero.example.ts"),
+      'export const example = "__hero_example__";\n',
+    );
+
+    await assemblePluginAdminBundle({
+      plugins: [],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+      blockModules: [
+        { module: resolve(workspace, "src/blocks.ts"), exportName: "default" },
+      ],
+    });
+
+    expect(
+      await readFile(resolve(adminDest, "plugins/site-bundle.js"), "utf8"),
+    ).toContain("__hero_example__");
+  });
+
+  test("keeps a lazy `view` import in plugin admin code outside a block", async () => {
+    await writeFile(
+      resolve(workspace, "src/settings.ts"),
+      'export const settings = "__settings_view__";\n',
+    );
+    await writeFile(
+      resolve(workspace, "src/admin.ts"),
+      'globalThis.__settings__ = { view: () => import("./settings.js") };\n',
+    );
+    const adminDest = resolve(workspace, "dist");
+    await assemblePluginAdminBundle({
+      plugins: [plugin("./src/admin.ts") as AssemblerPlugin],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+    });
+    await registrationsOf(adminDest);
+    const { __settings__ } = globalThis as unknown as {
+      __settings__: { view: () => Promise<{ settings: string }> };
+    };
+
+    const settings = await __settings__.view();
+
+    expect(settings.settings).toBe("__settings_view__");
+  });
+
+  test("emits nothing for a view module's stylesheet", async () => {
+    const adminDest = resolve(workspace, "admin-dest");
+    await writeFile(
+      resolve(workspace, "src/blocks.ts"),
+      'export default [{ name: "acme/hero", view: () => import("./hero.view.js") }];',
+    );
+    await writeFile(
+      resolve(workspace, "src/hero.view.ts"),
+      'import "./hero.css";\nexport default function HeroView() { return null; }',
+    );
+    await writeFile(
+      resolve(workspace, "src/hero.css"),
+      ".hero { color: red; }",
+    );
+
+    await assemblePluginAdminBundle({
+      plugins: [],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+      blockModules: [
+        { module: resolve(workspace, "src/blocks.ts"), exportName: "default" },
+      ],
+    });
+
+    expect(await readdir(resolve(adminDest, "plugins"))).toEqual([
+      "site-bundle.js",
+    ]);
+  });
+
+  test("registers a block whose view the shell can't load", async () => {
+    const adminDest = resolve(workspace, "admin-dest");
+    await writeFile(
+      resolve(workspace, "src/blocks.ts"),
+      'export default [{ name: "acme/hero", view: () => import("./hero.view.js") }];',
+    );
+    await writeFile(
+      resolve(workspace, "src/hero.view.ts"),
+      "export default function HeroView() { return null; }",
+    );
+    await assemblePluginAdminBundle({
+      plugins: [],
+      registry: emptyRegistry(),
+      adminDest,
+      projectRoot: workspace,
+      blockModules: [
+        { module: resolve(workspace, "src/blocks.ts"), exportName: "default" },
+      ],
+    });
+    const [[, spec]] = (await registrationsOf(adminDest)) as [
+      [string, { view: () => Promise<unknown> }],
+    ];
+
+    await expect(spec.view()).rejects.toThrow(
+      "The admin shell never loads a block's view module.",
+    );
+  });
+
   test("builds for a site whose only admin contribution is a method client, registered through the host's auth-client shim", async () => {
     const adminDest = resolve(workspace, "admin-dest");
     await mkdir(adminDest, { recursive: true });
