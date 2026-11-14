@@ -320,6 +320,8 @@ Skip the augmentation and both `.role("hero")` and `data.entry.images.hero` are 
 
 The rest add no tables of their own. `@plumix/plugin-feeds` reads the shared `entries` table and writes nothing at all. `@plumix/plugin-blog` and `@plumix/plugin-pages` register entry types, and every entry of every type is a row in the shared `entries` table. `@plumix/plugin-menu` goes further and reuses the same tables for its own model: a menu is a row in `terms`, a menu item is a row in `entries`, and membership is a row in `entry_term`. `@plumix/plugin-media` stores an asset as an entry and the bytes in object storage, and `@plumix/plugin-og` stores a rendered card in the same bucket, keyed by its content.
 
+A plugin writes its own tables with `ctx.db` however it likes. It writes core's tables, the ones `plumix/schema` exports, through `ctx.entries`, `ctx.terms` and `ctx.settings.write`. Those run core's save path: the meta pipeline, the lifecycle actions, the edit-token and lease checks, and the purge of every cached page that read the row. A direct `insert`, `update` or `delete` on a core table skips all of it, so cached pages keep the old row. Reading core's tables directly is fine. The first-party plugins are linted for this: a direct write to a core table fails their lint.
+
 [Cloudflare Workers](/deployment/cloudflare/) covers applying a migration to a deployed D1 database rather than the local one.
 
 A plugin that owns tables ships its own history, so a site never generates migrations for a package's tables. As the author of a plugin published as a package, you keep that history in four steps:
