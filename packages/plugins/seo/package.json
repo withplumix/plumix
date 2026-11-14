@@ -31,11 +31,20 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./schema": {
+      "types": "./dist/db/schema.d.ts",
+      "default": "./dist/db/schema.js"
+    },
+    "./data-migrations": {
+      "types": "./dist/db/data-migrations.d.ts",
+      "default": "./dist/db/data-migrations.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "locales/*.mjs",
+    "migrations",
     "README.md",
     "LICENSE"
   ],
@@ -47,6 +56,7 @@
     "attw": "attw --pack . --profile esm-only",
     "build": "tsc -p tsconfig.build.json && plumix-check-declarations",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
+    "db:generate": "drizzle-kit generate",
     "format": "prettier --check . --ignore-path ../../../.gitignore --ignore-path ../../../.prettierignore",
     "i18n:check": "plumix i18n verify",
     "i18n:compile": "plumix i18n compile",
@@ -60,6 +70,7 @@
   },
   "dependencies": {
     "@orpc/server": "catalog:orpc",
+    "drizzle-orm": "catalog:drizzle",
     "valibot": "catalog:"
   },
   "peerDependencies": {
@@ -85,6 +96,7 @@
     "@types/react": "catalog:react",
     "@types/react-dom": "catalog:react",
     "@vitest/coverage-v8": "catalog:vitest",
+    "drizzle-kit": "catalog:drizzle",
     "eslint": "catalog:",
     "plumix": "workspace:*",
     "prettier": "catalog:",

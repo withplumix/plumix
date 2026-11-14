@@ -1,0 +1,1 @@
+CREATE INDEX `entries_type_status_id_idx` ON `entries` (`type`,`status`,`id`,`published_at`,`updated_at`);

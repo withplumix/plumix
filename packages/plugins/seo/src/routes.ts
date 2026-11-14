@@ -28,10 +28,13 @@ import { SITEMAP_STYLESHEET, SITEMAP_STYLESHEET_PATH } from "./stylesheet.js";
 const ROBOTS_PATH = "/robots.txt";
 
 /**
- * An hour at the edge, cut short by a publish's purge; clients always
+ * A day at the edge, cut short by a publish's purge; clients always
  * revalidate.
  */
-const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
+const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=86400";
+
+/** An hour at the edge, cut short by a publish's purge. */
+const LLMS_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 
 /**
  * The key every sitemap response and `llms.txt` reads under, so one
@@ -40,10 +43,14 @@ const SITEMAP_CACHE_CONTROL = "public, max-age=0, s-maxage=3600";
 const SITEMAP_CACHE_KEY = "sitemap";
 
 /**
- * Anything but a 1-based page number goes unclaimed and 404s through the
- * content router.
+ * Anything but a 1-based page number, or for an entry type the id a page
+ * starts after, goes unclaimed and 404s through the content router.
  */
-const PAGE_SEGMENT = ":page([1-9]\\d*)";
+function pageSegment(scope: SitemapScope): string {
+  return scope.ref.kind === "entries"
+    ? ":page(0|[1-9]\\d*)"
+    : ":page([1-9]\\d*)";
+}
 
 function stylesheetHref(ctx: AppContext): string {
   return withBasePath(SITEMAP_STYLESHEET_PATH, ctx.config.basePath);
@@ -104,7 +111,7 @@ async function handleLlmsTxt(ctx: AppContext): Promise<Response> {
   return new Response(await llmsTxtBody(ctx), {
     headers: {
       "content-type": "text/markdown; charset=utf-8",
-      "cache-control": SITEMAP_CACHE_CONTROL,
+      "cache-control": LLMS_CACHE_CONTROL,
     },
   });
 }
@@ -166,7 +173,7 @@ export function registerSitemapRoutes(
 
   for (const scope of scopes) {
     ctx.registerPublicRoute({
-      path: `/sitemap-${sitemapScopeStem(scope.ref)}-${PAGE_SEGMENT}.xml`,
+      path: `/sitemap-${sitemapScopeStem(scope.ref)}-${pageSegment(scope)}.xml`,
       cacheable: true,
       handler: (_request, appCtx, params) =>
         handleSubSitemap(appCtx, scope, Number(params.page)),

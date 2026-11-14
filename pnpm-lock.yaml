@@ -2366,6 +2366,9 @@ importers:
       '@orpc/server':
         specifier: catalog:orpc
         version: 1.16.1(crossws@0.3.5)(ws@8.22.0)
+      drizzle-orm:
+        specifier: catalog:drizzle
+        version: 0.45.4(@cloudflare/workers-types@5.20261104.1)(@libsql/client@0.18.0)(bun-types@1.4.2)
       valibot:
         specifier: 'catalog:'
         version: 1.5.0(typescript@6.0.3)
@@ -2418,6 +2421,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.5(vitest@5.0.5)
+      drizzle-kit:
+        specifier: catalog:drizzle
+        version: 0.31.11
       eslint:
         specifier: 'catalog:'
         version: 10.14.0(jiti@2.7.0)(supports-color@10.2.2)

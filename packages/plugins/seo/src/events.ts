@@ -3,7 +3,7 @@ import type { OgImage } from "plumix/plugin";
 import { defineFilter } from "plumix/plugin";
 
 import type { SchemaPiece, SchemaPieceName } from "./schema.js";
-import type { SitemapScopeRef, SitemapUrl } from "./sitemap.js";
+import type { SitemapPage, SitemapUrl } from "./sitemap.js";
 
 /**
  * The seo plugin's filters. They ride on the root's `seo()` factory, which
@@ -32,10 +32,9 @@ export const seoFilters = {
   llmsTxt: defineFilter<string>("seo:llms-txt", { sync: false }),
   sitemap: {
     /** Applied even on an empty page, so a handler can inject rows. */
-    urls: defineFilter<
-      readonly SitemapUrl[],
-      { readonly scope: SitemapScopeRef; readonly page: number }
-    >("seo:sitemap:urls", { sync: false }),
+    urls: defineFilter<readonly SitemapUrl[], SitemapPage>("seo:sitemap:urls", {
+      sync: false,
+    }),
   },
   schema: {
     /**

@@ -22,8 +22,9 @@ type and a taxonomy sharing one silently lost the taxonomy's sub-sitemap.
 
 - **Scopes are namespaced.** Entry-type scopes sit under `entries`, taxonomy
   scopes under `terms`, and contributed scopes under their own names, at
-  `/sitemap-entries-<type>-<n>.xml`, `/sitemap-terms-<tax>-<n>.xml` and
-  `/sitemap-<name>-<n>.xml`. `entries` and `terms` are reserved. A duplicate
+  `/sitemap-entries-<type>-<after>.xml`, `/sitemap-terms-<tax>-<n>.xml` and
+  `/sitemap-<name>-<n>.xml`. An entry type's page is named by the id it starts
+  after, so it reads by key instead of skipping rows (#3542). `entries` and `terms` are reserved. A duplicate
   contributed name fails at boot naming both plugins, and a policy key naming no
   scope fails at boot.
 - **`false` is about the sitemap only.** The admin "Hide from search engines"
