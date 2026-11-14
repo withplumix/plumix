@@ -1,5 +1,67 @@
 # @plumix/runtime-bun
 
+## 0.3.1
+
+### Patch Changes
+
+- [#3662](https://github.com/withplumix/plumix/pull/3662) [`600f34a`](https://github.com/withplumix/plumix/commit/600f34ade711dd71f31f1b241ba59c21853155a5) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a batch of writes on the `nodeSqlite` and `bunSqlite` databases leaving its earlier statements committed when a later one fails. The batch now commits all of its statements or none, as it does on D1 and libSQL, so a failed email change no longer keeps the old sessions alive.
+
+- [#3635](https://github.com/withplumix/plumix/pull/3635) [`e975b8b`](https://github.com/withplumix/plumix/commit/e975b8b29f06c3664560bb56a838da24271b6cc2) Thanks [@nasyrov](https://github.com/nasyrov)! - Changes how a block is defined, so the editor no longer loads every block's code up front. A block's definition now holds only what the editor needs, and everything that renders or runs on the server moves into a view module the definition imports lazily. This is a breaking change for every block.
+
+  Before:
+
+  ```tsx
+  export const hero = defineBlock({
+    name: "acme/hero",
+    title: "Hero",
+    loaders: { posts: loadPosts },
+    deps: { settings: ["site"] },
+    errorFallback: () => <p>Unavailable</p>,
+    render: ({ attrs, loaders, deps }) => <Hero {...attrs} />,
+  });
+  ```
+
+  After:
+
+  ```tsx
+  // hero.tsx
+  export const hero = defineBlock({
+    name: "acme/hero",
+    title: "Hero",
+    view: () => import("./hero.view"),
+  });
+
+  // hero.view.tsx
+  export const loaders = { posts: loadPosts };
+  export const deps = { settings: ["site"] } as const;
+  export const errorFallback = () => <p>Unavailable</p>;
+  export default function HeroView({
+    attrs,
+  }: BlockViewProps<HeroAttrs, typeof loaders, typeof deps>) {
+    return <Hero {...attrs} />;
+  }
+  ```
+
+  - `BlockNodeComponent` is now `BlockView` and `BlockNodeRenderProps` is now `BlockViewProps`. A view also receives the block's `name`, so one module can serve several blocks.
+  - `BlockSpec` takes only the attrs type: write `BlockSpec<HeroAttrs>` where you wrote `BlockSpec<HeroAttrs, typeof loaders, typeof deps>`. A view types its loaders and deps through `BlockViewProps` instead.
+  - `defineBlock` no longer rejects a dep kind no plugin registered at compile time, because a block's `deps` moved into its view module. A view still can't read a dep key its `BlockViewProps` doesn't declare.
+  - The server loads every view when the site boots, so pages render the same HTML as before, except that a highlighted code block's `<code>` now carries `data-testid="code-highlighted"` and the HTML block's wrapper `<div>` carries `data-testid="html-block"`. In the editor, the placeholder for a block no plugin registers now carries `data-testid="block-unregistered"`. The editor canvas loads a document's views before showing it, a catalog item's views when you hover or focus it, and the rest when idle, so a block never shows a loading state.
+  - `renderBlockSpecToHtml` and `renderBlockTreeToHtml` from `plumix/test` now return a promise, and `loadBlockViews` loads the views a test renders outside a site.
+  - The code block's syntax highlighter and the HTML block's sanitizer leave the editor's eager chunk graph, and the editor's canvas no longer loads the admin's UI kit, which shrinks the editor's initial JavaScript for every site.
+  - `plumix sync` and every other CLI command no longer import block views, so a view may import CSS.
+
+- [#3409](https://github.com/withplumix/plumix/pull/3409) [`d1f437d`](https://github.com/withplumix/plumix/commit/d1f437d57c4240b826f4b867b8f53680678aee0b) Thanks [@nasyrov](https://github.com/nasyrov)! - Aborts a running scheduled task's `ctx.signal` when the site shuts down, so a task that checks it stops between batches instead of being cut off at exit.
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3611](https://github.com/withplumix/plumix/pull/3611) [`1cbb204`](https://github.com/withplumix/plumix/commit/1cbb204d5c15dd605c67c419cf4e7c2cd6e74764) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `react` and `react-dom` to 19.3.1 and `@tanstack/react-query` to 5.105.2 in the framework and the first-party plugins, the `@lingui/*` packages to 6.11.0 in the framework and `plugin-forms`, `radix-ui` to 1.8.1, `react-hook-form` to 7.91.0 and `@hookform/resolvers` to 7 in the framework, `vite` to 8.3.5 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.67.0, `wrangler` 4.156.1) in `@plumix/runtime-cloudflare`.
+
+- [#3661](https://github.com/withplumix/plumix/pull/3661) [`189c402`](https://github.com/withplumix/plumix/commit/189c40263af5404ec304330fd345554c8a6ab933) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `plumix dev` on Node and Bun serving the site's SQLite database, its `-wal`, `-shm` and `-journal` files and the `diskStorage` directory as static files. A request for any of them now gets a 403, and a runtime's `runDevCommand` options can name the paths its slots keep on disk with `privatePaths`.
+
+- [#3559](https://github.com/withplumix/plumix/pull/3559) [`3a597f9`](https://github.com/withplumix/plumix/commit/3a597f9e1ae6114df5ed8f1fd5a7e12e8ff7b25f) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads every current time in core, the first-party plugins and the runtimes through `now()`, so a test site's `site.travel` and `site.freezeTime` now move token and invite expiry, edit leases, retention cutoffs, rate-limit windows and `updatedAt` stamps too. A column's SQL `unixepoch()` default, such as `createdAt`, still stamps real time.
+
+- [#3479](https://github.com/withplumix/plumix/pull/3479) [`d75c0a0`](https://github.com/withplumix/plumix/commit/d75c0a096aa11af62e293f792e6087694e052b75) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes block strings, mails, the welcome screen and the admin bar rendering in English on a site that enables a regional locale: the generated server entry now hands core the closest catalog for each enabled locale, which `plumix build` works out. Upgrade `plumix` with the adapter.
+
 ## 0.3.0
 
 ### Minor Changes

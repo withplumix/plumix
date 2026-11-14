@@ -1,5 +1,31 @@
 # @plumix/plugin-menu
 
+## 0.7.0
+
+### Minor Changes
+
+- [#3563](https://github.com/withplumix/plumix/pull/3563) [`290c634`](https://github.com/withplumix/plumix/commit/290c634f16aa20e15ddfe392e58a5cab62c7815a) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `menu`, exported from `@plumix/plugin-menu/server`, holding the plugin's events `saved` and `deleted` and its async filters `tree` and `item`, so another plugin subscribes with `ctx.filters.add(menu.tree, …)` or `ctx.events.on(menu.saved, …)` with no `declare module`. It is exported from `/server` because the root's `menu()` factory, which still installs the plugin, takes the name. Payloads are unchanged, and saving or deleting a menu still purges the pages that render it. The plugin now needs `plumix` 0.27.0 or later.
+
+  Breaking: the `menu:tree`, `menu:item`, `menu:saved` and `menu:deleted` string names are removed from `FilterRegistry` and `ActionRegistry`. Replace `addFilter("menu:item", …)` with `ctx.filters.add(menu.item, …)`, `addFilter("menu:tree", …)` with `ctx.filters.add(menu.tree, …)`, and `addAction("menu:saved", …)` with `ctx.events.on(menu.saved, …)`.
+
+- [#3660](https://github.com/withplumix/plumix/pull/3660) [`932c99d`](https://github.com/withplumix/plumix/commit/932c99de521a0ba45fd1e9c6edeb6b370441885c) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a cached nav keeping a term's old name: a page that renders a menu item linking a term is now purged when the term is renamed. Publishing a draft that a menu item links now purges the pages that render the menu too. The menu writes its menus, items and their links through `ctx.terms` and `ctx.entries`, so creating a menu announces `term:created`. A page that renders a menu is stored under the menu's term tag and each item's tag: adding an item or deleting the menu purges it, and so does editing, moving or removing an item. A save that changes nothing purges nothing. Menus are no longer stored under a `menu:<id>` tag.
+
+- [#3491](https://github.com/withplumix/plumix/pull/3491) [`65a1e0c`](https://github.com/withplumix/plumix/commit/65a1e0c275d5d163584f3183362ad4c3dcac757c) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the plugin's RPC router in its descriptor's type, so a test site that installs it lists its procedures on `site.rpc.menu`. `@orpc/server` moves to the plugin's dependencies, since its published types now name it.
+
+### Patch Changes
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3555](https://github.com/withplumix/plumix/pull/3555) [`bcec2f0`](https://github.com/withplumix/plumix/commit/bcec2f03e5e34009ac8f967e1ff00cbec0d9cffe) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.105.0 and `@orpc/server` to 1.16.1 in the framework and the first-party plugins, `@tanstack/react-router` to 1.170.46 in the framework, `plugin-og` and `plugin-seo`, the other `@orpc/*` packages to 1.16.1, the `@tiptap/*` packages to 3.32.0, `vitest` to 5.0.5 and `@playwright/test` to 1.64.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.66.0, `wrangler` 4.154) in `@plumix/runtime-cloudflare`.
+
+- [#3611](https://github.com/withplumix/plumix/pull/3611) [`1cbb204`](https://github.com/withplumix/plumix/commit/1cbb204d5c15dd605c67c419cf4e7c2cd6e74764) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `react` and `react-dom` to 19.3.1 and `@tanstack/react-query` to 5.105.2 in the framework and the first-party plugins, the `@lingui/*` packages to 6.11.0 in the framework and `plugin-forms`, `radix-ui` to 1.8.1, `react-hook-form` to 7.91.0 and `@hookform/resolvers` to 7 in the framework, `vite` to 8.3.5 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.67.0, `wrangler` 4.156.1) in `@plumix/runtime-cloudflare`.
+
+- [#3609](https://github.com/withplumix/plumix/pull/3609) [`ae6b003`](https://github.com/withplumix/plumix/commit/ae6b003a5671e65cc7b53c5221b1f8e98accd8ef) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the `menu_item` entry type and the `menu` taxonomy inheriting core's default capabilities. Every capability of both now goes to editors, the tier `term:menu:manage` already sets, so core's entry and term procedures read and write menus only for editors and admins.
+
+- [#3410](https://github.com/withplumix/plumix/pull/3410) [`efa3e67`](https://github.com/withplumix/plumix/commit/efa3e6765587c53e6e9173cee721302c0041ae34) Thanks [@nasyrov](https://github.com/nasyrov)! - Writes menu locations through `ctx.settings`, so assigning or clearing a location moves the `menu_locations` group's `etag` and an older copy of the group is refused as a conflict. Deleting a menu bound to a location now fires `settings.groupChanged` before `menu:deleted`, not after.
+
+- [#3559](https://github.com/withplumix/plumix/pull/3559) [`3a597f9`](https://github.com/withplumix/plumix/commit/3a597f9e1ae6114df5ed8f1fd5a7e12e8ff7b25f) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads every current time in core, the first-party plugins and the runtimes through `now()`, so a test site's `site.travel` and `site.freezeTime` now move token and invite expiry, edit leases, retention cutoffs, rate-limit windows and `updatedAt` stamps too. A column's SQL `unixepoch()` default, such as `createdAt`, still stamps real time.
+
 ## 0.6.0
 
 ### Minor Changes

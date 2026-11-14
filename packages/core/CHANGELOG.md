@@ -1,5 +1,49 @@
 # @plumix/core
 
+## 0.27.0
+
+### Minor Changes
+
+- [#3501](https://github.com/withplumix/plumix/pull/3501) [`bdb8718`](https://github.com/withplumix/plumix/commit/bdb8718c76b553b5da40e9668a766406db9d2fd9) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds authorization discovery to the MCP endpoint. It serves RFC 9728 protected-resource metadata at `/.well-known/oauth-protected-resource` and at the path-specific URI for `/_plumix/mcp`, including under a `basePath`. A 401 now carries a `WWW-Authenticate: Bearer` challenge with `resource_metadata` and `scope`. An MCP tool can declare the `capability` it needs, and a token whose capabilities don't cover it gets 403 `insufficient_scope` naming the scope to ask for.
+
+- [#3560](https://github.com/withplumix/plumix/pull/3560) [`b51fb6b`](https://github.com/withplumix/plumix/commit/b51fb6b174bef266e152c5b7888cd1593c4ad4a4) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds OAuth sign-in for MCP clients, so Claude, ChatGPT or VS Code can connect to a site with only its URL. The person approves the client on a new admin consent page and can untick capabilities of the requested `read`, `draft` or `full` scope; the client gets a one-hour token that works only on `/_plumix/mcp`. Run the core migration before deploying: it adds the `oauth_grants` and `oauth_authorization_codes` tables.
+
+- [#3571](https://github.com/withplumix/plumix/pull/3571) [`6da672a`](https://github.com/withplumix/plumix/commit/6da672a8c60e414fbb72208fd4b3d211b62acd24) Thanks [@nasyrov](https://github.com/nasyrov)! - Keeps OAuth clients connected with rotating refresh tokens: `/_plumix/oauth/token` now also returns a refresh token that lasts 30 days and is replaced on every use, so an MCP client never holds a long-lived secret. Presenting a refresh token that was already used revokes every access and refresh token of that grant, so a stolen one locks the thief out. Run the core migration before deploying: it adds the `oauth_refresh_tokens` table.
+
+- [#3575](https://github.com/withplumix/plumix/pull/3575) [`6bf712c`](https://github.com/withplumix/plumix/commit/6bf712cef2854b194ac08665c4b2985e5a4cc024) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds a Connected apps section to the profile's API tokens card. It lists each OAuth client a person approved, with its access and when it was last used, and revoking one disconnects it at once and makes its next connection ask for consent again. An admin with `user:manage_tokens` can list and revoke another user's connected apps.
+
+### Patch Changes
+
+- [#3431](https://github.com/withplumix/plumix/pull/3431) [`f739142`](https://github.com/withplumix/plumix/commit/f739142caf44f5b5d0a90fb990203ef90fc344d4) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `auth.apiTokens.create`, `auth.deviceFlow.approve` and `user.requestEmailChange` accepting an API-token caller. They now need a signed-in session, and an API-token request gets `UNAUTHORIZED`.
+
+- [#3621](https://github.com/withplumix/plumix/pull/3621) [`8e96243`](https://github.com/withplumix/plumix/commit/8e96243b57b305e3f04dc6eefe0e7396c8250dd6) Thanks [@nasyrov](https://github.com/nasyrov)! - Validates sessions and API tokens against the D1 primary when read replication is on (`session: "auto"` or `"primary-first"`). Other reads keep their replica routing.
+
+- [#3620](https://github.com/withplumix/plumix/pull/3620) [`e77381c`](https://github.com/withplumix/plumix/commit/e77381c6350fbeab8f7b666869e3fd1e3e016694) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an email change leaving the user's outstanding sign-in links, invites and passkey registrations usable. Committing the change now revokes them along with the user's sessions.
+
+- [#3619](https://github.com/withplumix/plumix/pull/3619) [`0c65af0`](https://github.com/withplumix/plumix/commit/0c65af0985a0ac8fdd5c5781c957976fddb58772) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the reference picker's lookup offering terms and entries the caller's role or API token scopes do not let them read through `term.list` and `entry.list`.
+
+- [#3618](https://github.com/withplumix/plumix/pull/3618) [`89add8f`](https://github.com/withplumix/plumix/commit/89add8fcc43d089f758e197df45ce5fbfd05b4dc) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes OAuth client metadata to accept only `https:` redirect URIs, or `http:` to a loopback host; a document listing any other redirect URI is refused as invalid. The consent page also leaves only for an `http:` or `https:` URL.
+
+- [#3617](https://github.com/withplumix/plumix/pull/3617) [`70f05ce`](https://github.com/withplumix/plumix/commit/70f05ce8be11f3bf3209b9a6e5293c76004c6560) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an OAuth sign-in finishing in a browser other than the one that started it: `/start` now sets a short-lived `plumix_oauth_state` cookie, and the callback signs in only a browser that holds it. A sign-in left open across a deploy has to start again.
+
+- [#3624](https://github.com/withplumix/plumix/pull/3624) [`67d7d7e`](https://github.com/withplumix/plumix/commit/67d7d7e8faad6a028b425af8a5b6c5123683b26e) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes preview links so only a user who can edit an entry can create one, and a link stops working once the user who created it can no longer edit the entry or is disabled.
+
+- [#3414](https://github.com/withplumix/plumix/pull/3414) [`484d78a`](https://github.com/withplumix/plumix/commit/484d78a1baff570b72b4415dc73531d3f301587b) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `ctx.registerMark` accepting a core mark's name such as `bold` or `highlight`: a plugin mark that reuses a core mark name now throws at setup. Name plugin marks `pluginId/markName`.
+
+- [#3664](https://github.com/withplumix/plumix/pull/3664) [`acf797b`](https://github.com/withplumix/plumix/commit/acf797ba9b7f8361d82b35eff41c76d9979a7067) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an editor link (`?plumix.edit`) to a plugin route: a public route now renders it live with `private, no-store`, and a cacheable raw route no longer stores its response in the CDN.
+
+- [#3655](https://github.com/withplumix/plumix/pull/3655) [`9fdbef9`](https://github.com/withplumix/plumix/commit/9fdbef94f5c415d48ce8f0bb7cf77068d8074fb3) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a member's cached page leaving as publicly cacheable on a CDN hit, and gives uncached public pages an explicit `private, no-cache`.
+
+- [#3658](https://github.com/withplumix/plumix/pull/3658) [`b7a19c2`](https://github.com/withplumix/plumix/commit/b7a19c2822b9b8bff7d4eea034af048af1d490ac) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes an editor link (`?plumix.edit`) to a policied plugin route leaving without `private, no-store`.
+
+- [#3430](https://github.com/withplumix/plumix/pull/3430) [`4598b09`](https://github.com/withplumix/plumix/commit/4598b09d1dc0d47494d199fcfe573d94f00c37e6) Thanks [@nasyrov](https://github.com/nasyrov)! - Marks `actingAs` and `openPlaygroundDb` from `plumix/test/playwright` as stable: neither carries `@experimental` any more, and their signatures and behavior are unchanged.
+
+- [#3616](https://github.com/withplumix/plumix/pull/3616) [`f8fe302`](https://github.com/withplumix/plumix/commit/f8fe302958700d3fcbdba553c4d0d5707de3e475) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the sync routes accepting an API token narrowed by scopes or a preset. `plumix sync` and `plumix import --url` now need a token with no scopes, minted as "Same as me", and answer `403` for any other.
+
+- [#3625](https://github.com/withplumix/plumix/pull/3625) [`96492be`](https://github.com/withplumix/plumix/commit/96492be50debcb4baf00bb4aae55c36cccb22e0f) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes editing, disabling, enabling, deleting and changing the email of another user who holds a capability you lack: each is now refused with `FORBIDDEN`, as assigning such a role already was. Acting on yourself is unchanged.
+
+- [#3428](https://github.com/withplumix/plumix/pull/3428) [`fff1361`](https://github.com/withplumix/plumix/commit/fff13613a4d8190639c94d750fc2c043ac7f7c3d) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the admin-area list for a browser asking for Traditional Chinese (`zh-TW`, `zh-HK`): it is now English instead of Simplified Chinese. Negotiation follows the CLDR parent locales, so `de-AT` still gets German and `zh-SG` gets Simplified Chinese.
+
 ## 0.26.0
 
 ### Patch Changes
