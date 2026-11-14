@@ -50,7 +50,14 @@ describe("projectDebugSnapshot", () => {
     const snap = projectDebugSnapshot(
       EMPTY,
       ctxWith({
-        user: { id: 1, email: "a@b.c", role: "admin", meta: {} },
+        user: {
+          id: 1,
+          email: "a@b.c",
+          name: null,
+          avatarUrl: null,
+          role: "admin",
+          meta: {},
+        },
         tokenScopes: ["read:posts"],
         resolvedEntity: { kind: "entry", id: 7, preview: false },
         config: testConfig({

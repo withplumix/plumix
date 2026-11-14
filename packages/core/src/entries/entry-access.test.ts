@@ -65,6 +65,7 @@ describe("entryPolicyAdmits asked through anonymousContext", () => {
     id: 1,
     email: "admin@example.test",
     name: null,
+    avatarUrl: null,
     role: "admin",
     meta: {},
   };

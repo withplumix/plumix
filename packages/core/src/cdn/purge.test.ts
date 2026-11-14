@@ -162,7 +162,14 @@ describe("purge accumulator", () => {
     const { ctx, cdn, flush } = await fakeCtx();
     const derived = withUser(
       ctx,
-      { id: 1, email: "u@cms.example", role: "admin", meta: {} },
+      {
+        id: 1,
+        email: "u@cms.example",
+        name: null,
+        avatarUrl: null,
+        role: "admin",
+        meta: {},
+      },
       { kind: "session" },
     );
 

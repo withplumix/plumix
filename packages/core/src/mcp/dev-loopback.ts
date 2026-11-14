@@ -1,4 +1,5 @@
 import type { AppContext } from "../context/app-context.js";
+import { principalOf } from "../auth/principal.js";
 import { withUser } from "../auth/with-user.js";
 import { asc, eq } from "../db/index.js";
 import { users } from "../db/schema/users.js";
@@ -15,10 +16,9 @@ export async function asLoopbackAdmin(ctx: AppContext): Promise<AppContext> {
     .orderBy(asc(users.id))
     .limit(1);
   if (admin === undefined) return ctx;
-  const { id, email, role, meta } = admin;
-  return withUser(
-    ctx,
-    { id, email, role, meta },
-    { kind: "api-token", token: DEV_LOOPBACK, scopes: null },
-  );
+  return withUser(ctx, principalOf(admin), {
+    kind: "api-token",
+    token: DEV_LOOPBACK,
+    scopes: null,
+  });
 }

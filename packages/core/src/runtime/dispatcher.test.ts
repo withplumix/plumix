@@ -2119,7 +2119,11 @@ describe("dispatcher — public read-through CDN", () => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
         ctx.filters.add(render.document, (document, _input, appCtx) => {
           tagCdnEntry(
-            withUser(appCtx, { ...author, meta: {} }, { kind: "session" }),
+            withUser(
+              appCtx,
+              { ...author, name: null, avatarUrl: null, meta: {} },
+              { kind: "session" },
+            ),
             ["x:1"],
           );
           return document;

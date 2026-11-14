@@ -281,6 +281,8 @@ describe("findRelatedEntries under an entry's access policy", () => {
         user: {
           id: member.id,
           email: member.email,
+          name: null,
+          avatarUrl: null,
           role: member.role,
           meta: {},
         },

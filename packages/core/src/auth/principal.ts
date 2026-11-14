@@ -31,12 +31,17 @@ export type PrincipalPolicy =
    */
   | { readonly kind: "bearer"; readonly audience: string | null };
 
-const identityOf = ({ id, email, role, meta }: User): AuthenticatedUser => ({
+/** The request-time projection of a user row, the same on every surface. */
+export function principalOf({
   id,
   email,
+  name,
+  avatarUrl,
   role,
   meta,
-});
+}: User): AuthenticatedUser {
+  return { id, email, name, avatarUrl, role, meta };
+}
 
 /**
  * `null` when `policy` admits no one. A context already carrying a principal
@@ -46,7 +51,6 @@ const identityOf = ({ id, email, role, meta }: User): AuthenticatedUser => ({
 export async function resolvePrincipal(
   ctx: AppContext,
   policy: PrincipalPolicy,
-  project: (user: User) => AuthenticatedUser = identityOf,
 ): Promise<AuthenticatedAppContext | null> {
   if (ctx.user !== null && ctx.credential !== null) {
     return admits(policy, ctx.credential)
@@ -67,7 +71,7 @@ export async function resolvePrincipal(
   );
   const credential = result && credentialOf(result);
   if (!result || !credential || !admits(policy, credential)) return null;
-  return withUser(ctx, project(result.user), credential);
+  return withUser(ctx, principalOf(result.user), credential);
 }
 
 function admits(policy: PrincipalPolicy, credential: Credential): boolean {

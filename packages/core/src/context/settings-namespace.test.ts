@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { AppContext, Db } from "./app-context.js";
+import { principalOf } from "../auth/principal.js";
 import { HandlerRegistry } from "../events-and-filters/registry.js";
 import { settings } from "../events-and-filters/settings.js";
 import { definePlugin } from "../plugin/define.js";
@@ -42,7 +43,7 @@ describe("ctx.settings on a derived context", () => {
   test("an anonymous REST principal's write is heard with no user", async () => {
     const admin = await adminUser.transient({ db }).create();
     const { heard, ctx } = heardContext({
-      user: { id: admin.id, email: admin.email, role: "admin", meta: {} },
+      user: principalOf(admin),
     });
     const principal = await resolveRestPrincipal(ctx);
     if (principal.kind !== "anonymous") throw new Error("expected anonymous");

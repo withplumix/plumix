@@ -24,6 +24,7 @@ import {
   InviteError,
   validateInviteToken,
 } from "../invite.js";
+import { principalOf } from "../principal.js";
 import { optionalRedirectTo } from "../redirect.js";
 import { invalidateSession, validateSession } from "../sessions.js";
 import { sessionCookieScope } from "../sign-in.js";
@@ -280,12 +281,7 @@ async function announceCredential(
       deviceType: credential.deviceType,
       isBackedUp: credential.isBackedUp,
     },
-    actor: {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      meta: user.meta,
-    },
+    actor: principalOf(user),
   });
 }
 

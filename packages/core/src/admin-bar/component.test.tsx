@@ -31,6 +31,8 @@ const emptyRegistry = createBlockRegistry([]);
 const user: AuthenticatedUser = {
   id: 7,
   email: "editor@cms.example",
+  name: null,
+  avatarUrl: null,
   role: "editor",
   meta: {},
 };

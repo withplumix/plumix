@@ -513,10 +513,7 @@ function tryPublicRoutes(
  * anonymous hot path pays nothing.
  */
 async function withPublicReader(ctx: AppContext): Promise<AppContext> {
-  return (
-    (await resolvePrincipal(ctx, { kind: "session-gated" }, (user) => user)) ??
-    ctx
-  );
+  return (await resolvePrincipal(ctx, { kind: "session-gated" })) ?? ctx;
 }
 
 /**
@@ -977,11 +974,7 @@ async function runPluginRawRoute(
       : notFound(UNKNOWN_PLUMIX_ROUTE);
   }
 
-  const authedCtx = await resolvePrincipal(
-    ctx,
-    { kind: "configured" },
-    ({ id, email, name, role, meta }) => ({ id, email, name, role, meta }),
-  );
+  const authedCtx = await resolvePrincipal(ctx, { kind: "configured" });
   if (!authedCtx) {
     return jsonResponse({ error: "unauthorized" }, { status: 401 });
   }
