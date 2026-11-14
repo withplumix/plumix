@@ -956,8 +956,8 @@ function serveRawRoute(
     defer: ctx.defer,
     telemetry: ctx.telemetry,
     render: () => runPluginRawRoute(route, ctx),
-    // Read after the handler ran: a route resolves the entity it answers for
-    // mid-request, and `tagCdnEntry` is where it names what that was.
+    // Read after the handler ran: a route reads what it answers for
+    // mid-request, and core's read helpers declare what that was.
     tags: () => declaredPageTags(ctx),
   });
 }

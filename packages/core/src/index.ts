@@ -266,18 +266,6 @@ export type { EntryChange } from "./entries/change-feed.js";
 export type { EntryChangeKind } from "./db/schema/entry_changes.js";
 export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";
-// For a plugin writing straight to `ctx.db`, which fires no `entry:*` action,
-// to enqueue the purge core would without restating the tag scheme.
-export {
-  entryPurgeTags,
-  entryTag,
-  termPurgeTags,
-  typeTag,
-} from "./cdn/contract/tags.js";
-export { enqueuePurgeTags } from "./cdn/purge.js";
-// A raw `cacheable: true` route has no resolved intent, so it names its own
-// tags and the publish purge clears it with the page.
-export { tagCdnEntry } from "./cdn/route-tags.js";
 // Exposed for plugin routes that own an expensive-to-produce payload — a
 // generated social card, a derived image — so each route doesn't restate the
 // storage and ETag round-trips (#1958).
