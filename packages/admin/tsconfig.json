@@ -13,6 +13,7 @@
     "test",
     "e2e",
     "screenshots",
+    "verify",
     "vite.config.ts",
     "vitest.config.ts",
     "playwright.config.ts"
