@@ -35,6 +35,26 @@ export {
   sumDistinct,
 } from "@plumix/core/db";
 
+// Table, constraint and column builders for a site's own SQLite tables.
+export {
+  blob,
+  check,
+  // typescript-eslint's no-deprecated flags the binding when only one overload,
+  // drizzle's legacy variadic form, is deprecated.
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  foreignKey,
+  index,
+  integer,
+  numeric,
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- as `foreignKey`
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  unique,
+  uniqueIndex,
+} from "@plumix/core/db";
+
 // Introspection, bulk-write limits, write-result helpers and data migrations.
 export {
   chunkForD1,

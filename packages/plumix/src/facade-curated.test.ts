@@ -648,6 +648,138 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "placeholder",
         ],
       },
+      {
+        reason:
+          "the classes drizzle's SQLite table, column, index and constraint " +
+          "builders return. A schema is written with the builders, and a " +
+          "plugin reads a built table through `getTableColumns` and " +
+          "`getTableName`.",
+        names: [
+          "Check",
+          "CheckBuilder",
+          "ForeignKey",
+          "ForeignKeyBuilder",
+          "Index",
+          "IndexBuilder",
+          "IndexBuilderOn",
+          "InlineForeignKeys",
+          "PrimaryKey",
+          "PrimaryKeyBuilder",
+          "SQLiteBaseInteger",
+          "SQLiteBaseIntegerBuilder",
+          "SQLiteBigInt",
+          "SQLiteBigIntBuilder",
+          "SQLiteBlobBuffer",
+          "SQLiteBlobBufferBuilder",
+          "SQLiteBlobJson",
+          "SQLiteBlobJsonBuilder",
+          "SQLiteBoolean",
+          "SQLiteBooleanBuilder",
+          "SQLiteColumn",
+          "SQLiteColumnBuilder",
+          "SQLiteCustomColumn",
+          "SQLiteCustomColumnBuilder",
+          "SQLiteInteger",
+          "SQLiteIntegerBuilder",
+          "SQLiteNumeric",
+          "SQLiteNumericBigInt",
+          "SQLiteNumericBigIntBuilder",
+          "SQLiteNumericBuilder",
+          "SQLiteNumericNumber",
+          "SQLiteNumericNumberBuilder",
+          "SQLiteReal",
+          "SQLiteRealBuilder",
+          "SQLiteTable",
+          "SQLiteText",
+          "SQLiteTextBuilder",
+          "SQLiteTextJson",
+          "SQLiteTextJsonBuilder",
+          "SQLiteTimestamp",
+          "SQLiteTimestampBuilder",
+          "UniqueConstraint",
+          "UniqueConstraintBuilder",
+          "UniqueOnConstraintBuilder",
+        ],
+      },
+      {
+        reason:
+          "drizzle's SQLite database, dialects, session and query builders. " +
+          "A query starts from `ctx.db`, whose driver the runtime adapter " +
+          "supplies.",
+        names: [
+          "BaseSQLiteDatabase",
+          "ExecuteResultSync",
+          "QueryBuilder",
+          "SQLiteAsyncDialect",
+          "SQLiteDeleteBase",
+          "SQLiteDialect",
+          "SQLiteInsertBase",
+          "SQLiteInsertBuilder",
+          "SQLitePreparedQuery",
+          "SQLiteSelectBase",
+          "SQLiteSelectBuilder",
+          "SQLiteSelectQueryBuilderBase",
+          "SQLiteSession",
+          "SQLiteSyncDialect",
+          "SQLiteTransaction",
+          "SQLiteUpdateBase",
+          "SQLiteUpdateBuilder",
+          "withReplicas",
+        ],
+      },
+      {
+        reason:
+          "drizzle's SQLite views. A schema module declares tables, and a " +
+          "read a view would name is a query on `ctx.db`.",
+        names: [
+          "ManualViewBuilder",
+          "SQLiteView",
+          "ViewBuilder",
+          "ViewBuilderCore",
+          "getViewConfig",
+          "sqliteView",
+          "view",
+        ],
+      },
+      {
+        reason:
+          "drizzle's standalone set operators, which shape a query rather " +
+          "than declare a table. A select on `ctx.db` has them as methods " +
+          "of its own.",
+        names: ["except", "intersect", "union", "unionAll"],
+      },
+      {
+        reason:
+          "a query-time table alias for a self-join, which declares no " +
+          "table. Publishing it is a decision about query helpers, apart " +
+          "from the schema builders.",
+        names: ["alias"],
+      },
+      {
+        reason: "`integer` under a second name; it is published under its own",
+        names: ["int"],
+      },
+      {
+        reason:
+          "a table builder that rewrites every name it is given through a " +
+          "function. A site table is named as written, the name " +
+          "`plumix migrate` creates.",
+        names: ["sqliteTableCreator"],
+      },
+      {
+        reason:
+          "a column type with a codec of its own. The published column " +
+          "builders cover what SQLite stores, a JSON value included as " +
+          '`text({ mode: "json" })`.',
+        names: ["customType"],
+      },
+      {
+        reason:
+          "drizzle's schema introspection: a built table's full config, the " +
+          "tables a query names and a unique constraint's default name. A " +
+          "plugin reads a table through `getTableColumns` and `getTableName`.",
+        names: ["extractUsedTable", "getTableConfig", "uniqueKeyName"],
+      },
     ],
   },
   "./db/libsql": { mirrors: "@plumix/core/db/libsql", withheld: [] },
