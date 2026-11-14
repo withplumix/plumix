@@ -1,9 +1,18 @@
 import type {
+  RelationalSchemaConfig,
+  TablesRelationalConfig,
+} from "drizzle-orm";
+import type {
   DatabaseAdapter,
   RequestScopedDb,
   RequestScopedDbArgs,
 } from "plumix/runtime";
-import { drizzle } from "drizzle-orm/d1";
+import {
+  createTableRelationsHelpers,
+  extractTablesRelationalConfig,
+} from "drizzle-orm";
+import { drizzle, DrizzleD1Database, SQLiteD1Session } from "drizzle-orm/d1";
+import { SQLiteAsyncDialect } from "drizzle-orm/sqlite-core";
 import { isSecureRequest, readSessionCookie } from "plumix/auth";
 import { responseAllowsSharedStorage } from "plumix/runtime";
 
@@ -135,18 +144,46 @@ function connectRequestScoped(
 
 type D1SessionConstraint = "first-primary" | "first-unconstrained";
 
-function sessionDb(
-  session: D1DatabaseSession,
-  schema: RequestScopedDbArgs["schema"],
-) {
+type Schema = RequestScopedDbArgs["schema"];
+
+const relationalConfigs = new WeakMap<
+  Schema,
+  RelationalSchemaConfig<TablesRelationalConfig>
+>();
+
+function relationalConfigFor(
+  schema: Schema,
+): RelationalSchemaConfig<TablesRelationalConfig> {
+  let config = relationalConfigs.get(schema);
+  if (!config) {
+    const tables = extractTablesRelationalConfig(
+      schema,
+      createTableRelationsHelpers,
+    );
+    config = {
+      fullSchema: schema,
+      schema: tables.tables,
+      tableNamesMap: tables.tableNamesMap,
+    };
+    relationalConfigs.set(schema, config);
+  }
+  return config;
+}
+
+/**
+ * Not `drizzle()`: it re-derives the relational config from the whole schema
+ * per call. Drizzle 1.0 (relational queries v2) may change these constructors.
+ */
+function sessionDb(session: D1DatabaseSession, schema: Schema) {
   // Safety: `D1DatabaseSession` carries `prepare` and `batch` with the same
   // signatures `D1Database` declares, and those are the only members drizzle
   // and the tracer call — `dump`/`exec`/`withSession` are never reached.
   const sessionBinding = session as unknown as D1Database;
-  return drizzle(traceD1Client(d1Client(sessionBinding)), {
-    schema,
-    casing: "snake_case",
-  });
+  const client = traceD1Client(d1Client(sessionBinding));
+  const config = relationalConfigFor(schema);
+  const dialect = new SQLiteAsyncDialect({ casing: "snake_case" });
+  const driverSession = new SQLiteD1Session(client, dialect, config);
+  return new DrizzleD1Database("async", dialect, driverSession, config);
 }
 
 function getBinding(env: unknown, name: string): D1Database {
