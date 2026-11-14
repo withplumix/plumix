@@ -12,6 +12,7 @@ import {
   readThroughRoute,
 } from "./read-through.js";
 import { sharingBeforeRender } from "./sharing-verdict.js";
+import { isUniversalCopy, UNIVERSAL_COPY_HEADER } from "./universal-copy.js";
 
 /**
  * `defer` swallows the promise here so tests can drive the store-write path
@@ -64,6 +65,8 @@ function decide(
   return sharingBeforeRender({
     privileged: false,
     ephemeralGrant: false,
+    authorization: false,
+    principalIsPersonal: false,
     accessSegment: null,
     canKeySegments: cdnCanKeySegments(cdn),
     ...facts,
@@ -551,6 +554,146 @@ describe("readThrough", () => {
         originStore: false,
       },
     ]);
+  });
+});
+
+describe("readThrough for a session on a page with no policy", () => {
+  const ENTRY = { kind: "content", intent: "entry" } as const;
+
+  function sessionDecision(cdn: ConnectedCdn): SharingDecision {
+    return decide(cdn, {
+      request: GET("https://site.test/hello", {
+        cookie: "plumix_session=alice",
+      }),
+      privileged: true,
+      page: ENTRY,
+    });
+  }
+
+  function stored(body: string, headers: Record<string, string> = {}) {
+    return new Response(body, { status: 200, headers });
+  }
+
+  it("serves the universal copy without a render", async () => {
+    const universal = stored("shared", { [UNIVERSAL_COPY_HEADER]: "1" });
+    const { cdn, match, put } = spies({
+      match: () => Promise.resolve(universal),
+    });
+    const render = vi.fn(() => Promise.resolve(new Response("live")));
+
+    const result = await readThrough({
+      decision: sessionDecision(cdn),
+      cdn,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render,
+      tags: noTags,
+      personal: () => false,
+    });
+
+    expect(result).toBe(universal);
+    expect(render).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+    expect(match.mock.calls[0]?.[0].headers.has("cookie")).toBe(false);
+  });
+
+  it("renders live over a stored copy that is not universal", async () => {
+    const { cdn, put, decorate } = spies({
+      match: () => Promise.resolve(stored("teaser")),
+    });
+    const fresh = new Response("member body", { status: 200 });
+
+    const result = await readThrough({
+      decision: sessionDecision(cdn),
+      cdn,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render: () => Promise.resolve(fresh),
+      tags: noTags,
+      personal: () => false,
+    });
+
+    expect(result).toBe(fresh);
+    expect(put).not.toHaveBeenCalled();
+    expect(decorate).not.toHaveBeenCalled();
+  });
+
+  it("renders live on a miss and never stores the render", async () => {
+    const { cdn, put, decorate } = spies();
+    const fresh = new Response("member body", { status: 200 });
+    const telemetry = createTelemetryCollector();
+
+    const result = await readThrough({
+      decision: sessionDecision(cdn),
+      cdn,
+      defer: immediateDefer,
+      telemetry,
+      render: () => Promise.resolve(fresh),
+      tags: () => ["e:7"],
+      personal: () => false,
+    });
+
+    expect(result).toBe(fresh);
+    expect(put).not.toHaveBeenCalled();
+    expect(decorate).not.toHaveBeenCalled();
+    expect(cdnFacts(telemetry)).toEqual([
+      {
+        segment: "private",
+        universalRead: true,
+        decision: "miss",
+        stored: false,
+        originStore: true,
+      },
+    ]);
+  });
+});
+
+describe("the copy an anonymous render stores", () => {
+  async function storedCopy(accessSegment: RequestFacts["accessSegment"]) {
+    const { cdn, put } = spies();
+    await readThrough({
+      decision: decide(cdn, {
+        request: GET(),
+        accessSegment,
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render: () => Promise.resolve(new Response("page", { status: 200 })),
+      tags: noTags,
+      personal: () => false,
+    });
+    const copy = put.mock.calls[0]?.[1];
+    if (copy === undefined) throw new Error("expected a stored copy");
+    return copy;
+  }
+
+  it("is marked universal on a page with no policy", async () => {
+    expect(isUniversalCopy(await storedCopy(null))).toBe(true);
+  });
+
+  it("is not marked universal on a policied page", async () => {
+    expect(isUniversalCopy(await storedCopy("anonymous"))).toBe(false);
+  });
+
+  it("leaves the response the visitor gets unmarked", async () => {
+    const { cdn } = spies();
+
+    const result = await readThrough({
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render: () => Promise.resolve(new Response("page", { status: 200 })),
+      tags: noTags,
+      personal: () => false,
+    });
+
+    expect(isUniversalCopy(result)).toBe(false);
   });
 });
 

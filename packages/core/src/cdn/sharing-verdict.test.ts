@@ -23,6 +23,8 @@ function facts(overrides: Partial<RequestFacts> = {}): RequestFacts {
     request: new Request("https://site.test/post"),
     privileged: false,
     ephemeralGrant: false,
+    authorization: false,
+    principalIsPersonal: false,
     accessSegment: null,
     page: { kind: "content", intent: "entry" },
     canKeySegments: true,
@@ -32,9 +34,14 @@ function facts(overrides: Partial<RequestFacts> = {}): RequestFacts {
 
 /** The decision as plain data: the segment and the bypass reason or key URL. */
 function outcome(decision: SharingDecision) {
-  return decision.kind === "bypass"
-    ? { segment: decision.segment, bypass: decision.reason }
-    : { segment: decision.segment, key: decision.key.url };
+  switch (decision.kind) {
+    case "bypass":
+      return { segment: decision.segment, bypass: decision.reason };
+    case "read-through":
+      return { segment: decision.segment, key: decision.key.url };
+    case "read-universal":
+      return { segment: decision.segment, universal: decision.key.url };
+  }
 }
 
 const PLAIN_KEY = "https://site.test/post?__plumix_build=b1";
@@ -47,9 +54,40 @@ describe("sharingBeforeRender", () => {
       expected: { segment: "anonymous", key: PLAIN_KEY },
     },
     {
-      name: "an unpolicied page to a privileged request is private",
+      name: "an unpolicied page to a session reads the universal copy",
       facts: facts({ privileged: true }),
+      expected: { segment: "private", universal: PLAIN_KEY },
+    },
+    {
+      name: "an unpolicied page to an Authorization header is private",
+      facts: facts({ privileged: true, authorization: true }),
       expected: { segment: "private", bypass: "private" },
+    },
+    {
+      name: "an unpolicied page to a session with an ephemeral grant is private",
+      facts: facts({ privileged: true, ephemeralGrant: true }),
+      expected: { segment: "private", bypass: "private" },
+    },
+    {
+      name: "an unpolicied page to a principal personal from the start is private",
+      facts: facts({ privileged: true, principalIsPersonal: true }),
+      expected: { segment: "private", bypass: "private" },
+    },
+    {
+      name: "an unpolicied search to a session is private",
+      facts: facts({
+        privileged: true,
+        page: { kind: "content", intent: "search" },
+      }),
+      expected: { segment: "private", bypass: "private" },
+    },
+    {
+      name: "an unpolicied page to a session's POST bypasses the method",
+      facts: facts({
+        privileged: true,
+        request: new Request("https://site.test/post", { method: "POST" }),
+      }),
+      expected: { segment: "private", bypass: "method" },
     },
     {
       name: "an unpolicied page with an ephemeral grant is private",
@@ -189,12 +227,32 @@ describe("sharingBeforeRender", () => {
     {
       name: "an opted-in archive type still bypasses a private segment",
       facts: facts({
+        accessSegment: "private",
+        page: {
+          kind: "content",
+          intent: "archiveType",
+          registeredCacheable: true,
+        },
+      }),
+      expected: { segment: "private", bypass: "private" },
+    },
+    {
+      name: "an opted-in archive type with no policy reads the universal copy",
+      facts: facts({
         privileged: true,
         page: {
           kind: "content",
           intent: "archiveType",
           registeredCacheable: true,
         },
+      }),
+      expected: { segment: "private", universal: PLAIN_KEY },
+    },
+    {
+      name: "an archive type not opted in is private to a session",
+      facts: facts({
+        privileged: true,
+        page: { kind: "content", intent: "archiveType" },
       }),
       expected: { segment: "private", bypass: "private" },
     },
@@ -268,14 +326,22 @@ describe("sharingBeforeRender", () => {
 
 const ENTRY: PageKind = { kind: "content", intent: "entry" };
 
-function readThrough(segment: Segment): SharingDecision {
+function readThrough(segment: Segment, universal = false): SharingDecision {
   return {
     kind: "read-through",
     segment,
     page: ENTRY,
     key: new Request("https://site.test/post"),
+    universal,
   };
 }
+
+const READ_UNIVERSAL: SharingDecision = {
+  kind: "read-universal",
+  segment: "private",
+  page: ENTRY,
+  key: new Request("https://site.test/post"),
+};
 
 function bypass(
   segment: Segment,
@@ -291,91 +357,199 @@ describe("sharingAfterRender", () => {
       name: "an anonymous 200 is stored, decorated and leaves as a page",
       decision: readThrough("anonymous"),
       render: { status: 200, personal: false },
-      expected: { store: true, decorate: true, clientCopy: "page" },
+      expected: {
+        store: true,
+        decorate: true,
+        universal: false,
+        clientCopy: "page",
+      },
     },
     {
       name: "an anonymous 404 is neither stored nor decorated",
       decision: readThrough("anonymous"),
       render: { status: 404, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "page" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
     },
     {
       name: "an anonymous redirect is neither stored nor decorated",
       decision: readThrough("anonymous"),
       render: { status: 301, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "page" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
     },
     {
       name: "an anonymous 500 is neither stored nor decorated",
       decision: readThrough("anonymous"),
       render: { status: 500, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "page" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
     },
     {
       name: "a personal anonymous 200 is neither stored nor decorated",
       decision: readThrough("anonymous"),
       render: { status: 200, personal: true },
-      expected: { store: false, decorate: false, clientCopy: "page" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
     },
     {
       name: "a shared segment's 200 is stored but leaves private",
       decision: readThrough("authenticated"),
       render: { status: 200, personal: false },
-      expected: { store: true, decorate: false, clientCopy: "private" },
+      expected: {
+        store: true,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
     },
     {
       name: "a shared segment's personal 200 is not stored and leaves private",
       decision: readThrough("authenticated"),
       render: { status: 200, personal: true },
-      expected: { store: false, decorate: false, clientCopy: "private" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
     },
     {
       name: "a shared segment's 404 is not stored and leaves private",
       decision: readThrough("capability:briefing:read"),
       render: { status: 404, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "private" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
     },
     {
       name: "a private bypass leaves private",
       decision: bypass("private", "private"),
       render: { status: 200, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "private" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
     },
     {
       name: "an anonymous bypass is not stored and leaves as a page",
       decision: bypass("anonymous", "intent"),
       render: { status: 200, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "page" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
     },
     {
       name: "a shared segment the CDN cannot key leaves private",
       decision: bypass("authenticated", "segment-unsupported"),
       render: { status: 200, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "private" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
     },
     {
       name: "a policied plugin route's anonymous response leaves as rendered",
       decision: bypass("anonymous", "intent", { kind: "policied-route" }),
       render: { status: 200, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "as-rendered" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "as-rendered",
+      },
     },
     {
       name: "a policied plugin route's private response leaves private",
       decision: bypass("private", "private", { kind: "policied-route" }),
       render: { status: 200, personal: false },
-      expected: { store: false, decorate: false, clientCopy: "private" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
     },
     {
       name: "an anonymous hit leaves as a page",
       decision: readThrough("anonymous"),
       render: undefined,
-      expected: { store: false, decorate: false, clientCopy: "page" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
     },
     {
       name: "a shared segment's hit leaves private",
       decision: readThrough("authenticated"),
       render: undefined,
-      expected: { store: false, decorate: false, clientCopy: "private" },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "private",
+      },
+    },
+    {
+      name: "an unpolicied anonymous 200 is stored as the universal copy",
+      decision: readThrough("anonymous", true),
+      render: { status: 200, personal: false },
+      expected: {
+        store: true,
+        decorate: true,
+        universal: true,
+        clientCopy: "page",
+      },
+    },
+    {
+      name: "an unpolicied anonymous 404 is not stored as the universal copy",
+      decision: readThrough("anonymous", true),
+      render: { status: 404, personal: false },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "page",
+      },
+    },
+    {
+      name: "a session's render of the universal page is never stored",
+      decision: READ_UNIVERSAL,
+      render: { status: 200, personal: false },
+      expected: {
+        store: false,
+        decorate: false,
+        universal: false,
+        clientCopy: "universal-reader",
+      },
     },
   ])("$name", ({ decision, render, expected }) => {
     expect(sharingAfterRender(decision, render)).toEqual(expected);

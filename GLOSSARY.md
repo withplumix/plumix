@@ -573,8 +573,12 @@ The copy of a public response the CDN stores under a segment and serves on a hit
 _Avoid_: stored copy, cached response
 
 **Client copy**:
-The copy of a public response that leaves for the visitor. Its headers tell downstream caches and the browser what they may keep, and the segment decides them, on a hit and a miss alike: every segment but `anonymous` leaves `private, no-store`.
+The copy of a public response that leaves for the visitor. Its headers tell downstream caches and the browser what they may keep, and the segment decides them, on a hit and a miss alike: every segment but `anonymous` leaves `private, no-store`, except the universal copy served to a signed-in reader, which leaves `private, no-cache`.
 _Avoid_: visitor's copy, response headers
+
+**Universal copy**:
+The edge copy of a page with no access policy, stored from an anonymous 200 render. It is the same for every principal, so a signed-in reader who is not personal from the start may be served it; their own render never replaces it. See ADR 0030.
+_Avoid_: shared copy, public copy
 
 **Personal render**:
 A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.apiToken`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; the segment's edge copy still serves the next principal in it. See ADR 0030.

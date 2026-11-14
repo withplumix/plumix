@@ -60,9 +60,39 @@ can keep it, but a hit served from it still leaves `private, no-store` with
 downstream cache would keep one member's copy past a revoked session, and
 serve it to anonymous visitors when the session rode in a header.
 
-On the `anonymous` segment the question cannot arise, because every privileged
-request renders `private` there (#2914). On the `private` segment nothing is
-ever stored, so the verdict changes nothing.
+On the `anonymous` segment the question cannot arise, because a privileged
+request never writes there. On the `private` segment nothing is ever stored,
+so the verdict changes nothing.
+
+## The universal copy
+
+Amended by #3642, replacing #2914's rule for pages with no access policy.
+
+> **A privileged request may read the universal anonymous copy and never
+> writes one.**
+
+An anonymous 200 of a page with no access policy is the same for every
+principal, so its edge copy is marked universal when it is stored. A request
+with a session, no `Authorization` header and no ephemeral grant, to a page
+with no access policy, looks that copy up under the anonymous key:
+
+- a universal copy is served, and leaves `private, no-cache` with `vary:
+cookie` and no `cache-tag`, so the reader's browser keeps it only while it
+  revalidates;
+- a miss, or a copy that is not universal, renders live in the `private`
+  segment, and that render is never stored.
+
+The two decisions made before the render apply here too: a principal who gets
+the admin bar, or whose locale differs from the request's anonymous one, skips
+the shared copy and renders live. A policied page is unchanged: its segment
+decides, and a policy that grants `anonymous` to a privileged request still
+renders `private`, since its anonymous copy may be a teaser. An API-token
+request never reads the shared copy. The marker is internal: it is never on a
+response that leaves.
+
+Signed-in UI on such a page loads the session on the client, as islands
+already do through `authClient`; the server stays the gate for anything that
+needs the principal.
 
 ## Considered options
 
