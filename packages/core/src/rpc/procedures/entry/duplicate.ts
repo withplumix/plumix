@@ -1,11 +1,19 @@
+import type { Capability } from "../../../access/contract/capability.js";
 import type { NewEntry } from "../../../db/schema/entries.js";
+import type { JsonObject, JsonValue } from "../../../json.js";
+import type { MetaBoxField } from "../../../plugin/manifest.js";
 import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { entries } from "../../../db/schema/entries.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { applyTermPatch, loadEntryTerms } from "../../../entries/terms.js";
 import { canReadEntry } from "../../../entries/visibility.js";
-import { resolveEntryMeta } from "../../../meta/entry.js";
+import { patchedMetaBag } from "../../../meta/core.js";
+import {
+  resolveEntryMeta,
+  sanitizeAndValidateEntryMeta,
+} from "../../../meta/entry.js";
+import { listEntryMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryRpc } from "../../filters.js";
@@ -70,6 +78,21 @@ export const duplicate = base
       "draft",
     );
 
+    // A key no field registers is the record of the plugin that wrote it, and
+    // a gated field is the caller's only if a create would let them set it.
+    const metaPatch = await sanitizeAndValidateEntryMeta(
+      context,
+      source.type,
+      writableMeta(
+        listEntryMetaFields(context.plugins, source.type),
+        source.meta,
+        context.auth,
+      ),
+      {},
+      errors,
+      "draft",
+    );
+
     const candidate: NewEntry = {
       type: source.type,
       title: `${source.title} (copy)`,
@@ -84,9 +107,7 @@ export const duplicate = base
       sortOrder: source.sortOrder,
       authorId: context.user.id,
       publishedAt: null,
-      // Copy the raw meta JSON verbatim — it was already sanitized on
-      // the source, so no decode/re-validate round trip is needed.
-      meta: source.meta,
+      meta: patchedMetaBag({}, metaPatch),
     };
 
     let created: typeof entries.$inferSelect | undefined;
@@ -119,3 +140,18 @@ export const duplicate = base
     });
     return { ...output, etag: etagOf(created.updatedAt) };
   });
+
+function writableMeta(
+  fields: readonly MetaBoxField[],
+  stored: JsonObject,
+  auth: { can(capability: Capability): boolean },
+): JsonObject {
+  const writable: Record<string, JsonValue> = {};
+  for (const field of fields) {
+    const value = stored[field.key];
+    if (value === undefined) continue;
+    if (field.capability && !auth.can(field.capability)) continue;
+    writable[field.key] = value;
+  }
+  return writable;
+}

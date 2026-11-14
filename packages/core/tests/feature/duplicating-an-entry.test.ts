@@ -11,11 +11,17 @@ import { testSite } from "../../src/test/site.js";
 const posts = definePlugin("posts", {
   setup: (ctx) => {
     ctx.registerEntryType("post", { label: "Posts", isPublic: true });
+    ctx.registerEntryType("guide", { label: "Guides" });
     ctx.registerTermTaxonomy("category", { label: "category" });
     ctx.registerEntryMetaBox("box", {
       label: "Box",
       entryTypes: ["post"],
       fields: [text("tone").default("warm")],
+    });
+    ctx.registerEntryMetaBox("gated", {
+      label: "Gated",
+      entryTypes: ["post", "guide"],
+      fields: [text("note").capability("entry:post:edit_any")],
     });
   },
 });
@@ -227,21 +233,18 @@ describe("duplicating an entry", () => {
     expect(fetched.terms.category).toEqual([category.id]);
   });
 
-  test("copies the source's raw meta column", async () => {
+  test("copies the meta a field registers, and leaves out a key none does", async () => {
     const source = await site.factory.published.create({
       title: "Has meta",
       slug: "has-meta",
-      meta: { featured: true },
+      meta: { tone: "cool", featured: true },
     });
 
     const copy = await site
       .actingAs("editor")
       .rpc.entry.duplicate({ id: source.id });
 
-    const persisted = await site.context.db.query.entries.findFirst({
-      where: eq(entries.id, copy.id),
-    });
-    expect(persisted?.meta).toEqual({ featured: true });
+    expect(await storedMeta(copy.id)).toEqual({ tone: "cool" });
   });
 
   test("a duplicate of a duplicate still gets a fresh slug", async () => {
@@ -313,20 +316,60 @@ describe("duplicating an entry", () => {
     await expect(duplicate).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  // A copy is not a new entity in the ADR 0026 sense: it carries the
-  // source's meta as stored, so a key the source lacks stays absent.
-  test("applies no field defaults to the copy", async () => {
+  test("leaves out a field the caller may not write", async () => {
+    const author = await site.factory.author.create();
     const source = await site.factory.published.create({
-      meta: { other: "kept" },
+      authorId: author.id,
+      meta: { tone: "cool", note: "editors only" },
     });
+
+    const copy = await site
+      .actingAs(author)
+      .rpc.entry.duplicate({ id: source.id });
+
+    expect(await storedMeta(copy.id)).toEqual({ tone: "cool" });
+  });
+
+  // One row per registered type, so a type added later needs a row here.
+  const writableByType: Record<string, object> = {
+    post: { tone: "set" },
+    guide: {},
+  };
+
+  test.each([...site.context.plugins.entryTypes.keys()])(
+    "a %s copy holds only the meta a create by the caller can set",
+    async (type) => {
+      const author = await site.factory.author.create();
+      const source = await site.factory.published.create({
+        type,
+        authorId: author.id,
+        meta: { unregistered: "set", tone: "set", note: "set" },
+      });
+
+      const copy = await site
+        .actingAs(author)
+        .rpc.entry.duplicate({ id: source.id });
+
+      expect(await storedMeta(copy.id)).toEqual(writableByType[type]);
+    },
+  );
+
+  // A copy is not a new entity in the ADR 0026 sense, so a key the source
+  // lacks stays absent.
+  test("applies no field defaults to the copy", async () => {
+    const source = await site.factory.published.create({ meta: {} });
 
     const copy = await site
       .actingAs("editor")
       .rpc.entry.duplicate({ id: source.id });
 
-    const persisted = await site.context.db.query.entries.findFirst({
-      where: eq(entries.id, copy.id),
-    });
-    expect(persisted?.meta).toEqual({ other: "kept" });
+    expect(await storedMeta(copy.id)).toEqual({});
   });
 });
+
+async function storedMeta(id: number): Promise<unknown> {
+  const row = await site.context.db.query.entries.findFirst({
+    where: eq(entries.id, id),
+  });
+  return row?.meta;
+}
