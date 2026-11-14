@@ -28,7 +28,7 @@ const config = (dir: string, tagline = "first") =>
 import { definePlugin } from "plumix/plugin";
 import { defineTheme, fallback } from "plumix/theme";
 import { plumix } from "plumix";
-import { bun, bunSqlite } from "@plumix/runtime-bun";
+import { bun, bunSqlite, diskStorage } from "@plumix/runtime-bun";
 import { greeting } from "./greeting.mjs";
 
 const probes = definePlugin("probes", { setup: (ctx) => {
@@ -43,7 +43,8 @@ const probes = definePlugin("probes", { setup: (ctx) => {
 
 export default plumix({
   runtime: bun(),
-  database: bunSqlite({ path: ${JSON.stringify(join(dir, "site.sqlite"))} }),
+  database: bunSqlite({ path: "data/site.sqlite" }),
+  storage: diskStorage({ dir: "data/media" }),
   auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
   theme: defineTheme({ templates: [fallback(() => null)] }),
   plugins: [probes],
@@ -68,6 +69,7 @@ let dir: string;
 let adminDir: string;
 let server: ViteDevServer;
 let undoSourceConfigs: () => void;
+let previousCwd: string;
 
 /** Read per request: a restart binds a fresh ephemeral port. */
 function origin(): string {
@@ -103,11 +105,17 @@ beforeAll(async () => {
 
   mkdirSync(SITES, { recursive: true });
   dir = realpathSync(mkdtempSync(join(SITES, "dev-")));
+  // The cwd a relative `diskStorage()` dir resolves against, as `plumix dev`
+  // run from the project root has it.
+  previousCwd = process.cwd();
+  process.chdir(dir);
   writeFileSync(join(dir, CONFIG_FILE), config(dir));
   writeFileSync(join(dir, "greeting.mjs"), 'export const greeting = "v1";\n');
   writeFileSync(join(dir, ".env"), "PROBE_SECRET=from-dotenv\n");
+  mkdirSync(join(dir, "data/media/objects/2026/11"), { recursive: true });
+  writeFileSync(join(dir, "data/media/objects/2026/11/draft.png"), "draft");
   await applyCoreTestSchema(
-    bunSqlite({ path: join(dir, "site.sqlite") }).connect(
+    bunSqlite({ path: join(dir, "data/site.sqlite") }).connect(
       {},
       new Request("http://localhost/"),
       schema,
@@ -134,6 +142,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await server.close();
+  process.chdir(previousCwd);
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
   undoSourceConfigs();
@@ -146,6 +155,28 @@ describe("plumix dev on the bun runtime", { timeout: 240_000 }, () => {
     const secret = await text("/probe/secret");
 
     expect(secret).toBe("from-dotenv");
+  });
+
+  test.each([
+    "/data/site.sqlite",
+    "/data/site.sqlite-wal",
+    "/data/media/objects/2026/11/draft.png",
+  ])("%s, which a slot keeps on disk, is refused", async (path) => {
+    const response = await fetch(`${origin()}${path}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  test("Vite's own deny list still refuses .env", async () => {
+    const response = await fetch(`${origin()}/.env`);
+
+    expect(response.status).toBe(403);
+  });
+
+  test("a source module beside the slots' files is still served", async () => {
+    const response = await fetch(`${origin()}/greeting.mjs`);
+
+    expect(response.status).toBe(200);
   });
 
   test("editing a module the config imports changes what the next request serves, without a restart", async () => {

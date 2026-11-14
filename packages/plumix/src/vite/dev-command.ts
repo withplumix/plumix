@@ -14,6 +14,7 @@ import {
   isRunnableDevEnvironment,
   mergeConfig,
   normalizePath,
+  resolveConfig,
 } from "vite";
 
 import type {
@@ -124,6 +125,12 @@ export interface DevCommandOptions<Entry extends DevEntry> {
     readonly publicDir: string;
   }) => Promise<LoadedSite>;
   /**
+   * The absolute paths this runtime's slots keep on disk for `config`, such
+   * as a database file or a storage directory, which the dev server refuses
+   * to serve.
+   */
+  readonly privatePaths?: (config: PlumixConfig) => readonly string[];
+  /**
    * Test seam: merged over the dev server's own Vite config, so a test can
    * add a resolver and take an ephemeral port.
    */
@@ -133,6 +140,31 @@ export interface DevCommandOptions<Entry extends DevEntry> {
 }
 
 const SERVER_ENVIRONMENT = "server";
+
+const GLOB_SYNTAX = /[\\*?[\]{}()!+@]/g;
+
+/**
+ * `server.fs.deny` globs refusing each path and everything under it, with
+ * the path's own glob syntax escaped.
+ */
+export function denyPatterns(paths: readonly string[]): string[] {
+  return paths.flatMap((path) => {
+    const literal = normalizePath(path).replace(GLOB_SYNTAX, "\\$&");
+    return [literal, `${literal}/**`];
+  });
+}
+
+/**
+ * Vite's own `server.fs.deny`, which a configured list replaces rather than
+ * extends.
+ */
+async function viteDefaultDeny(root: string): Promise<string[]> {
+  const resolved = await resolveConfig(
+    { configFile: false, root, logLevel: "silent" },
+    "serve",
+  );
+  return resolved.server.fs.deny;
+}
 
 /** The page a failed `buildApp` renders; small, so it is written whole. */
 async function respond(res: ServerResponse, response: Response): Promise<void> {
@@ -155,6 +187,7 @@ export async function runDevCommand<Entry extends DevEntry>(
   const loadDotenv = createDotenvLoader();
   // Set by `config` before `configureServer` reads it, on start and restart.
   let entryPath = "";
+  let defaultDeny: Promise<string[]> | undefined;
 
   async function loadSite(
     runner: ModuleRunner,
@@ -184,12 +217,22 @@ export async function runDevCommand<Entry extends DevEntry>(
     // predates the file.
     async config() {
       loadDotenv(join(ctx.cwd, ".env"));
-      const { runtime } = await emitPlumixSources(ctx.cwd, ctx.configPath, {
-        fresh: true,
-      });
+      const { config, runtime } = await emitPlumixSources(
+        ctx.cwd,
+        ctx.configPath,
+        { fresh: true },
+      );
       const server = options.environment(runtime);
       entryPath = join(ctx.cwd, server.entry);
       return {
+        server: {
+          fs: {
+            deny: [
+              ...(await (defaultDeny ??= viteDefaultDeny(ctx.cwd))),
+              ...denyPatterns(options.privatePaths?.(config) ?? []),
+            ],
+          },
+        },
         environments: {
           [SERVER_ENVIRONMENT]: {
             ...serverEnvironment(server),

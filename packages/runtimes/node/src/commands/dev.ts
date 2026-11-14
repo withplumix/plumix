@@ -1,21 +1,41 @@
-import type { CommandDefinition } from "plumix";
+import { resolve } from "node:path";
+import type { CommandDefinition, PlumixConfig } from "plumix";
 import type { DevCommandOptions, DevEntry } from "plumix/vite";
 
 import type { RequestHandler } from "../http/bridge.js";
 import type { NodeSite } from "../site.js";
 import { isNodeRuntime } from "../adapter.js";
+import { isDiskStorage } from "../disk-storage.js";
 import { ASSETS_DIR_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
 import { createRequestListener } from "../http/bridge.js";
 import { createImageLayer } from "../http/images.js";
+import { isNodeSqlite } from "../node-sqlite.js";
 import { loadPlumixVite, nodeServerEnvironment } from "./vite.js";
 
 type NodeDevEntry = DevEntry & Partial<Pick<NodeSite, "startCron" | "dispose">>;
+
+/**
+ * Resolved against the process cwd, as `nodeSqlite()` and `diskStorage()`
+ * resolve them.
+ */
+function privatePaths(config: PlumixConfig): string[] {
+  const paths: string[] = [];
+  if (isNodeSqlite(config.database)) {
+    const file = resolve(config.database.config.path);
+    paths.push(file, `${file}-wal`, `${file}-shm`, `${file}-journal`);
+  }
+  if (config.storage && isDiskStorage(config.storage)) {
+    paths.push(resolve(config.storage.config.dir));
+  }
+  return paths;
+}
 
 /** What `plumix dev` hands `runDevCommand` on this runtime. */
 export const nodeDevOptions: DevCommandOptions<NodeDevEntry> = {
   environment: nodeServerEnvironment,
   stagedFiles: (root) => createAssetsLayer({ root }).serve,
+  privatePaths,
   async site({ config, entry, publicDir }) {
     const { trustProxy, bodySizeLimit } = isNodeRuntime(config.runtime)
       ? config.runtime.config
