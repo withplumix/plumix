@@ -1,6 +1,9 @@
 import type { AuthenticatedAppContext } from "../../../context/app-context.js";
-import type { Entry, NewEntry } from "../../../db/schema/entries.js";
-import type { EntryEditErrors } from "../../../entries/editability.js";
+import type {
+  Entry,
+  EntryStatus,
+  NewEntry,
+} from "../../../db/schema/entries.js";
 import type { JsonObject, JsonValue } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
 import type { FieldAttrCheck } from "./content.js";
@@ -10,10 +13,7 @@ import { ACCESS_POLICY_META_KEY } from "../../../access/contract/meta-key.js";
 import { etagOf } from "../../../db/concurrency.js";
 import { isUniqueConstraintError } from "../../../db/index.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
-import {
-  assertCanDeleteEntry,
-  assertCanEditEntry,
-} from "../../../entries/editability.js";
+import { assertCanEditEntry } from "../../../entries/editability.js";
 import {
   applyTermPatch,
   assertTermsPatchValid,
@@ -67,6 +67,7 @@ import {
 } from "./lifecycle.js";
 import { scheduledDateInvalid } from "./publish-scheduled.js";
 import { entryUpdateInputSchema } from "./schemas.js";
+import { assertCanMoveEntryStatus } from "./status-moves.js";
 import { writeErrors as errors, withStoredMeta } from "./writes-shared.js";
 
 interface ParentGuards {
@@ -77,21 +78,6 @@ interface ParentGuards {
 interface GuardedWriteGuards {
   readonly slugTaken: () => never;
   readonly updateFailed: () => never;
-}
-
-function assertCanPublishTransition(
-  context: AuthenticatedAppContext,
-  existing: Entry,
-  errors: EntryEditErrors,
-): void {
-  const publishCapability = entryCapabilityByName(
-    context.plugins,
-    existing.type,
-    "publish",
-  );
-  if (!context.auth.can(publishCapability)) {
-    throw errors.FORBIDDEN({ data: { capability: publishCapability } });
-  }
 }
 
 /**
@@ -158,12 +144,11 @@ function fieldAttrCheck(
 
 /**
  * Where a procedure checks capabilities inside the save: `edit` once the row is
- * loaded, `publish` or `trash` once the save is known to make that move.
+ * loaded, `status` once the save is known to change the status.
  */
 interface EntryUpdateGates {
   readonly edit?: (existing: Entry) => void;
-  readonly publish?: (existing: Entry) => void;
-  readonly trash?: (existing: Entry) => void;
+  readonly status?: (existing: Entry, to: EntryStatus) => void;
 }
 
 /** `entry.update` and `ctx.entries.update`, each with its own gates. */
@@ -347,11 +332,8 @@ export async function updateEntry(
     };
   }
 
-  if (isPublishTransition || nowScheduled) {
-    gates.publish?.(existing);
-  }
-  if (filtered.status === "trash" && existing.status !== "trash") {
-    gates.trash?.(existing);
+  if (filtered.status !== undefined && filtered.status !== existing.status) {
+    gates.status?.(existing, filtered.status);
   }
 
   if (filtered.parentId != null && filtered.parentId !== existing.parentId) {
@@ -509,11 +491,8 @@ export const update = base
       edit: (existing) => {
         assertCanEditEntry(context, existing, errors);
       },
-      publish: (existing) => {
-        assertCanPublishTransition(context, existing, errors);
-      },
-      trash: (existing) => {
-        assertCanDeleteEntry(context, existing, errors);
+      status: (existing, to) => {
+        assertCanMoveEntryStatus(context, existing, to, errors);
       },
     });
     const output = await context.filters.apply(entryRpc.update.output, {

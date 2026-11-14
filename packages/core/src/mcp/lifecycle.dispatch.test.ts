@@ -206,6 +206,23 @@ describe("MCP content_publish", () => {
     expect((await rowOf(h, id))?.status).toBe("draft");
   });
 
+  test("an entry in the trash is refused to a caller who can't restore it, as entry.restore refuses them", async () => {
+    const h = await mcpHarness();
+    const author = await h.factory.user.create({ role: "author" });
+    const secret = await mintPat(h, { userId: author.id });
+    const trashed = await h.factory.trashed.create({ authorId: author.id });
+
+    const result = await callTool(h, secret, "content_publish", {
+      type: "post",
+      id: trashed.id,
+      ifMatch: await currentEtag(h.db, trashed.id),
+    });
+
+    expect(result._meta?.code).toBe("forbidden");
+    expect(result.content[0]?.text).toContain("entry:post:delete");
+    expect((await rowOf(h, trashed.id))?.status).toBe("trash");
+  });
+
   test("a stale ifMatch returns conflict with the current etag", async () => {
     const h = await mcpHarness();
     const secret = await mintPat(h);

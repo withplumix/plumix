@@ -1,7 +1,6 @@
 import * as v from "valibot";
 
 import type { JsonObject } from "../../../json.js";
-import { entryCapabilityByName } from "../../../access/contract/entry-capabilities.js";
 import { etagOf, ifMatchObject } from "../../../db/concurrency.js";
 import { loadAuthoredEntry } from "../../../entries/authored.js";
 import { sanitizePromotedEntryMeta } from "../../../meta/entry.js";
@@ -26,6 +25,7 @@ import {
   fireEntryTransition,
   fireEntryUpdated,
 } from "./lifecycle.js";
+import { assertCanPublishEntry } from "./status-moves.js";
 
 const publishInput = ifMatchObject(
   { id: idParam, takeOver: v.optional(v.boolean()) },
@@ -40,14 +40,7 @@ export const publish = base
     if (!live) {
       throw errors.NOT_FOUND({ data: { kind: "entry", id: input.id } });
     }
-    const publishCapability = entryCapabilityByName(
-      context.plugins,
-      live.type,
-      "publish",
-    );
-    if (!context.auth.can(publishCapability)) {
-      throw errors.FORBIDDEN({ data: { capability: publishCapability } });
-    }
+    assertCanPublishEntry(context, live, errors);
     await assertLeaseAllows(
       context,
       { kind: "entry", id: live.id },
