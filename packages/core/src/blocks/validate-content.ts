@@ -1,4 +1,5 @@
-import type { BlockSpec } from "./block-registry.js";
+import type { JsonObject } from "../json.js";
+import type { BlockField, BlockSpec } from "./block-registry.js";
 import type { EntryContent } from "./entry-content.js";
 import type { BlockNode } from "./render-block-tree.js";
 import type { ForbiddenStyle, StylePolicy } from "./styles/style-policy.js";
@@ -219,6 +220,79 @@ function keptAsStored(
     kept.add(path);
   });
   return kept;
+}
+
+export interface FieldAttr {
+  readonly path: string;
+  readonly node: BlockNode;
+  readonly field: BlockField;
+  /** `starting` holds this value on a node with the same `id` and `name`. */
+  readonly stored: boolean;
+}
+
+function fieldsOf(spec: BlockSpec | undefined): readonly BlockField[] {
+  return (spec?.inputs ?? []).flatMap((input) =>
+    input.field ? [input.field] : [],
+  );
+}
+
+const fieldAttrIdentityOf = (node: BlockNode, field: BlockField): string =>
+  `${identityOf(node)}\u0000${field.key}\u0000${JSON.stringify(node.attrs?.[field.key])}`;
+
+/** Every field attr `content` holds. Each stored value matches once. */
+export function fieldAttrs(
+  content: EntryContent,
+  starting: readonly EntryContent[],
+  registry: SpecLookup,
+): readonly FieldAttr[] {
+  const available = mostHeldByAny(starting, registry, (node) =>
+    fieldsOf(registry.get(node.name)).map((field) =>
+      fieldAttrIdentityOf(node, field),
+    ),
+  );
+  const attrs: FieldAttr[] = [];
+  eachNode(content.blocks, "blocks", registry, (node, path) => {
+    for (const field of fieldsOf(registry.get(node.name))) {
+      const identity = fieldAttrIdentityOf(node, field);
+      const left = available.get(identity) ?? 0;
+      if (left > 0) available.set(identity, left - 1);
+      attrs.push({ path, node, field, stored: left > 0 });
+    }
+  });
+  return attrs;
+}
+
+export function withAttrsAtPaths<Content extends EntryContent>(
+  content: Content,
+  registry: SpecLookup,
+  attrs: ReadonlyMap<string, JsonObject>,
+): Content {
+  if (attrs.size === 0) return content;
+  return {
+    ...content,
+    blocks: patchedNodes(content.blocks, "blocks", registry, attrs),
+  };
+}
+
+function patchedNodes(
+  nodes: readonly BlockNode[],
+  basePath: string,
+  registry: SpecLookup,
+  attrs: ReadonlyMap<string, JsonObject>,
+): BlockNode[] {
+  return nodes.map((node, i) => {
+    const path = `${basePath}[${String(i)}]`;
+    let patched = attrs.get(path) ?? node.attrs;
+    for (const key of blockSlotKeys(node, registry.get(node.name))) {
+      const value = patched?.[key];
+      if (!isBlockNodeArray(value)) continue;
+      patched = {
+        ...patched,
+        [key]: patchedNodes(value, `${path}.${key}`, registry, attrs),
+      };
+    }
+    return patched === node.attrs ? node : { ...node, attrs: patched };
+  });
 }
 
 function slotOf(

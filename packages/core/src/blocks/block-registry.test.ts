@@ -1,8 +1,12 @@
 import { describe, expect, test } from "vitest";
 
-import type { BlockSpec } from "./block-registry.js";
+import type { BlockField, BlockSpec } from "./block-registry.js";
 import type { BlockView } from "./render-block-tree.js";
-import { createBlockRegistry, defineBlock } from "./block-registry.js";
+import {
+  contentInput,
+  createBlockRegistry,
+  defineBlock,
+} from "./block-registry.js";
 
 function makeSpec(name: string, render: BlockView): BlockSpec {
   return {
@@ -63,7 +67,48 @@ describe("createBlockRegistry", () => {
   });
 });
 
+const title: BlockField = {
+  key: "title",
+  label: "Title",
+  type: "string",
+  inputType: "text",
+};
+
 describe("defineBlock", () => {
+  test("turns a meta-box field into an input carrying it", () => {
+    const spec = defineBlock({
+      name: "acme/card",
+      inputs: [title],
+      view: () => Promise.resolve({ default: noopRender }),
+    });
+
+    expect(spec.inputs).toEqual([
+      { name: "title", type: "text", label: "Title", field: title },
+    ]);
+  });
+
+  test("builds a field builder into an input carrying its field", () => {
+    const spec = defineBlock({
+      name: "acme/card",
+      inputs: [{ build: () => title }],
+      view: () => Promise.resolve({ default: noopRender }),
+    });
+
+    expect(spec.inputs?.[0]?.field).toBe(title);
+  });
+
+  test("keeps a block input as declared", () => {
+    const slot = { name: "content", type: "slot" };
+
+    const spec = defineBlock({
+      name: "acme/card",
+      inputs: [slot],
+      view: () => Promise.resolve({ default: noopRender }),
+    });
+
+    expect(spec.inputs?.[0]).toBe(slot);
+  });
+
   test("returns the spec with the outer object shallow-frozen", () => {
     const spec = defineBlock({
       name: "core/heading",
@@ -122,6 +167,18 @@ describe("defineBlock", () => {
     expect(spec.variations?.[0]?.title).toEqual({
       id: "block.hero.split.title",
       message: "Split Hero",
+    });
+  });
+});
+
+describe("contentInput", () => {
+  test("marks a meta-box field input as a content input", () => {
+    expect(contentInput({ build: () => title })).toEqual({
+      name: "title",
+      type: "text",
+      label: "Title",
+      field: title,
+      content: true,
     });
   });
 });

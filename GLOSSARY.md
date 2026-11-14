@@ -229,7 +229,7 @@ The module a block spec's `view` imports lazily, holding what renders or runs on
 _Avoid_: render function, block component, view (alone, for this module)
 
 **Block input**:
-A single editable control declared on a block — an attribute, a style-bound property, or a slot input.
+A single editable control declared on a block — an attribute, a style-bound property, a slot input, or a meta-box field whose value the save settles like a meta field's.
 
 **Content input**:
 A block input marked `content: true`: the text, link or media a writer without the layout capability may still change. Every other input is layout, and a slot or style-bound input always is.

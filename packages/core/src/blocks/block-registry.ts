@@ -54,6 +54,35 @@ export interface BlockInput {
    * plugin field.
    */
   readonly accept?: string | readonly string[];
+  /** A write settles the attr through this field. */
+  readonly field?: BlockField;
+}
+
+/**
+ * A compiled meta-box field, named by the part `blocks/` reads: the field
+ * contracts sit in a layer above it.
+ */
+export interface BlockField {
+  readonly key: string;
+  readonly label: Label;
+  readonly type: "string" | "number" | "boolean" | "json";
+  readonly inputType: string;
+}
+
+/** A meta-box field builder from `plumix/fields`, or the field it builds. */
+export type BlockFieldDeclaration = BlockField | { build(): BlockField };
+
+export function contentInput(declared: BlockFieldDeclaration): BlockInput {
+  return { ...fieldInput(declared), content: true };
+}
+
+function fieldInput(declared: BlockFieldDeclaration): BlockInput {
+  const field = "build" in declared ? declared.build() : declared;
+  return { name: field.key, type: field.inputType, label: field.label, field };
+}
+
+function compileInput(input: BlockInput | BlockFieldDeclaration): BlockInput {
+  return "name" in input ? input : fieldInput(input);
 }
 
 /**
@@ -246,6 +275,12 @@ export function createBlockRegistry(
   });
 }
 
+export interface BlockDefinition<
+  Attrs extends MaterializedAttrs = MaterializedAttrs,
+> extends Omit<BlockSpec<Attrs>, "inputs"> {
+  readonly inputs?: readonly (BlockInput | BlockFieldDeclaration)[];
+}
+
 /**
  * Returns plain `BlockSpec` because the registry stores homogenized rows and
  * `BlockSpec` is invariant in `Attrs`. `Attrs` defaults wide so
@@ -253,7 +288,10 @@ export function createBlockRegistry(
  */
 export function defineBlock<
   Attrs extends MaterializedAttrs = MaterializedAttrs,
->(spec: BlockSpec<Attrs>): BlockSpec {
+>(definition: BlockDefinition<Attrs>): BlockSpec {
+  const { inputs, ...rest } = definition;
+  const spec: BlockSpec<Attrs> =
+    inputs === undefined ? rest : { ...rest, inputs: inputs.map(compileInput) };
   // Safety: the registry is keyed by name, so a widened spec only meets nodes
   // carrying its own name; the erasure buys a homogeneous map, not
   // interchangeable specs.

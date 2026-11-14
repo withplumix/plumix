@@ -9,7 +9,7 @@ import { resolveEntryMeta } from "../../../meta/entry.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { entryRpc } from "../../filters.js";
-import { assertContentValidAgainstRegistries } from "./content.js";
+import { settleContentAgainstRegistries } from "./content.js";
 import { entryDuplicateInputSchema } from "./schemas.js";
 
 /**
@@ -53,7 +53,7 @@ export const duplicate = base
 
     // The copy starts from its source, so it keeps a block whose plugin is
     // gone but not a tree the registry refuses in any other way.
-    assertContentValidAgainstRegistries(
+    const content = await settleContentAgainstRegistries(
       source.content,
       [source.content],
       context,
@@ -66,13 +66,15 @@ export const duplicate = base
         ),
         from: [source.content],
       },
+      // Every attr is the source's own, and meta copies its bag unchecked.
+      "draft",
     );
 
     const candidate: NewEntry = {
       type: source.type,
       title: `${source.title} (copy)`,
       slug: source.slug,
-      content: source.content,
+      content,
       excerpt: source.excerpt,
       status: "draft",
       // Keep the source's parent — the copy stays a sibling. A deleted

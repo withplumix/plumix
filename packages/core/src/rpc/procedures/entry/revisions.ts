@@ -35,8 +35,8 @@ import { assertLeaseAllows } from "../../concurrency.js";
 import { idParam } from "../../contract/validation.js";
 import { ENTRY_IF_MATCH_MESSAGE, entryRows } from "./concurrency.js";
 import {
-  assertContentValidAgainstRegistries,
   assertContentWithinByteCap,
+  settleContentAgainstRegistries,
 } from "./content.js";
 import {
   applyEntryBeforeSave,
@@ -204,7 +204,7 @@ export const restore = base
     // The same gate as any save. The revision starts the save alongside live,
     // so a block unregistered since the snapshot comes back with it.
     assertContentWithinByteCap(revision.content, errors);
-    assertContentValidAgainstRegistries(
+    const content = await settleContentAgainstRegistries(
       revision.content,
       [revision.content, live.content],
       context,
@@ -214,6 +214,8 @@ export const restore = base
         capability: namespacedEntryCapability(namespace, "edit_layout"),
         from: [live.content],
       },
+      // Every attr is the revision's own, and meta restores its bag unchecked.
+      "draft",
     );
 
     const typeSupportsAutosave =
@@ -245,7 +247,7 @@ export const restore = base
           // Title is live-only, like slug and parentId, so it anchors to live;
           // only the drafted body restores into the draft.
           title: live.title,
-          content: revision.content,
+          content: content ?? null,
           excerpt: revision.excerpt,
           meta: cleanedMeta,
           metaDeletes,
@@ -277,7 +279,7 @@ export const restore = base
     const patch: Partial<NewEntry> = {
       title: revision.title,
       slug: decodedEnvelope?.slug ?? live.slug,
-      content: revision.content,
+      content,
       excerpt: revision.excerpt,
       status: revision.status,
       parentId: decodedEnvelope?.parentId ?? live.parentId,

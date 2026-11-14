@@ -1,3 +1,4 @@
+import type { Label } from "../i18n/label.js";
 import type { StyleBucketName } from "./styles/style-policy.js";
 import type { BlockContentValidationResult } from "./validate-content.js";
 
@@ -12,7 +13,14 @@ export type BlockContentValidationCode =
   | "disallowed_child"
   | "requires_parent"
   | "style_not_allowed"
-  | "layout_change";
+  | "layout_change"
+  | "invalid_attribute";
+
+/** The error shape a meta-box field gives, `path` running from the attr's key. */
+export interface BlockAttributeError {
+  readonly path: string;
+  readonly message: Label;
+}
 
 export interface BlockContentValidationIssue {
   readonly code: BlockContentValidationCode;
@@ -28,6 +36,8 @@ export interface BlockContentValidationIssue {
   readonly property?: string;
   /** For `style_not_allowed` on a CSS property: the bucket holding it. */
   readonly breakpoint?: StyleBucketName;
+  /** For `invalid_attribute`: what the attr's meta-box field refused. */
+  readonly errors?: BlockAttributeError[];
 }
 
 export class BlockContentValidationError extends Error {

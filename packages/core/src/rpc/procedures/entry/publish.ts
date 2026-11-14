@@ -19,6 +19,7 @@ import { base } from "../../base.js";
 import { assertLeaseAllows } from "../../concurrency.js";
 import { idParam } from "../../contract/validation.js";
 import { ENTRY_IF_MATCH_MESSAGE, entryRows } from "./concurrency.js";
+import { settleContentFieldAttrs } from "./content.js";
 import {
   applyEntryBeforeSave,
   captureRevisionIfSupported,
@@ -64,7 +65,14 @@ export const publish = base
     // Title, slug and parentId stay on live: title is live-only, and the
     // autosave carries slug and parentId only for restore-from-revision.
     const patch = {
-      content: autosave.content,
+      // Strict over every field attr, as the merged meta bag below is.
+      content: await settleContentFieldAttrs(
+        autosave.content,
+        [autosave.content],
+        context.blocks,
+        "publish",
+        errors,
+      ),
       excerpt: autosave.excerpt,
       // Autosaves are draft-lenient, so publish is where the merged bag is
       // finally strict-validated, rejecting with per-field errors.
