@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import type { KnipConfig } from "knip";
 
 import type { SharedAdminRuntimeSpecifier } from "./packages/core/src/admin/runtime.ts";
@@ -41,9 +43,15 @@ const PLUGIN_LINGUI_CLI = "@lingui/cli";
 
 // A plugin whose descriptor names its router (`site.rpc` types it from there)
 // emits `.d.ts` that import `@orpc/server`, so a consumer resolving those types
-// needs it installed beside the plugin. Knip reads `src/`, and a plugin whose
-// source reaches oRPC only through `plumix/plugin` never imports it by name.
-const PLUGIN_ROUTER_TYPES = "@orpc/server";
+// needs it installed beside the plugin. Its source reaches oRPC only through
+// `plumix/plugin` and never imports it by name. Knip's published-type analysis
+// reads a built package's `dist/*.d.ts` and counts `@orpc/server` as used there,
+// calling an ignore redundant; with no `dist/` it has nothing to read. So the
+// ignore applies only while the plugin's types are unbuilt.
+function pluginRouterTypes(workspace: string): string[] {
+  const builtTypes = join(import.meta.dirname, workspace, "dist/index.d.ts");
+  return existsSync(builtTypes) ? [] : ["@orpc/server"];
+}
 
 const config: KnipConfig = {
   // `exports` check disabled at the project level — admin's vendored
@@ -338,7 +346,7 @@ const config: KnipConfig = {
       // `test:e2e` runs.
       ignoreDependencies: [
         PLUGIN_LINGUI_CLI,
-        PLUGIN_ROUTER_TYPES,
+        ...pluginRouterTypes("packages/plugins/media"),
         "@plumix/runtime-cloudflare",
       ],
       // See packages/admin above for why the playwright plugin is off.
@@ -449,7 +457,7 @@ const config: KnipConfig = {
       // here because the playground needs an entry type to hang a box off.
       ignoreDependencies: [
         PLUGIN_LINGUI_CLI,
-        PLUGIN_ROUTER_TYPES,
+        ...pluginRouterTypes("packages/plugins/seo"),
         "@plumix/runtime-cloudflare",
         "@plumix/plugin-blog",
       ],
@@ -487,7 +495,7 @@ const config: KnipConfig = {
       // here because the playground needs an entry type to hang a card off.
       ignoreDependencies: [
         PLUGIN_LINGUI_CLI,
-        PLUGIN_ROUTER_TYPES,
+        ...pluginRouterTypes("packages/plugins/og"),
         "@plumix/runtime-cloudflare",
         "@plumix/plugin-blog",
       ],
