@@ -166,7 +166,7 @@ type BlockProps = Readonly<Record<string, string | undefined>> & BlockSeamProps;
 export interface BlockViewProps<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the default for a block that declares no deps
   Deps extends TemplateDepDeclarations = {},
 > {
   /** The block's name, so one view module can serve several blocks. */
@@ -196,7 +196,7 @@ export interface BlockViewProps<
 export type BlockView<
   Attrs = MaterializedAttrs,
   Loaders extends BlockLoaderRecord = BlockLoaderRecord,
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the default for a block that declares no deps
   Deps extends TemplateDepDeclarations = {},
 > = (props: BlockViewProps<Attrs, Loaders, Deps>) => ReactNode;
 

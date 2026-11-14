@@ -163,9 +163,7 @@ describe("the generated editor entry under Vite's dependency scan", () => {
       },
       "serve",
     );
-    // Deprecated because a dev server runs the scan itself; this is the one
-    // call that runs it alone and returns what it found.
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the one call that runs the dep scan alone and returns what it found
     const metadata = await optimizeDeps(config, true);
 
     expect(Object.keys(metadata.optimized)).toContain("cjs-dep");

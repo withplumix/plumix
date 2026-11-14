@@ -21,7 +21,13 @@ export default defineConfig(
     // user-facing — keep them out of the `no-unlocalized-strings` net. Only
     // the fixtures: the specs themselves are linted, so the test-id query
     // convention reaches them.
-    ignores: ["src/components/ui/**", "locales/**", "e2e/fixtures/**"],
+    // TanStack Router's generated route tree asks to be left out of linting.
+    ignores: [
+      "src/components/ui/**",
+      "locales/**",
+      "e2e/fixtures/**",
+      "src/routeTree.gen.ts",
+    ],
   },
   {
     // Colocated tests match `src/**`, so the strict i18n net would catch

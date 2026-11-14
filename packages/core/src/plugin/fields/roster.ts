@@ -86,7 +86,7 @@ type Assert<T extends true> = T;
  * makes this exact equality rather than mutual assignability.
  */
 type Equals<A, B> =
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- the single-use `<T>` is what makes the equality exact
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
     ? true
     : false;

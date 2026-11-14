@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import eslintCommentsPlugin from "@eslint-community/eslint-plugin-eslint-comments";
 import eslint from "@eslint/js";
 import importXPlugin from "eslint-plugin-import-x";
 import sonarjsPlugin from "eslint-plugin-sonarjs";
@@ -73,6 +74,7 @@ export const baseConfig = defineConfig(
   {
     files: ["**/*.js", "**/*.ts", "**/*.tsx"],
     plugins: {
+      "@eslint-community/eslint-comments": eslintCommentsPlugin,
       "import-x": importXPlugin,
       plumix: plumixPlugin,
       turbo: turboPlugin,
@@ -110,6 +112,20 @@ export const baseConfig = defineConfig(
       "@typescript-eslint/no-deprecated": "error",
       "import-x/consistent-type-specifier-style": ["error", "prefer-top-level"],
       "import-x/no-duplicates": "error",
+      // Only the disable directives silence a rule, so only they owe a reason.
+      "@eslint-community/eslint-comments/require-description": [
+        "error",
+        {
+          ignore: [
+            "eslint",
+            "eslint-enable",
+            "eslint-env",
+            "exported",
+            "global",
+            "globals",
+          ],
+        },
+      ],
     },
   },
   // The `src/**` block below repeats this selector because flat config

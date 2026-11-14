@@ -39,7 +39,7 @@ export const keepPreviousData = ns.keepPreviousData;
  * Deprecated upstream; dropping a binding from this shim would break the
  * published surface.
  */
-// eslint-disable-next-line @typescript-eslint/no-deprecated
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- deprecated upstream, still on the published surface
 export const isCancelledError = ns.isCancelledError;
 export const skipToken = ns.skipToken;
 export const usePrefetchQuery = ns.usePrefetchQuery;

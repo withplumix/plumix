@@ -18,8 +18,11 @@ import { traceSqlClient } from "../db/trace-libsql.js";
 type TestDb = ReturnType<typeof drizzle<typeof schema>>;
 
 /** Any drizzle SQLite db — core's, a plugin's, a runtime's, sync or async. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type MigratableDb = BaseSQLiteDatabase<"sync" | "async", any, any>;
+type MigratableDb = BaseSQLiteDatabase<
+  "sync" | "async",
+  unknown,
+  Record<string, unknown>
+>;
 
 /**
  * Core's shipped history, at the package root: `../../migrations` from both

@@ -74,7 +74,7 @@ export function memoryStorage(
         uploaded: currentTime(),
       });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async get(key, opts): Promise<GetResult | null> {
       const entry = store.get(key);
       if (!entry) return null;
@@ -93,7 +93,7 @@ export function memoryStorage(
         arrayBuffer: () => Promise.resolve(toFreshArrayBuffer(slice)),
       };
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async head(key) {
       const entry = store.get(key);
       if (!entry) return null;
@@ -104,11 +104,11 @@ export function memoryStorage(
         customMetadata: entry.customMetadata,
       };
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async delete(key) {
       store.delete(key);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async list(prefix, opts: ListOptions = {}): Promise<ListResult> {
       const limit = Math.min(opts.limit ?? 1000, 1000);
       const filtered: {
@@ -136,11 +136,11 @@ export function memoryStorage(
         truncated: nextIndex < filtered.length,
       };
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async url(key, _opts?: UrlOptions): Promise<string> {
       return `${publicUrlBase}${encodeURIComponent(key)}`;
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async presignPut(
       key,
       opts: PresignPutOptions,

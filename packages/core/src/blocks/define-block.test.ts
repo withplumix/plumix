@@ -42,8 +42,7 @@ describe("defineBlock type inference", () => {
 
 describe("BlockViewProps", () => {
   test("loader return types flow into the view's `loaders`", () => {
-    // A type alias, not an interface: a loader record needs an index signature.
-    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
+    // eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- a loader record needs the implicit index signature only a type alias has
     type Loaders = {
       readonly posts: () => Promise<readonly string[]>;
       readonly featured: () => Promise<number | null>;

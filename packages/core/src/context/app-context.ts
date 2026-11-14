@@ -186,7 +186,7 @@ export interface PluginCache {
  * Declaration-merge target for helpers a plugin registers with
  * `extendAppContext(key, value)`; augment it so `ctx.<key>` is typed.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an augmentation target
 export interface AppContextExtensions {}
 
 export interface AppContextBase<

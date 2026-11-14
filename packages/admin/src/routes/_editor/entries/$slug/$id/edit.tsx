@@ -744,12 +744,10 @@ function EntryEditor({
     [entryTypeName],
   );
   const supportsTitle =
-    // `supports` list code, not a display label.
-    // eslint-disable-next-line lingui/no-unlocalized-strings
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- a `supports` list code, not a display label
     entryType?.supports?.includes("title") ?? false;
   const supportsExcerpt =
-    // `supports` list code, not a display label.
-    // eslint-disable-next-line lingui/no-unlocalized-strings
+    // eslint-disable-next-line lingui/no-unlocalized-strings -- a `supports` list code, not a display label
     entryType?.supports?.includes("excerpt") ?? false;
   const isHierarchical = entryType?.isHierarchical === true;
   const parentCandidates = useQuery({
@@ -757,8 +755,7 @@ function EntryEditor({
       input: {
         type: entryTypeName ?? "",
         limit: 100,
-        // SQL column picklist code, not a display label.
-        // eslint-disable-next-line lingui/no-unlocalized-strings
+        // eslint-disable-next-line lingui/no-unlocalized-strings -- a column picklist code, not a display label
         orderBy: "title",
         order: "asc",
       },

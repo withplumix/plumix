@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
     "@eslint/js": "^10",
     "@shadcn/lint": "^0.2.0",
     "eslint-plugin-import-x": "^4",

@@ -12,11 +12,11 @@ function fakeClipboard(initial = "") {
   let text = initial;
   return {
     text: () => text,
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- fakes the Clipboard API, which returns promises
     async readText() {
       return text;
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- fakes the Clipboard API, which returns promises
     async writeText(next: string) {
       text = next;
     },

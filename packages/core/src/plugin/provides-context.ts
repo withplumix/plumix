@@ -6,7 +6,7 @@ export interface ContextExtensionEntry {
   readonly pluginId: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an augmentation target
 export interface PluginContextExtensions {}
 
 export interface PluginProvidesContext {

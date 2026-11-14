@@ -79,6 +79,9 @@ Lint enforces the mechanical part in all linted code, tests included: a comment 
 (`plumix/no-jsdoc-in-function-body`); and no code is left commented out
 (`sonarjs/no-commented-code`).
 
+Every `eslint-disable` directive ends in `-- <reason>` saying why the rule is wrong there
+(`@eslint-community/eslint-comments/require-description`).
+
 A comment that claims a coupling ("mirrors", "keep … in sync", "must match") is an invariant
 nothing checks. Collapse the duplication first, so one source holds the fact. When the copies
 can't be collapsed, bind them with a test that fails when they drift, and name it with

@@ -9,8 +9,7 @@ import type { Label } from "@plumix/core/i18n";
 // `CONFLICT.data.errors`.
 
 /** Where every admin form keeps its meta bag in the RHF values. */
-// RHF path segment, not display copy.
-// eslint-disable-next-line lingui/no-unlocalized-strings
+// eslint-disable-next-line lingui/no-unlocalized-strings -- an RHF path segment, not display copy
 export const META_FORM_BASE_PATH = "meta";
 
 export interface MetaFieldServerError {
@@ -115,7 +114,5 @@ export function useApplyMetaFieldErrors(
     form.clearErrors(basePath as never);
     if (!errors || errors.length === 0) return;
     applyMetaFieldErrors(form.setError, basePath, errors, resolveMessage);
-    // `form` methods are stable per RHF instance.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [errors, basePath, resolveMessage]);
+  }, [form, errors, basePath, resolveMessage]);
 }

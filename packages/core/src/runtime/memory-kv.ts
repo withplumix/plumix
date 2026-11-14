@@ -54,22 +54,22 @@ export function memoryKv(config: MemoryKvConfig = {}): MemoryKV {
   };
 
   const connected: ConnectedKv = {
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async get(key) {
       return live(key)?.value ?? null;
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async put(key, value, opts?: KvPutOptions) {
       const ttl = opts?.expirationTtl;
       const expiresAt =
         ttl !== undefined ? now().getTime() + ttl * 1000 : undefined;
       store.set(key, { value, expiresAt });
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async delete(key) {
       store.delete(key);
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract with nothing to await
     async list(opts: KvListOptions = {}): Promise<KvListResult> {
       // Cap the page at 1000 keys; the floor of 1 also stops a `limit: 0` from
       // returning an empty page with a live cursor forever.

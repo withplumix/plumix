@@ -127,7 +127,7 @@ declare module "plumix" {
     readonly isShownInMenus?: boolean;
     readonly menuPickerLabel?: string;
   }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- an augmentation repeats the original's type parameters
   interface LookupAdapterOptions<TScope = unknown> {
     /**
      * Opt-in for non-default kinds (`media`, `user`, future custom

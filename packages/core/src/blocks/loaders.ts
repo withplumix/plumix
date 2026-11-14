@@ -37,7 +37,7 @@ export interface BlockLoaderArgs {
  * Type-erased storage bound only: blocks keep concrete loader types through
  * inference, and nothing calls a loader through this type.
  */
-// eslint-disable-next-line plumix/no-unknown-return
+// eslint-disable-next-line plumix/no-unknown-return -- a type-erased bound; nothing calls a loader through it
 export type BlockLoaderFn = (args: BlockLoaderArgs) => Promise<unknown>;
 export type BlockLoaderRecord = Readonly<Record<string, BlockLoaderFn>>;
 

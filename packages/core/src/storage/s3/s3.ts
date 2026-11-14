@@ -202,7 +202,7 @@ export function s3(config: S3Config): S3ObjectStorage {
           );
           return parseListing(await response.text());
         },
-        // eslint-disable-next-line @typescript-eslint/require-await
+        // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract; a public URL needs no request
         async url(key, _opts?: UrlOptions): Promise<string | null> {
           if (!config.publicUrlBase) return null;
           return `${config.publicUrlBase.replace(/\/$/, "")}/${encodePath(key)}`;

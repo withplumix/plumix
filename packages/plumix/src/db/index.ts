@@ -39,9 +39,7 @@ export {
 export {
   blob,
   check,
-  // typescript-eslint's no-deprecated flags the binding when only one overload,
-  // drizzle's legacy variadic form, is deprecated.
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- only drizzle's legacy variadic overload is deprecated
   foreignKey,
   index,
   integer,

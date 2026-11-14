@@ -43,12 +43,12 @@ export const Route = createFileRoute("/_editor/entries/$slug/create")({
   beforeLoad: ({ context, params }): { entryType: EntryTypeManifestEntry } => {
     const entryType = findEntryTypeBySlug(params.slug);
     if (!entryType) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
     const createCapability = entryTypeCapability(entryType, "create");
     if (!hasCap(context.user.capabilities, createCapability)) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router control-flow
       throw notFound();
     }
     return { entryType };

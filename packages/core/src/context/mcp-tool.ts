@@ -34,6 +34,6 @@ export interface McpTool<TSchema extends GenericSchema = GenericSchema> {
    * carry `Date` fields and a `ResolvedMeta` bag still typed `Record<string,
    * unknown>`.
    */
-  // eslint-disable-next-line plumix/no-unknown-return
+  // eslint-disable-next-line plumix/no-unknown-return -- rows carry `Date`s and untyped meta, so no narrower type fits
   run(ctx: AppContext, input: InferOutput<TSchema>): unknown;
 }
