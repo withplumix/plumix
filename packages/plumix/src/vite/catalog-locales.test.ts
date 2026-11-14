@@ -98,7 +98,10 @@ describe("virtual:plumix/catalog-locales in a build of a site enabling regional 
       configFile: false,
       root: dir,
       logLevel: "warn",
-      plugins: [plumixSourceResolver(), plumix({ adminDir })],
+      plugins: [
+        plumixSourceResolver(),
+        plumix({ configFile: join(dir, "plumix.config.ts"), adminDir }),
+      ],
       environments: {
         server: serverEnvironment({
           entry: ".plumix/worker.ts",

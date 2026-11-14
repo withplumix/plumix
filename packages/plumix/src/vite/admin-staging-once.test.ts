@@ -55,7 +55,7 @@ afterEach(() => {
 const stagedIndex = () => join(dir, "public/_plumix/admin/index.html");
 
 function resolvedPlugin() {
-  const plugin = plumix({
+  const [plugin] = plumix({
     configFile: join(dir, "plumix.config.mjs"),
     adminDir: join(dir, "admin-dist"),
   });

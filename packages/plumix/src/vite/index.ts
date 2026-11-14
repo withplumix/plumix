@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { cp, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, relative, resolve, sep } from "node:path";
-import type { Plugin, UserConfig } from "vite";
+import type { Plugin, PluginOption, UserConfig } from "vite";
 import * as v from "valibot";
 import { mergeConfig } from "vite";
 
@@ -25,6 +25,7 @@ import {
 } from "@plumix/core";
 
 import type { LoadConfigOptions } from "../cli/load-config.js";
+import type { AdminSourceWatch } from "./admin-source-watch.js";
 import type { BlockModuleRef } from "./block-module-resolver.js";
 import type { DiscoveredIsland } from "./island-transform.js";
 import type { PluginCatalogFile } from "./plugin-catalogs-codegen.js";
@@ -32,6 +33,7 @@ import type { PluginChunkRef } from "./plugin-chunk-scripts.js";
 import { loadConfig } from "../cli/load-config.js";
 import { withAdminCatalogLocales } from "./admin-catalog-locales.js";
 import { assemblePluginAdminBundle } from "./admin-plugin-bundle.js";
+import { watchAdminSources } from "./admin-source-watch.js";
 import { generateIslandsRendererEntrySource } from "./auth-method-clients-codegen.js";
 import { generateClientEntrySource } from "./client-entry-codegen.js";
 import { serveDevEndpoints } from "./dev-endpoints.js";
@@ -76,6 +78,10 @@ const ADMIN_PACKAGE_ROOT = dirname(
 const ADMIN_SOURCE_DIR = resolve(ADMIN_PACKAGE_ROOT, "dist");
 
 export interface PlumixVitePluginOptions {
+  /**
+   * Resolved against the process cwd, before Vite knows its `root`: pass it
+   * when the root is elsewhere.
+   */
   readonly configFile?: string;
   /**
    * Test seam: the built admin to stage, in place of `@plumix/admin`'s
@@ -110,7 +116,22 @@ function projectEnabledLocales(i18n: PlumixConfig["i18n"]): CoreCatalogLocales {
   return projectCoreCatalogLocales(enabledLocaleCodes(i18n));
 }
 
-export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
+/**
+ * The site's `vite.plugins` ride beside the plugin because Vite fixes its
+ * plugin list before any `config` hook runs.
+ */
+export function plumix(
+  options: PlumixVitePluginOptions = {},
+): [Plugin, Promise<PluginOption[]>] {
+  return [plumixPlugin(options), sitePlugins(options.configFile)];
+}
+
+async function sitePlugins(configFile?: string): Promise<PluginOption[]> {
+  const { config } = await loadConfig(process.cwd(), configFile);
+  return (config.vite?.plugins as PluginOption[] | undefined) ?? [];
+}
+
+function plumixPlugin(options: PlumixVitePluginOptions): Plugin {
   let root = process.cwd();
   let publicDir = "";
   let configPath: string | undefined;
@@ -129,7 +150,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
   let prepared: Promise<void> | undefined;
   // The last config staged, which a dev server restages on an admin edit.
   let emitted: Regenerated | undefined;
-  let adminSourceFiles: readonly string[] = [];
+  let adminSources: AdminSourceWatch | undefined;
   // One per plugin instance, so the client and server of one build share it.
   const buildId = randomUUID();
 
@@ -142,7 +163,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
     // The `_plumix/` filter in `stageUserPublic` keeps a user's files
     // out of the admin's subtree, which `stageAdminAssets` owns.
     await stageUserPublic({ workspaceRoot: root, publicDir });
-    adminSourceFiles = await stageAdminAssets(
+    const adminSourceFiles = await stageAdminAssets(
       publicDir,
       next.manifest,
       next.plugins,
@@ -151,6 +172,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       next.editorBlockModules,
       options.adminDir,
     );
+    adminSources?.watch(adminSourceFiles);
   }
 
   function prepare(warn: (message: string) => void): Promise<void> {
@@ -283,12 +305,11 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       }
       const { config } = await loadConfig(scanRoot, options.configFile);
       if (env.command === "build") assertMagicLinkHasMailer(config);
-      const merged = config.vite
-        ? (mergeConfig(
-            base,
-            config.vite as Partial<UserConfig>,
-          ) as Partial<UserConfig>)
-        : base;
+      const { plugins: _sitePlugins, ...siteVite } = config.vite ?? {};
+      const merged = mergeConfig(
+        base,
+        siteVite as Partial<UserConfig>,
+      ) as Partial<UserConfig>;
       const onLog = withoutUseClientWarning(
         merged.build?.rolldownOptions?.onLog ??
           userConfig.build?.rolldownOptions?.onLog,
@@ -375,17 +396,10 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
       prepared = undefined;
       serveDevEndpoints(server);
 
-      // Outside the root, a workspace plugin's files need adding to the watch.
-      void prepare((message) => server.config.logger.warn(message))
-        .then(() => server.watcher.add([...adminSourceFiles]))
-        // `buildStart` awaits the same staging and reports its failure.
-        .catch(() => undefined);
-
       const restage = (next: Promise<Regenerated>, failure: string): void => {
         void next
           .then(async (regenerated) => {
             await stage(regenerated);
-            server.watcher.add([...adminSourceFiles]);
             server.ws.send({ type: "full-reload" });
           })
           .catch((error: unknown) => {
@@ -398,6 +412,18 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
           });
       };
 
+      adminSources?.close();
+      adminSources = watchAdminSources(() => {
+        if (!emitted) return;
+        restage(
+          Promise.resolve(emitted),
+          "failed to rebuild the plugin admin bundle on change",
+        );
+      });
+      void prepare((message) => server.config.logger.warn(message))
+        // `buildStart` awaits the same staging and reports its failure.
+        .catch(() => undefined);
+
       server.watcher.on("change", (path) => {
         const changed = resolve(path);
         if (configPath && changed === configPath) {
@@ -407,15 +433,11 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
             regenerate(root, options.configFile, { fresh: true }),
             "failed to regenerate config on change",
           );
-          return;
-        }
-        if (emitted && adminSourceFiles.includes(changed)) {
-          restage(
-            Promise.resolve(emitted),
-            "failed to rebuild the plugin admin bundle on change",
-          );
         }
       });
+    },
+    closeBundle() {
+      adminSources?.close();
     },
   };
 }

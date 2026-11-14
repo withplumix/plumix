@@ -30,7 +30,8 @@ describe("plumix() vite plugin — magic link needs a mailer", () => {
       };`,
       "utf8",
     );
-    return plumix({ configFile: configPath }).config as ConfigHook;
+    const [plugin] = plumix({ configFile: configPath });
+    return plugin.config as ConfigHook;
   }
 
   test("fails the build of a magic-link site with no mailer", async () => {
