@@ -1616,7 +1616,7 @@ describe("reference hydration memo (request-scoped)", () => {
   });
 
   // An entry reference, not the photo kind the rest of this block uses:
-  // only the entry adapter declares `embeddedCacheTags`.
+  // the photo adapter names no core entity, so it tags nothing.
   test("a batch answered from the memo tags its page as the first one did", async () => {
     const { registry, findField } = registryWithEntryRef();
     const h = await createRpcHarness({ authAs: "admin", plugins: registry });

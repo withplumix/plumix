@@ -970,12 +970,8 @@ async function resolveGroup(
     const groupKey = referenceGroupKey(target);
     // Tagged by id, so the entity's own write in this request drops the
     // entry — a memoized miss included (#2517).
-    const tagsFor = (id: string): readonly string[] => [
-      ...(adapter.kind === undefined
-        ? []
-        : hydratedEntityTags(adapter.kind, id)),
-      ...(adapter.embeddedCacheTags?.(id) ?? []),
-    ];
+    const tagsFor = (id: string): readonly string[] =>
+      adapter.kind === undefined ? [] : hydratedEntityTags(adapter.kind, id);
     const payloads = await memoBatch(
       ctx.memo,
       idList,

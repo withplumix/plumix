@@ -9,8 +9,7 @@ import {
   definePolicy,
   grant,
 } from "../../src/access/policy.js";
-import { entryPurgeTags } from "../../src/cdn/contract/tags.js";
-import { tagCdnEntry } from "../../src/cdn/route-tags.js";
+import { compileEntryQuery, entryQuery } from "../../src/entries/query.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
 
@@ -193,8 +192,8 @@ const sitemap = definePlugin("seo", {
     ctx.registerPublicRoute({
       path: "/sitemap.xml",
       cacheable: true,
-      handler: (_request, appCtx) => {
-        tagCdnEntry(appCtx, entryPurgeTags("post", 7));
+      handler: async (_request, appCtx) => {
+        await compileEntryQuery(appCtx, entryQuery().ofTypes("post"));
         return new Response("<urlset/>", { status: 200 });
       },
     });
@@ -216,7 +215,7 @@ describe("public route dispatch — CDN", () => {
   test("an opted-in route stores its response under the tags it declared", async () => {
     const page = await cached.visit("/sitemap.xml");
 
-    page.assertOk().assertHeader("cache-tag", "t:post,e:7");
+    page.assertOk().assertHeader("cache-tag", "t:post");
     cached.cdn.assertStored("/sitemap.xml");
   });
 

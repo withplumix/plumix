@@ -7,7 +7,6 @@ import type {
   LookupAdapter,
   LookupResult,
 } from "../../../plugin/lookup.js";
-import { entryTag } from "../../../cdn/contract/tags.js";
 import { and, eq, inArray, like, ne, or } from "../../../db/index.js";
 import { entries, ENTRY_STATUSES } from "../../../db/schema/entries.js";
 import { isAuthoredEntryType } from "../../../entries/authored.js";
@@ -110,13 +109,6 @@ export const entryLookupAdapter = {
       .limit(numericIds.length);
     const urls = await buildEntryPermalinks(ctx, rows);
     return rows.map((row, i) => toEntrySummary(row, urls[i] ?? null));
-  },
-
-  // `e:<id>` already covers every change to this entry; the coarse `t:<type>`
-  // tag would purge the page on any publish of that type.
-  embeddedCacheTags(id) {
-    const numericId = parseEntryId(id);
-    return numericId === null ? [] : [entryTag(numericId)];
   },
 } satisfies LookupAdapter<EntryFieldScope>;
 

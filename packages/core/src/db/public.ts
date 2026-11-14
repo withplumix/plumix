@@ -1,18 +1,9 @@
-// Direct writes fire no `entry:*`/`term:*` action and so no auto-purge, which
-// is why the write helpers and the purge vocabulary share this import.
+// A plugin's direct writes to its own tables. Core's entities are written
+// through `ctx.entries`, `ctx.terms` and `ctx.settings.write`, which purge.
 
 // Query operators, table-introspection helpers, unique-constraint guards,
 // types.
 export * from "./index.js";
-// CDN tag vocabulary (PRD #1080): build the coarse `t:<type>`/`e:<id>`
-// tags core would and enqueue them for the post-request / scheduled flush.
-export {
-  entryPurgeTags,
-  entryTag,
-  termPurgeTags,
-  typeTag,
-} from "../cdn/contract/tags.js";
-export { enqueuePurgeTags } from "../cdn/purge.js";
 // So a plugin replacing the search page can degrade to core's own query rather
 // than restate it.
 export { entrySearchCondition } from "./search-conditions.js";
