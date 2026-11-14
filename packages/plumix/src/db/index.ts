@@ -91,9 +91,9 @@ export {
   versionIfMatchObject,
 } from "@plumix/core/db";
 
-// Meta settling, core's search conditions, visitor metadata, and the entry
-// query — a query that narrows is built with the same operators everything
-// else on this path uses.
+// Core's search conditions, visitor metadata, and the entry query — a query
+// that narrows is built with the same operators everything else on this path
+// uses.
 export {
   compileEntryQuery,
   entryQuery,
@@ -101,7 +101,6 @@ export {
   loadAuthoredEntry,
   publicEntryRows,
   readVisitorMeta,
-  settleMeta,
   taxonomyTermRows,
   tokenizeSearchQuery,
 } from "@plumix/core/db";

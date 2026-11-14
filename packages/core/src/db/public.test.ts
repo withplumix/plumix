@@ -21,7 +21,6 @@ describe("@plumix/core/db surface", () => {
       "getTableName",
       "is",
       "readVisitorMeta",
-      "settleMeta",
     ]) {
       expect(db, name).toHaveProperty(name);
     }
@@ -29,6 +28,10 @@ describe("@plumix/core/db surface", () => {
 
   it("leaves the tables to @plumix/core/schema, their one import path", () => {
     expect(db).not.toHaveProperty("entries");
+  });
+
+  it("does not export settleMeta, since core's own writers settle meta", () => {
+    expect(db).not.toHaveProperty("settleMeta");
   });
 
   it("does not leak core-owned cache tags or purge internals", () => {

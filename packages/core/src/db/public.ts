@@ -9,10 +9,6 @@ export * from "./index.js";
 export { entrySearchCondition } from "./search-conditions.js";
 export { tokenizeSearchQuery } from "../search/contract/search-terms.js";
 export type { SearchTerm } from "../search/contract/search-terms.js";
-// Settling meta is a direct writer's other obligation: a raw write skips the
-// field pipeline that stores a value in its declared form (#2433).
-export { settleMeta } from "../meta/settle-meta.js";
-export type { MetaOwner } from "../meta/settle-meta.js";
 // Any table with `updated_at` or `version` opts into guarded writes by
 // composing these into its own drizzle update.
 export {
