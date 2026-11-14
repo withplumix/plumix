@@ -2,7 +2,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin as VitePlugin } from "vite";
+import type { ESTree, Plugin as VitePlugin } from "vite";
 import { compile, optimize } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
 import { build } from "vite";
@@ -24,6 +24,7 @@ import {
   blockSpecsArrayExpr,
 } from "./block-module-resolver.js";
 import { VitePluginError } from "./errors.js";
+import { memberKey, parseModule } from "./estree.js";
 import { withoutUseClientWarning } from "./use-client-warning.js";
 
 // Bare imports of `react` etc. in the plugin source get aliased to
@@ -138,6 +139,7 @@ export async function assemblePluginAdminBundle({
     plugins: [
       pluginRuntimeAliasPlugin(),
       keepAdminEntriesPlugin(resolvedEntries),
+      dropBlockViewsPlugin(),
     ],
     build: {
       outDir: pluginsOutDir,
@@ -388,6 +390,69 @@ function pluginRuntimeAliasPlugin(): VitePlugin {
       return SHIM_PATHS[source] ?? null;
     },
   };
+}
+
+const VIEW_NOT_IN_SHELL =
+  'Promise.reject(new Error("The admin shell never loads a block\'s view module."))';
+
+/** The shell reads only a block's definition, never its view module (ADR 0071). */
+function dropBlockViewsPlugin(): VitePlugin {
+  return {
+    name: "plumix:drop-block-views",
+    enforce: "pre",
+    transform: {
+      filter: { code: "import(" },
+      handler(code, id) {
+        const imports = viewImports(parseModule(code, id));
+        if (imports.length === 0) return null;
+        let out = code;
+        for (const { start, end } of imports.reverse()) {
+          out = out.slice(0, start) + VIEW_NOT_IN_SHELL + out.slice(end);
+        }
+        return { code: out, map: null };
+      },
+    },
+  };
+}
+
+/**
+ * A block is an object with a `name` beside its `view`: `defineBlock` returns
+ * its argument, so a plain `BlockSpec` literal counts too. In source order,
+ * which the splice relies on.
+ */
+function viewImports(program: ESTree.Program): ESTree.ImportExpression[] {
+  const found: ESTree.ImportExpression[] = [];
+  const visit = (value: unknown, inView: boolean): void => {
+    if (typeof value !== "object" || value === null) return;
+    if (inView && isNode<ESTree.ImportExpression>(value, "ImportExpression")) {
+      found.push(value);
+      return;
+    }
+    if (isNode<ESTree.ObjectExpression>(value, "ObjectExpression")) {
+      const isBlock = value.properties.some((m) => memberKey(m) === "name");
+      for (const member of value.properties) {
+        visit(member, inView || (isBlock && memberKey(member) === "view"));
+      }
+      return;
+    }
+    for (const child of Object.values(value) as unknown[]) {
+      visit(child, inView);
+    }
+  };
+  visit(program, false);
+  return found;
+}
+
+function isNode<T extends ESTree.Node>(
+  value: unknown,
+  type: T["type"],
+): value is T {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    value.type === type
+  );
 }
 
 /**
