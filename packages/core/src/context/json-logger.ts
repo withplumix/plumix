@@ -1,7 +1,14 @@
 import type { Logger, LogMeta } from "./app-context.js";
 import { now as currentTime } from "../clock.js";
+import { loggableError } from "./log-meta.js";
 
 type Level = keyof Logger;
+
+interface LogRecordHead {
+  readonly level: Level;
+  readonly message: string;
+  readonly time: string;
+}
 
 /**
  * A logger for a log drain: each call is written as one JSON object ending in
@@ -14,8 +21,12 @@ export function createJsonLogger(
   const log =
     (level: Level) =>
     (message: string, meta?: LogMeta): void => {
-      const head = { level, message, time: now().toISOString() };
-      write(`${serialize({ ...head, ...meta, ...head })}\n`);
+      const head: LogRecordHead = {
+        level,
+        message,
+        time: now().toISOString(),
+      };
+      write(`${serialize(head, meta)}\n`);
     };
   return {
     debug: log("debug"),
@@ -26,29 +37,17 @@ export function createJsonLogger(
 }
 
 /** A log call must never throw, so meta JSON cannot hold is dropped, and says why. */
-function serialize(record: LogMeta): string {
+function serialize(head: LogRecordHead, meta: LogMeta = {}): string {
   try {
-    return JSON.stringify(record, (_key, value: unknown) =>
-      value instanceof Error ? errorFields(value) : value,
+    return JSON.stringify(
+      { ...head, ...meta, ...head },
+      (_key, value: unknown) =>
+        value instanceof Error ? loggableError(value) : value,
     );
   } catch (cause) {
-    const { level, message, time } = record;
     return JSON.stringify({
-      level,
-      message,
-      time,
+      ...head,
       unserializable: cause instanceof Error ? cause.message : String(cause),
     });
   }
-}
-
-interface ErrorFields {
-  readonly name: string;
-  readonly message: string;
-  readonly stack: string | undefined;
-}
-
-/** An `Error`'s own fields are non-enumerable, so it would print as `{}`. */
-function errorFields(error: Error): ErrorFields {
-  return { name: error.name, message: error.message, stack: error.stack };
 }

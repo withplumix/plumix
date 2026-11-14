@@ -40,6 +40,7 @@ import {
 } from "../test/dispatcher.js";
 import { userFactory } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
+import { fakeLogger } from "../test/logger-fake.js";
 import { pooledEntryTypesPlugin } from "../test/pooled-entry-types.js";
 import { defineTheme } from "../theme.js";
 import { buildApp } from "./app.js";
@@ -936,6 +937,40 @@ describe("dispatcher — error boundary", () => {
     );
     const response = await h.dispatch(authed);
     expect(response.status).toBe(500);
+  });
+
+  test("logs a failed public render with the error, its cause reachable", async () => {
+    const logger = fakeLogger();
+    const h = await createDispatcherHarness({
+      logger,
+      config: {
+        theme: defineTheme({
+          templates: [
+            fallback(() => {
+              throw new Error("Failed query", {
+                cause: new Error("D1_ERROR: overloaded"),
+              });
+            }),
+          ],
+        }),
+      },
+    });
+
+    await h.dispatch(new Request("https://cms.example/"));
+
+    expect(logger.lines).toMatchObject([
+      {
+        level: "error",
+        message: "dispatch_failed",
+        meta: {
+          url: "https://cms.example/",
+          error: {
+            message: "Failed query",
+            cause: { message: "D1_ERROR: overloaded" },
+          },
+        },
+      },
+    ]);
   });
 });
 

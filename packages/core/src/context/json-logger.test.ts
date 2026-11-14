@@ -49,6 +49,41 @@ describe("createJsonLogger", () => {
     ]);
   });
 
+  test("serializes an error's cause chain down to a cause that is not an error", () => {
+    const { logger, lines } = capture();
+    const error = new Error("Failed query", {
+      cause: new Error("D1_ERROR: overloaded", { cause: "retry later" }),
+    });
+
+    logger.error("dispatch_failed", { error });
+
+    expect(lines.map((line) => JSON.parse(line) as unknown)).toMatchObject([
+      {
+        error: {
+          message: "Failed query",
+          cause: {
+            name: "Error",
+            message: "D1_ERROR: overloaded",
+            cause: "retry later",
+          },
+        },
+      },
+    ]);
+  });
+
+  test("serializes an error held by a class instance in the meta", () => {
+    const { logger, lines } = capture();
+    class Job {
+      constructor(readonly lastError: Error) {}
+    }
+
+    logger.error("job_failed", { job: new Job(new Error("boom")) });
+
+    expect(lines.map((line) => JSON.parse(line) as unknown)).toMatchObject([
+      { job: { lastError: { name: "Error", message: "boom" } } },
+    ]);
+  });
+
   test("meta cannot overwrite the record's level, message or time", () => {
     const { logger, lines } = capture();
 
@@ -72,6 +107,18 @@ describe("createJsonLogger", () => {
 
     expect(lines.map((line) => JSON.parse(line) as unknown)).toMatchObject([
       { level: "error", message: "dispatch_failed" },
+    ]);
+  });
+
+  test("an error that is its own cause still yields one parseable line", () => {
+    const { logger, lines } = capture();
+    const error = new Error("Failed query");
+    error.cause = error;
+
+    logger.error("dispatch_failed", { error });
+
+    expect(lines.map((line) => JSON.parse(line) as unknown)).toMatchObject([
+      { error: { message: "Failed query", cause: "[Circular]" } },
     ]);
   });
 });

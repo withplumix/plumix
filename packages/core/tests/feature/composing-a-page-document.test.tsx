@@ -771,7 +771,9 @@ describe("the document's viewport", () => {
 
     page.assertStatus(500);
     expect(
-      reservedFragmentSite.logger.lines.map((line) => line.meta?.err),
+      reservedFragmentSite.logger.lines.map(
+        (line) => (line.meta?.error as Error | undefined)?.message,
+      ),
     ).toContain(
       'The document manifest has a `meta[0]` entry named "viewport". The ' +
         "renderer writes that tag itself, once per page, so a second one " +
@@ -790,7 +792,9 @@ describe("the document's viewport", () => {
 
     page.assertStatus(500);
     expect(
-      reservedFilterSite.logger.lines.map((line) => line.meta?.err),
+      reservedFilterSite.logger.lines.map(
+        (line) => (line.meta?.error as Error | undefined)?.message,
+      ),
     ).toContain(
       'The document manifest has a `meta[0]` entry named "Theme-Color". The ' +
         "renderer writes that tag itself, once per page, so a second one " +
