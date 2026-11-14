@@ -1,5 +1,5 @@
 import type { CommandContext } from "plumix";
-import type { Plugin } from "vite";
+import type { PluginOption } from "vite";
 import { loadOnce } from "plumix/support";
 
 import { workersCaching } from "./workers-caching.js";
@@ -21,7 +21,7 @@ export async function createCloudflareVite(
      */
     readonly inspectorPort?: number;
   } = {},
-): Promise<{ plugins: Plugin[]; root: string }> {
+): Promise<{ plugins: PluginOption[]; root: string }> {
   const { emitPlumixSources, plumix } = await loadPlumixVite();
   const { cloudflare } = await loadCloudflarePlugin();
 
@@ -34,14 +34,14 @@ export async function createCloudflareVite(
       ? { inspectorPort: options.inspectorPort }
       : undefined,
   ) as unknown;
-  const plugins: Plugin[] = [
+  const plugins: PluginOption[] = [
     plumix({ configFile: ctx.configPath }),
     workersCaching(ctx.cwd),
   ];
   if (Array.isArray(cfResult)) {
-    plugins.push(...(cfResult as Plugin[]));
+    plugins.push(...(cfResult as PluginOption[]));
   } else if (cfResult) {
-    plugins.push(cfResult as Plugin);
+    plugins.push(cfResult as PluginOption);
   }
   return { plugins, root: ctx.cwd };
 }

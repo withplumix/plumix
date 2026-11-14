@@ -1,9 +1,24 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { UserConfig } from "vite";
-import { build, createLogger, mergeConfig, resolveConfig } from "vite";
+import type { Plugin, Rolldown, UserConfig } from "vite";
+import {
+  build,
+  createBuilder,
+  createLogger,
+  mergeConfig,
+  resolveConfig,
+} from "vite";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { MANIFEST_SCRIPT_ID } from "@plumix/core/manifest";
 
 import { plumix } from "./index.js";
 import { SERIALIZE_VIRTUAL_ID } from "./island-transform.js";
@@ -19,7 +34,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("plugins declared in plumix.config.ts.vite reach the returned config", async () => {
+  test("leaves the site's vite.plugins out of the config it merges", async () => {
     const configPath = join(dir, "plumix.config.mjs");
     writeFileSync(
       configPath,
@@ -27,16 +42,16 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
         runtime: { name: 'x', handler: {}, generateEntry: () => '' },
         database: { kind: 'x' },
         auth: { passkey: {} },
-        vite: { plugins: [{ name: 'tailwindcss-probe' }] },
+        vite: { plugins: [{ name: 'site-probe' }], server: { port: 4321 } },
       };`,
       "utf8",
     );
-    const plugin = plumix({ configFile: configPath });
-    const result = await (
+    const [plugin] = plumix({ configFile: configPath });
+    const result = (await (
       plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
-    )({ root: dir }, { command: "serve", mode: "development" });
-    const merged = result as { plugins?: readonly { name?: string }[] };
-    expect(merged.plugins?.map((p) => p.name)).toContain("tailwindcss-probe");
+    )({ root: dir }, { command: "serve", mode: "development" })) as UserConfig;
+    expect(result.plugins).toBeUndefined();
+    expect(result.server?.port).toBe(4321);
   });
 
   test("disables Vite's built-in HMR error overlay so it never stacks with plumix's (#1622)", async () => {
@@ -50,7 +65,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       };`,
       "utf8",
     );
-    const plugin = plumix({ configFile: configPath });
+    const [plugin] = plumix({ configFile: configPath });
     const result = await (
       plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
     )({ root: dir }, { command: "serve", mode: "development" });
@@ -71,7 +86,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       };`,
       "utf8",
     );
-    const plugin = plumix({ configFile: configPath });
+    const [plugin] = plumix({ configFile: configPath });
     const result = await (
       plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
     )({ root: dir }, { command: "serve", mode: "development" });
@@ -91,7 +106,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       };`,
       "utf8",
     );
-    const plugin = plumix({ configFile: configPath });
+    const [plugin] = plumix({ configFile: configPath });
     const result = await (
       plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
     )({ root: dir }, { command: "serve", mode: "development" });
@@ -126,7 +141,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     const previous = process.env.PLUMIX_EDITOR;
     process.env.PLUMIX_EDITOR = "cursor";
     try {
-      const plugin = plumix({ configFile: configPath });
+      const [plugin] = plumix({ configFile: configPath });
       const result = await (
         plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
       )({ root: dir }, { command: "serve", mode: "development" });
@@ -156,7 +171,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
         };`,
         "utf8",
       );
-      const plugin = plumix({ configFile: configPath });
+      const [plugin] = plumix({ configFile: configPath });
       const result = await (
         plugin.config as (userConfig: unknown, env: unknown) => Promise<unknown>
       )({ root: dir }, { command: "build", mode: "production" });
@@ -192,7 +207,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
     const UUID =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-    function sitePlugin(): ReturnType<typeof plumix> {
+    function sitePlugin(): Plugin {
       const configPath = join(dir, "plumix.config.mjs");
       writeFileSync(
         configPath,
@@ -203,11 +218,12 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
         };`,
         "utf8",
       );
-      return plumix({ configFile: configPath });
+      const [plugin] = plumix({ configFile: configPath });
+      return plugin;
     }
 
     async function buildId(
-      plugin: ReturnType<typeof plumix>,
+      plugin: Plugin,
       command: "build" | "serve",
     ): Promise<unknown> {
       const result = await (
@@ -267,7 +283,7 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
       };`,
       "utf8",
     );
-    const plugin = plumix({ configFile: configPath });
+    const [plugin] = plumix({ configFile: configPath });
     const result = (
       await (
         plugin.config as (
@@ -325,8 +341,26 @@ describe("plumix() vite plugin — `config()` merges plumix.config.vite", () => 
 });
 
 describe("plumix() vite plugin — island serialize virtual module", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "plumix-vite-serialize-"));
+    writeFileSync(
+      join(dir, "plumix.config.mjs"),
+      `export default {
+        runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+        database: { kind: 'x' },
+        auth: { passkey: {} },
+      };`,
+    );
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   test("resolves the virtual id and loads an IslandShim re-export from plumix/blocks", () => {
-    const plugin = plumix();
+    const [plugin] = plumix({ configFile: join(dir, "plumix.config.mjs") });
     const resolveId = plugin.resolveId as (
       id: string,
       importer?: string,
@@ -341,5 +375,98 @@ describe("plumix() vite plugin — island serialize virtual module", () => {
     expect(load(resolvedId)).toContain(
       `export { IslandShim } from "plumix/blocks"`,
     );
+  });
+});
+
+describe("plumix() vite plugin — the site's vite.plugins", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = realpathSync(mkdtempSync(join(tmpdir(), "plumix-vite-plugins-")));
+    const adminDir = join(dir, "admin-dist");
+    mkdirSync(adminDir);
+    writeFileSync(
+      join(adminDir, "index.html"),
+      `<!doctype html><script id="${MANIFEST_SCRIPT_ID}" type="application/json">{}</script>`,
+    );
+    writeFileSync(
+      join(adminDir, "catalog-locales.json"),
+      JSON.stringify({
+        sourceLocale: "en",
+        catalogs: { admin: ["en"], editor: ["en"], blocks: ["en"] },
+      }),
+    );
+    writeFileSync(join(dir, "entry.js"), "export const page = 1;\n");
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  // A resolved config written out: evaluating the real `plumix()` costs half a minute.
+  function writeSiteConfig(vite: string): string {
+    const configPath = join(dir, "plumix.config.mjs");
+    writeFileSync(
+      configPath,
+      `import { appendFileSync } from "node:fs";
+const en = { code: "en", label: "English", direction: "ltr", enabled: true };
+export default {
+  runtime: { name: "x", handler: {}, generateEntry: () => "" },
+  database: { kind: "x" },
+  auth: { passkey: {} },
+  theme: { templates: [] },
+  plugins: [],
+  i18n: { defaultLocale: en, locales: [en] },
+  ${vite}
+};
+`,
+      "utf8",
+    );
+    return configPath;
+  }
+
+  async function buildSite(configPath: string): Promise<string[]> {
+    const builder = await createBuilder({
+      configFile: false,
+      root: dir,
+      logLevel: "silent",
+      plugins: [
+        plumix({ configFile: configPath, adminDir: join(dir, "admin-dist") }),
+      ],
+      environments: {
+        site: {
+          consumer: "server",
+          build: {
+            write: false,
+            rolldownOptions: { input: join(dir, "entry.js") },
+          },
+        },
+      },
+    });
+    const environment = builder.environments.site;
+    if (environment === undefined) throw new Error("no site environment");
+    const output = (await builder.build(
+      environment,
+    )) as Rolldown.RolldownOutput;
+    return output.output.map((chunk) => chunk.fileName);
+  }
+
+  test("runs a plugin the site lists under vite.plugins once per bundle", async () => {
+    const bundles = join(dir, "bundles.log");
+    const configPath = writeSiteConfig(
+      `vite: { plugins: [{ name: "site-probe", generateBundle() { appendFileSync(${JSON.stringify(bundles)}, "x"); } }] },`,
+    );
+
+    await buildSite(configPath);
+
+    expect(readFileSync(bundles, "utf8")).toBe("x");
+  });
+
+  test("builds a site whose config lists no vite.plugins", async () => {
+    const configPath = writeSiteConfig("");
+
+    const files = await buildSite(configPath);
+
+    expect(files).toContain("entry.mjs");
   });
 });

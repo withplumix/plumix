@@ -73,7 +73,7 @@ function stagedManifest(): Record<string, unknown> {
 }
 
 test("staging the admin injects each enabled locale's catalog locale for the admin, editor and blocks catalogs", async () => {
-  const plugin = plumix({
+  const [plugin] = plumix({
     configFile: join(dir, "plumix.config.mjs"),
     adminDir: join(dir, "admin-dist"),
   });

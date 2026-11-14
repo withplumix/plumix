@@ -455,6 +455,17 @@ export const vite: PlumixConfigInput["vite"] = {
 };
 ```
 
+`vite.plugins` adds Vite plugins to `plumix dev` and `plumix build` on every runtime. They run after Plumix's own plugin.
+
+```ts
+import type { PlumixConfigInput } from "plumix";
+import tailwindcss from "@tailwindcss/vite";
+
+export const vite: PlumixConfigInput["vite"] = {
+  plugins: [tailwindcss()],
+};
+```
+
 ## Related
 
 [Project Structure](/getting-started/project-structure/) covers the rest of the files this one sits beside. [Secrets](/deployment/secrets/) goes further into `.env`, production secrets and the `EnvInput` slots. [Bindings and Environment](/deployment/bindings/) covers the `wrangler.jsonc` half of the runtime slots. [Cloudflare Workers](/deployment/cloudflare/) covers what each adapter factory actually binds to. [Access & Identity](/access/overview/) covers the `auth` slot's principals and sessions, and [Passkeys](/access/passkeys/) covers the relying-party fields inside it. [Plugins](/plugins/overview/) covers what goes in the `plugins` array. [Themes](/themes/overview/) covers the `theme` slot. [Permalinks and Slugs](/routing/permalinks/) covers the URLs `redirects` and `basePath` reshape.

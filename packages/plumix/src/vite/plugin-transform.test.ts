@@ -1,10 +1,31 @@
-import { describe, expect, test } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { plumix } from "./index.js";
 
 describe("plumix vite plugin — SSR transform on .js islands", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "plumix-transform-"));
+    writeFileSync(
+      join(dir, "plumix.config.mjs"),
+      `export default {
+        runtime: { name: 'x', handler: {}, generateEntry: () => '' },
+        database: { kind: 'x' },
+        auth: { passkey: {} },
+      };`,
+    );
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   test("a .js `use client` module is rewritten to the island wrapper", async () => {
-    const plugin = plumix();
+    const [plugin] = plumix({ configFile: join(dir, "plumix.config.mjs") });
     const code = `"use client";
 import { useState } from "react";
 export function CopyLink() {
