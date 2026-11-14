@@ -176,6 +176,8 @@ function harness(user: AuthenticatedUser | null = adminUser): HarnessHandles {
 const adminUser: AuthenticatedUser = {
   id: 7,
   email: "alice@example.com",
+  name: null,
+  avatarUrl: null,
   role: "admin",
   meta: {},
 };

@@ -17,6 +17,8 @@ import { withUser } from "./with-user.js";
 const editor: AuthenticatedUser = {
   id: 7,
   email: "editor@example.com",
+  name: null,
+  avatarUrl: null,
   role: "editor",
   meta: {},
 };
@@ -311,20 +313,14 @@ describe("the session-gated policy", () => {
 });
 
 describe("the user a policy carries", () => {
-  test("is the user's identity unless the surface projects another shape", async () => {
-    const row = { ...editor, name: "Ed", avatarUrl: null };
+  test("is the row's projection, holding none of its other columns", async () => {
+    const row = { ...editor, name: "Ed", slug: "ed", disabledAt: null };
     const ctx = await contextWith({
       authenticate: () => Promise.resolve(asSession(row)),
     });
 
-    const identity = await resolvePrincipal(ctx, { kind: "configured" });
-    const whole = await resolvePrincipal(
-      ctx,
-      { kind: "configured" },
-      (user) => user,
-    );
+    const authed = await resolvePrincipal(ctx, { kind: "configured" });
 
-    expect(identity?.user).toEqual(editor);
-    expect(whole?.user).toEqual(row);
+    expect(authed?.user).toStrictEqual({ ...editor, name: "Ed" });
   });
 });

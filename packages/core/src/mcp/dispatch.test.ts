@@ -1161,6 +1161,36 @@ describe("MCP endpoint — dev trust", () => {
     expect(await h.db.select().from(apiTokens)).toHaveLength(0);
   });
 
+  test("a loopback request's tool sees the first admin in the one principal shape", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const whoami = definePlugin("test-whoami", {
+      setup: (ctx) => {
+        ctx.registerMcpTool({
+          name: "whoami",
+          description: "Test-only: the tool's principal.",
+          inputSchema: v.object({}),
+          run: (toolCtx) => toolCtx.user,
+        });
+      },
+    });
+    const h = await mcpHarness({ config: { plugins: [blog, whoami] } });
+    const admin = await h.factory.admin.create({
+      name: "Ada",
+      avatarUrl: "https://cdn.example/ada.png",
+    });
+
+    const json = await callLoopbackTool(h, "whoami", {});
+
+    expect(parseToolResult(json)).toStrictEqual({
+      id: admin.id,
+      email: admin.email,
+      name: "Ada",
+      avatarUrl: "https://cdn.example/ada.png",
+      role: "admin",
+      meta: {},
+    });
+  });
+
   test("a loopback request with no token creates a draft as the first admin", async () => {
     vi.stubEnv("PLUMIX_DEV", "1");
     const h = await mcpHarness({ config: { plugins: [blog] } });

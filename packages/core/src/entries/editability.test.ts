@@ -19,6 +19,8 @@ import {
 const CALLER: AuthenticatedUser = {
   id: 1,
   email: "caller@example.com",
+  name: null,
+  avatarUrl: null,
   role: "author",
   meta: {},
 };

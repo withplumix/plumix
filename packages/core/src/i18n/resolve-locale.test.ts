@@ -25,7 +25,14 @@ function adminRequest(
 }
 
 function user(meta: JsonObject = {}): AuthenticatedUser {
-  return { id: 1, email: "u@x", role: "admin", meta };
+  return {
+    id: 1,
+    email: "u@x",
+    name: null,
+    avatarUrl: null,
+    role: "admin",
+    meta,
+  };
 }
 
 describe("resolveLocale", () => {

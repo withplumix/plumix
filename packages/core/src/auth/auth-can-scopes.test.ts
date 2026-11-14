@@ -52,7 +52,14 @@ function buildCtx(args: {
 }) {
   return withUser(
     (args.on ?? site).context,
-    { id: 1, email: "u@cms.example", role: args.role, meta: {} },
+    {
+      id: 1,
+      email: "u@cms.example",
+      name: null,
+      avatarUrl: null,
+      role: args.role,
+      meta: {},
+    },
     args.tokenScopes === undefined
       ? { kind: "session" }
       : {

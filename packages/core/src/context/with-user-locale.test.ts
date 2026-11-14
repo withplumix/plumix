@@ -22,7 +22,14 @@ describe("withUser — locale re-resolution", () => {
 
     const authed = withUser(
       baseCtx,
-      { id: 1, email: "u@cms.example", role: "admin", meta: { locale: "fr" } },
+      {
+        id: 1,
+        email: "u@cms.example",
+        name: null,
+        avatarUrl: null,
+        role: "admin",
+        meta: { locale: "fr" },
+      },
       { kind: "session" },
     );
 

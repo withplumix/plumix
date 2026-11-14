@@ -11,6 +11,7 @@ const user: RendererUser = {
   id: 1,
   email: "ada@example.com",
   name: "Ada",
+  avatarUrl: null,
   role: "member",
   meta: {},
 };

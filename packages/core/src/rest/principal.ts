@@ -13,6 +13,8 @@ import { rebindDispatch } from "../events-and-filters/dispatch.js";
 const PUBLIC_PRINCIPAL: AuthenticatedUser = {
   id: 0,
   email: "",
+  name: null,
+  avatarUrl: null,
   role: "member",
   meta: {},
 };

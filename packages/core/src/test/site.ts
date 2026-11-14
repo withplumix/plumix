@@ -29,6 +29,7 @@ import type { Travel } from "./site-clock.js";
 import type { StorageFake } from "./storage-fake.js";
 import type { TelemetryFake } from "./telemetry-fake.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
+import { principalOf } from "../auth/principal.js";
 import { createSession } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
 import { createAppContext } from "../context/app.js";
@@ -356,8 +357,9 @@ export async function testSite<
       get context() {
         const ctx = contextFor(new Request("https://cms.example/"));
         if (principal === null) return ctx;
-        const { id, email, role, meta } = userOf(principal);
-        return withUser(ctx, { id, email, role, meta }, { kind: "session" });
+        return withUser(ctx, principalOf(userOf(principal)), {
+          kind: "session",
+        });
       },
       visit: async (target, options) => {
         const path =

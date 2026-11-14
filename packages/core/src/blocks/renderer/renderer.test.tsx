@@ -144,6 +144,8 @@ describe("useUser", () => {
     const user = {
       id: 12,
       email: "author@example.com",
+      name: null,
+      avatarUrl: null,
       role: "author",
       meta: {},
     };

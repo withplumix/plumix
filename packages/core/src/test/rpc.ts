@@ -20,6 +20,7 @@ import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { coreAuthMethods } from "../auth/core-methods.js";
 import { declareAuthMethods } from "../auth/declared-methods.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
+import { principalOf } from "../auth/principal.js";
 import { createSession, DEFAULT_SESSION_POLICY } from "../auth/sessions.js";
 import { withUser } from "../auth/with-user.js";
 import { resolveAllowedBlocks } from "../blocks/allowed-blocks.js";
@@ -113,7 +114,7 @@ export type AuthenticatedRpcHarness = RpcHarnessBase<User>;
  * `h.context` is the base one, and read surfaces answer per viewer.
  */
 export function authedCtx(h: AuthenticatedRpcHarness): AppContext {
-  return withUser(h.context, h.user, { kind: "session" });
+  return withUser(h.context, principalOf(h.user), { kind: "session" });
 }
 
 /** The context `authenticated` hands a handler called with an API token. */
@@ -121,7 +122,7 @@ export function tokenCtx(
   h: AuthenticatedRpcHarness,
   scopes: readonly string[] | null,
 ): AppContext {
-  return withUser(h.context, h.user, {
+  return withUser(h.context, principalOf(h.user), {
     kind: "api-token",
     token: { id: "test-token", name: "test" },
     scopes,

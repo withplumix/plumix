@@ -10,8 +10,8 @@ export function sessionUserOf(
   user: {
     readonly id: number;
     readonly email: string;
-    readonly name?: string | null;
-    readonly avatarUrl?: string | null;
+    readonly name: string | null;
+    readonly avatarUrl: string | null;
     readonly role: string;
   },
   plugins: PluginRegistry,
@@ -21,8 +21,8 @@ export function sessionUserOf(
   return {
     id: user.id,
     email: user.email,
-    name: user.name ?? null,
-    avatarUrl: user.avatarUrl ?? null,
+    name: user.name,
+    avatarUrl: user.avatarUrl,
     role: user.role,
     capabilities: capabilitiesForRole(user.role, plugins).filter(can),
   };

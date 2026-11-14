@@ -24,7 +24,14 @@ import {
 } from "./policy.js";
 
 function user(role: DefaultRole, meta: JsonObject = {}): AuthenticatedUser {
-  return { id: 1, email: "u@site.test", name: null, role, meta };
+  return {
+    id: 1,
+    email: "u@site.test",
+    name: null,
+    avatarUrl: null,
+    role,
+    meta,
+  };
 }
 
 let db: Awaited<ReturnType<typeof createTestDb>>;
