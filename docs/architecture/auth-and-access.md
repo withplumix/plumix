@@ -60,7 +60,7 @@ Entry and term capabilities derive from `POST_TYPE_CAPABILITY_ACTIONS` and `TERM
 
 **Surfaces.**
 
-- Admin shell: the dispatcher authenticates only when the request has a session, and sends a user without `admin:access` to `/`.
+- Admin shell: the `session-gated` policy, and a principal for whom `ctx.auth.can("admin:access")` is false goes to `/`, so a token's scopes narrow it. The admin bar on a public render asks the same.
 - RPC: the `authenticated` middleware (`rpc/authenticated.ts`) plus `requireCapability`. See [RPC and editing](rpc-and-editing.md).
 - REST, MCP and `plumix sync`: the `bearer` policy, API token only (`rest/principal.ts`, `mcp/dispatch.ts`, `runtime/sync-operator.ts`). See [REST API](rest-api.md) and [MCP](mcp.md).
 - Public render: the `session-gated` policy, so the user loads only when the request has a session. `trackPrincipalReads` marks a render personal when it reads `user`, `tokenScopes`, `credential` or `auth.can` ([ADR 0030](../adr/0030-a-render-that-reads-the-principal-is-never-shared.md)). `policyForMatch` and `selectEntryPolicy` in `access/gate.ts` pick the entry's policy; a stored policy key that no longer exists falls back to the type's `default`. `gateToResponse` turns its gate into a redirect, a challenge or a render. A gate grants a segment: `anonymous`, `authenticated`, `private`, `capability:<name>`, or an `entitlement:<label>`. Everyone holding a capability shares one cached copy of a page it gates, whatever their role. See [routing and render](routing-and-render.md) and [CDN cache](cdn-cache.md).

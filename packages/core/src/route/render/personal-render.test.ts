@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../context/app-context.js";
 import type { DefaultRole } from "../../users/contract/roles.js";
+import { principalOf } from "../../auth/principal.js";
+import { withUser } from "../../auth/with-user.js";
 import { block } from "../../events-and-filters/block-render.js";
 import { definePlugin } from "../../plugin/define.js";
 import { testSite } from "../../test/site.js";
@@ -180,5 +182,17 @@ describe("adminBarViewer", () => {
       id: member.id,
       role: "member",
     });
+  });
+
+  test("is null for a viewer whose token scopes leave out admin:access, though their role holds it", async () => {
+    const admin = await site.factory.user.create({ role: "admin" });
+
+    const ctx = withUser(site.context, principalOf(admin), {
+      kind: "api-token",
+      token: { id: "token-1", name: "scoped" },
+      scopes: ["entry:post:read"],
+    });
+
+    expect(adminBarViewer(trackPrincipalReads(ctx))).toBeNull();
   });
 });
