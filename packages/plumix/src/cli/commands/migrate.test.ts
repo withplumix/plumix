@@ -565,7 +565,7 @@ async up({ db }) {
         core: trackingRows("__drizzle_migrations_core"),
         widgets: trackingRows("__drizzle_migrations_acme_plugin_widgets"),
       };
-      expect(applied).toEqual({ core: 8, widgets: 1 });
+      expect(applied).toEqual({ core: 9, widgets: 1 });
 
       await migrateCommand.run(applyCtx([], plugins));
 
@@ -588,7 +588,7 @@ async up({ db }) {
       );
 
       expect(lines.join("\n")).toMatch(
-        /^→ local · site\.sqlite\ncore: applied 8 migrations\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n@acme\/plugin-widgets: applied 1 migration\n {2}applied 1970-01-01T00:00:01\.000Z [0-9a-f]{8}\ncore: applied 1 data migration\n {2}applied rename-subscriber-to-member$/,
+        /^→ local · site\.sqlite\ncore: applied 9 migrations\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n {2}applied \S+Z [0-9a-f]{8}\n@acme\/plugin-widgets: applied 1 migration\n {2}applied 1970-01-01T00:00:01\.000Z [0-9a-f]{8}\ncore: applied 1 data migration\n {2}applied rename-subscriber-to-member$/,
       );
     });
 
@@ -1188,7 +1188,7 @@ export default [
         query(`SELECT key, value FROM settings WHERE "group" = 'flags'`),
       ).toEqual([{ key: "beta", value: "false" }]);
       expect(lines).toEqual([
-        "core: applied 8 migrations",
+        "core: applied 9 migrations",
         "@acme/plugin-widgets: applied 1 migration",
         "core: applied 1 data migration",
         "site: applied 1 data migration",
@@ -1237,10 +1237,10 @@ export default [
       await serve(serverDir);
 
       expect(names("table")).toContain("widgets");
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
       expect(trackingRows("__drizzle_migrations_acme_plugin_widgets")).toBe(1);
       expect(lines).toEqual([
-        "core: applied 8 migrations",
+        "core: applied 9 migrations",
         "@acme/plugin-widgets: applied 1 migration",
         "core: applied 1 data migration",
       ]);
@@ -1271,7 +1271,7 @@ export default [
       });
 
       expect(confirm).not.toHaveBeenCalled();
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("fails on a site whose own tables are ahead of its history, opening nothing", async () => {
@@ -1449,7 +1449,7 @@ export default [
 
       await migrateForDev(devTarget([]));
 
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
       expect(opened).toEqual(["site", "memory"]);
     });
 
@@ -1526,7 +1526,7 @@ export default [
 
       expect(lines.slice(0, 4)).toEqual([
         "→ production · site.sqlite",
-        "core: 8 pending",
+        "core: 9 pending",
         expect.stringMatching(/^ {2}pending \S+Z [0-9a-f]{8}$/) as unknown,
         expect.stringMatching(/^ {2}pending \S+Z [0-9a-f]{8}$/) as unknown,
       ]);
@@ -1548,7 +1548,7 @@ export default [
 
       await migrateCommand.run(production([]));
 
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("--yes applies without asking", async () => {
@@ -1557,7 +1557,7 @@ export default [
       await migrateCommand.run(production(["--yes"]));
 
       expect(confirm).not.toHaveBeenCalled();
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("--dry-run prints the plan and applies nothing", async () => {
@@ -1589,7 +1589,7 @@ export default [
       await migrateCommand.run(applyCtx([], [], runtime(PRODUCTION)));
 
       expect(confirm).not.toHaveBeenCalled();
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
   });
 
@@ -1690,7 +1690,7 @@ export default [
       await migrateCommand.run(withData(["fresh", "--yes"]));
 
       expect(names("table")).not.toContain("leftover");
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
       expect(query("SELECT name FROM runs")).toEqual([{ name: "a1" }]);
     });
 
@@ -1702,7 +1702,7 @@ export default [
         migrateCommand.run(applyCtx(["fresh"])),
       ).rejects.toMatchObject({ code: "migrate_fresh_unconfirmed" });
 
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("lists every table it drops and asks before dropping any", async () => {
@@ -1723,7 +1723,7 @@ export default [
         "Drop every table in local · site.sqlite and migrate it from nothing?",
       );
       expect(lines.at(-1)).toBe("Nothing was dropped.");
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("--dry-run prints the plan and drops nothing", async () => {
@@ -1735,9 +1735,9 @@ export default [
       await migrateCommand.run(applyCtx(["fresh", "--dry-run"]));
 
       expect(confirm).not.toHaveBeenCalled();
-      expect(lines).toContain("core: 8 to apply");
+      expect(lines).toContain("core: 9 to apply");
       expect(lines.at(-1)).toBe("Dry run: nothing was dropped.");
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("a remote wipe asks for the database's name, and a wrong one aborts", async () => {
@@ -1758,7 +1758,7 @@ export default [
       );
       expect(confirm).not.toHaveBeenCalled();
       expect(events).toEqual([]);
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("a remote wipe goes ahead once the database's name is typed", async () => {
@@ -1776,7 +1776,7 @@ export default [
 
       expect(events).toContain("wipe");
       expect(names("table")).not.toContain("leftover");
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("prints the restore point before it drops anything, and the next step after", async () => {
@@ -1809,7 +1809,7 @@ export default [
         ),
       ).rejects.toMatchObject({ code: "migrate_owner_history_missing" });
 
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
   });
 
@@ -1823,7 +1823,7 @@ export default [
       await migrateCommand.run(applyCtx(["status"], plugins));
 
       expect(lines.join("\n")).toMatch(
-        /^→ local · site\.sqlite\ncore: 0 applied, 8 pending\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n@acme\/plugin-widgets: 0 applied, 1 pending\n {2}pending 1970-01-01T00:00:01\.000Z [0-9a-f]{8}\ncore: 0 data migrations applied, 1 pending\n {2}pending rename-subscriber-to-member$/,
+        /^→ local · site\.sqlite\ncore: 0 applied, 9 pending\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n {2}pending .+\n@acme\/plugin-widgets: 0 applied, 1 pending\n {2}pending 1970-01-01T00:00:01\.000Z [0-9a-f]{8}\ncore: 0 data migrations applied, 1 pending\n {2}pending rename-subscriber-to-member$/,
       );
     });
     test("lists each owner's applied and pending data migrations after the schema status", async () => {
@@ -1853,7 +1853,7 @@ export default [
       ]);
       expect(lines.slice(0, 2)).toEqual([
         "→ local · site.sqlite",
-        "core: 8 applied, 0 pending",
+        "core: 9 applied, 0 pending",
       ]);
     });
   });
@@ -1887,7 +1887,7 @@ export default [
       await migrateCommand.run(applyCtx([]));
 
       expect(schema()).toEqual(before);
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
       expect(opened).toEqual(["site", "memory"]);
       expect(lines.join("\n")).toContain("drizzle/");
 
@@ -1908,7 +1908,7 @@ export default [
 
       await migrateCommand.run(applyCtx([]));
 
-      expect(trackingRows("__drizzle_migrations_core")).toBe(8);
+      expect(trackingRows("__drizzle_migrations_core")).toBe(9);
     });
 
     test("refuses a schema that differs, naming the difference, and changes nothing", async () => {
