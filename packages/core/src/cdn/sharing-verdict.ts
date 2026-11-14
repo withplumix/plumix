@@ -2,7 +2,12 @@ import type { Segment } from "../access/contract/access.js";
 import type { RouteIntent } from "../route/contract/intent.js";
 import type { ClientCopy } from "./client-copy.js";
 import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
-import { methodIsCacheable, segmentCdnKey } from "./decision.js";
+import {
+  cacheControlAllowsSharedStorage,
+  methodIsCacheable,
+  routeCdnKey,
+  segmentCdnKey,
+} from "./decision.js";
 
 /**
  * Public route intents whose anonymous render is a shared, cacheable document.
@@ -114,7 +119,9 @@ function readsUniversalCopy(facts: RequestFacts): boolean {
  * A per-request grant must not outlive its request in a shared entry, and an
  * `anonymous` render to a privileged request can show who signed in.
  */
-function segmentFor(facts: RequestFacts): Segment {
+function segmentFor(
+  facts: Pick<RequestFacts, "privileged" | "ephemeralGrant" | "accessSegment">,
+): Segment {
   if (facts.ephemeralGrant) return PRIVATE_SEGMENT;
   const segment = facts.accessSegment ?? "anonymous";
   if (segment === "anonymous" && facts.privileged) return PRIVATE_SEGMENT;
@@ -146,6 +153,7 @@ function pageIsCacheable(page: PageKind): boolean {
 export interface RenderFacts {
   readonly status: number;
   readonly personal: boolean;
+  readonly setsCookie: boolean;
 }
 
 export interface AfterRenderVerdict {
@@ -165,23 +173,25 @@ export function sharingAfterRender(
   render?: RenderFacts,
 ): AfterRenderVerdict {
   const clientCopy = clientCopyFor(decision);
-  if (decision.kind !== "read-through" || !rendersShareably(render)) {
+  if (
+    decision.kind !== "read-through" ||
+    render === undefined ||
+    !rendersShareably(render)
+  ) {
     return { store: false, decorate: false, universal: false, clientCopy };
   }
   return {
     store: true,
-    decorate: clientCopy === "page",
+    // The edge copy can drop a visitor's `Set-Cookie`; the client copy can't,
+    // so stamping shared freshness beside it would hand that cookie to everyone.
+    decorate: clientCopy === "page" && !render.setsCookie,
     universal: decision.universal,
     clientCopy,
   };
 }
 
-function rendersShareably(render: RenderFacts | undefined): boolean {
-  return (
-    render !== undefined &&
-    responseIsShareable(render.status) &&
-    !render.personal
-  );
+function rendersShareably(render: RenderFacts): boolean {
+  return responseIsShareable(render.status) && !render.personal;
 }
 
 /** Gates decoration, so a transient 500 never leaves carrying page freshness. */
@@ -197,4 +207,82 @@ function clientCopyFor(decision: SharingDecision): ClientCopy {
   if (decision.kind === "read-universal") return "universal-reader";
   if (decision.segment !== "anonymous") return "private";
   return decision.page.kind === "policied-route" ? "as-rendered" : "page";
+}
+
+export interface RouteRequestFacts {
+  readonly request: Request;
+  /** Asked through the site's authenticator, never by sniffing the cookie. */
+  readonly privileged: boolean;
+  readonly ephemeralGrant: boolean;
+  /**
+   * A public route renders a privileged request live as its reader. A raw
+   * route still serves it the shared copy but never fills it.
+   */
+  readonly route: "public" | "raw";
+}
+
+/**
+ * No segment axis: a route's `cacheable: true` claims every unprivileged
+ * visitor gets the same document.
+ */
+export type RouteSharingDecision =
+  | {
+      readonly kind: "bypass";
+      readonly reason: Extract<CdnBypassReason, "method" | "private">;
+    }
+  | {
+      readonly kind: "read-through";
+      readonly key: Request;
+      /** Whether this request's own render may fill the shared copy. */
+      readonly shareable: boolean;
+    };
+
+export function routeSharingBeforeRender(
+  facts: RouteRequestFacts,
+): RouteSharingDecision {
+  const rendersPrivately =
+    segmentFor({ ...facts, accessSegment: null }) === PRIVATE_SEGMENT;
+  if (rendersPrivately && facts.route === "public") {
+    return { kind: "bypass", reason: "private" };
+  }
+  if (!methodIsCacheable(facts.request.method)) {
+    return { kind: "bypass", reason: "method" };
+  }
+  return {
+    kind: "read-through",
+    key: routeCdnKey(facts.request),
+    shareable: !rendersPrivately,
+  };
+}
+
+export interface RouteRenderFacts {
+  readonly status: number;
+  readonly setsCookie: boolean;
+  readonly cacheControl: string | null;
+}
+
+/**
+ * Freshness and tags stay the handler's to declare. `auth: "public"` only means
+ * core doesn't gate the route; a handler may still personalize.
+ */
+export function routeSharingAfterRender(
+  decision: RouteSharingDecision,
+  render?: RouteRenderFacts,
+): AfterRenderVerdict {
+  const clientCopy: ClientCopy =
+    decision.kind === "bypass" && decision.reason === "private"
+      ? "private"
+      : "as-rendered";
+  if (decision.kind === "bypass" || render === undefined) {
+    return { store: false, decorate: false, universal: false, clientCopy };
+  }
+  // The edge copy is the response the handler built, so it is stored only
+  // where it may also leave shared. The store would overwrite
+  // `private`/`no-store` with the page TTL.
+  const shared =
+    decision.shareable &&
+    responseIsShareable(render.status) &&
+    cacheControlAllowsSharedStorage(render.cacheControl) &&
+    !render.setsCookie;
+  return { store: shared, decorate: shared, universal: false, clientCopy };
 }
