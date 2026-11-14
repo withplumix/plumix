@@ -23,7 +23,7 @@ const SETTINGS_CAPABILITY = "settings:manage";
 /** The server's gate on the admin shell, before any page's own capability. */
 const ADMIN_ACCESS = "admin:access";
 
-function pageId(route: string): string {
+export function pageId(route: string): string {
   const segments = route.split("/").filter((segment) => segment !== "");
   return segments.length === 0 ? DASHBOARD_ID : segments.join("-");
 }

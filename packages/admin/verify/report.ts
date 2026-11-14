@@ -21,13 +21,13 @@ export type PageEvent =
       readonly failure: string;
     };
 
-export interface ConsoleMessage {
+interface ConsoleMessage {
   readonly text: string;
   readonly location?: string;
 }
 
 /** `status` when the server answered, `failure` when nothing did. */
-export type FailedRequest =
+type FailedRequest =
   | { readonly method: string; readonly url: string; readonly status: number }
   | { readonly method: string; readonly url: string; readonly failure: string };
 
@@ -40,7 +40,7 @@ export interface AxeViolation {
   readonly nodes: readonly { readonly target: readonly unknown[] }[];
 }
 
-export interface AxeViolationSummary {
+interface AxeViolationSummary {
   readonly id: string;
   readonly impact?: string | null;
   readonly help: string;

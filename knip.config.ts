@@ -299,6 +299,8 @@ const config: KnipConfig = {
         // The documentation capture: same rig, run by the playwright CLI
         // under its own project rather than by an import.
         "screenshots/*.spec.ts",
+        // `pnpm verify:admin`'s specs, run by their own playwright project.
+        "verify/*.spec.ts",
         // `lingui.config.ts` is loaded by the `@lingui/cli` binary
         // (extract/compile) — never imported.
         "lingui.config.ts",
