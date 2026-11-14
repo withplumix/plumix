@@ -6,7 +6,7 @@ import {
 } from "./universal-copy.js";
 
 export type ClientCopy =
-  "private" | "page" | "as-rendered" | "universal-reader";
+  "private" | "page" | "as-rendered" | "universal-reader" | "front-cache";
 
 export function applyClientCopy(
   response: Response,
@@ -21,6 +21,8 @@ export function applyClientCopy(
       return response;
     case "universal-reader":
       return universalReaderCopy(response);
+    case "front-cache":
+      return declaredOrRevalidated(response);
   }
 }
 
@@ -53,7 +55,10 @@ export function privateClientCopy(response: Response): Response {
  * kept.
  */
 export function pageClientCopy(response: Response): Response {
-  const page = withoutUniversalMarker(response);
+  return declaredOrRevalidated(withoutUniversalMarker(response));
+}
+
+function declaredOrRevalidated(page: Response): Response {
   if (page.headers.has("cache-control")) return page;
   return withHeaders(page, (headers) => {
     headers.set("cache-control", "private, no-cache");

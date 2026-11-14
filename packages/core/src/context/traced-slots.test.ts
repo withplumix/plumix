@@ -150,6 +150,49 @@ describe("traceCdn", () => {
 
     expect(cdn.purgeTags).toBeUndefined();
   });
+
+  test("a front cache's read produces a `cdn: front cache` span", async () => {
+    const telemetry = createTelemetryCollector();
+    const cdn = traceCdn(
+      {
+        ...stub(),
+        frontCache: {
+          read: () => Promise.resolve(new Response("copy")),
+          forwarded: (request) => request.headers.has("x-forwarded"),
+        },
+      },
+      () => telemetry,
+    );
+
+    const copy = await cdn.frontCache?.read(
+      new Request("https://cms.example/"),
+    );
+
+    expect(await copy?.text()).toBe("copy");
+    expect(telemetry.getSpans().map((s) => s.name)).toEqual([
+      "cdn: front cache",
+    ]);
+  });
+
+  test("a front cache still recognizes what it forwarded through the wrapper", () => {
+    const telemetry = createTelemetryCollector();
+    const cdn = traceCdn(
+      {
+        ...stub(),
+        frontCache: {
+          read: () => Promise.resolve(new Response("copy")),
+          forwarded: (request) => request.headers.has("x-forwarded"),
+        },
+      },
+      () => telemetry,
+    );
+
+    const forwarded = cdn.frontCache?.forwarded(
+      new Request("https://cms.example/", { headers: { "x-forwarded": "1" } }),
+    );
+
+    expect(forwarded).toBe(true);
+  });
 });
 
 describe("traceAssets", () => {

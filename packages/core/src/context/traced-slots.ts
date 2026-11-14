@@ -37,6 +37,7 @@ export function traceCdn(
   const store = cdn.store;
   const purgeTags = cdn.purgeTags?.bind(cdn);
   const purgeAll = cdn.purgeAll?.bind(cdn);
+  const frontCache = cdn.frontCache;
   return {
     // Header math rather than I/O, like `storage.url` below — spanning it would
     // put a 0ms row next to real round-trips.
@@ -52,6 +53,15 @@ export function traceCdn(
     }),
     ...(purgeAll && {
       purgeAll: () => getTelemetry().span("cdn: purge all", () => purgeAll()),
+    }),
+    ...(frontCache && {
+      frontCache: {
+        read: (request: Request) =>
+          getTelemetry().span("cdn: front cache", () =>
+            frontCache.read(request),
+          ),
+        forwarded: frontCache.forwarded.bind(frontCache),
+      },
     }),
   };
 }

@@ -18,6 +18,11 @@ export function cdnCanKeySegments(cdn: ConnectedCdn): boolean {
 
 interface ReadThroughArgs {
   readonly decision: SharingDecision;
+  /**
+   * As it arrived, base path included: a front cache keys on that URL. Built
+   * only for a front-cache read, since it takes over the request's body.
+   */
+  readonly requestAsItArrived: () => Request;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
@@ -33,7 +38,16 @@ interface ReadThroughArgs {
 
 /** Leaves the client copy to the caller, which applies it on every path. */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
-  const { decision, cdn, defer, telemetry, render, tags, personal } = args;
+  const {
+    decision,
+    requestAsItArrived,
+    cdn,
+    defer,
+    telemetry,
+    render,
+    tags,
+    personal,
+  } = args;
   const { segment } = decision;
 
   if (decision.kind === "bypass") {
@@ -47,8 +61,13 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
   }
 
   const readsUniversal = decision.kind === "read-universal";
+  const { frontCache } = cdn;
+  const fromFrontCache = readsUniversal && frontCache !== undefined;
   return lookupOrRender({
     key: decision.key,
+    match: fromFrontCache
+      ? () => frontCache.read(requestAsItArrived())
+      : () => cdn.store?.match(decision.key) ?? Promise.resolve(undefined),
     cdn,
     defer,
     telemetry,
@@ -63,7 +82,12 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
         personal: isPersonal,
         setsCookie: fresh.headers.has("set-cookie"),
       });
-      return { ...verdict, personal: isPersonal };
+      return {
+        ...verdict,
+        marksResponse:
+          verdict.universal && verdict.clientCopy === "front-cache",
+        personal: isPersonal,
+      };
     },
   });
 }
@@ -97,6 +121,7 @@ export async function readThroughRoute(
 
   return lookupOrRender({
     key: decision.key,
+    match: () => cdn.store?.match(decision.key) ?? Promise.resolve(undefined),
     cdn,
     defer,
     telemetry,
@@ -108,6 +133,7 @@ export async function readThroughRoute(
         setsCookie: fresh.headers.has("set-cookie"),
         cacheControl: fresh.headers.get("cache-control"),
       }),
+      marksResponse: false,
       personal: false,
     }),
     render,
@@ -118,11 +144,14 @@ interface Settled {
   readonly store: boolean;
   readonly decorate: boolean;
   readonly universal: boolean;
+  /** The front cache that forwarded the request reads the marker itself. */
+  readonly marksResponse: boolean;
   readonly personal: boolean;
 }
 
 interface LookupArgs {
   readonly key: Request;
+  readonly match: () => Promise<Response | undefined>;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
@@ -145,14 +174,24 @@ interface LookupArgs {
 }
 
 async function lookupOrRender(args: LookupArgs): Promise<Response> {
-  const { key, cdn, defer, telemetry, fact, acceptsHit, render, tags, settle } =
-    args;
+  const {
+    key,
+    match,
+    cdn,
+    defer,
+    telemetry,
+    fact,
+    acceptsHit,
+    render,
+    tags,
+    settle,
+  } = args;
   const store = cdn.store;
   // A storeless deploy misses by definition, so the fact names the regime
   // rather than reading as a failing cache.
   const originStore = store !== undefined;
 
-  const hit = await store?.match(key);
+  const hit = await match();
   if (hit && (acceptsHit === undefined || acceptsHit(hit))) {
     telemetry.record("cdn", { ...fact, decision: "hit", originStore });
     return hit;
@@ -186,5 +225,6 @@ async function lookupOrRender(args: LookupArgs): Promise<Response> {
     );
   }
   if (!settled.decorate) return fresh;
-  return cdn.decorate(fresh, entryTags);
+  const decorated = cdn.decorate(fresh, entryTags);
+  return settled.marksResponse ? markUniversalCopy(decorated) : decorated;
 }

@@ -68,8 +68,8 @@ const BINDS_THE_CACHED_ENTRYPOINT = [
   // Purges are per entrypoint, so one called from the default export would
   // never clear what the cached entrypoint stored.
   [
-    "purges through the cached entrypoint",
-    "bindWorkersCache({ purge: (options) => exports.PlumixSharedCache.purge(options) });",
+    "purges through the cached entrypoint, and reads a signed-in reader's copy from it",
+    "bindWorkersCache({ fetch: (request) => exports.PlumixSharedCache.fetch(request), purge: (options) => exports.PlumixSharedCache.purge(options) });",
   ],
   ["turns the gateway on", "export const sharedEntrypointCached = true;"],
 ] as const;

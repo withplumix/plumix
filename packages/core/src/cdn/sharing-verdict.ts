@@ -48,6 +48,8 @@ export interface RequestFacts {
   readonly page: PageKind;
   /** A vendor varying on a named cookie satisfies it differently. */
   readonly canKeySegments: boolean;
+  /** Sent by the CDN's front cache, which reads the universal marker itself. */
+  readonly forwarded: boolean;
 }
 
 /** Why the CDN refused to participate in a request. */
@@ -68,6 +70,7 @@ export type SharingDecision =
       readonly key: Request;
       /** The page has no access policy, so its copy is every principal's. */
       readonly universal: boolean;
+      readonly forwarded: boolean;
     }
   /**
    * A signed-in request to a page with no access policy: it may be served the
@@ -100,6 +103,7 @@ export function sharingBeforeRender(facts: RequestFacts): SharingDecision {
     page: facts.page,
     key: segmentCdnKey(facts.request, segment),
     universal: segment === "anonymous" && facts.accessSegment === null,
+    forwarded: facts.forwarded,
   };
 }
 
@@ -184,7 +188,9 @@ export function sharingAfterRender(
     store: true,
     // The edge copy can drop a visitor's `Set-Cookie`; the client copy can't,
     // so stamping shared freshness beside it would hand that cookie to everyone.
-    decorate: clientCopy === "page" && !render.setsCookie,
+    decorate:
+      (clientCopy === "page" || clientCopy === "front-cache") &&
+      !render.setsCookie,
     universal: decision.universal,
     clientCopy,
   };
@@ -206,7 +212,10 @@ export function responseIsShareable(status: number): boolean {
 function clientCopyFor(decision: SharingDecision): ClientCopy {
   if (decision.kind === "read-universal") return "universal-reader";
   if (decision.segment !== "anonymous") return "private";
-  return decision.page.kind === "policied-route" ? "as-rendered" : "page";
+  if (decision.page.kind === "policied-route") return "as-rendered";
+  return decision.kind === "read-through" && decision.forwarded
+    ? "front-cache"
+    : "page";
 }
 
 export interface RouteRequestFacts {

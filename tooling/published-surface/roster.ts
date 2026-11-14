@@ -673,10 +673,10 @@ export const ROSTER: Readonly<
       },
       {
         reason:
-          "what the generated Worker entry's gateway calls to strip a " +
-          "request's cookies and marketing parameters before it reaches " +
-          "the entrypoint Workers Caching sits in front of",
-        names: ["sharedCacheRequest"],
+          "the gateway the generated Worker entry's default export runs: " +
+          "it forwards a request with no session, stripped, to the " +
+          "entrypoint Workers Caching sits in front of, and its inputs",
+        names: ["serveThroughGateway", "Gateway"],
       },
     ],
     "./cdn": [
@@ -690,7 +690,7 @@ export const ROSTER: Readonly<
         reason:
           "what the Workers Caching module the generated Worker entry " +
           "imports calls to hand the provider the cached entrypoint's " +
-          "purge, and that binding's shape",
+          "fetch and purge, and that binding's shape",
         names: ["bindWorkersCache", "WorkersCache"],
       },
     ],

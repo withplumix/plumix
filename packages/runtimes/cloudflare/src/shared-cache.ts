@@ -5,6 +5,12 @@
 export const SHARED_CACHE_ENTRYPOINT = "PlumixSharedCache";
 
 /**
+ * Set on what the gateway forwards: core then keeps the universal marker on
+ * the response, for the gateway to read and strip.
+ */
+const GATEWAY_HEADER = "x-plumix-gateway";
+
+/**
  * Cloudflare APO's marketing parameters
  * (https://developers.cloudflare.com/automatic-platform-optimization/reference/query-parameters/),
  * plus Microsoft Ads' `msclkid`. They never change the page, so one copy
@@ -50,5 +56,18 @@ export function sharedCacheRequest(request: Request): Request {
   url.searchParams.sort();
   const forwarded = new Request(url, request);
   forwarded.headers.delete("cookie");
+  forwarded.headers.set(GATEWAY_HEADER, "1");
   return forwarded;
+}
+
+export function forwardedByGateway(request: Request): boolean {
+  return request.headers.has(GATEWAY_HEADER);
+}
+
+/** A client's copy of the gateway's header would keep the marker on its page. */
+export function visitorRequest(request: Request): Request {
+  if (!forwardedByGateway(request)) return request;
+  const visitor = new Request(request);
+  visitor.headers.delete(GATEWAY_HEADER);
+  return visitor;
 }

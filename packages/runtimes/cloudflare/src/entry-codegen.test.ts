@@ -37,7 +37,7 @@ describe("cloudflare generateEntry", () => {
   test("builds one handler through core from the runtime's spec and reuses it across invocations", () => {
     const source = entry("./config.ts");
     expect(source).toContain(
-      'import { buildApp, createRuntimeHandler, mayServeFromSharedCache, renderDevBootErrorResponse } from "plumix/runtime";',
+      'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
     );
     expect(source).toContain("handler ??= createRuntimeHandler(app)");
     expect(source).not.toContain("config.runtime.createHandler");
@@ -69,14 +69,16 @@ describe("cloudflare generateEntry", () => {
       "{ env, waitUntil: (promise) => ctx.waitUntil(promise) }",
     );
     expect(source).toContain("handler.fetch(request, invocation(env, ctx))");
-    expect(source).toContain("return serve(app, request, env, ctx);");
+    expect(source).toContain(
+      "serve: (visitor) => serve(app, visitor, env, ctx),",
+    );
   });
 
   test("hands the scheduled run report to the invocation-status rule, and branches on nothing itself", () => {
     const source = entry("./config.ts");
     expect(source).toContain("async scheduled(event, env, ctx)");
     expect(source).toContain(
-      'import { sharedCacheRequest, surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
+      'import { serveThroughGateway, surfaceScheduledFailure } from "@plumix/runtime-cloudflare";',
     );
     const start = source.indexOf("async scheduled(event, env, ctx)");
     // Bounded to the handler because the `fetch` above carries a branch and a
@@ -136,7 +138,7 @@ describe("cloudflare generateEntry", () => {
     expect(source).toContain("if (process.env.PLUMIX_DEV)");
     expect(source).toContain("renderDevBootErrorResponse(bootError)");
     expect(source).toContain(
-      'import { buildApp, createRuntimeHandler, mayServeFromSharedCache, renderDevBootErrorResponse } from "plumix/runtime";',
+      'import { buildApp, createRuntimeHandler, renderDevBootErrorResponse } from "plumix/runtime";',
     );
   });
 
@@ -185,17 +187,17 @@ describe("cloudflare generateEntry", () => {
       );
     });
 
-    test("forwards a request the shared cache may serve, stripped, through ctx.exports", () => {
+    test("hands every request to the gateway, with the cached entrypoint reached through ctx.exports", () => {
       const fetch = gateway(entry("./config.ts"));
 
       expect(fetch).toContain(
-        "if (sharedEntrypointCached && mayServeFromSharedCache(app, request)) {",
-      );
-      expect(fetch).toContain(
-        "return ctx.exports.PlumixSharedCache.fetch(sharedCacheRequest(request));",
-      );
-      expect(fetch.indexOf("PlumixSharedCache.fetch")).toBeLessThan(
-        fetch.indexOf("return serve(app, request, env, ctx);"),
+        [
+          "    return serveThroughGateway(request, {",
+          "      app,",
+          "      sharedCache: sharedEntrypointCached ? (forwarded) => ctx.exports.PlumixSharedCache.fetch(forwarded) : null,",
+          "      serve: (visitor) => serve(app, visitor, env, ctx),",
+          "    });",
+        ].join("\n"),
       );
     });
   });

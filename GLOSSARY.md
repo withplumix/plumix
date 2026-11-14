@@ -580,6 +580,10 @@ _Avoid_: visitor's copy, response headers
 The edge copy of a page with no access policy, stored from an anonymous 200 render. It is the same for every principal, so a signed-in reader who is not personal from the start may be served it; their own render never replaces it. See ADR 0030.
 _Avoid_: shared copy, public copy
 
+**Front cache**:
+A shared cache in front of the app in the same deploy, such as Workers Caching behind the Cloudflare gateway. It forwards requests with no session to the app, and a signed-in reader's universal copy is read from it.
+_Avoid_: gateway cache, edge cache
+
 **Personal render**:
 A public render that read the principal during the render phase (`ctx.user`, `ctx.tokenScopes`, `ctx.apiToken`, `ctx.auth.can()`, `useUser()`), or that carries the admin bar or the principal's own locale. It is never stored in a shared segment's entry and leaves as `private, no-store`; the segment's edge copy still serves the next principal in it. See ADR 0030.
 _Avoid_: personalized render, per-user render

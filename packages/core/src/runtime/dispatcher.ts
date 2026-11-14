@@ -532,6 +532,7 @@ function requestSharingFacts(
   | "authorization"
   | "ephemeralGrant"
   | "principalIsPersonal"
+  | "forwarded"
 > {
   return {
     request: ctx.request,
@@ -539,7 +540,15 @@ function requestSharingFacts(
     authorization: ctx.request.headers.has("authorization"),
     ephemeralGrant: requestCarriesEphemeralGrant(ctx.request),
     principalIsPersonal: principalIsPersonal(ctx),
+    forwarded: ctx.cdn?.frontCache?.forwarded(ctx.request) === true,
   };
+}
+
+/** The base path is stripped before routing; a front cache keys on it. */
+function requestAsItArrived(app: PlumixApp, ctx: AppContext): Request {
+  const url = new URL(ctx.request.url);
+  url.pathname = withBasePath(url.pathname, app.config.basePath);
+  return new Request(url, ctx.request);
 }
 
 function registeredPageCacheable(
@@ -609,6 +618,7 @@ async function dispatchPublicRoute(
     // internally so telemetry stays uniform.
     const response = await readThrough({
       decision,
+      requestAsItArrived: () => requestAsItArrived(app, ctx),
       cdn,
       defer: ctx.defer,
       telemetry: ctx.telemetry,
