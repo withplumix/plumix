@@ -14,6 +14,7 @@ import type { DefaultRole } from "../users/contract/roles.js";
 import corePackage from "../../package.json" with { type: "json" };
 import { defineBlock } from "../blocks/block-registry.js";
 import { eq } from "../db/index.js";
+import { apiTokens } from "../db/schema/api_tokens.js";
 import { entries } from "../db/schema/entries.js";
 import { DEV_ERROR_CLIENT_ERRORS_ENDPOINT } from "../dev/ui/index.js";
 import { definePlugin } from "../plugin/define.js";
@@ -23,6 +24,7 @@ import { createDispatcherHarness } from "../test/dispatcher.js";
 import { currentEtag } from "../test/entry-etag.js";
 import { CONTRIBUTOR_ROLE } from "../test/roles.js";
 import { defineTheme } from "../theme.js";
+import { mcpRouterClient } from "./router-client.js";
 
 /**
  * MCP is default-off; every test in this suite exercises the live endpoint,
@@ -1135,6 +1137,28 @@ describe("MCP endpoint — dev trust", () => {
 
     const rows = parseToolResult<ContentRow[]>(json);
     expect(rows.map((r) => r.slug)).toEqual(["draft"]);
+  });
+
+  test("a loopback request is refused a procedure that creates a credential", async () => {
+    vi.stubEnv("PLUMIX_DEV", "1");
+    const minter = definePlugin("test-minter", {
+      setup: (ctx) => {
+        ctx.registerMcpTool({
+          name: "mint_token",
+          description: "Test-only: mints an API token through RPC.",
+          inputSchema: v.object({}),
+          run: (toolCtx) =>
+            mcpRouterClient(toolCtx).auth.apiTokens.create({ name: "agent" }),
+        });
+      },
+    });
+    const h = await mcpHarness({ config: { plugins: [blog, minter] } });
+    await h.factory.admin.create();
+
+    const json = await callLoopbackTool(h, "mint_token", {});
+
+    expect(json.result.isError).toBe(true);
+    expect(await h.db.select().from(apiTokens)).toHaveLength(0);
   });
 
   test("a loopback request with no token creates a draft as the first admin", async () => {

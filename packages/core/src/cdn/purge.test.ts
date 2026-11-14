@@ -160,12 +160,11 @@ describe("purge accumulator", () => {
   // so a derived context must share the same set.
   it("flushes tags enqueued against a derived context", async () => {
     const { ctx, cdn, flush } = await fakeCtx();
-    const derived = withUser(ctx, {
-      id: 1,
-      email: "u@cms.example",
-      role: "admin",
-      meta: {},
-    });
+    const derived = withUser(
+      ctx,
+      { id: 1, email: "u@cms.example", role: "admin", meta: {} },
+      { kind: "session" },
+    );
 
     enqueuePurgeTags(derived, entryPurgeTags("post", 9));
     await flush();

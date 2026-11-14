@@ -357,7 +357,7 @@ export async function testSite<
         const ctx = contextFor(new Request("https://cms.example/"));
         if (principal === null) return ctx;
         const { id, email, role, meta } = userOf(principal);
-        return withUser(ctx, { id, email, role, meta });
+        return withUser(ctx, { id, email, role, meta }, { kind: "session" });
       },
       visit: async (target, options) => {
         const path =

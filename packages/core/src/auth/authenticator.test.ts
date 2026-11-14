@@ -11,7 +11,6 @@ import {
   defaultAuthenticator,
   requestHasSession,
   sessionAuthenticator,
-  tokenScopesOf,
 } from "./authenticator.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
 import { createSession } from "./sessions.js";
@@ -327,9 +326,9 @@ describe("RequestAuthenticator interface", () => {
 });
 
 /**
- * `hasSession` gates whether the public-render path runs the authenticator
- * at all (see loadUserForPublicRequest) — a non-cookie authenticator must be
- * able to opt in, or a signed-in visitor renders as anonymous.
+ * `hasSession` gates the session-gated policy in principal.ts, so a
+ * non-cookie authenticator must opt in, or a signed-in visitor renders as
+ * anonymous.
  */
 const carriesReq = (headers?: HeadersInit): Request =>
   new Request("https://cms.example/post/hello", headers ? { headers } : {});
@@ -440,35 +439,5 @@ describe("authenticateSession", () => {
   test("returns null when the authenticator resolves no one", async () => {
     const { resolved } = await resolveWith(() => null);
     expect(resolved).toBeNull();
-  });
-});
-
-describe("tokenScopesOf", () => {
-  const user = { id: 1 } as User;
-
-  test("a session is unrestricted", () => {
-    expect(tokenScopesOf({ user, credential: "session" })).toBeNull();
-  });
-
-  test("an api token carries its scopes", () => {
-    expect(
-      tokenScopesOf({
-        user,
-        credential: "api-token",
-        tokenScopes: ["entry:post:read"],
-        apiToken: { id: "token-hash", name: "ci" },
-      }),
-    ).toEqual(["entry:post:read"]);
-  });
-
-  test("an unscoped api token is unrestricted", () => {
-    expect(
-      tokenScopesOf({
-        user,
-        credential: "api-token",
-        tokenScopes: null,
-        apiToken: { id: "token-hash", name: "ci" },
-      }),
-    ).toBeNull();
   });
 });

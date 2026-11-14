@@ -61,6 +61,7 @@ describe("trackPrincipalReads", () => {
     ["reading ctx.user", (ctx) => ctx.user],
     ["reading ctx.tokenScopes", (ctx) => ctx.tokenScopes],
     ["reading ctx.apiToken", (ctx) => ctx.apiToken],
+    ["reading ctx.credential", (ctx) => ctx.credential],
     ["calling ctx.auth.can()", (ctx) => ctx.auth.can("entry:post:read")],
   ])("%s marks the render personal", async (_read, read) => {
     const member = await site.factory.user.create({ role: "member" });

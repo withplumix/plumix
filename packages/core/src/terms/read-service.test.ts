@@ -36,9 +36,19 @@ async function harness(role: DefaultRole): Promise<AuthenticatedRpcHarness> {
 
 function authedCtx(
   h: AuthenticatedRpcHarness,
-  tokenScopes: string[] | null = null,
+  tokenScopes?: string[],
 ): AppContext {
-  return withUser(h.context, h.user, tokenScopes);
+  return withUser(
+    h.context,
+    h.user,
+    tokenScopes === undefined
+      ? { kind: "session" }
+      : {
+          kind: "api-token",
+          token: { id: "token-hash", name: "ci" },
+          scopes: tokenScopes,
+        },
+  );
 }
 
 const listInput = (partial: Record<string, unknown>) =>

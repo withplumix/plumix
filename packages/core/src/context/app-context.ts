@@ -74,6 +74,19 @@ export interface ApiTokenRef {
 }
 
 /**
+ * What the request's principal authenticated with. Only a `session` reaches a
+ * procedure that creates a credential (ADR 0024).
+ */
+export type Credential =
+  | { readonly kind: "session" }
+  | {
+      readonly kind: "api-token";
+      readonly token: ApiTokenRef;
+      /** Narrows the role's capabilities; `null` leaves them as they are. */
+      readonly scopes: readonly string[] | null;
+    };
+
+/**
  * Not JSON: the canonical payload is `{ error }` carrying a live `Error`, which
  * a structured backend serializes however it likes.
  */
@@ -193,6 +206,11 @@ export interface AppContextBase<
   readonly tokenScopes: readonly string[] | null;
   /** The API token the request authenticated with; null for any other caller. */
   readonly apiToken: ApiTokenRef | null;
+  /**
+   * Set with the principal, which is then never resolved again; `null` until
+   * one is.
+   */
+  readonly credential: Credential | null;
   /**
    * The surface an edit lease taken on this context's behalf records, when it
    * is not the one the credential implies.

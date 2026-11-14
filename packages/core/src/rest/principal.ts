@@ -1,5 +1,6 @@
 import type { AppContext, AuthenticatedUser } from "../context/app-context.js";
-import { authenticateBearer, hasBearerToken } from "../auth/bearer.js";
+import { hasBearerToken } from "../auth/bearer.js";
+import { resolvePrincipal } from "../auth/principal.js";
 import { makeAuthCan } from "../auth/with-user.js";
 import { rebindSettings } from "../context/settings-namespace.js";
 import { rebindDispatch } from "../events-and-filters/dispatch.js";
@@ -39,6 +40,9 @@ export async function resolveRestPrincipal(
     };
     return { kind: "anonymous", ctx: anonymous };
   }
-  const authed = await authenticateBearer(ctx);
+  const authed = await resolvePrincipal(ctx, {
+    kind: "bearer",
+    audience: null,
+  });
   return authed ? { kind: "authed", ctx: authed } : { kind: "unauthorized" };
 }

@@ -1,9 +1,9 @@
 import type { Capability } from "../access/contract/capability.js";
 import type {
-  ApiTokenRef,
   AppContext,
   AuthenticatedAppContext,
   AuthenticatedUser,
+  Credential,
 } from "../context/app-context.js";
 import type { PluginRegistry } from "../plugin/manifest.js";
 import { resolveCapability } from "../access/contract/capability.js";
@@ -37,14 +37,16 @@ export function makeAuthCan(
 export function withUser<TSchema extends Record<string, unknown>>(
   ctx: AppContext<TSchema>,
   user: AuthenticatedUser,
-  tokenScopes: readonly string[] | null = null,
-  apiToken: ApiTokenRef | null = null,
+  credential: Credential,
 ): AuthenticatedAppContext<TSchema> {
+  const tokenScopes =
+    credential.kind === "api-token" ? credential.scopes : null;
   const next: AuthenticatedAppContext<TSchema> = {
     ...ctx,
     user,
+    credential,
     tokenScopes,
-    apiToken,
+    apiToken: credential.kind === "api-token" ? credential.token : null,
     auth: {
       can: makeAuthCan(ctx.plugins, user, tokenScopes),
     },

@@ -19,6 +19,7 @@ export function anonymousContext(ctx: AppContext): AppContext {
     user: { value: null, enumerable: true },
     tokenScopes: { value: null, enumerable: true },
     apiToken: { value: null, enumerable: true },
+    credential: { value: null, enumerable: true },
     auth: { value: { can: () => false }, enumerable: true },
     locale: {
       value: resolveLocale({

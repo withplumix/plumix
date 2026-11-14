@@ -1698,7 +1698,7 @@ describe("reference hydration memo (request-scoped)", () => {
     const bags = [{ findField, decoded: { featured: String(draft.id) } }];
     // `h.context` is the unauthenticated base; the admin is a derivation
     // of it, and both read one memo.
-    const editor = withUser(h.context, h.user, null);
+    const editor = withUser(h.context, h.user, { kind: "session" });
 
     const asEditor = await resolveMetaBags(editor, bags);
     const asVisitor = await resolveMetaBags(h.context, bags);
@@ -1743,7 +1743,7 @@ describe("reference hydration memo (invalidated by a write)", () => {
       status: "draft",
       title: "Before",
     });
-    const editor = withUser(ctx, admin, null);
+    const editor = withUser(ctx, admin, { kind: "session" });
 
     await run(async () => {
       const before = await resolveMetaBags(editor, bagsFor(draft.id));

@@ -13,7 +13,8 @@ const errors = createORPCErrorConstructorMap(RPC_ERRORS);
 const site = await testSite({});
 
 /** The gate as a plugin's `.use(authenticated)` handler reaches it. */
-const contextOf = (user: User) => withUser(site.context, user);
+const contextOf = (user: User) =>
+  withUser(site.context, user, { kind: "session" });
 
 describe("previewableEntry", () => {
   test("hands an editor the live row for a type it asked for", async () => {

@@ -15,12 +15,7 @@ import {
   signalSoftGate,
 } from "../access/gate.js";
 import { resolveAccess } from "../access/policy.js";
-import {
-  apiTokenOf,
-  authenticateTraced,
-  requestHasSession,
-  tokenScopesOf,
-} from "../auth/authenticator.js";
+import { requestHasSession } from "../auth/authenticator.js";
 import { resolveLoginPath } from "../auth/config.js";
 import {
   hasCsrfHeader,
@@ -30,8 +25,8 @@ import {
 import { matchAuthMethodRoute } from "../auth/declared-methods.js";
 import { loadAuthFlowRoutes } from "../auth/flow-routes-loader.js";
 import { AUTHORIZE_PATH, TOKEN_PATH } from "../auth/oauth-server/urls.js";
+import { resolvePrincipal } from "../auth/principal.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
-import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
 import {
   applyClientCopy,
@@ -89,7 +84,6 @@ import {
   redirect,
   withNoStore,
 } from "./contract/http.js";
-import { loadUserForPublicRequest } from "./load-user-for-public-request.js";
 import { deliverTelemetrySnapshot } from "./telemetry-delivery.js";
 
 const RPC_PREFIX = "/_plumix/rpc";
@@ -514,6 +508,17 @@ function tryPublicRoutes(
 }
 
 /**
+ * The reader of a public page, loaded only for a request with a session so the
+ * anonymous hot path pays nothing.
+ */
+async function withPublicReader(ctx: AppContext): Promise<AppContext> {
+  return (
+    (await resolvePrincipal(ctx, { kind: "session-gated" }, (user) => user)) ??
+    ctx
+  );
+}
+
+/**
  * The CDN's privileged check must ask the site's authenticator rather than
  * sniff the cookie.
  */
@@ -553,9 +558,7 @@ async function dispatchPublicRoute(
 ): Promise<Response> {
   const { match, intent } = routed;
   try {
-    // Early-returns for session-less traffic, so the anonymous hot path pays
-    // nothing.
-    ctx = await loadUserForPublicRequest(ctx);
+    ctx = await withPublicReader(ctx);
 
     // After the principal loads, so a per-entry lookup shares the request memo
     // the render reuses.
@@ -803,7 +806,7 @@ async function servePublicRoute(
   ctx: AppContext,
 ): Promise<Response> {
   if (requestIsPrivileged(ctx.request, ctxHasSession(ctx))) {
-    const reader = await loadUserForPublicRequest(ctx);
+    const reader = await withPublicReader(ctx);
     const response = await match.route.handler(
       reader.request,
       reader,
@@ -833,7 +836,7 @@ async function servePoliciedPublicRoute(
   match: PublicRouteMatch,
   policy: AccessPolicy,
 ): Promise<Response> {
-  ctx = await loadUserForPublicRequest(ctx);
+  ctx = await withPublicReader(ctx);
   const access = await resolveAccess(ctx, policy);
   const gated = gateToResponse(access.gate, {
     ctx,
@@ -963,17 +966,14 @@ async function runPluginRawRoute(
       : notFound(UNKNOWN_PLUMIX_ROUTE);
   }
 
-  const result = await authenticateTraced(ctx, ctx.authenticator);
-  if (!result) return jsonResponse({ error: "unauthorized" }, { status: 401 });
-
-  const { id, email, name, role, meta } = result.user;
-  const tokenScopes = tokenScopesOf(result);
-  const authedCtx = withUser(
+  const authedCtx = await resolvePrincipal(
     ctx,
-    { id, email, name, role, meta },
-    tokenScopes,
-    apiTokenOf(result),
+    { kind: "configured" },
+    ({ id, email, name, role, meta }) => ({ id, email, name, role, meta }),
   );
+  if (!authedCtx) {
+    return jsonResponse({ error: "unauthorized" }, { status: 401 });
+  }
 
   if (gate === "authenticated") {
     return route.handler(authedCtx.request, authedCtx);
@@ -1023,11 +1023,7 @@ async function serveAdmin(ctx: AppContext): Promise<Response> {
   const contentType = upstream.headers.get("content-type")?.toLowerCase();
   if (!contentType?.includes("text/html")) return upstream;
 
-  // Otherwise a Bearer-only request would bump `api_tokens.lastUsedAt` on every
-  // cross-site navigation.
-  const auth = ctxHasSession(ctx)
-    ? await authenticateTraced(ctx, ctx.authenticator)
-    : null;
+  const auth = await resolvePrincipal(ctx, { kind: "session-gated" });
   // Anonymous visitors still need the SPA's login screen.
   if (
     auth?.user &&

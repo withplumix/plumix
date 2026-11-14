@@ -62,6 +62,7 @@ export type {
   CoreCapability,
   CreatedSession,
   CreateSessionInput,
+  Credential,
   DefaultRole,
   DefinePolicyInput,
   DerivedCapability,

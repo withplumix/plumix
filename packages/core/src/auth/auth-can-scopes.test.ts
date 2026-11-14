@@ -46,19 +46,26 @@ const tagged = await testSite({
 
 function buildCtx(args: {
   role: "member" | "author" | "editor" | "admin";
-  tokenScopes?: readonly string[] | null;
+  /** Absent signs in with a session; present, with a token of these scopes. */
+  tokenScopes?: readonly string[];
   on?: { readonly context: AppContext };
 }) {
   return withUser(
     (args.on ?? site).context,
     { id: 1, email: "u@cms.example", role: args.role, meta: {} },
-    args.tokenScopes ?? null,
+    args.tokenScopes === undefined
+      ? { kind: "session" }
+      : {
+          kind: "api-token",
+          token: { id: "token-hash", name: "ci" },
+          scopes: args.tokenScopes,
+        },
   );
 }
 
 describe("auth.can — tokenScopes narrowing", () => {
   test("session-style auth (tokenScopes null) inherits role caps verbatim", () => {
-    const ctx = buildCtx({ role: "editor", tokenScopes: null });
+    const ctx = buildCtx({ role: "editor" });
     expect(ctx.auth.can("entry:post:edit_any")).toBe(true);
     expect(ctx.auth.can("settings:manage")).toBe(false); // editor < admin
   });

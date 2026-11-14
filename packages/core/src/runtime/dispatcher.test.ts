@@ -1405,6 +1405,7 @@ describe("dispatcher — plugin raw routes", () => {
       plumixRequest("/_plumix/media/upload", { method: "POST" }),
     );
     expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "unauthorized" });
   });
 
   test("authenticated route dispatches when a valid session is present", async () => {
@@ -2117,7 +2118,10 @@ describe("dispatcher — public read-through CDN", () => {
       setup: (ctx) => {
         ctx.registerEntryType("post", { label: "Posts", isPublic: true });
         ctx.filters.add(render.document, (document, _input, appCtx) => {
-          tagCdnEntry(withUser(appCtx, { ...author, meta: {} }), ["x:1"]);
+          tagCdnEntry(
+            withUser(appCtx, { ...author, meta: {} }, { kind: "session" }),
+            ["x:1"],
+          );
           return document;
         });
       },
