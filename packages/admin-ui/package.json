@@ -190,9 +190,17 @@
       "types": "./dist/tooltip.d.ts",
       "default": "./dist/tooltip.js"
     },
+    "./use-debounced-value": {
+      "types": "./dist/use-debounced-value.d.ts",
+      "default": "./dist/use-debounced-value.js"
+    },
     "./use-mobile": {
       "types": "./dist/use-mobile.d.ts",
       "default": "./dist/use-mobile.js"
+    },
+    "./use-timed-flag": {
+      "types": "./dist/use-timed-flag.d.ts",
+      "default": "./dist/use-timed-flag.js"
     },
     "./utils": {
       "types": "./dist/utils.d.ts",

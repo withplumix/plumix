@@ -38,6 +38,13 @@ const EXCEPTIONS: Readonly<Record<string, RosterException>> = {
       "into dnd-kit, split out so a unit test can call it. A caller passes " +
       "`SortableAnnouncements` to `SortableList` and never needs it.",
   },
+  timers: {
+    omitFrom: "exports",
+    reason:
+      "The timers behind `useTimedFlag` and `useDebouncedValue`, split out " +
+      "so a unit test can drive them under fake timers. A component calls " +
+      "the hooks, which also cancel the timer on unmount.",
+  },
 };
 
 interface ExportTarget {

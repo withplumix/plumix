@@ -40,5 +40,7 @@ export * from "./textarea.js";
 export * from "./toggle.js";
 export * from "./toggle-group.js";
 export * from "./tooltip.js";
+export * from "./use-debounced-value.js";
 export * from "./use-mobile.js";
+export * from "./use-timed-flag.js";
 export * from "./utils.js";
