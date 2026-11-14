@@ -78,7 +78,11 @@ export interface ApiTokenRef {
  * procedure that creates a credential (ADR 0024).
  */
 export type Credential =
-  | { readonly kind: "session" }
+  | {
+      readonly kind: "session";
+      /** The Plumix session row's id; an identity provider's assertion has none. */
+      readonly sessionId?: string;
+    }
   | {
       readonly kind: "api-token";
       readonly token: ApiTokenRef;

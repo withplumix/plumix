@@ -8,7 +8,12 @@ import type { ApiTokenRef, Db } from "./app-context.js";
  * are `tokenScopes ∩ roleCaps`; `null` means unrestricted.
  */
 export type AuthResult =
-  | { readonly user: User; readonly credential: "session" }
+  | {
+      readonly user: User;
+      readonly credential: "session";
+      /** The Plumix session row's id; an identity provider's assertion has none. */
+      readonly sessionId?: string;
+    }
   | {
       readonly user: User;
       readonly credential: "api-token";

@@ -29,7 +29,11 @@ export function sessionAuthenticator(
       if (!token) return null;
       const validated = await validateSession(db, token, policy);
       if (!validated) return null;
-      return { user: validated.user, credential: "session" };
+      return {
+        user: validated.user,
+        credential: "session",
+        sessionId: validated.session.id,
+      };
     },
     hasSession(request) {
       return readSessionCookie(request) !== null;

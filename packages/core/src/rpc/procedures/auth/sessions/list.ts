@@ -1,10 +1,9 @@
-import { readSessionCookie } from "../../../../auth/cookies.js";
-import { hashToken } from "../../../../auth/tokens.js";
 import { now } from "../../../../clock.js";
 import { and, asc, eq, gt } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
+import { currentSessionId } from "./current.js";
 import { sessionsListInputSchema } from "./schemas.js";
 
 /**
@@ -16,8 +15,7 @@ export const list = base
   .use(authenticated)
   .input(sessionsListInputSchema)
   .handler(async ({ context }) => {
-    const cookieToken = readSessionCookie(context.request);
-    const currentId = cookieToken ? await hashToken(cookieToken) : null;
+    const currentId = currentSessionId(context.credential);
 
     const rows = await context.db
       .select({

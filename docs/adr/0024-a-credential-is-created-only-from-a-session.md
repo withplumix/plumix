@@ -31,8 +31,9 @@ the authenticator knows that.
   resolves no one, so it is refused rather than let through.
 - **The context carries the credential.** `resolvePrincipal(ctx, policy)` in
   `auth/principal.ts` resolves a request's principal once and returns the
-  context carrying it, with `ctx.credential` set to `{ kind: "session" }` or
-  `{ kind: "api-token", token, scopes }`. Every other builder of a principal
+  context carrying it, with `ctx.credential` set to
+  `{ kind: "session", sessionId? }` or `{ kind: "api-token", token, scopes }`.
+  `sessionId` names the Plumix session row; an IdP assertion carries none. Every other builder of a principal
   (`withUser`, MCP's dev loopback, the test site's `actingAs`) names the kind
   too, with no default. A context that already carries a principal is never
   resolved again, so its credential kind is the one fact a later check reads.

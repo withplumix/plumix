@@ -89,7 +89,7 @@ function admits(policy: PrincipalPolicy, credential: Credential): boolean {
 function credentialOf(result: AuthResult): Credential | null {
   switch (result.credential) {
     case "session":
-      return { kind: "session" };
+      return { kind: "session", sessionId: result.sessionId };
     case "api-token":
       return {
         kind: "api-token",

@@ -116,8 +116,9 @@ export interface TestSite<
   readonly filters: FiltersFake;
   readonly env: PlumixEnv;
   /**
-   * A fresh context for calling a service directly, as the user `actingAs`
-   * names. Throws for a role whose user no call has created yet.
+   * A fresh context for calling a service directly, as `actingAs` names.
+   * Throws for a role no call has created yet; carries no session id before
+   * the first call.
    */
   readonly context: AppContext;
   /**
@@ -168,6 +169,7 @@ type Principal = User | { readonly role: SeededRole } | null;
 
 interface Session {
   readonly user: User;
+  readonly id: string;
   readonly cookie: string;
 }
 
@@ -359,6 +361,7 @@ export async function testSite<
         if (principal === null) return ctx;
         return withUser(ctx, principalOf(userOf(principal)), {
           kind: "session",
+          sessionId: signedIn.get(principal)?.settled?.id,
         });
       },
       visit: async (target, options) => {
@@ -412,10 +415,10 @@ async function sessionFor(
       ? principal
       : await userFactory.transient({ db }).create({ role: principal.role });
   // Inside the site's context, so the session's lifetime starts on its clock.
-  const { token } = await requestStore.run(ctx, () =>
+  const { token, session } = await requestStore.run(ctx, () =>
     createSession(db, { userId: user.id }),
   );
-  return { user, cookie: `${SESSION_COOKIE_NAME}=${token}` };
+  return { user, id: session.id, cookie: `${SESSION_COOKIE_NAME}=${token}` };
 }
 
 function rpcClient<TRpc extends PluginRpcRouters>(

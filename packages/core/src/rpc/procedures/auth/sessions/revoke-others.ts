@@ -1,30 +1,29 @@
-import { readSessionCookie } from "../../../../auth/cookies.js";
-import { hashToken } from "../../../../auth/tokens.js";
 import { and, eq, ne } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
 import { auth } from "../../../../events-and-filters/auth.js";
 import { authenticated } from "../../../authenticated.js";
 import { base } from "../../../base.js";
+import { currentSessionId } from "./current.js";
 import { sessionsRevokeOthersInputSchema } from "./schemas.js";
 
 /**
- * External authenticators mint no session rows; the IdP owns the session,
- * so this returns `{ revoked: 0 }` rather than erroring.
+ * An identity provider's caller has no current session, so it revokes every
+ * row. An API token revokes none: it isn't a session, and no scope gates this.
  */
 export const revokeOthers = base
   .use(authenticated)
   .input(sessionsRevokeOthersInputSchema)
   .handler(async ({ context }) => {
-    const currentToken = readSessionCookie(context.request);
-    if (!currentToken) {
-      return { revoked: 0 };
-    }
-    const currentId = await hashToken(currentToken);
+    if (context.credential?.kind !== "session") return { revoked: 0 };
+    const currentId = currentSessionId(context.credential);
 
     const rows = await context.db
       .delete(sessions)
       .where(
-        and(eq(sessions.userId, context.user.id), ne(sessions.id, currentId)),
+        and(
+          eq(sessions.userId, context.user.id),
+          currentId === undefined ? undefined : ne(sessions.id, currentId),
+        ),
       )
       .returning({ id: sessions.id });
     // Emit one event per revoked row so the audit log captures each
