@@ -5,6 +5,7 @@ import type { Registry } from "./registry.js";
 import { loadRegistry } from "./registry.js";
 import {
   doctorFailure,
+  listeningPort,
   planBoot,
   planInstall,
   planSmokeCombos,
@@ -332,5 +333,34 @@ describe("withStubMailer", () => {
     expect(() => withStubMailer("export default {};\n")).toThrow(
       "no `const config = plumix({` line to add a mailer to",
     );
+  });
+});
+
+describe("listeningPort", () => {
+  it("reads the port a server says it is listening on", () => {
+    expect(listeningPort("plumix: listening on http://0.0.0.0:41237\n")).toBe(
+      41237,
+    );
+  });
+
+  it("reads the port wrangler says it is ready on, not an earlier url", () => {
+    const output = [
+      "⎔ Starting local server...",
+      "The Local Explorer API is available at http://127.0.0.1:1/cdn-cgi/local/explorer/api",
+      "\u001b[32m[wrangler:info]\u001b[39m Ready on http://127.0.0.1:59598",
+      "",
+    ].join("\n");
+
+    expect(listeningPort(output)).toBe(59598);
+  });
+
+  it("waits for the rest of a port cut off mid-number", () => {
+    expect(
+      listeningPort("plumix: listening on http://0.0.0.0:41"),
+    ).toBeUndefined();
+  });
+
+  it("is undefined until the server says where it listens", () => {
+    expect(listeningPort("⎔ Starting local server...\n")).toBeUndefined();
   });
 });

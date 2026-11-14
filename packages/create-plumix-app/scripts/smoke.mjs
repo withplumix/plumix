@@ -40,7 +40,6 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -59,6 +58,7 @@ const { loadRegistry } = await import(
 );
 const {
   doctorFailure,
+  listeningPort,
   planBoot,
   planInstall,
   planSmokeCombos,
@@ -339,14 +339,34 @@ function installedRuntime(appDir) {
   throw new Error(`No runtime package among the dependencies of ${appDir}.`);
 }
 
-function freePort() {
+// How long a started server has to say where it listens, and then to answer.
+const SERVE_WINDOW_MS = 90_000;
+
+/**
+ * The server is started on port 0, so no other process can take its port
+ * between choosing it and binding it.
+ */
+function boundPort(child) {
+  let output = "";
   return new Promise((done, fail) => {
-    const server = createServer();
-    server.once("error", fail);
-    server.listen(0, "127.0.0.1", () => {
-      const { port } = server.address();
-      server.close(() => done(port));
-    });
+    const read = (chunk) => {
+      output += chunk;
+      const port = listeningPort(output);
+      if (port !== undefined) done(port);
+    };
+    child.stdout.on("data", read);
+    child.stderr.on("data", read);
+    child.once("exit", (code, signal) =>
+      fail(
+        new Error(
+          `The server exited (${signal ?? code}) before it said where it listens.`,
+        ),
+      ),
+    );
+    setTimeout(
+      () => fail(new Error("The server never said where it listens.")),
+      SERVE_WINDOW_MS,
+    ).unref();
   });
 }
 
@@ -416,7 +436,7 @@ async function assertServes(base, child) {
     ),
   );
   exited.catch(() => {});
-  const deadline = Date.now() + 90_000;
+  const deadline = Date.now() + SERVE_WINDOW_MS;
   for (;;) {
     const attempt = await Promise.race([
       fetch(`${base}/`).then(
@@ -498,23 +518,23 @@ async function boot(appDir, combo) {
     execSync(command, { cwd: appDir, env, stdio: "inherit" });
   }
 
-  const port = await freePort();
   const logFile = join(appDir, "server.log");
   const log = createWriteStream(logFile);
   const child = spawn(plan.start, {
     cwd: appDir,
-    env: { ...env, PORT: String(port) },
+    env: { ...env, PORT: "0" },
     shell: true,
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
-  child.stdout.pipe(log);
-  child.stderr.pipe(log);
+  child.stdout.setEncoding("utf8").pipe(log);
+  child.stderr.setEncoding("utf8").pipe(log);
+  const port = boundPort(child);
   // The temp dir goes with the combo, so surface the server's output now.
   const printLogTail = () =>
     console.error(readFileSync(logFile, "utf8").slice(-4000));
   try {
-    await assertServes(`http://127.0.0.1:${port}`, child);
+    await assertServes(`http://127.0.0.1:${await port}`, child);
   } catch (err) {
     stop(child);
     printLogTail();
