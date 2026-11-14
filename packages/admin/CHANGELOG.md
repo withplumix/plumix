@@ -1,5 +1,11 @@
 # @plumix/admin
 
+## 0.27.0
+
+### Patch Changes
+
+- [#3618](https://github.com/withplumix/plumix/pull/3618) [`89add8f`](https://github.com/withplumix/plumix/commit/89add8fcc43d089f758e197df45ce5fbfd05b4dc) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes OAuth client metadata to accept only `https:` redirect URIs, or `http:` to a loopback host; a document listing any other redirect URI is refused as invalid. The consent page also leaves only for an `http:` or `https:` URL.
+
 ## 0.26.0
 
 No changes in this release.

@@ -1,5 +1,15 @@
 # create-plumix-app
 
+## 0.10.0
+
+### Minor Changes
+
+- [#3574](https://github.com/withplumix/plumix/pull/3574) [`29e9d5a`](https://github.com/withplumix/plumix/commit/29e9d5a322a881ff392fc6f23a58b27addf24454) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds tests to a new site: Vitest, a `vitest.config.ts` calling `defineTestConfig()`, a `test` script, and `tests/feature/home.test.ts`, which visits `/` and asserts the page renders through the `fallback` template. `pnpm test` passes with no edits.
+
+### Patch Changes
+
+- [#3646](https://github.com/withplumix/plumix/pull/3646) [`c7e7964`](https://github.com/withplumix/plumix/commit/c7e796455dd93123a2a3c28d16369f691b063d48) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes `--auth magic-link` scaffolding `mailer: consoleMailer()`, which let a site deploy that logged every sign-in link, token included. The scaffold now writes no mailer: `plumix dev` catches the sign-in mail, and `plumix build` fails until you configure a real transport.
+
 ## 0.9.0
 
 ### Minor Changes
