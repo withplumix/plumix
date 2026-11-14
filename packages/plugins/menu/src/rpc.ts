@@ -22,11 +22,8 @@ import {
 import {
   authenticated,
   base,
-  listEntryMetaFields,
-  listTermMetaFields,
   requireCapability,
   resolveCapability,
-  startingMeta,
   termCapability,
 } from "plumix/plugin";
 import { entries, entryTerm, settings, terms } from "plumix/schema";
@@ -36,10 +33,10 @@ import * as v from "valibot";
 import type { MenuDepthLimit } from "./server/depth.js";
 import type { ResolvedRow } from "./server/resolveItemStates.js";
 import type { RegisteredMenuLocation } from "./server/types.js";
-import { MenuPluginError } from "./errors.js";
 import { MENU_DEPTH_HARD_CAP, menuDepthLimit } from "./server/depth.js";
 import { getEligibleMenuKinds, isMenuEligible } from "./server/eligibility.js";
 import { menu } from "./server/events.js";
+import { MENU_TAXONOMY } from "./server/getMenuByName.js";
 import { parseMenuItemMeta } from "./server/parseMeta.js";
 import {
   lookupMenuTargets,
@@ -48,12 +45,11 @@ import {
 import {
   flattenSaveItems,
   hasNewNestingPastLimit,
-  resolveParentIds,
+  storedMetaChanges,
   withTargetSnapshot,
 } from "./server/save.js";
 import { sanitizeMenuHref } from "./server/url.js";
 
-const MENU_TAXONOMY = "menu";
 const MENU_ITEM_ENTRY_TYPE = "menu_item";
 const MENU_LOCATIONS_GROUP = "menu_locations";
 const MAX_ITEMS_PER_SAVE = 500;
@@ -350,7 +346,14 @@ export function createMenuRouter(
         claimedIds.length === 0
           ? []
           : await context.db
-              .select({ id: entries.id, meta: entries.meta })
+              .select({
+                id: entries.id,
+                title: entries.title,
+                sortOrder: entries.sortOrder,
+                parentId: entries.parentId,
+                meta: entries.meta,
+                updatedAt: entries.updatedAt,
+              })
               .from(entries)
               .where(
                 and(
@@ -365,9 +368,9 @@ export function createMenuRouter(
                   inArray(entries.id, claimedIds),
                 ),
               );
-      const validClaimedIds = new Set(existingRows.map((r) => r.id));
+      const storedRows = new Map(existingRows.map((r) => [r.id, r]));
       for (const id of claimedIds) {
-        if (!validClaimedIds.has(id)) {
+        if (!storedRows.has(id)) {
           throw errors.CONFLICT({
             data: {
               reason: "claimed_id_not_in_menu",
@@ -377,8 +380,8 @@ export function createMenuRouter(
         }
       }
 
-      // The item tree is the menu's content: claim the menu term first, so
-      // of two saves from one copy only the first writes any item.
+      // Claimed first, so of two saves from one copy only the first writes.
+      // Not a term update: no term column changes; the item writes purge.
       const claimed = await claimTerm(context.db, term.id, input.ifMatch, {});
       if (!claimed) {
         throw errors.NOT_FOUND({ data: { kind: "menu", id: term.id } });
@@ -399,102 +402,74 @@ export function createMenuRouter(
 
       const priorIds = new Set(priorRows.map((r) => r.id));
 
-      // Reuse the editor's user as the items' author for new items.
-      // Slice 7+ admin always saves with an authenticated editor; the
-      // user's authorId is not user-visible on menu items.
-      const authorId = context.user.id;
-
       // Slug uniqueness on entries is `(type, slug)` — across all
       // `menu_item` rows, slugs must be unique. Generate per-save with
       // termId + index suffix to avoid collisions across menus.
       const slugBase = `mi-t${term.id}-${now().getTime()}-${cryptoRandom()}`;
-      // A new item starts from the fields registered on `menu_item` (ADR
-      // 0026); its own meta lands on top.
-      const starting = startingMeta(
-        listEntryMetaFields(context.plugins, MENU_ITEM_ENTRY_TYPE),
-      );
 
       const itemIds: number[] = [];
       const added: number[] = [];
       const modified: number[] = [];
 
-      // Serial, no transaction: D1 lacks BEGIN/COMMIT and libsql's opens a
-      // separate connection. The claim above already moved the token, so a
-      // copy from before a failed write conflicts.
+      // Serial: D1 lacks BEGIN/COMMIT. The claim above moved the token, so a
+      // stale copy conflicts. A parent precedes its children in the payload.
       for (let i = 0; i < flat.items.length; i++) {
         const item = flat.items[i];
-        if (!item) continue;
+        const meta = metas[i];
+        if (!item || !meta) continue;
+        const title = item.title ?? "";
+        const parentId =
+          item.resolvedParentIndex === null
+            ? null
+            : (itemIds[item.resolvedParentIndex] ?? null);
 
-        if (item.id !== null) {
-          const [updated] = await context.db
-            .update(entries)
-            .set({
-              title: item.title ?? "",
-              sortOrder: item.sortOrder,
-              meta: metas[i],
-              // parentId is patched in the second pass below.
-            })
-            .where(eq(entries.id, item.id))
-            .returning({ id: entries.id });
-          if (!updated) {
-            throw errors.CONFLICT({
-              data: { reason: "row_disappeared", key: String(item.id) },
+        const stored = item.id === null ? undefined : storedRows.get(item.id);
+        if (stored) {
+          const storedMeta = storedMetaChanges(
+            storedMetas.get(stored.id) ?? null,
+            meta,
+          );
+          const changes = {
+            ...(title === stored.title ? {} : { title }),
+            ...(item.sortOrder === stored.sortOrder
+              ? {}
+              : { sortOrder: item.sortOrder }),
+            ...(parentId === stored.parentId ? {} : { parentId }),
+            ...(storedMeta === undefined ? {} : { storedMeta }),
+          };
+          if (Object.keys(changes).length > 0) {
+            await context.entries.update({
+              id: stored.id,
+              ifMatch: stored.updatedAt,
+              ...changes,
             });
           }
-          itemIds.push(item.id);
-          modified.push(item.id);
+          itemIds.push(stored.id);
+          modified.push(stored.id);
         } else {
-          const [inserted] = await context.db
-            .insert(entries)
-            .values({
-              type: MENU_ITEM_ENTRY_TYPE,
-              title: item.title ?? "",
-              slug: `${slugBase}-${i}`,
-              status: "published",
-              authorId,
-              sortOrder: item.sortOrder,
-              meta: { ...starting, ...metas[i] },
-            })
-            .returning({ id: entries.id });
-          if (!inserted) {
-            throw errors.CONFLICT({ data: { reason: "insert_failed" } });
-          }
-          itemIds.push(inserted.id);
-          added.push(inserted.id);
-          // Junction row links this item to the menu term.
-          await context.db.insert(entryTerm).values({
+          const { entry: inserted } = await context.entries.create({
+            type: MENU_ITEM_ENTRY_TYPE,
+            title,
+            slug: `${slugBase}-${String(i)}`,
+            status: "published",
+            sortOrder: item.sortOrder,
+            parentId,
+            storedMeta: storedMetaChanges(null, meta),
+          });
+          await context.terms.assign({
             entryId: inserted.id,
             termId: term.id,
-            sortOrder: item.sortOrder,
           });
+          itemIds.push(inserted.id);
+          added.push(inserted.id);
         }
       }
 
-      // Second pass: patch parent_id now that every item has a
-      // resolved id.
-      const parentIds = resolveParentIds(flat.items, itemIds);
-      for (let i = 0; i < itemIds.length; i++) {
-        const id = itemIds[i];
-        const parentId = parentIds[i] ?? null;
-        if (id === undefined) continue;
-        await context.db
-          .update(entries)
-          .set({ parentId })
-          .where(eq(entries.id, id));
-      }
-
-      // Drop items present before but not in the new payload.
       const keptIds = new Set(itemIds);
-      const removedIds = [...priorIds].filter((id) => !keptIds.has(id));
-      if (removedIds.length > 0) {
-        await context.db.delete(entries).where(inArray(entries.id, removedIds));
-        // entry_term cascade deletes via FK on entries.id.
+      const removed = [...priorIds].filter((id) => !keptIds.has(id));
+      for (const id of removed) {
+        await context.entries.delete(id);
       }
-
-      // Reuse `removedIds` — `removed` in the response IS what we
-      // deleted. Recomputing risks divergence after a refactor.
-      const itemIdSet = new Set(itemIds);
-      const removed = [...priorIds].filter((id) => !itemIdSet.has(id));
 
       await context.events.emit(menu.saved, {
         termId: term.id,
@@ -529,11 +504,9 @@ export function createMenuRouter(
         throw errors.NOT_FOUND({ data: { kind: "menu", id: input.termId } });
       }
       // Serial deletes (no transaction wrapper — see save handler note).
-      // entry_term cascades on entries.id and terms.id, so deleting the
-      // entries first then the term sweeps the junction rows
-      // automatically.
-      await context.db
-        .delete(entries)
+      const items = await context.db
+        .select({ id: entries.id })
+        .from(entries)
         .where(
           and(
             eq(entries.type, MENU_ITEM_ENTRY_TYPE),
@@ -546,7 +519,10 @@ export function createMenuRouter(
             ),
           ),
         );
-      await context.db.delete(terms).where(eq(terms.id, term.id));
+      for (const item of items) {
+        await context.entries.delete(item.id);
+      }
+      await context.terms.delete(term.id);
       // Leaving bindings to a deleted menu is a known WP pain point.
       await context.settings.removeValue(MENU_LOCATIONS_GROUP, term.slug);
       await context.events.emit(menu.deleted, {
@@ -599,25 +575,12 @@ export function createMenuRouter(
           }
           slug = `${baseSlug}-${String(attempt + 1)}`;
         }
-        const [row] = await context.db
-          .insert(terms)
-          .values({
-            taxonomy: MENU_TAXONOMY,
-            slug,
-            name: input.name,
-            // A new menu starts from the fields registered on the `menu`
-            // taxonomy (ADR 0026).
-            meta: startingMeta(
-              listTermMetaFields(context.plugins, MENU_TAXONOMY),
-            ),
-          })
-          .returning({ id: terms.id, version: terms.version });
-        if (!row) {
-          // `.returning()` after a successful INSERT is non-empty on SQLite/D1;
-          // surface a driver regression rather than paper over it.
-          throw MenuPluginError.menuCreateNoRowReturned();
-        }
-        return { termId: row.id, slug, etag: etagOf(row.version) };
+        const { term: created, etag } = await context.terms.create({
+          taxonomy: MENU_TAXONOMY,
+          slug,
+          name: input.name,
+        });
+        return { termId: created.id, slug, etag };
       },
     );
 

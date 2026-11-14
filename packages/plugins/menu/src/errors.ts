@@ -1,16 +1,10 @@
 type MenuPluginErrorCode =
-  | "invalid_location_id"
-  | "location_label_empty"
-  | "invalid_location_max_depth"
-  | "resolve_parent_ids_length_mismatch"
-  | "menu_create_no_row_returned";
+  "invalid_location_id" | "location_label_empty" | "invalid_location_max_depth";
 
 interface MenuPluginErrorFields {
   id?: string;
   pattern?: string;
   maxLength?: number;
-  itemsLength?: number;
-  resolvedIdsLength?: number;
 }
 
 export class MenuPluginError extends Error {
@@ -22,8 +16,6 @@ export class MenuPluginError extends Error {
   readonly id: string | undefined;
   readonly pattern: string | undefined;
   readonly maxLength: number | undefined;
-  readonly itemsLength: number | undefined;
-  readonly resolvedIdsLength: number | undefined;
 
   private constructor(
     code: MenuPluginErrorCode,
@@ -35,8 +27,6 @@ export class MenuPluginError extends Error {
     this.id = fields.id;
     this.pattern = fields.pattern;
     this.maxLength = fields.maxLength;
-    this.itemsLength = fields.itemsLength;
-    this.resolvedIdsLength = fields.resolvedIdsLength;
   }
 
   static invalidLocationId(ctx: {
@@ -68,25 +58,6 @@ export class MenuPluginError extends Error {
       "invalid_location_max_depth",
       `registerMenuLocation("${ctx.id}"): \`maxDepth\` must be an integer from 1 to ${String(ctx.hardCap)}.`,
       { id: ctx.id },
-    );
-  }
-
-  static resolveParentIdsLengthMismatch(ctx: {
-    itemsLength: number;
-    resolvedIdsLength: number;
-  }): MenuPluginError {
-    return new MenuPluginError(
-      "resolve_parent_ids_length_mismatch",
-      `resolveParentIds: items.length (${String(ctx.itemsLength)}) does not match resolvedIds.length (${String(ctx.resolvedIdsLength)})`,
-      ctx,
-    );
-  }
-
-  static menuCreateNoRowReturned(): MenuPluginError {
-    return new MenuPluginError(
-      "menu_create_no_row_returned",
-      "menu.create: insert returned no row",
-      {},
     );
   }
 }

@@ -1,5 +1,9 @@
 import { createORPCErrorConstructorMap } from "@orpc/server";
 
+import type {
+  AppContext,
+  AuthenticatedAppContext,
+} from "../../../context/app-context.js";
 import type { Entry } from "../../../db/schema/entries.js";
 import type { JsonObject } from "../../../json.js";
 import type { ResolvedMeta } from "../../../meta/contract/bags.js";
@@ -10,9 +14,16 @@ import { RPC_ERRORS } from "../../../rpc-errors.js";
 /** The constructors a handler's `errors` holds, for a write made outside one. */
 export const writeErrors = createORPCErrorConstructorMap(RPC_ERRORS);
 
+/** A write made through `ctx` needs a principal to act as. */
+export function asAuthenticated(ctx: AppContext): AuthenticatedAppContext {
+  const { user } = ctx;
+  if (user === null) throw writeErrors.UNAUTHORIZED();
+  return { ...ctx, user };
+}
+
 /**
- * `storedMeta` keys are written into the stored bag as given, past the field
- * pipeline: a plugin's own record of the entry, which no meta-box field owns.
+ * Written into the stored bag as given, past the field pipeline: a plugin's
+ * own record of the entry. A `null` clears its key, as in `meta`.
  */
 interface StoredMetaInput {
   readonly storedMeta?: JsonObject;
@@ -51,8 +62,10 @@ export function withStoredMeta(
 ): MetaPatch | null {
   if (storedMeta === undefined) return patch;
   const upserts = new Map(patch?.upserts);
+  const deletes = [...(patch?.deletes ?? [])];
   for (const [key, value] of Object.entries(storedMeta)) {
-    upserts.set(key, value);
+    if (value === null) deletes.push(key);
+    else upserts.set(key, value);
   }
-  return { upserts, deletes: patch?.deletes ?? [] };
+  return { upserts, deletes };
 }

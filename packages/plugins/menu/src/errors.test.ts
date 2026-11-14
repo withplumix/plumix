@@ -34,26 +34,3 @@ describe("MenuPluginError.locationLabelEmpty", () => {
     );
   });
 });
-
-describe("MenuPluginError.resolveParentIdsLengthMismatch", () => {
-  test("class identity, code, exposed lengths, and message", () => {
-    const err = MenuPluginError.resolveParentIdsLengthMismatch({
-      itemsLength: 5,
-      resolvedIdsLength: 3,
-    });
-    expect(err.code).toBe("resolve_parent_ids_length_mismatch");
-    expect(err.itemsLength).toBe(5);
-    expect(err.resolvedIdsLength).toBe(3);
-    expect(err.message).toContain(
-      "resolveParentIds: items.length (5) does not match resolvedIds.length (3)",
-    );
-  });
-});
-
-describe("MenuPluginError.menuCreateNoRowReturned", () => {
-  test("class identity, code, and message", () => {
-    const err = MenuPluginError.menuCreateNoRowReturned();
-    expect(err.code).toBe("menu_create_no_row_returned");
-    expect(err.message).toContain("menu.create: insert returned no row");
-  });
-});

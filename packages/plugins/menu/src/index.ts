@@ -1,7 +1,6 @@
 import type { DefaultRole } from "plumix/auth";
 import type { Label } from "plumix/i18n";
 import type {
-  AppContext,
   EntryTypeLabels,
   PluginDescriptor,
   TermTaxonomyLabels,
@@ -10,7 +9,6 @@ import {
   POST_TYPE_CAPABILITY_ACTIONS,
   TERM_TAXONOMY_CAPABILITY_ACTIONS,
 } from "plumix/auth";
-import { enqueuePurgeTags } from "plumix/db";
 import {
   definePlugin,
   PLUGIN_I18N_SLOT,
@@ -20,7 +18,6 @@ import {
 import type { MenuRouter } from "./rpc.js";
 import type { MenuLocationOptions } from "./server/types.js";
 import { createMenuRouter, MENU_MANAGE_CAPABILITY } from "./rpc.js";
-import { menuTag } from "./server/cache-tags.js";
 import { menu as menuSubject } from "./server/events.js";
 import {
   getMenusForLocations,
@@ -209,16 +206,6 @@ export function menu(
       });
 
       ctx.registerRpcRouter(createMenuRouter(registered));
-
-      // A rendered menu is stored under `menu:<termId>` (see `resolveMenus`).
-      const purgeMenu = (
-        { termId }: { readonly termId: number },
-        appCtx: AppContext,
-      ) => {
-        enqueuePurgeTags(appCtx, [menuTag(termId)]);
-      };
-      ctx.events.on(menuSubject.saved, purgeMenu);
-      ctx.events.on(menuSubject.deleted, purgeMenu);
 
       ctx.registerAdminPage({
         path: "/menus",

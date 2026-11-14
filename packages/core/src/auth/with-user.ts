@@ -56,10 +56,12 @@ export function withUser<TSchema extends Record<string, unknown>>(
     settings: rebindSettings(ctx.settings, () => next),
     ...rebindDispatch(ctx, () => next),
   };
+  // Safety: `TSchema` reaches only `db`, and an entry or term write reads
+  // core's tables, which every site's schema carries.
+  const principal = next as unknown as AppContext;
   // Onto `next` itself, since the rebound writes close over it.
   return Object.assign(next, {
-    // Safety: `TSchema` reaches only `db`, and an entry write reads core's
-    // tables, which every site's schema carries.
-    entries: rebindToPrincipal(ctx.entries, next as unknown as AppContext),
+    entries: rebindToPrincipal(ctx.entries, principal),
+    terms: rebindToPrincipal(ctx.terms, principal),
   });
 }

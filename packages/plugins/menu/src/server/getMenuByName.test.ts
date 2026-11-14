@@ -964,8 +964,9 @@ describe("getMenuByName", () => {
     const menu = await getMenuByName(ctx, "lean");
     expect(menu?.items.map((i) => i.label)).toEqual(["Solo"]);
     // The published constraint rides the adapter's WHERE via scope.status,
-    // not a separate pre-filter query.
-    expect(select.mock.calls.length).toBe(6);
+    // not a separate pre-filter query. Two reads are the menu's term and its
+    // items, resolved through core for their cache tags.
+    expect(select.mock.calls.length).toBe(8);
     select.mockRestore();
   });
 

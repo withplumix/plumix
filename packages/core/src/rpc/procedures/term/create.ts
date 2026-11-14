@@ -1,4 +1,8 @@
+import type { AuthenticatedAppContext } from "../../../context/app-context.js";
+import type { TermCreateInput } from "./schemas.js";
+import type { TermWritten } from "./writes-shared.js";
 import { spellTermCapability } from "../../../access/contract/capability.js";
+import { etagOf } from "../../../db/concurrency.js";
 import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { term } from "../../../events-and-filters/term.js";
@@ -15,99 +19,21 @@ import { listTermMetaFields } from "../../../plugin/manifest.js";
 import { authenticated } from "../../authenticated.js";
 import { base } from "../../base.js";
 import { termRpc } from "../../filters.js";
+import { writeErrors as errors } from "../entry/writes-shared.js";
 import { termWire } from "./helpers.js";
 import { termCreateInputSchema } from "./schemas.js";
 
 export const create = base
   .use(authenticated)
   .input(termCreateInputSchema)
-  .handler(async ({ input, context, errors }) => {
+  .handler(async ({ input, context }) => {
     const filtered = await context.filters.apply(termRpc.create.input, input);
 
-    if (!context.plugins.termTaxonomies.has(filtered.taxonomy)) {
-      throw errors.NOT_FOUND({
-        data: { kind: "taxonomy", id: filtered.taxonomy },
-      });
-    }
-
-    const editCap = spellTermCapability(filtered.taxonomy, "edit");
-    if (!context.auth.can(editCap)) {
-      throw errors.FORBIDDEN({ data: { capability: editCap } });
-    }
-
-    if (filtered.parentId !== undefined && filtered.parentId !== null) {
-      const parent = await context.db.query.terms.findFirst({
-        where: and(
-          eq(terms.id, filtered.parentId),
-          eq(terms.taxonomy, filtered.taxonomy),
-        ),
-      });
-      if (!parent) {
-        throw errors.CONFLICT({ data: { reason: "parent_mismatch" } });
+    const { term: created, meta } = await createTerm(context, filtered, () => {
+      const editCap = spellTermCapability(filtered.taxonomy, "edit");
+      if (!context.auth.can(editCap)) {
+        throw errors.FORBIDDEN({ data: { capability: editCap } });
       }
-    }
-
-    // A new term starts from its fields' defaults (ADR 0026); the meta the
-    // caller sends lands on top of them.
-    const starting = startingMeta(
-      listTermMetaFields(context.plugins, filtered.taxonomy),
-    );
-
-    // Validate meta up-front so a bad key fails before the term insert —
-    // keeps the DB clean when the client sends a typo in a meta key.
-    const metaPatch = await sanitizeMetaForRpc(
-      context.plugins,
-      filtered.taxonomy,
-      filtered.meta,
-      { stored: starting, auth: context.auth },
-      errors,
-    );
-    if (metaPatch) {
-      assertTermMetaCapabilities(
-        context.plugins,
-        filtered.taxonomy,
-        metaPatch,
-        context.auth,
-        errors,
-      );
-      await validateTermMetaReferences(
-        context,
-        filtered.taxonomy,
-        metaPatch,
-        errors,
-      );
-    }
-
-    let created;
-    try {
-      [created] = await context.db
-        .insert(terms)
-        .values({
-          taxonomy: filtered.taxonomy,
-          name: filtered.name,
-          slug: filtered.slug,
-          description: filtered.description ?? null,
-          parentId: filtered.parentId ?? null,
-          meta: patchedMetaBag(starting, metaPatch),
-        })
-        .returning();
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        throw errors.CONFLICT({ data: { reason: "slug_taken" } });
-      }
-      throw error;
-    }
-    if (!created) {
-      throw errors.CONFLICT({ data: { reason: "insert_failed" } });
-    }
-
-    if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
-      await announceTermMetaChange(context, created, metaPatch);
-    }
-    const meta = await resolveTermMeta(context, created.taxonomy, created.meta);
-
-    await context.events.emit(term.for(created.taxonomy).created, {
-      term: created,
     });
     return termWire(
       await context.filters.apply(termRpc.create.output, {
@@ -116,3 +42,93 @@ export const create = base
       }),
     );
   });
+
+/** `gate` is a capability check, run once the taxonomy is known. */
+export async function createTerm(
+  context: AuthenticatedAppContext,
+  filtered: TermCreateInput,
+  gate?: () => void,
+): Promise<TermWritten> {
+  if (!context.plugins.termTaxonomies.has(filtered.taxonomy)) {
+    throw errors.NOT_FOUND({
+      data: { kind: "taxonomy", id: filtered.taxonomy },
+    });
+  }
+  gate?.();
+
+  if (filtered.parentId !== undefined && filtered.parentId !== null) {
+    const parent = await context.db.query.terms.findFirst({
+      where: and(
+        eq(terms.id, filtered.parentId),
+        eq(terms.taxonomy, filtered.taxonomy),
+      ),
+    });
+    if (!parent) {
+      throw errors.CONFLICT({ data: { reason: "parent_mismatch" } });
+    }
+  }
+
+  // A new term starts from its fields' defaults (ADR 0026); the meta the
+  // caller sends lands on top of them.
+  const starting = startingMeta(
+    listTermMetaFields(context.plugins, filtered.taxonomy),
+  );
+
+  // Validate meta up-front so a bad key fails before the term insert —
+  // keeps the DB clean when the client sends a typo in a meta key.
+  const metaPatch = await sanitizeMetaForRpc(
+    context.plugins,
+    filtered.taxonomy,
+    filtered.meta,
+    { stored: starting, auth: context.auth },
+    errors,
+  );
+  if (metaPatch) {
+    assertTermMetaCapabilities(
+      context.plugins,
+      filtered.taxonomy,
+      metaPatch,
+      context.auth,
+      errors,
+    );
+    await validateTermMetaReferences(
+      context,
+      filtered.taxonomy,
+      metaPatch,
+      errors,
+    );
+  }
+
+  let created;
+  try {
+    [created] = await context.db
+      .insert(terms)
+      .values({
+        taxonomy: filtered.taxonomy,
+        name: filtered.name,
+        slug: filtered.slug,
+        description: filtered.description ?? null,
+        parentId: filtered.parentId ?? null,
+        meta: patchedMetaBag(starting, metaPatch),
+      })
+      .returning();
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      throw errors.CONFLICT({ data: { reason: "slug_taken" } });
+    }
+    throw error;
+  }
+  if (!created) {
+    throw errors.CONFLICT({ data: { reason: "insert_failed" } });
+  }
+
+  if (metaPatch && !isEmptyMetaPatch(metaPatch)) {
+    await announceTermMetaChange(context, created, metaPatch);
+  }
+  const meta = await resolveTermMeta(context, created.taxonomy, created.meta);
+
+  await context.events.emit(term.for(created.taxonomy).created, {
+    term: created,
+  });
+  return { term: created, meta, etag: etagOf(created.version) };
+}

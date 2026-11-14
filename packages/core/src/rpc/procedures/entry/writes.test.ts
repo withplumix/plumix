@@ -99,6 +99,22 @@ describe("ctx.entries.update", () => {
     expect(written.entry.meta).toMatchObject({ checksum: "abc" });
   });
 
+  test("a null in stored meta clears that key", async () => {
+    const editor = await site.factory.editor.create();
+    const entry = await site.factory.draft.create({
+      authorId: editor.id,
+      meta: { checksum: "abc", size: 3 },
+    });
+
+    const written = await site.actingAs(editor).context.entries.update({
+      id: entry.id,
+      ifMatch: entry.updatedAt,
+      storedMeta: { checksum: null },
+    });
+
+    expect(written.entry.meta).toEqual({ size: 3 });
+  });
+
   test("stored meta alongside a cleared field still clears it", async () => {
     const editor = await site.factory.editor.create();
     const entry = await site.factory.draft.create({
