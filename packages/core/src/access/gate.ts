@@ -124,3 +124,16 @@ function challengeResponse(kind: string): Response {
     },
   });
 }
+
+/**
+ * Gives a client-side unlock the hard gate's signal. Skipped on a 404, where
+ * the teaser resolved to nothing.
+ */
+export function signalSoftGate(
+  response: Response,
+  gate: Gate | undefined,
+): void {
+  if (gate?.type !== "challenge" || gate.soft !== true) return;
+  if (response.status === 404) return;
+  response.headers.set("x-plumix-challenge", gate.kind);
+}

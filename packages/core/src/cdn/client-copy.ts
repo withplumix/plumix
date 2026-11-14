@@ -1,16 +1,23 @@
-import type { Segment } from "../access/contract/access.js";
 import { withHeaders } from "../runtime/contract/http.js";
 
-/**
- * Downstream caches don't know the segment axis, so only the anonymous
- * document may leave shareable, on a hit as on a miss: the edge copy is widened
- * for storage only.
- */
-export function segmentClientCopy(
+export type ClientCopy = "private" | "page" | "as-rendered";
+
+export function applyClientCopy(
   response: Response,
-  segment: Segment,
+  copy: ClientCopy,
 ): Response {
-  if (segment === "anonymous") return response;
+  switch (copy) {
+    case "private":
+      return privateClientCopy(response);
+    case "page":
+      return pageClientCopy(response);
+    case "as-rendered":
+      return response;
+  }
+}
+
+/** The edge copy is widened for storage only; this copy is one reader's. */
+export function privateClientCopy(response: Response): Response {
   return withHeaders(response, (headers) => {
     headers.set("cache-control", "private, no-store");
     if (!variesOnCookie(headers)) headers.append("vary", "cookie");

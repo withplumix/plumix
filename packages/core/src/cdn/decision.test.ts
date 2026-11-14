@@ -2,178 +2,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   BUILD_KEY_PARAM,
-  cdnBypassReason,
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
   responseAllowsSharedStorage,
-  responseIsShareable,
   routeCdnKey,
   SEGMENT_KEY_PARAM,
   segmentCdnKey,
 } from "./decision.js";
-
-/**
- * Defaults to a provider that can key by segment; cases about its absence
- * pass `canKeySegments: false` themselves.
- */
-type BypassArgs = Parameters<typeof cdnBypassReason>[0];
-const bypassReason = (
-  req: Omit<BypassArgs, "canKeySegments"> &
-    Partial<Pick<BypassArgs, "canKeySegments">>,
-): ReturnType<typeof cdnBypassReason> =>
-  cdnBypassReason({ canKeySegments: true, ...req });
-
-describe("cdnBypassReason", () => {
-  it("caches an anonymous GET to a public entry permalink", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "anonymous",
-        intentKind: "entry",
-      }),
-    ).toBe(null);
-  });
-
-  it("caches anonymous GETs to entryType, term, and frontPage intents", () => {
-    for (const intentKind of ["entryType", "term", "frontPage"] as const) {
-      expect(
-        bypassReason({ method: "GET", segment: "anonymous", intentKind }),
-      ).toBe(null);
-    }
-  });
-
-  it("caches a non-anonymous shared segment (keyed separately)", () => {
-    for (const segment of [
-      "authenticated",
-      "capability:user:list",
-      "members",
-    ] as const) {
-      expect(
-        bypassReason({ method: "GET", segment, intentKind: "entry" }),
-      ).toBe(null);
-    }
-  });
-
-  it("bypasses a private segment", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "private",
-        intentKind: "entry",
-      }),
-    ).toBe("private");
-  });
-
-  it("bypasses search pages", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "anonymous",
-        intentKind: "search",
-      }),
-    ).toBe("intent");
-  });
-
-  it("bypasses an archive type that has not opted into caching", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "anonymous",
-        intentKind: "archiveType",
-      }),
-    ).toBe("intent");
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "anonymous",
-        intentKind: "archiveType",
-        registeredPageCacheable: false,
-      }),
-    ).toBe("intent");
-  });
-
-  it("caches an archive type that opted in via cacheable: true", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "anonymous",
-        intentKind: "archiveType",
-        registeredPageCacheable: true,
-      }),
-    ).toBe(null);
-  });
-
-  it("still bypasses an opted-in archive type for a private segment", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "private",
-        intentKind: "archiveType",
-        registeredPageCacheable: true,
-      }),
-    ).toBe("private");
-  });
-
-  it("still bypasses an opted-in archive type on a non-GET/HEAD method", () => {
-    expect(
-      bypassReason({
-        method: "POST",
-        segment: "anonymous",
-        intentKind: "archiveType",
-        registeredPageCacheable: true,
-      }),
-    ).toBe("method");
-  });
-
-  it("bypasses a non-anonymous segment on a provider that cannot key by segment", () => {
-    for (const segment of [
-      "authenticated",
-      "capability:user:list",
-      "members",
-    ]) {
-      expect(
-        bypassReason({
-          method: "GET",
-          segment,
-          intentKind: "entry",
-          canKeySegments: false,
-        }),
-      ).toBe("segment-unsupported");
-    }
-  });
-
-  it("still caches the anonymous segment on a provider that cannot key by segment", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "anonymous",
-        intentKind: "entry",
-        canKeySegments: false,
-      }),
-    ).toBe(null);
-  });
-
-  it("reports a private segment as private, not as unsupported", () => {
-    expect(
-      bypassReason({
-        method: "GET",
-        segment: "private",
-        intentKind: "entry",
-        canKeySegments: false,
-      }),
-    ).toBe("private");
-  });
-
-  it("bypasses non-GET/HEAD methods", () => {
-    expect(
-      bypassReason({
-        method: "POST",
-        segment: "anonymous",
-        intentKind: "entry",
-      }),
-    ).toBe("method");
-  });
-});
 
 describe("segmentCdnKey", () => {
   const at = (req: Request) => new URL(req.url);
@@ -314,18 +149,6 @@ describe("requestCarriesEphemeralGrant", () => {
         }),
       ),
     ).toBe(false);
-  });
-});
-
-describe("responseIsShareable", () => {
-  it("shares a 200", () => {
-    expect(responseIsShareable(200)).toBe(true);
-  });
-
-  it("does not share a redirect or an error", () => {
-    expect(responseIsShareable(301)).toBe(false);
-    expect(responseIsShareable(404)).toBe(false);
-    expect(responseIsShareable(500)).toBe(false);
   });
 });
 

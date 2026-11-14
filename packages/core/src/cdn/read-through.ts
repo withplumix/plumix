@@ -1,29 +1,22 @@
 import type { Segment } from "../access/contract/access.js";
 import type { DeferFn } from "../context/app-context.js";
 import type { TelemetryCollector } from "../context/telemetry.js";
-import type { RouteIntent } from "../route/contract/intent.js";
 import type { ConnectedCdn } from "../runtime/contract/slots.js";
-import { segmentClientCopy } from "./client-copy.js";
+import type { SharingDecision } from "./sharing-verdict.js";
 import {
-  cdnBypassReason,
   methodIsCacheable,
   requestIsPrivileged,
   responseAllowsSharedStorage,
-  responseIsShareable,
   routeCdnKey,
-  segmentCdnKey,
 } from "./decision.js";
+import { responseIsShareable, sharingAfterRender } from "./sharing-verdict.js";
+
+export function cdnCanKeySegments(cdn: ConnectedCdn): boolean {
+  return cdn.store !== undefined || cdn.segmentVary !== undefined;
+}
 
 interface ReadThroughArgs {
-  readonly request: Request;
-  readonly segment: Segment;
-  /** `null` when no public route matched; the CDN is never consulted. */
-  readonly intentKind: RouteIntent["kind"] | null;
-  /**
-   * Resolved by the dispatcher so the pure decision layer stays free of the
-   * registry lookup.
-   */
-  readonly registeredPageCacheable?: boolean;
+  readonly decision: SharingDecision;
   readonly cdn: ConnectedCdn;
   readonly defer: DeferFn;
   readonly telemetry: TelemetryCollector;
@@ -37,49 +30,37 @@ interface ReadThroughArgs {
   readonly personal: () => boolean;
 }
 
+/** Leaves the client copy to the caller, which applies it on every path. */
 export async function readThrough(args: ReadThroughArgs): Promise<Response> {
-  const {
-    request,
-    segment,
-    intentKind,
-    cdn,
-    defer,
-    telemetry,
-    render,
-    tags,
-    personal,
-  } = args;
+  const { decision, cdn, defer, telemetry, render, tags, personal } = args;
+  const { segment } = decision;
 
-  const originStore = cdn.store !== undefined;
-  const reason =
-    intentKind === null
-      ? "no-route"
-      : cdnBypassReason({
-          method: request.method,
-          segment,
-          intentKind,
-          registeredPageCacheable: args.registeredPageCacheable,
-          canKeySegments: originStore || cdn.segmentVary !== undefined,
-        });
-  if (reason !== null) {
+  if (decision.kind === "bypass") {
     telemetry.record("cdn", {
       decision: "bypass",
-      reason,
+      reason: decision.reason,
       segment,
-      originStore,
+      originStore: cdn.store !== undefined,
     });
     return render();
   }
 
   return lookupOrRender({
-    key: segmentCdnKey(request, segment),
+    key: decision.key,
     cdn,
     defer,
     telemetry,
     fact: { segment },
     render,
     tags,
-    personal,
+    settle: (fresh) => {
+      const isPersonal = personal();
+      const verdict = sharingAfterRender(decision, {
+        status: fresh.status,
+        personal: isPersonal,
+      });
+      return { ...verdict, personal: isPersonal };
+    },
   });
 }
 
@@ -122,7 +103,12 @@ export async function readThroughRoute(
     telemetry,
     fact: {},
     tags,
-    shareable: (fresh) => routeResponseIsShareable(request, hasSession, fresh),
+    settle: (fresh) => {
+      const shared =
+        responseIsShareable(fresh.status) &&
+        routeResponseIsShareable(request, hasSession, fresh);
+      return { store: shared, decorate: shared, personal: false };
+    },
     render,
   });
 }
@@ -142,6 +128,12 @@ function routeResponseIsShareable(
   return responseAllowsSharedStorage(fresh);
 }
 
+interface Settled {
+  readonly store: boolean;
+  readonly decorate: boolean;
+  readonly personal: boolean;
+}
+
 interface LookupArgs {
   readonly key: Request;
   readonly cdn: ConnectedCdn;
@@ -154,12 +146,11 @@ interface LookupArgs {
   readonly fact: { readonly segment?: Segment };
   readonly render: () => Promise<Response>;
   readonly tags: () => readonly string[];
-  readonly shareable?: (fresh: Response) => boolean;
-  readonly personal?: () => boolean;
+  readonly settle: (fresh: Response) => Settled;
 }
 
 async function lookupOrRender(args: LookupArgs): Promise<Response> {
-  const { key, cdn, defer, telemetry, fact, render, tags, shareable } = args;
+  const { key, cdn, defer, telemetry, fact, render, tags, settle } = args;
   const store = cdn.store;
   // A storeless deploy misses by definition, so the fact names the regime
   // rather than reading as a failing cache.
@@ -168,35 +159,28 @@ async function lookupOrRender(args: LookupArgs): Promise<Response> {
   const hit = await store?.match(key);
   if (hit) {
     telemetry.record("cdn", { ...fact, decision: "hit", originStore });
-    // The edge copy is widened for storage; a page's segment narrows it again.
-    return fact.segment === undefined
-      ? hit
-      : segmentClientCopy(hit, fact.segment);
+    return hit;
   }
 
   const fresh = await render();
-  const personal = args.personal?.() === true;
-  const shared =
-    responseIsShareable(fresh.status) &&
-    !personal &&
-    (shareable?.(fresh) ?? true);
+  const settled = settle(fresh);
   // The Workers Cache API persists GET responses only, so a HEAD render is
   // decorated and served without filling an entry.
-  const stored = store !== undefined && shared && key.method === "GET";
+  const stored = store !== undefined && settled.store && key.method === "GET";
   telemetry.record("cdn", {
     ...fact,
     decision: "miss",
     stored,
     originStore,
-    ...(personal ? { personal: true } : {}),
+    ...(settled.personal ? { personal: true } : {}),
   });
-  if (!shared) return fresh;
+  if (!settled.store) return fresh;
 
   const entryTags = tags();
   // Cloned before `decorate` reads the body.
   if (stored) defer(store.put(key, fresh.clone(), entryTags));
   // Core refuses a `Set-Cookie` response regardless of whether the provider
   // does.
-  if (fresh.headers.has("set-cookie")) return fresh;
+  if (!settled.decorate || fresh.headers.has("set-cookie")) return fresh;
   return cdn.decorate(fresh, entryTags);
 }

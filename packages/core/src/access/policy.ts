@@ -181,8 +181,8 @@ export function principalSegment(
 }
 
 /**
- * Equivalent to no policy. A privileged request (session, `Authorization`,
- * `?preview=`) still renders `private`, so it never enters the shared cache.
+ * Equivalent to no policy, including how `sharingBeforeRender` treats a
+ * privileged request.
  */
 export const anonymousPolicy: AccessPolicy = definePolicy({
   resolve: () => grant("anonymous"),

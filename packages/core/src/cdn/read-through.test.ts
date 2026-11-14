@@ -2,10 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { TelemetryCollector } from "../context/telemetry.js";
 import type { CdnStore, ConnectedCdn } from "../runtime/contract/slots.js";
+import type { RequestFacts, SharingDecision } from "./sharing-verdict.js";
 import { createTelemetryCollector } from "../context/collector.js";
 import { NOOP_TELEMETRY } from "../context/telemetry.js";
 import { responseAllowsSharedStorage, SEGMENT_KEY_PARAM } from "./decision.js";
-import { readThrough, readThroughRoute } from "./read-through.js";
+import {
+  cdnCanKeySegments,
+  readThrough,
+  readThroughRoute,
+} from "./read-through.js";
+import { sharingBeforeRender } from "./sharing-verdict.js";
 
 /**
  * `defer` swallows the promise here so tests can drive the store-write path
@@ -50,6 +56,20 @@ function spies(
   return { cdn, match, put, decorate };
 }
 
+/** An unprivileged request with no policy, asked of `cdn` as the dispatcher asks it. */
+function decide(
+  cdn: ConnectedCdn,
+  facts: Pick<RequestFacts, "request" | "page"> & Partial<RequestFacts>,
+): SharingDecision {
+  return sharingBeforeRender({
+    privileged: false,
+    ephemeralGrant: false,
+    accessSegment: null,
+    canKeySegments: cdnCanKeySegments(cdn),
+    ...facts,
+  });
+}
+
 function cdnFacts(telemetry: TelemetryCollector): unknown[] {
   return telemetry.get("cdn").map((record) => record.data);
 }
@@ -62,9 +82,10 @@ describe("readThrough", () => {
     );
 
     const result = await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "entry",
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "entry" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -92,9 +113,10 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(new Response("fresh")));
 
     const result = await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "frontPage",
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "frontPage" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -118,9 +140,10 @@ describe("readThrough", () => {
     );
 
     const result = await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "entry",
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "entry" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -140,9 +163,11 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThrough({
-      request: GET(),
-      segment: "private",
-      intentKind: "entry",
+      decision: decide(cdn, {
+        request: GET(),
+        accessSegment: "private",
+        page: { kind: "content", intent: "entry" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -164,11 +189,13 @@ describe("readThrough", () => {
     );
 
     await readThrough({
-      request: new Request("https://site.test/members", {
-        headers: { cookie: "plumix_session=alice" },
+      decision: decide(cdn, {
+        request: new Request("https://site.test/members", {
+          headers: { cookie: "plumix_session=alice" },
+        }),
+        accessSegment: "authenticated",
+        page: { kind: "content", intent: "entry" },
       }),
-      segment: "authenticated",
-      intentKind: "entry",
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -199,9 +226,11 @@ describe("readThrough", () => {
     // Storeless and without `segmentVary`, the provider hands every visitor one
     // shared copy — so this render must not be decorated into it.
     const result = await readThrough({
-      request: GET("https://site.test/members"),
-      segment: "authenticated",
-      intentKind: "entry",
+      decision: decide(cdn, {
+        request: GET("https://site.test/members"),
+        accessSegment: "authenticated",
+        page: { kind: "content", intent: "entry" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry,
@@ -228,14 +257,15 @@ describe("readThrough", () => {
       Promise.resolve(new Response("members", { status: 200 })),
     );
     const telemetry = createTelemetryCollector();
+    const varying = { ...cdn, segmentVary: (response: Response) => response };
 
-    // The dispatcher stamps every non-anonymous render `private, no-store`,
-    // so a conforming `decorate` refuses it even without `segmentVary`.
     await readThrough({
-      request: GET("https://site.test/members"),
-      segment: "authenticated",
-      intentKind: "entry",
-      cdn: { ...cdn, segmentVary: (response) => response },
+      decision: decide(varying, {
+        request: GET("https://site.test/members"),
+        accessSegment: "authenticated",
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn: varying,
       defer: immediateDefer,
       telemetry,
       render,
@@ -260,9 +290,11 @@ describe("readThrough", () => {
     const telemetry = createTelemetryCollector();
 
     const result = await readThrough({
-      request: GET("https://site.test/members"),
-      segment: "authenticated",
-      intentKind: "entry",
+      decision: decide(cdn, {
+        request: GET("https://site.test/members"),
+        accessSegment: "authenticated",
+        page: { kind: "content", intent: "entry" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry,
@@ -295,9 +327,10 @@ describe("readThrough", () => {
     );
 
     await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: null,
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: null },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -318,10 +351,14 @@ describe("readThrough", () => {
     );
 
     await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "archiveType",
-      registeredPageCacheable: true,
+      decision: decide(cdn, {
+        request: GET(),
+        page: {
+          kind: "content",
+          intent: "archiveType",
+          registeredCacheable: true,
+        },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -342,9 +379,10 @@ describe("readThrough", () => {
     );
 
     await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "archiveType",
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "archiveType" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -368,9 +406,10 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "entry",
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "entry" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -392,9 +431,10 @@ describe("readThrough", () => {
     const render = vi.fn(() => Promise.resolve(fresh));
 
     const result = await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "entry",
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "entry" },
+      }),
       cdn,
       defer: immediateDefer,
       telemetry: NOOP_TELEMETRY,
@@ -409,14 +449,64 @@ describe("readThrough", () => {
     expect(decorate).not.toHaveBeenCalled();
   });
 
-  it("records a miss against an origin store as stored", async () => {
+  it("stores a shared segment's render without decorating it", async () => {
+    const { cdn, put, decorate } = spies();
+    const fresh = new Response("members", { status: 200 });
+
+    const result = await readThrough({
+      decision: decide(cdn, {
+        request: GET("https://site.test/members"),
+        accessSegment: "authenticated",
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn,
+      defer: immediateDefer,
+      telemetry: NOOP_TELEMETRY,
+      render: () => Promise.resolve(fresh),
+      tags: () => ["e:7"],
+      personal: () => false,
+    });
+
+    expect(put).toHaveBeenCalledOnce();
+    expect(decorate).not.toHaveBeenCalled();
+    expect(result).toBe(fresh);
+  });
+
+  it("records a hit with its segment", async () => {
     const telemetry = createTelemetryCollector();
+    const { cdn } = spies({
+      match: () => Promise.resolve(new Response("cached", { status: 200 })),
+    });
 
     await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "entry",
-      cdn: spies().cdn,
+      decision: decide(cdn, {
+        request: GET("https://site.test/members"),
+        accessSegment: "authenticated",
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn,
+      defer: immediateDefer,
+      telemetry,
+      render: () => Promise.resolve(new Response("fresh")),
+      tags: noTags,
+      personal: () => false,
+    });
+
+    expect(cdnFacts(telemetry)).toEqual([
+      { segment: "authenticated", decision: "hit", originStore: true },
+    ]);
+  });
+
+  it("records a miss against an origin store as stored", async () => {
+    const telemetry = createTelemetryCollector();
+    const { cdn } = spies();
+
+    await readThrough({
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn,
       defer: immediateDefer,
       telemetry,
       render: () => Promise.resolve(new Response("body")),
@@ -436,12 +526,14 @@ describe("readThrough", () => {
 
   it("records a storeless miss as a regime rather than a failure", async () => {
     const telemetry = createTelemetryCollector();
+    const { cdn } = spies({ storeless: true });
 
     await readThrough({
-      request: GET(),
-      segment: "anonymous",
-      intentKind: "entry",
-      cdn: spies({ storeless: true }).cdn,
+      decision: decide(cdn, {
+        request: GET(),
+        page: { kind: "content", intent: "entry" },
+      }),
+      cdn,
       defer: immediateDefer,
       telemetry,
       render: () => Promise.resolve(new Response("body")),
@@ -606,6 +698,24 @@ describe("readThroughRoute", () => {
     expect(match).toHaveBeenCalledOnce();
     expect(put).not.toHaveBeenCalled();
     expect(decorate).not.toHaveBeenCalled();
+  });
+
+  it("records a route miss with no segment and no personal flag", async () => {
+    const telemetry = createTelemetryCollector();
+
+    await readThroughRoute({
+      request: GET("https://site.test/_plumix/og/card/abc.png"),
+      hasSession: false,
+      cdn: spies().cdn,
+      defer: immediateDefer,
+      telemetry,
+      render: () => Promise.resolve(new Response("card", { status: 200 })),
+      tags: noTags,
+    });
+
+    expect(cdnFacts(telemetry)).toEqual([
+      { decision: "miss", stored: true, originStore: true },
+    ]);
   });
 
   it("decorates a HEAD but never stores one (the Cache API is GET-only)", async () => {
