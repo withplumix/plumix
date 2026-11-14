@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { segmentClientCopy } from "./client-copy.js";
+import { privateClientCopy } from "./client-copy.js";
 
-describe("segmentClientCopy", () => {
+describe("privateClientCopy", () => {
   it("adds cookie to a member page that varies on another header", () => {
     const page = new Response("page", {
       headers: { vary: "accept-language" },
     });
 
-    const copy = segmentClientCopy(page, "authenticated");
+    const copy = privateClientCopy(page);
 
     expect(copy.headers.get("vary")).toBe("accept-language, cookie");
   });
@@ -18,7 +18,7 @@ describe("segmentClientCopy", () => {
       headers: { vary: "Accept-Language, Cookie" },
     });
 
-    const copy = segmentClientCopy(page, "authenticated");
+    const copy = privateClientCopy(page);
 
     expect(copy.headers.get("vary")).toBe("Accept-Language, Cookie");
   });

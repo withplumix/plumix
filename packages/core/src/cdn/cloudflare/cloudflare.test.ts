@@ -6,7 +6,9 @@ import type { CdnStore, ConnectedCdn } from "../../runtime/contract/slots.js";
 import type { CloudflareCdnConfig } from "./cloudflare.js";
 import { NOOP_TELEMETRY } from "../../context/telemetry.js";
 import { describeCdnContract } from "../../test/conformance/cdn.js";
-import { readThrough } from "../read-through.js";
+import { applyClientCopy } from "../client-copy.js";
+import { cdnCanKeySegments, readThrough } from "../read-through.js";
+import { sharingAfterRender, sharingBeforeRender } from "../sharing-verdict.js";
 import { cloudflare } from "./cloudflare.js";
 
 /**
@@ -386,11 +388,17 @@ describe("an origin store across builds", () => {
 
   async function serveFrontAfterStoreWrite(body: string): Promise<string> {
     const writes: Promise<unknown>[] = [];
+    const cdn = connect();
     const response = await readThrough({
-      request: new Request("https://site.test/"),
-      segment: "anonymous",
-      intentKind: "frontPage",
-      cdn: connect(),
+      decision: sharingBeforeRender({
+        request: new Request("https://site.test/"),
+        privileged: false,
+        ephemeralGrant: false,
+        accessSegment: null,
+        page: { kind: "content", intent: "frontPage" },
+        canKeySegments: cdnCanKeySegments(cdn),
+      }),
+      cdn,
       defer: (write) => {
         writes.push(write);
       },
@@ -445,40 +453,36 @@ describe("the client copy of a segment page served from the origin store", () =>
     globalThis.fetch = zone.purgeEndpoint;
   });
 
-  // Stands in for the dispatcher's render, which already marks a non-anonymous
-  // segment's page for its audience.
   async function visit(
     segment: Segment,
     headers?: Record<string, string>,
   ): Promise<Response> {
     const writes: Promise<unknown>[] = [];
-    const response = await readThrough({
+    const cdn = connect();
+    const decision = sharingBeforeRender({
       request: new Request("https://site.test/members", { headers }),
-      segment,
-      intentKind: "entry",
-      cdn: connect(),
+      privileged: false,
+      ephemeralGrant: false,
+      accessSegment: segment,
+      page: { kind: "content", intent: "entry" },
+      canKeySegments: cdnCanKeySegments(cdn),
+    });
+    const response = await readThrough({
+      decision,
+      cdn,
       defer: (write) => {
         writes.push(write);
       },
       telemetry: NOOP_TELEMETRY,
       render: () =>
         Promise.resolve(
-          new Response("page", {
-            headers:
-              segment === "anonymous"
-                ? { "content-type": "text/html" }
-                : {
-                    "content-type": "text/html",
-                    "cache-control": "private, no-store",
-                    vary: "cookie",
-                  },
-          }),
+          new Response("page", { headers: { "content-type": "text/html" } }),
         ),
       tags: () => ["e:7"],
       personal: () => false,
     });
     await Promise.all(writes);
-    return response;
+    return applyClientCopy(response, sharingAfterRender(decision).clientCopy);
   }
 
   it("a member's hit leaves as the segment's private copy, untagged", async () => {

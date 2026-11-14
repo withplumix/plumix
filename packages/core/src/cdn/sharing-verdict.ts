@@ -1,0 +1,151 @@
+import type { Segment } from "../access/contract/access.js";
+import type { RouteIntent } from "../route/contract/intent.js";
+import type { ClientCopy } from "./client-copy.js";
+import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
+import { methodIsCacheable, segmentCdnKey } from "./decision.js";
+
+/**
+ * Public route intents whose anonymous render is a shared, cacheable document.
+ * `search` is deliberately excluded — its unbounded query space would pollute
+ * the CDN with one entry per distinct query string.
+ */
+const CACHEABLE_INTENTS: ReadonlySet<RouteIntent["kind"]> = new Set([
+  "entry",
+  "entryType",
+  "term",
+  "frontPage",
+]);
+
+export type PageKind =
+  | {
+      readonly kind: "content";
+      /** `null` when no public route matched. */
+      readonly intent: RouteIntent["kind"] | null;
+      /**
+       * Core can't know a plugin page's content dependencies, so an archive
+       * type or a view caches only on this opt-in.
+       */
+      readonly registeredCacheable?: boolean;
+    }
+  /** Renders per reader, so it never reaches the CDN. */
+  | { readonly kind: "policied-route" };
+
+export interface RequestFacts {
+  readonly request: Request;
+  /** Asked through the site's authenticator, never by sniffing the cookie. */
+  readonly privileged: boolean;
+  readonly ephemeralGrant: boolean;
+  /** `null` for a page with no access policy. */
+  readonly accessSegment: Segment | null;
+  readonly page: PageKind;
+  /** A vendor varying on a named cookie satisfies it differently. */
+  readonly canKeySegments: boolean;
+}
+
+/** Why the CDN refused to participate in a request. */
+export type CdnBypassReason =
+  "method" | "private" | "segment-unsupported" | "intent" | "no-route";
+
+export type SharingDecision =
+  | {
+      readonly kind: "bypass";
+      readonly segment: Segment;
+      readonly page: PageKind;
+      readonly reason: CdnBypassReason;
+    }
+  | {
+      readonly kind: "read-through";
+      readonly segment: Segment;
+      readonly page: PageKind;
+      readonly key: Request;
+    };
+
+export function sharingBeforeRender(facts: RequestFacts): SharingDecision {
+  const segment = segmentFor(facts);
+  const reason = bypassReason(facts, segment);
+  if (reason !== null) {
+    return { kind: "bypass", segment, page: facts.page, reason };
+  }
+  return {
+    kind: "read-through",
+    segment,
+    page: facts.page,
+    key: segmentCdnKey(facts.request, segment),
+  };
+}
+
+/**
+ * A per-request grant must not outlive its request in a shared entry, and an
+ * `anonymous` render to a privileged request can show who signed in.
+ */
+function segmentFor(facts: RequestFacts): Segment {
+  if (facts.ephemeralGrant) return PRIVATE_SEGMENT;
+  const segment = facts.accessSegment ?? "anonymous";
+  if (segment === "anonymous" && facts.privileged) return PRIVATE_SEGMENT;
+  return segment;
+}
+
+function bypassReason(
+  facts: RequestFacts,
+  segment: Segment,
+): CdnBypassReason | null {
+  const { page } = facts;
+  if (page.kind === "content" && page.intent === null) return "no-route";
+  if (!methodIsCacheable(facts.request.method)) return "method";
+  if (segment === PRIVATE_SEGMENT) return "private";
+  if (segment !== "anonymous" && !facts.canKeySegments) {
+    return "segment-unsupported";
+  }
+  return pageIsCacheable(page) ? null : "intent";
+}
+
+function pageIsCacheable(page: PageKind): boolean {
+  if (page.kind === "policied-route" || page.intent === null) return false;
+  if (page.intent === "archiveType" || page.intent === "view") {
+    return page.registeredCacheable === true;
+  }
+  return CACHEABLE_INTENTS.has(page.intent);
+}
+
+export interface RenderFacts {
+  readonly status: number;
+  readonly personal: boolean;
+}
+
+export interface AfterRenderVerdict {
+  /** The edge copy is shared; only a GET fills an origin store. */
+  readonly store: boolean;
+  readonly decorate: boolean;
+  readonly clientCopy: ClientCopy;
+}
+
+/**
+ * Without render facts (a hit, or a route that never reaches the CDN) only the
+ * client copy is decided, from the before-render decision alone.
+ */
+export function sharingAfterRender(
+  decision: SharingDecision,
+  render?: RenderFacts,
+): AfterRenderVerdict {
+  const clientCopy = clientCopyFor(decision);
+  const store =
+    decision.kind === "read-through" &&
+    render !== undefined &&
+    responseIsShareable(render.status) &&
+    !render.personal;
+  return { store, decorate: store && clientCopy === "page", clientCopy };
+}
+
+/** Gates decoration, so a transient 500 never leaves carrying page freshness. */
+export function responseIsShareable(status: number): boolean {
+  return status === 200;
+}
+
+/**
+ * Downstream caches don't know the segment axis, so only the anonymous
+ * document may leave shareable, on a hit as on a miss.
+ */
+function clientCopyFor(decision: SharingDecision): ClientCopy {
+  if (decision.segment !== "anonymous") return "private";
+  return decision.page.kind === "policied-route" ? "as-rendered" : "page";
+}

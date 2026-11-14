@@ -2,14 +2,18 @@ import type { AccessPolicy, Segment } from "../access/policy.js";
 import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { AuthMethodRouteMatch } from "../auth/declared-methods.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
+import type { RequestFacts } from "../cdn/sharing-verdict.js";
 import type { AppContext } from "../context/app-context.js";
 import type { AuthMethodRoute } from "../plugin/auth-method.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { ContentRoute, PublicRouteMatch } from "../route/index.js";
 import type { PlumixApp } from "./app.js";
 import { resolveCapability } from "../access/contract/capability.js";
-import { PRIVATE_SEGMENT } from "../access/contract/segments.js";
-import { gateToResponse, policyForMatch } from "../access/gate.js";
+import {
+  gateToResponse,
+  policyForMatch,
+  signalSoftGate,
+} from "../access/gate.js";
 import { resolveAccess } from "../access/policy.js";
 import {
   apiTokenOf,
@@ -29,14 +33,26 @@ import { AUTHORIZE_PATH, TOKEN_PATH } from "../auth/oauth-server/urls.js";
 import { getCapabilityResolver } from "../auth/rbac.js";
 import { withUser } from "../auth/with-user.js";
 import { stripBasePath, withBasePath } from "../base-path.js";
-import { pageClientCopy, segmentClientCopy } from "../cdn/client-copy.js";
+import {
+  applyClientCopy,
+  pageClientCopy,
+  privateClientCopy,
+} from "../cdn/client-copy.js";
 import { declaredPageTags } from "../cdn/contract/page-tags.js";
 import {
   requestCarriesEphemeralGrant,
   requestIsPrivileged,
 } from "../cdn/decision.js";
 import { flushPurgeTags } from "../cdn/purge.js";
-import { readThrough, readThroughRoute } from "../cdn/read-through.js";
+import {
+  cdnCanKeySegments,
+  readThrough,
+  readThroughRoute,
+} from "../cdn/read-through.js";
+import {
+  sharingAfterRender,
+  sharingBeforeRender,
+} from "../cdn/sharing-verdict.js";
 import { pageTags } from "../cdn/tags.js";
 import { now } from "../clock.js";
 import { interfaceEnabled } from "../config.js";
@@ -498,22 +514,21 @@ function tryPublicRoutes(
 }
 
 /**
- * An `anonymous` grant to a privileged request renders `private`: its render
- * can show who signed in.
- */
-function segmentForAudience(ctx: AppContext, segment: Segment): Segment {
-  return segment === "anonymous" &&
-    requestIsPrivileged(ctx.request, ctxHasSession(ctx))
-    ? PRIVATE_SEGMENT
-    : segment;
-}
-
-/**
  * The CDN's privileged check must ask the site's authenticator rather than
  * sniff the cookie.
  */
 function ctxHasSession(ctx: AppContext): boolean {
   return requestHasSession(ctx.authenticator, ctx.request);
+}
+
+function requestSharingFacts(
+  ctx: AppContext,
+): Pick<RequestFacts, "request" | "privileged" | "ephemeralGrant"> {
+  return {
+    request: ctx.request,
+    privileged: requestIsPrivileged(ctx.request, ctxHasSession(ctx)),
+    ephemeralGrant: requestCarriesEphemeralGrant(ctx.request),
+  };
 }
 
 function registeredPageCacheable(
@@ -548,7 +563,7 @@ async function dispatchPublicRoute(
 
     // The gate runs before any content resolves, so a gated type refuses even a
     // would-be-404 URL rather than leak which slugs exist.
-    let segment: Segment;
+    let accessSegment: Segment | null = null;
     if (policy !== null) {
       const access = await resolveAccess(ctx, policy);
       const gated = gateToResponse(access.gate, {
@@ -559,38 +574,36 @@ async function dispatchPublicRoute(
       if (gated !== null) return gated;
       // A soft gate's template reads `ctx.access.gate` to serve the teaser.
       ctx.access = access;
-      // A preview or editor grant is per request; its render must not outlive
-      // it in the shared segment entry.
-      segment = requestCarriesEphemeralGrant(ctx.request)
-        ? PRIVATE_SEGMENT
-        : segmentForAudience(ctx, access.segment);
-    } else {
-      segment = requestIsPrivileged(ctx.request, ctxHasSession(ctx))
-        ? PRIVATE_SEGMENT
-        : "anonymous";
+      accessSegment = access.segment;
     }
+
+    const cdn = ctx.cdn;
+    const decision = sharingBeforeRender({
+      ...requestSharingFacts(ctx),
+      accessSegment,
+      page: {
+        kind: "content",
+        intent: intent?.kind ?? null,
+        registeredCacheable: registeredPageCacheable(ctx, intent),
+      },
+      canKeySegments: cdn !== undefined && cdnCanKeySegments(cdn),
+    });
 
     // Principal reads above chose the segment; one from here on makes the
     // render personal.
     ctx = trackPrincipalReads(ctx);
 
-    const cdn = ctx.cdn;
+    const { clientCopy } = sharingAfterRender(decision);
+    const render = () => renderPublicRoute(app, ctx, routed);
+    if (cdn === undefined) return applyClientCopy(await render(), clientCopy);
     // A `private` segment still goes through the read-through, which bypasses
     // internally so telemetry stays uniform.
-    if (cdn === undefined) {
-      return pageClientCopy(await renderPublicRoute(app, ctx, routed, segment));
-    }
     const response = await readThrough({
-      request: ctx.request,
-      segment,
-      intentKind: intent?.kind ?? null,
-      // Resolved here so the pure decision layer stays free of the registry
-      // lookup.
-      registeredPageCacheable: registeredPageCacheable(ctx, intent),
+      decision,
       cdn,
       defer: ctx.defer,
       telemetry: ctx.telemetry,
-      render: () => renderPublicRoute(app, ctx, routed, segment),
+      render,
       // Segment variants share one tag set, so one publish purges them all.
       tags: () => {
         const routeTags =
@@ -610,7 +623,7 @@ async function dispatchPublicRoute(
       },
       personal: () => renderIsPersonal(ctx),
     });
-    return pageClientCopy(response);
+    return applyClientCopy(response, clientCopy);
   } catch (err) {
     return pageClientCopy(await renderPublicError(app, ctx, url, err));
   }
@@ -620,10 +633,9 @@ async function renderPublicRoute(
   app: PlumixApp,
   ctx: AppContext,
   routed: ContentRoute,
-  segment: Segment,
 ): Promise<Response> {
   const renderEnv = app.renderEnv;
-  let response = await ctx.telemetry.span("resolve", async (s) => {
+  const response = await ctx.telemetry.span("resolve", async (s) => {
     try {
       return await routed.render(ctx);
     } finally {
@@ -636,7 +648,7 @@ async function renderPublicRoute(
       }
     }
   });
-  response = markAudience(response, ctx, segment);
+  signalSoftGate(response, ctx.access?.gate);
   if (response.status === 404 && acceptsHtml(ctx.request)) {
     const html = await renderErrorThroughTheme({
       ctx,
@@ -653,20 +665,6 @@ async function renderPublicRoute(
     return new Response(html, { status: 404, headers });
   }
   return response;
-}
-
-function markAudience(
-  response: Response,
-  ctx: AppContext,
-  segment: Segment,
-): Response {
-  // Gives a client-side unlock the hard gate's signal. Skipped on a 404, where
-  // the teaser resolved to nothing.
-  const gate = ctx.access?.gate;
-  if (gate?.type === "challenge" && gate.soft && response.status !== 404) {
-    response.headers.set("x-plumix-challenge", gate.kind);
-  }
-  return segmentClientCopy(response, segment);
 }
 
 async function renderPublicError(
@@ -811,7 +809,7 @@ async function servePublicRoute(
       reader,
       match.params,
     );
-    return markAudience(response, reader, PRIVATE_SEGMENT);
+    return privateClientCopy(response);
   }
   const run = async () => match.route.handler(ctx.request, ctx, match.params);
   const cdn = ctx.cdn;
@@ -844,8 +842,15 @@ async function servePoliciedPublicRoute(
   });
   if (gated !== null) return gated;
   ctx.access = access;
+  const decision = sharingBeforeRender({
+    ...requestSharingFacts(ctx),
+    accessSegment: access.segment,
+    page: { kind: "policied-route" },
+    canKeySegments: false,
+  });
   const response = await match.route.handler(ctx.request, ctx, match.params);
-  return markAudience(response, ctx, segmentForAudience(ctx, access.segment));
+  signalSoftGate(response, access.gate);
+  return applyClientCopy(response, sharingAfterRender(decision).clientCopy);
 }
 
 /**
