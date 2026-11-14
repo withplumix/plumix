@@ -2,7 +2,6 @@ import { resolve } from "node:path";
 import type { PlaywrightTestConfig } from "@playwright/test";
 import { defineConfig, devices } from "@playwright/test";
 
-import type { RuntimeE2E } from "./runtime-e2e.js";
 import type { PlumixWorkerOptions } from "./test.js";
 import { readRuntimeE2E } from "./runtime-e2e.js";
 
@@ -110,42 +109,61 @@ export function superviseWebServer(command: string): string {
     .join(" ");
 }
 
-interface PlaygroundCommand {
+export interface PlaygroundWebServerOptions {
+  /** The directory the command runs from, which `playground` is relative to. */
+  readonly configDir: string;
   readonly playground: string;
-  readonly wipe: readonly string[];
-  /** Runs each `plumix` step; the runtime's `cli`, else `pnpm exec plumix`. */
-  readonly cli: string;
+  /** The port `plumix dev` binds, offset already applied. */
   readonly port: number;
-  readonly inspectorPort: number | undefined;
-  readonly extraSetup: string | undefined;
+  /** As `port`; omitted leaves workerd to allocate one. */
+  readonly inspectorPort?: number;
+  /** Shell step run after `plumix migrate fresh` and before `plumix dev`. */
+  readonly extraSetup?: string;
 }
 
-function bakePlaygroundCommand(input: PlaygroundCommand): string {
+export interface PlaygroundWebServer {
+  /** Unsupervised; wrap it in `superviseWebServer` to tie it to its parent. */
+  readonly command: string;
+  /** Answers once the Plumix handler serves, not just the admin shell. */
+  readonly url: string;
+}
+
+/**
+ * Boots a playground from a clean state: wipes what its runtime's `plumix.e2e`
+ * block names, migrates fresh, then runs `plumix dev`.
+ */
+export function playgroundWebServer(
+  options: PlaygroundWebServerOptions,
+): PlaygroundWebServer {
+  const runtime = readRuntimeE2E(
+    resolve(options.configDir, options.playground),
+  );
+  const cli = runtime.cli ?? "pnpm exec plumix";
   const steps = [
-    `cd ${input.playground}`,
+    `cd ${options.playground}`,
     // The baseline lives in the wiped state, so a stale one goes with it.
-    ...input.wipe.map((path) => `rm -rf -- ${shellQuote(path)}`),
-    `${input.cli} migrate fresh --yes`,
+    ...runtime.wipe.map((path) => `rm -rf -- ${shellQuote(path)}`),
+    `${cli} migrate fresh --yes`,
   ];
-  if (input.extraSetup) steps.push(input.extraSetup);
-  const devFlags = [`--port ${String(input.port)}`];
-  if (input.inspectorPort !== undefined) {
-    devFlags.push(`--inspector-port ${String(input.inspectorPort)}`);
+  if (options.extraSetup) steps.push(options.extraSetup);
+  const devFlags = [`--port ${String(options.port)}`];
+  if (options.inspectorPort !== undefined) {
+    devFlags.push(`--inspector-port ${String(options.inspectorPort)}`);
   }
-  steps.push(`${input.cli} dev ${devFlags.join(" ")}`);
-  return steps.join(" && ");
+  steps.push(`${cli} dev ${devFlags.join(" ")}`);
+  return {
+    command: steps.join(" && "),
+    url: `http://localhost:${String(options.port)}${READINESS_PATH}`,
+  };
 }
 
-function playgroundRuntime(
-  configDir: string | undefined,
-  playground: string,
-): RuntimeE2E {
+function requireConfigDir(configDir: string | undefined): string {
   if (configDir === undefined) {
     throw new Error(
       "definePlumixE2EConfig: `playground` is resolved against `configDir` — pass `configDir: import.meta.dirname`.",
     );
   }
-  return readRuntimeE2E(resolve(configDir, playground));
+  return configDir;
 }
 
 /**
@@ -188,25 +206,20 @@ export function definePlumixE2EConfig(
   // `sharedDatabase: false`: specs never share a database (apps/demo has one
   // per session), so there's nothing to pin or snapshot.
   const hasSharedDb = isPlayground && options.sharedDatabase !== false;
-  const runtime =
+  const server =
     options.playground === undefined
       ? undefined
-      : playgroundRuntime(options.configDir, options.playground);
-  const webServerCommand =
-    options.webServerCommand ??
-    (options.playground !== undefined && runtime !== undefined
-      ? bakePlaygroundCommand({
+      : playgroundWebServer({
+          configDir: requireConfigDir(options.configDir),
           playground: options.playground,
-          wipe: runtime.wipe,
-          cli: runtime.cli ?? "pnpm exec plumix",
           port,
           inspectorPort:
             options.inspectorPort === undefined
               ? undefined
               : resolveE2EPort(options.inspectorPort),
           extraSetup: options.extraSetup,
-        })
-      : "");
+        });
+  const webServerCommand = options.webServerCommand ?? server?.command ?? "";
 
   return defineConfig<object, PlumixWorkerOptions>({
     testDir: options.testDir ?? ".",
@@ -240,7 +253,7 @@ export function definePlumixE2EConfig(
             // The static admin shell answers before Vite's server pre-bundle
             // finishes, so readiness is a bare GET the handler answers; the
             // magic-link verify always 302s. Custom commands keep `baseURL`.
-            url: isPlayground ? `${origin}${READINESS_PATH}` : baseURL,
+            url: server?.url ?? baseURL,
           }),
       // Reuse would skip the state wipe, migrations and rebuild, and Playwright
       // doesn't check the responder is this suite's server.
