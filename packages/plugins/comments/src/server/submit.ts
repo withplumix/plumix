@@ -2,7 +2,7 @@ import type { AppContext } from "plumix/plugin";
 import { resolveReturnUrl } from "plumix/auth";
 import { readVisitorMeta } from "plumix/db";
 import { labelSourceText } from "plumix/i18n";
-import { jsonResponse, listUserMetaFields, startingMeta } from "plumix/plugin";
+import { jsonResponse } from "plumix/plugin";
 import { now } from "plumix/support";
 import * as v from "valibot";
 
@@ -122,12 +122,9 @@ export function createSubmitHandler(config: ResolvedCommentsConfig) {
       return fail("comments_closed");
     }
 
-    // A `formPost` request resolves nobody here, by design; reading the session
-    // another way would defeat the guard.
-    const auth = await ctx.authenticator.authenticate(request, ctx.db, {
-      startingUserMeta: startingMeta(listUserMetaFields(ctx.plugins)),
-    });
-    const authUser = auth?.user ?? null;
+    // Null on a `formPost` request; reading the session another way would
+    // defeat the guard.
+    const authUser = ctx.user;
     const isAuthenticated = authUser !== null;
     // Lowercase so the trust lookup and Gravatar agree on one identity.
     const email = (authUser?.email ?? input.email).trim().toLowerCase();

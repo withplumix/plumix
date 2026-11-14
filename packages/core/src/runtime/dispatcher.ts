@@ -975,7 +975,10 @@ async function runPluginRawRoute(
 ): Promise<Response> {
   const gate = route.auth;
   if (gate === "public") {
-    return route.handler(ctx.request, ctx);
+    // Stored ignoring cookies, so it must not depend on who is asking.
+    const servesEveryone = route.cacheable === true;
+    const routeCtx = servesEveryone ? ctx : await withPublicReader(ctx);
+    return route.handler(routeCtx.request, routeCtx);
   }
 
   // Off-loopback it is absent, not unauthorized: a distinguishable answer would
