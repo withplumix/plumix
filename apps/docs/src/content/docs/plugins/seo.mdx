@@ -394,7 +394,7 @@ Turning **Block AI crawlers** on adds one more group to the file, naming the cra
 
 `/sitemap.xml` is an index, not a URL list. It names one sub-sitemap per **scope** — every public entry type, every public taxonomy, and every sitemap a plugin contributed with [`registerSitemap`](#contributing-a-sitemap) — paged at 1,000 URLs each. A scope with nothing published is left out.
 
-Each `<sitemap>` entry carries a `<lastmod>` where the plugin knows one. An entry type's page carries the newest `updatedAt` among the entries on that page, worked out in one query per entry type however many pages it has. A contributed page carries what its source's `lastmod` answers. A taxonomy's page carries none, since a term stores no modification time.
+Each `<sitemap>` entry carries a `<lastmod>` where the plugin knows one. An entry type's page carries the newest `updatedAt` among the entries on that page. Its pages and their dates come from one pass over the type's entries in id order, one query per entry type however many pages it has. A contributed page carries what its source's `lastmod` answers. A taxonomy's page carries none, since a term stores no modification time.
 
 A scope whose entry type or taxonomy is held out of the index leaves the set entirely — it is absent from the index and its sub-sitemap serves an empty `<urlset>`.
 
@@ -404,15 +404,17 @@ Each scope's sub-sitemap answers at a URL named by its kind, so an entry type an
 
 | Scope              | URL                                    |
 | ------------------ | -------------------------------------- |
-| An entry type      | `/sitemap-entries-<type>-<page>.xml`   |
+| An entry type      | `/sitemap-entries-<type>-<after>.xml`  |
 | A taxonomy         | `/sitemap-terms-<taxonomy>-<page>.xml` |
 | A plugin's sitemap | `/sitemap-<name>-<page>.xml`           |
 
-Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries, non-public types and anything marked **Hide from search engines** never appear — the exclusion is a `WHERE`, so the count driving the index's pagination and the page it pages agree. `entries` and `terms` belong to seo, so a `registerSitemap` call naming `entries` or `terms`, or a name starting `entries-` or `terms-`, fails the boot naming its plugin. Two plugins contributing one name fail the boot naming both.
+An entry type's page is named by the id it starts after, not by its number: the first is `/sitemap-entries-post-0.xml`, and the next starts after the last id the first lists, such as `/sitemap-entries-post-1042.xml`. A page reads the 1,000 entries after that id, so a late page costs what the first does. Take the URLs from the index rather than building them. A `seo.sitemap.urls` subscriber gets that id as `after` for an entry type's scope, and the 1-based page number as `page` for any other, so it checks which with `"after" in at`.
+
+Entry scopes list published entries with a `lastmod`; taxonomy scopes list term archives. Drafts, scheduled entries, non-public types and anything marked **Hide from search engines** never appear — the exclusion is a `WHERE`, so the index's pages and the pages it names agree. The plugin keeps the ids of entries marked **Hide from search engines** in a table of its own, `seo_noindexed_entries`, updated when an editor saves the field, so the sitemap looks them up instead of reading every entry's meta. `plumix migrate` creates the table and fills it from the entries already marked. An entry whose meta is written straight to the database, around Plumix, is not recorded until it is next saved or published. `entries` and `terms` belong to seo, so a `registerSitemap` call naming `entries` or `terms`, or a name starting `entries-` or `terms-`, fails the boot naming its plugin. Two plugins contributing one name fail the boot naming both.
 
 An entry type with an [access policy](/access/overview/) gets its scope like any other, and each entry is listed when its policy lets anonymous visitors list it. The sitemap asks that for anonymous visitors whoever requests it, so a signed-in member fetching `/sitemap.xml` sees what a crawler sees. A members-only entry is never listed. A soft-challenged entry is, since its page answers 200 with a teaser. The check is part of the same `WHERE`, so a page of 1,000 URLs is still full.
 
-Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-entries-nope-1.xml` is a 404, not an empty document, and a page segment that is not a page number is a 404 too.
+Scopes are enumerated when the theme is ready, so the routes the plugin claims are exactly the scopes the site registered — `/sitemap-entries-nope-0.xml` is a 404, not an empty document, and a page segment that is not a page number, or for an entry type an id, is a 404 too.
 
 A site with indexing turned off publishes an empty index and empty URL lists, so a crawler that already knows the URL learns nothing from it.
 
@@ -495,9 +497,9 @@ Seo asks that policy for an anonymous visitor, whoever requests the sitemap. Whe
 
 ### Caching
 
-Sitemap responses declare `public, max-age=0, s-maxage=3600` and go through the CDN when one is configured. Each scope is stored under what it read — an entry type's entries through `compileEntryQuery`, a taxonomy's terms through `taxonomyTermRows` — so publishing a post retires the post scope, and creating or deleting a category retires the category scope, and each leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all. `/llms.txt` declares the same header and reads each entry type it lists through `compileEntryQuery` too, so an entry write, a change of access choice included, retires it with the sitemap page that lists the entry. A `seo.sitemap.urls` subscriber that adds rows from its own data reads them with `ctx.cache.reads(key)`, so its `ctx.cache.changed(key)` retires the sitemap pages those rows joined.
+Sitemap responses declare `public, max-age=0, s-maxage=86400`, a day at the edge, and go through the CDN when one is configured. Each scope is stored under what it read — an entry type's entries through `compileEntryQuery`, a taxonomy's terms through `taxonomyTermRows` — so publishing a post retires the post scope, and creating or deleting a category retires the category scope, and each leaves the rest of the set alone. Saving the settings group purges all of them, since the indexing toggle decides whether any of them have URLs at all. `/llms.txt` declares an hour instead (`s-maxage=3600`) and reads each entry type it lists through `compileEntryQuery` too, so an entry write, a change of access choice included, retires it with the sitemap page that lists the entry. A `seo.sitemap.urls` subscriber that adds rows from its own data reads them with `ctx.cache.reads(key)`, so its `ctx.cache.changed(key)` retires the sitemap pages those rows joined.
 
-A contributed source is stored under whatever its `count`, `urls` and `lastmod` read: entries through `compileEntryQuery`, a taxonomy's terms through `taxonomyTermRows`, and your plugin's own data through `ctx.cache.reads`, which names your plugin's namespace, so your `ctx.cache.changed` retires the sub-sitemap. A source that reads neither rides the one-hour window instead of a purge.
+A contributed source is stored under whatever its `count`, `urls` and `lastmod` read: entries through `compileEntryQuery`, a taxonomy's terms through `taxonomyTermRows`, and your plugin's own data through `ctx.cache.reads`, which names your plugin's namespace, so your `ctx.cache.changed` retires the sub-sitemap. A source that reads neither rides the one-day window instead of a purge.
 
 With no CDN configured, every sitemap is generated per request.
 

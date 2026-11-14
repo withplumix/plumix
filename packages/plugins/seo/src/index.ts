@@ -13,10 +13,12 @@ import type { SeoSitemapsOptions } from "./sitemap.js";
 // Also anchors the `registerSitemap` augmentation, as the imports below do
 // theirs.
 import { createRegisterSitemap } from "./contributed.js";
+import * as schema from "./db/schema.js";
 import { seoFilters } from "./events.js";
 import { applySeoHead } from "./head.js";
 import { assertIndexViewsNameViews } from "./indexable.js";
 import { registerSeoEditorSurfaces } from "./meta-box.js";
+import { registerNoindexedEntries } from "./noindexed-entries.js";
 import { SERP_PREVIEW_INPUT_TYPE } from "./preview-box.js";
 import { registerSeoRoutes, registerSitemapRoutes } from "./routes.js";
 import {
@@ -34,6 +36,7 @@ export type { SitemapSource } from "./contributed.js";
 export type {
   SeoSitemapsOptions,
   SitemapChangeFrequency,
+  SitemapPage,
   SitemapScopePolicy,
   SitemapScopeRef,
   SitemapUrl,
@@ -122,6 +125,9 @@ function seoPlugin(
     // preview falls through to the admin's text-input fallback.
     adminEntry: ADMIN_ENTRY_PATH,
     i18n: PLUGIN_I18N_SLOT,
+    schema,
+    schemaModule: "@plumix/plugin-seo/schema",
+    dataMigrations: "@plumix/plugin-seo/data-migrations",
     filters: [
       seoFilters.ogImage,
       seoFilters.robotsTxt,
@@ -143,6 +149,7 @@ function seoPlugin(
     setup: (ctx) => {
       registerSeoSettingsDefaults(ctx);
       registerSeoRoutes(ctx, { llmsTxt: options.llmsTxt ?? true });
+      registerNoindexedEntries(ctx);
       // Declared here so the bundler synthesises the admin-chunk registration.
       ctx.registerFieldType({
         type: SERP_PREVIEW_INPUT_TYPE,

@@ -66,6 +66,15 @@ export const entries = sqliteTable(
     // For queries that filter by status without a type. Plain, not partial:
     // SQLite does not match a partial index's WHERE against a bound param.
     index("entries_status_published_idx").on(table.status, table.publishedAt),
+    // Keyset paging over one type's rows in id order, with no sort. Covers
+    // the publish date and modification time, which sit past `content`.
+    index("entries_type_status_id_idx").on(
+      table.type,
+      table.status,
+      table.id,
+      table.publishedAt,
+      table.updatedAt,
+    ),
     index("entries_author_id_idx").on(table.authorId),
     // Composite covers both `WHERE parent_id = ?` lookups (prefix scan) and
     // the menu/page-tree resolver's `ORDER BY parent_id, sort_order`. A

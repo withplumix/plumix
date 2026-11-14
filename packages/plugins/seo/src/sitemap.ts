@@ -7,6 +7,7 @@ import {
   and,
   compileEntryQuery,
   entryQuery,
+  gt,
   publicEntryRows,
   sql,
   taxonomyTermRows,
@@ -17,6 +18,7 @@ import { withBasePath, xmlEscape } from "plumix/support";
 
 import type { ContributedSitemap, SitemapSource } from "./contributed.js";
 import type { SeoSettings } from "./settings.js";
+import { seoNoindexedEntries } from "./db/schema.js";
 import { entryImages } from "./entry-images.js";
 import { SeoError } from "./errors.js";
 import { seoFilters } from "./events.js";
@@ -39,8 +41,10 @@ const NOINDEX_PATH = `$.${SEO_META_KEYS.noindex}`;
  * `json_type`, not `json_extract`, which collapses `true` and `1`; this
  * matches the reader's `=== true`, NULL included.
  */
-const entryIsIndexable = sql`json_type(${entries.meta}, ${NOINDEX_PATH}) is not 'true'`;
 const termIsIndexable = sql`json_type(${terms.meta}, ${NOINDEX_PATH}) is not 'true'`;
+
+/** Looked up by key, so no entry's meta is parsed to list it. */
+const entryIsIndexable = sql`not exists (select 1 from ${seoNoindexedEntries} where ${seoNoindexedEntries.entryId} = ${entries.id})`;
 
 /**
  * Google's sitemap image extension — the one crawlers read image entries from.
@@ -148,6 +152,26 @@ export type SitemapScopeRef =
   | { readonly kind: "terms"; readonly name: string }
   | { readonly kind: "contributed"; readonly name: string };
 
+/**
+ * One sub-sitemap: an entry type's is keyed by the id it starts after, any
+ * other scope's by its 1-based page number. Narrow with `"after" in page`.
+ */
+export type SitemapPage =
+  | {
+      readonly scope: Extract<SitemapScopeRef, { kind: "entries" }>;
+      readonly after: number;
+    }
+  | {
+      readonly scope: Exclude<SitemapScopeRef, { kind: "entries" }>;
+      readonly page: number;
+    };
+
+function sitemapPage(ref: SitemapScopeRef, key: number): SitemapPage {
+  return ref.kind === "entries"
+    ? { scope: ref, after: key }
+    : { scope: ref, page: key };
+}
+
 /** The `changefreq` and `priority` a scope's URLs default to. */
 export interface SitemapScopePolicy {
   readonly changefreq?: SitemapChangeFrequency;
@@ -193,6 +217,11 @@ export interface SitemapScope {
 }
 
 interface SitemapIndexPage {
+  /**
+   * What the page's URL carries: its 1-based number, or for an entry type's
+   * scope the id the page starts after.
+   */
+  readonly page: number;
   readonly lastmod?: string;
 }
 
@@ -238,7 +267,7 @@ export function sitemapIndexUrl(ctx: AppContext): string {
 function undatedPages(total: number): SitemapIndexPage[] {
   return Array.from(
     { length: Math.ceil(Math.max(total, 0) / SITEMAP_PAGE_SIZE) },
-    () => ({}),
+    (_, index) => ({ page: index + 1 }),
   );
 }
 
@@ -250,9 +279,9 @@ async function contributedPages(
   const { lastmod } = source;
   if (lastmod === undefined) return pages;
   return Promise.all(
-    pages.map(async (_, index) => {
-      const newest = await lastmod(ctx, index + 1);
-      return newest === undefined ? {} : { lastmod: newest };
+    pages.map(async ({ page }) => {
+      const newest = await lastmod(ctx, page);
+      return newest === undefined ? { page } : { page, lastmod: newest };
     }),
   );
 }
@@ -279,16 +308,30 @@ function listedTermsOf(ctx: AppContext, taxonomy: string) {
   return and(taxonomyTermRows(ctx, taxonomy), termIsIndexable);
 }
 
-/** One query for the whole scope; a query per page would grow with the site. */
+/**
+ * One pass over the scope in id order, keeping each page's first row: the id
+ * before it, and the newest `updatedAt` from it to the page's end.
+ */
 async function entryPages(
   ctx: AppContext,
   type: string,
 ): Promise<SitemapIndexPage[]> {
   const where = await listedEntriesOf(ctx, type);
   if (where === null) return [];
+  // Literals: a window frame's bound can't be a parameter.
+  const rowsAfterFirst = sql.raw(String(SITEMAP_PAGE_SIZE - 1));
+  const pageSize = sql.raw(String(SITEMAP_PAGE_SIZE));
   const ranked = ctx.db
     .select({
-      updatedAt: entries.updatedAt,
+      id: entries.id,
+      after:
+        sql<number>`lag(${entries.id}, 1, 0) over (order by ${entries.id})`.as(
+          "after",
+        ),
+      lastmod:
+        sql<number>`max(${entries.updatedAt}) over (order by ${entries.id} rows between current row and ${rowsAfterFirst} following)`.as(
+          "lastmod",
+        ),
       position: sql<number>`row_number() over (order by ${entries.id}) - 1`.as(
         "position",
       ),
@@ -296,22 +339,25 @@ async function entryPages(
     .from(entries)
     .where(where)
     .as("ranked");
-  // Cast, or a bound page size divides as a real and every row is a page.
-  const page = sql<number>`${ranked.position} / cast(${SITEMAP_PAGE_SIZE} as integer)`;
   const rows = await ctx.db
     .select({
-      lastmod: sql<Date>`max(${ranked.updatedAt})`.mapWith(entries.updatedAt),
+      after: ranked.after,
+      lastmod: sql<Date>`${ranked.lastmod}`.mapWith(entries.updatedAt),
     })
     .from(ranked)
-    .groupBy(page)
-    .orderBy(page);
-  return rows.map((row) => ({ lastmod: row.lastmod.toISOString() }));
+    .where(sql`${ranked.position} % ${pageSize} = 0`)
+    // SQLite doesn't promise a subquery's order; this sorts a row per page.
+    .orderBy(ranked.id);
+  return rows.map((row) => ({
+    page: row.after,
+    lastmod: row.lastmod.toISOString(),
+  }));
 }
 
 async function entryUrls(
   ctx: AppContext,
   type: string,
-  page: number,
+  afterId: number,
 ): Promise<SitemapUrl[]> {
   const where = await listedEntriesOf(ctx, type);
   if (where === null) return [];
@@ -324,10 +370,9 @@ async function entryUrls(
       meta: entries.meta,
     })
     .from(entries)
-    .where(where)
+    .where(and(where, gt(entries.id, afterId)))
     .orderBy(entries.id)
-    .limit(SITEMAP_PAGE_SIZE)
-    .offset(offsetFor(page));
+    .limit(SITEMAP_PAGE_SIZE);
 
   const images = await entryImages(
     ctx,
@@ -480,10 +525,11 @@ export async function collectSitemapUrls(
 ): Promise<readonly SitemapUrl[]> {
   const provided = await scope.urls(ctx, page);
   const urls = provided.map((url) => withPolicy(url, scope.policy));
-  return ctx.filters.apply(seoFilters.sitemap.urls, urls, {
-    scope: scope.ref,
-    page,
-  });
+  return ctx.filters.apply(
+    seoFilters.sitemap.urls,
+    urls,
+    sitemapPage(scope.ref, page),
+  );
 }
 
 /** The sub-sitemaps the index lists, one per page of each scope. */
@@ -494,9 +540,9 @@ export async function sitemapIndexEntries(
   const listed: SitemapIndexEntry[] = [];
   for (const scope of scopes) {
     const pages = await scope.pages(ctx);
-    for (const [index, { lastmod }] of pages.entries()) {
+    for (const { page, lastmod } of pages) {
       listed.push({
-        loc: `${ctx.origin}${subSitemapPath(ctx, scope.ref, index + 1)}`,
+        loc: `${ctx.origin}${subSitemapPath(ctx, scope.ref, page)}`,
         ...(lastmod === undefined ? {} : { lastmod }),
       });
     }
