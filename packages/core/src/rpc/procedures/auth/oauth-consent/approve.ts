@@ -5,11 +5,12 @@ import {
 } from "../../../../auth/oauth-server/grants.js";
 import { resolveScope } from "../../../../auth/oauth-server/scopes.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { coreBase } from "../../../base.js";
 import { oauthConsentApproveInputSchema } from "./schemas.js";
 import { validatedRequest } from "./validated.js";
 
-export const approve = base
+export const approve = coreBase
+  .meta({ createsCredential: true })
   .use(sessionAuthenticated)
   .input(oauthConsentApproveInputSchema)
   .handler(async ({ input, context, errors }) => {

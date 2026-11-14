@@ -4,7 +4,7 @@ import {
 } from "../../../../auth/device-flow.js";
 import { auth } from "../../../../events-and-filters/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { coreBase } from "../../../base.js";
 import { assertLookupOk } from "./lookup-helpers.js";
 import { deviceFlowApproveInputSchema } from "./schemas.js";
 
@@ -13,7 +13,8 @@ import { deviceFlowApproveInputSchema } from "./schemas.js";
  * between lookup and update makes `approveDeviceCode` return false, which
  * isn't told apart.
  */
-export const approve = base
+export const approve = coreBase
+  .meta({ createsCredential: true })
   .use(sessionAuthenticated)
   .input(deviceFlowApproveInputSchema)
   .handler(async ({ input, context, errors }) => {
