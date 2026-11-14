@@ -343,6 +343,26 @@ A plugin that owns tables ships its own history, so a site never generates migra
 
 A plugin that lives in the site's own folder, rather than in a package, declares the site's own tables. [`plumix migrate generate`](/deployment/cli/#migrate) writes their history to the site's `migrations/`.
 
+Either way, the schema module builds its tables from `plumix/db`. Its table, column, index and constraint builders come from the same drizzle instance core's own tables are built with, so the module needs no `drizzle-orm` import of its own:
+
+```ts
+// src/db/schema.ts
+import { index, integer, sqliteTable, text } from "plumix/db";
+import { users } from "plumix/schema";
+
+export const bookmarks = sqliteTable(
+  "bookmarks",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    userId: integer()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    url: text().notNull(),
+  },
+  (table) => [index("bookmarks_user_id_idx").on(table.userId)],
+);
+```
+
 ## Schema drizzle cannot express
 
 drizzle-kit models tables, columns and indexes. DDL outside that, such as a full-text virtual table or a trigger, goes in a hand-written migration in the plugin's own history:
