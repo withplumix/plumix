@@ -24,7 +24,7 @@ async function settleLocally(
 ): ReturnType<SyncEnd["settle"]> {
   const app = await buildApp(
     { ...options.config, database: nodeSqlite({ path }) },
-    { skipBlockViews: true },
+    { operatorCommand: true },
   );
   const handler = createRuntimeHandler(app);
   const { run } = handler;

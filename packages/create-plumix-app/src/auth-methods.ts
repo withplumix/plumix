@@ -25,10 +25,8 @@ export const CORE_AUTH_METHODS: readonly AuthMethodDescriptor[] = [
     label: "Magic link (email)",
     description: "Passwordless email sign-in links",
     comment:
-      "consoleMailer logs the link in dev — swap for a real mailer (Resend/Postmark/…) and its key before production.",
-    imports: ['import { consoleMailer } from "plumix";'],
+      "plumix dev catches the sign-in mail. Set a top-level mailer with a real transport (Resend, Postmark, …) before deploying: the build fails without one.",
     authEntry: 'magicLink: { siteName: "__PROJECT_NAME__" }',
-    configSlots: { mailer: "consoleMailer()" },
   },
 ];
 

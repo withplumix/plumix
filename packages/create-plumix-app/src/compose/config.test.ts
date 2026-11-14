@@ -154,9 +154,7 @@ const oauth: AuthMethodDescriptor = {
 const magicLink: AuthMethodDescriptor = {
   id: "magic-link",
   label: "Magic link",
-  imports: ['import { consoleMailer } from "plumix";'],
   authEntry: 'magicLink: { siteName: "__PROJECT_NAME__" }',
-  configSlots: { mailer: "consoleMailer()" },
 };
 
 describe("assembleConfig — auth methods", () => {
@@ -172,7 +170,7 @@ describe("assembleConfig — auth methods", () => {
     const config = withAuth([oauth, magicLink]);
     expect(config).toContain('import { auth, github } from "plumix/auth";');
     expect(config).toContain(
-      'import { consoleMailer, plumix, type OAuthProvidersOf } from "plumix";',
+      'import { plumix, type OAuthProvidersOf } from "plumix";',
     );
   });
 
@@ -180,10 +178,6 @@ describe("assembleConfig — auth methods", () => {
     const config = withAuth([oauth, magicLink]);
     expect(config).toContain("oauth: { providers:");
     expect(config).toContain('magicLink: { siteName: "app" }');
-  });
-
-  it("co-emits magic link's required mailer slot", () => {
-    expect(withAuth([magicLink])).toContain("mailer: consoleMailer(),");
   });
 
   it("declares secret bindings for env-resolver methods", () => {

@@ -131,9 +131,8 @@ function parseCli(argv: readonly string[]): CliArgs {
 export async function run(argv: readonly string[]): Promise<void> {
   const args = parseCli(argv);
   if (args.verbose) process.env.PLUMIX_VERBOSE = "1";
-  // The config evaluates here before Vite's `define` exists, and `plumix()`
-  // reads the flag: a dev site may leave out the mailer, since dev catches
-  // its mail.
+  // The config evaluates here before Vite's `define` exists, so what it runs
+  // reads the dev flag from the environment.
   if (args.command === "dev") process.env.PLUMIX_DEV = "1";
 
   if (args.version) {
@@ -231,7 +230,7 @@ export async function runCommand(
       runtimeMigrations,
       plugins: async () => {
         const { buildApp } = await loadCore();
-        return (await buildApp(loaded.config, { skipBlockViews: true }))
+        return (await buildApp(loaded.config, { operatorCommand: true }))
           .plugins;
       },
     });
@@ -264,7 +263,7 @@ export async function resolveCommandApp(
     );
   }
   const { buildApp } = await loadCore();
-  return buildApp(config, { skipBlockViews: true });
+  return buildApp(config, { operatorCommand: true });
 }
 
 /**

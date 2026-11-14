@@ -107,6 +107,18 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "the build check that a magic-link site has a mailer, which only this " +
+      "package's Vite plugin runs outside core",
+    names: ["assertMagicLinkHasMailer"],
+  },
+  {
+    reason:
+      "the config mistakes core throws, which only this package's CLI reads, " +
+      "to report them by code and hint",
+    names: ["ConfigError"],
+  },
+  {
+    reason:
       "how a capability's grant becomes the default roles that hold it, " +
       "which only core's registry reads",
     names: ["grantedRoles"],
@@ -373,6 +385,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
   "./cli": {
     mirrors: "@plumix/core/cli",
     withheld: [
+      {
+        reason:
+          "the config mistakes core throws, which only this package's CLI " +
+          "reads, to report them by code and hint",
+        names: ["ConfigError"],
+      },
       {
         reason: "the schedule helpers, published on `plumix/runtime`",
         names: [

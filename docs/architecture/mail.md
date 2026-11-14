@@ -67,6 +67,6 @@ Under `plumix dev`, `devMail` either supplies `consoleMailer` when the site has 
 - The `Mailer` contract is only `send(EmailMessage)`. A transport never sees a mail's name or props. ADR 0036; `auth/contract/mailer.ts`.
 - Every mail carries `preview` props, so the gallery and `renderMail` can render it with no send. `defineMail` requires `preview` in its type.
 - A magic-link request returns the same response whether or not the send failed, so it does not reveal registered addresses. ADR 0036; `packages/core/src/auth/magic-link/request.test.ts`.
-- Outside dev, `auth.magicLink` without a `mailer` fails config build with `magic_link_requires_mailer`. `packages/core/src/runtime/define-config.ts`; `packages/core/src/config.test.ts`.
+- Outside dev, `auth.magicLink` without a `mailer` fails `plumix build` and a production boot with `magic_link_requires_mailer`. An operator command's app skips the check. `packages/core/src/runtime/magic-link-mailer.ts`; `packages/core/src/runtime/app-magic-link-mailer.test.ts`; `packages/plumix/src/vite/magic-link-mailer.test.ts`.
 - Dev catching and the gallery exist only under the `PLUMIX_DEV` gate. AGENTS.md "Env & secrets"; `packages/plumix/src/vite/dev-gate-tree-shaking.test.ts`; `packages/core/src/dev/mail/dev-mail.test.ts`.
 - `alwaysTo` rejects a malformed address when the mailer resolves, with `always_to_invalid_address`. `packages/core/src/auth/mailer/always-to.test.ts`.

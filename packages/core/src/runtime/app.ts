@@ -97,6 +97,7 @@ import { parseCron } from "./contract/cron.js";
 import { AppBootError } from "./contract/errors.js";
 import { createDevRuntime } from "./dev.js";
 import { installPlugins } from "./install-plugins.js";
+import { assertMagicLinkHasMailer } from "./magic-link-mailer.js";
 import { registerCoreScheduledTasks } from "./register-core-scheduled-tasks.js";
 import { assembleShortcodeRegistry } from "./shortcode-registry.js";
 
@@ -262,16 +263,20 @@ export interface RuntimeContext {
    */
   readonly catalogLocales?: CoreCatalogLocales;
   /**
-   * Skips importing block view modules, for an app that never renders a block
-   * and runs outside Vite, where a view module's CSS or asset import can't load.
+   * For an operator command, which never serves a request: skips block views,
+   * whose CSS import can't load outside Vite, and the checks only serving needs.
    */
-  readonly skipBlockViews?: boolean;
+  readonly operatorCommand?: boolean;
 }
 
 export async function buildApp(
   config: PlumixConfig,
   runtime: RuntimeContext = {},
 ): Promise<PlumixApp> {
+  // `plumix dev` catches mail when the site has no mailer.
+  if (!process.env.PLUMIX_DEV && !runtime.operatorCommand) {
+    assertMagicLinkHasMailer(config);
+  }
   const handlers = new HandlerRegistry();
   // `PLUMIX_DEV` must be set before `buildApp`; without a dev object, capture
   // no-ops.
@@ -410,7 +415,7 @@ export async function buildApp(
   // the committed registry. Unknown block names and undeclared attrs
   // throw structured errors here rather than producing render junk later.
   commitBlockVariations(blocks);
-  if (!runtime.skipBlockViews) await loadBlockViews(blocks);
+  if (!runtime.operatorCommand) await loadBlockViews(blocks);
   const allowedBlocks: ReadonlySet<string> = new Set(
     resolveAllowedBlocks(blocks, {
       themeBlocks: config.theme.blocks ?? [],

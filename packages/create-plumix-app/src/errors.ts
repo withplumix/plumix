@@ -14,6 +14,7 @@ type ScaffoldErrorCode =
   | "snapshot_missing"
   | "smoke_package_manager_unsupported"
   | "smoke_start_missing"
+  | "smoke_config_call_missing"
   | "package_manager_conflict";
 
 /**
@@ -174,6 +175,13 @@ export class ScaffoldError extends Error {
     return new ScaffoldError(
       "smoke_start_missing",
       `${ctx.packageName} declares no "plumix.e2e.start" — the scaffold smoke boots every runtime's built server, so it needs the command that serves the build.`,
+    );
+  }
+
+  static smokeConfigCallMissing(): ScaffoldError {
+    return new ScaffoldError(
+      "smoke_config_call_missing",
+      "no `const config = plumix({` line to add a mailer to",
     );
   }
 }

@@ -2,7 +2,6 @@ import type { RoleName, SiteRoles } from "../access/contract/roles.js";
 import type { PlumixConfig, PlumixConfigInput } from "../config.js";
 import type { PlumixAuthConfig } from "../context/auth-config.js";
 import { normalizeBasePath } from "../base-path.js";
-import { ConfigError } from "../config.errors.js";
 import { resolveLocales } from "../i18n/locale-registry.js";
 import { resolveFrameworkRoutes } from "../route/contract/framework-routes.js";
 import { welcomeTheme } from "../welcome-theme.js";
@@ -29,12 +28,6 @@ export function plumix<
   readonly auth: TAuth;
   readonly roles?: TRoles;
 } {
-  // Fail at build time rather than crash on the first request. `plumix dev`
-  // catches mail when no mailer is configured, so the pairing holds only
-  // outside it.
-  if (config.auth.magicLink && !config.mailer && !process.env.PLUMIX_DEV) {
-    throw ConfigError.magicLinkRequiresMailer();
-  }
   return {
     ...config,
     theme: config.theme ?? welcomeTheme,

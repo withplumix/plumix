@@ -1,6 +1,6 @@
 import { styleText } from "node:util";
 
-import { isCliError } from "@plumix/core/cli";
+import { ConfigError, isCliError } from "@plumix/core/cli";
 
 const useColor = shouldUseColor();
 
@@ -61,6 +61,9 @@ export function exitWithError(error: unknown): never {
     // Without it a CI log names the file that failed but never why (#1883).
     const cause = causeText(error.cause);
     if (cause) report.detail(cause);
+    if (error.hint) report.hint(error.hint);
+  } else if (error instanceof ConfigError) {
+    report.error(`${error.code}: ${error.message}`);
     if (error.hint) report.hint(error.hint);
   } else if (error instanceof Error) {
     report.error(`UNEXPECTED: ${error.name}: ${error.message}`);

@@ -212,7 +212,7 @@ async function settleInSite(
   event: SyncAfterEvent,
 ): Promise<SyncSettleReport> {
   const handler = createRuntimeHandler(
-    await buildApp(config, { skipBlockViews: true }),
+    await buildApp(config, { operatorCommand: true }),
   );
   try {
     const { run } = handler;
