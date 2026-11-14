@@ -1,8 +1,8 @@
 import { and, eq, sql } from "../../../../db/index.js";
 import { credentials } from "../../../../db/schema/credentials.js";
 import { auth } from "../../../../events-and-filters/auth.js";
-import { authenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { sessionAuthenticated } from "../../../authenticated.js";
+import { coreBase } from "../../../base.js";
 import { credentialsDeleteInputSchema } from "./schemas.js";
 
 /**
@@ -10,8 +10,9 @@ import { credentialsDeleteInputSchema } from "./schemas.js";
  * themselves out. The count check sits in the DELETE's WHERE so concurrent
  * deletes can't both pass.
  */
-export const del = base
-  .use(authenticated)
+export const del = coreBase
+  .meta({ removesCredential: true })
+  .use(sessionAuthenticated)
   .input(credentialsDeleteInputSchema)
   .handler(async ({ input, context, errors }) => {
     const userId = context.user.id;

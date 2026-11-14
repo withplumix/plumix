@@ -2,8 +2,8 @@ import { now } from "../../../../clock.js";
 import { and, eq, isNull } from "../../../../db/index.js";
 import { apiTokens } from "../../../../db/schema/api_tokens.js";
 import { auth } from "../../../../events-and-filters/auth.js";
-import { authenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { sessionAuthenticated } from "../../../authenticated.js";
+import { coreBase } from "../../../base.js";
 import { requireCapability } from "../../../require-capability.js";
 import { apiTokensAdminRevokeInputSchema } from "./schemas.js";
 
@@ -13,8 +13,9 @@ const ADMIN_CAPABILITY = "user:manage_tokens";
  * Separate from self-scope `revoke` so audit can tell an admin revoke from
  * an owner's. Soft-deletes; an already-revoked row surfaces as NOT_FOUND.
  */
-export const adminRevoke = base
-  .use(authenticated)
+export const adminRevoke = coreBase
+  .meta({ removesCredential: true })
+  .use(sessionAuthenticated)
   .use(requireCapability(ADMIN_CAPABILITY))
   .input(apiTokensAdminRevokeInputSchema)
   .handler(async ({ input, context, errors }) => {

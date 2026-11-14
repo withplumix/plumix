@@ -1,20 +1,20 @@
 import { and, eq, ne } from "../../../../db/index.js";
 import { sessions } from "../../../../db/schema/sessions.js";
 import { auth } from "../../../../events-and-filters/auth.js";
-import { authenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { sessionAuthenticated } from "../../../authenticated.js";
+import { coreBase } from "../../../base.js";
 import { currentSessionId } from "./current.js";
 import { sessionsRevokeOthersInputSchema } from "./schemas.js";
 
 /**
  * An identity provider's caller has no current session, so it revokes every
- * row. An API token revokes none: it isn't a session, and no scope gates this.
+ * row.
  */
-export const revokeOthers = base
-  .use(authenticated)
+export const revokeOthers = coreBase
+  .meta({ removesCredential: true })
+  .use(sessionAuthenticated)
   .input(sessionsRevokeOthersInputSchema)
   .handler(async ({ context }) => {
-    if (context.credential?.kind !== "session") return { revoked: 0 };
     const currentId = currentSessionId(context.credential);
 
     const rows = await context.db

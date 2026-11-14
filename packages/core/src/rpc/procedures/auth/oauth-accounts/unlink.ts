@@ -3,8 +3,8 @@ import { and, eq, or, sql } from "../../../../db/index.js";
 import { credentials } from "../../../../db/schema/credentials.js";
 import { oauthAccounts } from "../../../../db/schema/oauth_accounts.js";
 import { auth } from "../../../../events-and-filters/auth.js";
-import { authenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { sessionAuthenticated } from "../../../authenticated.js";
+import { coreBase } from "../../../base.js";
 import { oauthAccountsUnlinkInputSchema } from "./schemas.js";
 
 /**
@@ -21,8 +21,9 @@ function hasEmailSignIn(summary: AuthMethodsSummary): boolean {
  * Refuses to remove the user's last way to sign in. The check sits in the
  * DELETE's WHERE so concurrent unlinks can't both pass.
  */
-export const unlink = base
-  .use(authenticated)
+export const unlink = coreBase
+  .meta({ removesCredential: true })
+  .use(sessionAuthenticated)
   .input(oauthAccountsUnlinkInputSchema)
   .handler(async ({ input, context, errors }) => {
     const userId = context.user.id;

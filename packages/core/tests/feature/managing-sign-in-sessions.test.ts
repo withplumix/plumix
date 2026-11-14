@@ -79,7 +79,7 @@ describe("revoking a user's other sessions", () => {
     expect(theirs).toHaveLength(2);
   });
 
-  test("revokes none for a caller holding only an API token", async () => {
+  test("refuses a caller holding only an API token, ending none", async () => {
     const editor = await site.factory.editor.create();
     await site.factory.session.create({ userId: editor.id });
     const { secret } = await site.factory.apiToken.create({
@@ -97,8 +97,7 @@ describe("revoking a user's other sessions", () => {
       body: JSON.stringify({ json: {} }),
     });
 
-    expect(page.status).toBe(200);
-    expect(page.body).toContain('"revoked":0');
+    page.assertJson({ json: { code: "UNAUTHORIZED" } });
     expect(await sessionIdsOf(editor.id)).toHaveLength(1);
   });
 
