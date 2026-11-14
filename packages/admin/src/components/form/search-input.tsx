@@ -7,6 +7,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@plumix/admin-ui/input-group";
+import { useDebouncedValue } from "@plumix/admin-ui/use-debounced-value";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -26,15 +27,11 @@ export function DebouncedSearchInput({
   readonly onCommit: (next: string | undefined) => void;
 }): ReactNode {
   const [value, setValue] = useState(initialValue);
+  const settled = useDebouncedValue(value, SEARCH_DEBOUNCE_MS);
   useEffect(() => {
-    if (value === initialValue) return;
-    const id = setTimeout(() => {
-      onCommit(value.length === 0 ? undefined : value);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => {
-      clearTimeout(id);
-    };
-  }, [value, initialValue, onCommit]);
+    if (settled === initialValue) return;
+    onCommit(settled.length === 0 ? undefined : settled);
+  }, [settled, initialValue, onCommit]);
 
   return (
     <InputGroup className="w-64">

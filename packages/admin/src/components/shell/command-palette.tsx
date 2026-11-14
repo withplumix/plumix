@@ -44,6 +44,7 @@ import {
   DialogTitle,
 } from "@plumix/admin-ui/dialog";
 import { Kbd } from "@plumix/admin-ui/kbd";
+import { useDebouncedValue } from "@plumix/admin-ui/use-debounced-value";
 
 import { CoreIcon } from "./core-icon.js";
 
@@ -96,19 +97,6 @@ const CORE_COMMANDS: readonly PaletteCommand[] = [
   },
 ];
 
-function useDebounced(value: string, ms: number): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebounced(value);
-    }, ms);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, ms]);
-  return debounced;
-}
-
 /**
  * `shouldFilter` is off: content results match server-side, possibly on excerpt
  * rather than title.
@@ -139,7 +127,7 @@ export function CommandPalette({
   }, []);
 
   const trimmed = query.trim();
-  const debounced = useDebounced(trimmed, DEBOUNCE_MS);
+  const debounced = useDebouncedValue(trimmed, DEBOUNCE_MS);
   const search = useQuery(
     orpc.search.query.queryOptions({
       input: { query: debounced },
