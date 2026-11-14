@@ -8,6 +8,7 @@ import { describe, expect, test } from "vitest";
 import {
   applyCoreTestSchema,
   applyTestSchema,
+  coreMigrationCount,
   createTestDb,
 } from "./harness.js";
 
@@ -70,6 +71,19 @@ describe("applyCoreTestSchema", () => {
       "entries_change_feed_insert",
       "entries_change_feed_update",
     ]);
+  });
+});
+
+describe("coreMigrationCount", () => {
+  test("matches the rows applying core's history writes", async () => {
+    const db = bareDb();
+    await applyCoreTestSchema(db);
+
+    const [row] = await db.all<{ n: number }>(
+      sql`SELECT count(*) AS n FROM __drizzle_migrations_core`,
+    );
+
+    expect(coreMigrationCount()).toBe(row?.n);
   });
 });
 

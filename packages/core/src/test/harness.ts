@@ -10,6 +10,7 @@ import { DrizzleD1Database } from "drizzle-orm/d1";
 import { migrate as migrateD1 } from "drizzle-orm/d1/migrator";
 import { drizzle, LibSQLDatabase } from "drizzle-orm/libsql";
 import { migrate as migrateLibsql } from "drizzle-orm/libsql/migrator";
+import { readMigrationFiles } from "drizzle-orm/migrator";
 
 import * as schema from "../db/schema/index.js";
 import { traceSqlClient } from "../db/trace-libsql.js";
@@ -69,6 +70,10 @@ export async function applyTestSchema(
 /** Apply core's shipped migration history — what a real install runs first. */
 export async function applyCoreTestSchema(db: MigratableDb): Promise<void> {
   await migrate(db, CORE_MIGRATIONS);
+}
+
+export function coreMigrationCount(): number {
+  return readMigrationFiles({ migrationsFolder: CORE_MIGRATIONS }).length;
 }
 
 /**

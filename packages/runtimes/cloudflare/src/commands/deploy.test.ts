@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CommandContext, PlumixApp } from "plumix";
-import { createDispatcherHarness } from "plumix/test";
+import { coreMigrationCount, createDispatcherHarness } from "plumix/test";
 import {
   afterEach,
   beforeAll,
@@ -111,7 +111,7 @@ describe("plumix deploy", () => {
     expect(events).toEqual([
       "build CLOUDFLARE_ENV=",
       "proxy remoteBindings=true",
-      "core applied 9",
+      `core applied ${String(coreMigrationCount())}`,
       "wrangler deploy --minify",
     ]);
   });

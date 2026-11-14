@@ -35,6 +35,7 @@ export {
   applyCoreTestSchema,
   applyTestSchema,
   buildRequest,
+  coreMigrationCount,
   createDeferQueue,
   createDispatcherHarness,
   createRpcHarness,

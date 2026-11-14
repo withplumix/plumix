@@ -32,6 +32,7 @@ export type { Factories } from "./factories.js";
 export {
   applyCoreTestSchema,
   applyTestSchema,
+  coreMigrationCount,
   createTestDb,
 } from "./harness.js";
 
