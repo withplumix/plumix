@@ -82,6 +82,90 @@ describe("the session", () => {
   });
 });
 
+/** Reads the session over the wire, signed in by an API token's secret alone. */
+function sessionWithToken(secret: string) {
+  return site.visit("/_plumix/rpc/auth/session", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${secret}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ json: {} }),
+  });
+}
+
+describe("the session read with an API token", () => {
+  test("for an editor's read-only token, holds only the token's capabilities", async () => {
+    const editor = await site.factory.editor.create();
+    const { secret } = await site
+      .actingAs(editor)
+      .rpc.auth.apiTokens.create({ name: "agent", preset: "read_only" });
+
+    const page = await sessionWithToken(secret);
+
+    page.assertOk().assertJson({
+      json: {
+        user: {
+          capabilities: [
+            "entry:post:read",
+            "entry:post:read_revisions",
+            "user:list",
+          ],
+        },
+      },
+    });
+  });
+
+  test("for a read-only token, leaves out a capability the token is refused", async () => {
+    const editor = await site.factory.editor.create();
+    const { secret } = await site
+      .actingAs(editor)
+      .rpc.auth.apiTokens.create({ name: "agent", preset: "read_only" });
+
+    const session = await sessionWithToken(secret);
+    const create = await site.visit("/_plumix/rpc/entry/create", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${secret}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ json: { slug: "agent-draft" } }),
+    });
+
+    create.assertForbidden();
+    session.assertOk().assertDontSee("entry:post:create");
+  });
+
+  test("for a token scoped past its owner's role, holds only what both grant, in the role's order", async () => {
+    const editor = await site.factory.editor.create();
+    const { secret } = await site.actingAs(editor).rpc.auth.apiTokens.create({
+      name: "agent",
+      scopes: ["settings:manage", "entry:post:read", "entry:post:publish"],
+    });
+
+    const page = await sessionWithToken(secret);
+
+    page.assertOk().assertJson({
+      json: {
+        user: { capabilities: ["entry:post:publish", "entry:post:read"] },
+      },
+    });
+  });
+
+  test("for a token with no scopes, holds the role's capabilities", async () => {
+    const member = await site.factory.user.create();
+    const { secret } = await site
+      .actingAs(member)
+      .rpc.auth.apiTokens.create({ name: "agent", scopes: null });
+
+    const page = await sessionWithToken(secret);
+
+    page.assertOk().assertJson({
+      json: { user: { capabilities: ["entry:post:read", "user:edit_own"] } },
+    });
+  });
+});
+
 const shop = definePlugin("shop", {
   setup: (ctx) => {
     // Plugin-registered entry type with its own capability namespace —
