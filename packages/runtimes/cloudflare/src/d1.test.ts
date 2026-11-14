@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SQL } from "drizzle-orm";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type {
   DatabaseAdapter,
   RequestScopedDb,
@@ -10,6 +11,7 @@ import type {
 import type { AppContext } from "plumix/plugin";
 import type { PlatformProxy } from "wrangler";
 import { sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { plumix } from "plumix";
 import { auth as authConfig, SESSION_COOKIE_NAME } from "plumix/auth";
 import { definePlugin, requestStore } from "plumix/plugin";
@@ -719,5 +721,85 @@ describe("d1() adapter — credential reads (session: 'auto')", () => {
     expect(new Set(log.map((s) => s.constraint))).toEqual(
       new Set(["first-unconstrained"]),
     );
+  });
+});
+
+const notes = sqliteTable("notes", {
+  id: integer("id").primaryKey(),
+  body: text("body").notNull(),
+});
+
+/** The relational config drizzle derives from the schema the database got. */
+function relationalConfigOf(db: unknown): unknown {
+  return (db as DrizzleD1Database<Record<string, unknown>>)._.schema;
+}
+
+describe("d1() adapter — per-request databases (session: 'auto')", () => {
+  const adapter = d1({ binding: "DB", session: "auto" });
+
+  function requestDbsFor(schema: Record<string, unknown>, binding: D1Database) {
+    return callScoped(adapter, {
+      env: { DB: binding },
+      request: new Request("https://cms.example/"),
+      schema,
+      isAuthenticated: false,
+      isWrite: false,
+    });
+  }
+
+  test("requests on one schema share one relational config", () => {
+    const schema = { notes };
+    const binding = fakeBinding() as unknown as D1Database;
+
+    const first = requestDbsFor(schema, binding);
+    const second = requestDbsFor(schema, binding);
+
+    const config = relationalConfigOf(first.db);
+    expect(config).toHaveProperty("notes");
+    expect(relationalConfigOf(second.db)).toBe(config);
+    expect(relationalConfigOf(first.credentialDb)).toBe(config);
+    expect(relationalConfigOf(second.credentialDb)).toBe(config);
+  });
+
+  test("another schema gets its own relational config", () => {
+    const binding = fakeBinding() as unknown as D1Database;
+
+    const first = requestDbsFor({ notes }, binding);
+    const other = requestDbsFor({ other: notes }, binding);
+
+    expect(relationalConfigOf(other.db)).toHaveProperty("other");
+    expect(relationalConfigOf(other.db)).not.toBe(relationalConfigOf(first.db));
+  });
+
+  async function seededNotesDb(log: RecordedStatement[]) {
+    await wipe(proxy.env.DB);
+    await proxy.env.DB.exec(
+      "CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL)",
+    );
+    await proxy.env.DB.prepare(
+      "INSERT INTO notes (id, body) VALUES (1, 'hello')",
+    ).run();
+    return requestDbsFor({ notes }, recordingBinding(proxy.env.DB, log))
+      .db as DrizzleD1Database<{ notes: typeof notes }>;
+  }
+
+  test("a relational query returns rows through the request's own session", async () => {
+    const log: RecordedStatement[] = [];
+    const db = await seededNotesDb(log);
+
+    const found = await db.query.notes.findFirst();
+
+    expect(found).toEqual({ id: 1, body: "hello" });
+    expect(log.map((s) => s.constraint)).toEqual(["first-unconstrained"]);
+  });
+
+  test("a plain select returns rows through the request's own session", async () => {
+    const log: RecordedStatement[] = [];
+    const db = await seededNotesDb(log);
+
+    const selected = await db.select().from(notes);
+
+    expect(selected).toEqual([{ id: 1, body: "hello" }]);
+    expect(log.map((s) => s.constraint)).toEqual(["first-unconstrained"]);
   });
 });
