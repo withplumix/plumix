@@ -240,6 +240,8 @@ export const badges = definePlugin("acme-badges", {
 });
 ```
 
+A function helper's `this` is the setup context of the plugin calling it, so `this.id` names that plugin. To call back later into code that plugin handed you, such as a callback a request runs, keep `this.runInFrame` and call through it: `ctx.cache` inside then names the plugin that registered the callback, not yours.
+
 State goes in `state`, never in the plugin factory's closure. A descriptor can be installed more than once (a build installs it alongside the running app), and each install needs its own. The state is private to the plugin's own lifecycle steps; share anything through `extendPluginContext` or `extendAppContext`.
 
 ## Loading heavy code lazily

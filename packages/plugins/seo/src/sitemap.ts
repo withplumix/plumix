@@ -424,12 +424,12 @@ export function sitemapScopes(
       urls: (ctx, page) => termUrls(ctx, taxonomy.name, page),
     });
   }
-  for (const { name, source } of contributed) {
+  for (const { name, source, runInFrame } of contributed) {
     add({
       ref: { kind: "contributed", name },
       ...(source.access === undefined ? {} : { access: source.access }),
-      pages: (ctx) => contributedPages(ctx, source),
-      urls: source.urls,
+      pages: (ctx) => runInFrame(() => contributedPages(ctx, source)),
+      urls: (ctx, page) => runInFrame(() => source.urls(ctx, page)),
     });
   }
   return scopes;
