@@ -31,6 +31,7 @@ async function tokenFor(
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
 });
 
 describe("settleDeployedSite", () => {
@@ -76,5 +77,27 @@ describe("settleDeployedSite", () => {
       ),
     ).rejects.toBe(missing);
     expect(remoteDeps.fetch).not.toHaveBeenCalled();
+  });
+
+  test("sends the Access service token to the deployed site", async () => {
+    vi.stubEnv("CF_ACCESS_CLIENT_ID", "id.access");
+    vi.stubEnv("CF_ACCESS_CLIENT_SECRET", "s3cret");
+    const h = await createDispatcherHarness();
+    const token = await tokenFor(h, "admin");
+    const requests: Request[] = [];
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => {
+      const request = new Request(url, init);
+      requests.push(request.clone());
+      return h.dispatch(request);
+    });
+
+    await settleDeployedSite(
+      "https://cms.example",
+      { scopes: ["content"], direction: "push" },
+      () => Promise.resolve(token),
+    );
+
+    expect(requests[0]?.headers.get("cf-access-client-id")).toBe("id.access");
+    expect(requests[0]?.headers.get("cf-access-client-secret")).toBe("s3cret");
   });
 });

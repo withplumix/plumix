@@ -1,4 +1,5 @@
 export { CliError, isCliError } from "./errors.js";
+export { remoteFetch } from "./remote-fetch.js";
 export {
   assertSameHeads,
   CORE_SYNC_SCOPE_TABLES,

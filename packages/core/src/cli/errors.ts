@@ -2,7 +2,8 @@
  * The codes core throws itself. Every other package declares its own union on
  * a subclass, so core carries no command's or runtime's vocabulary.
  */
-type CoreCliErrorCode = "spawn_failed" | "spawn_nonzero_exit";
+type CoreCliErrorCode =
+  "spawn_failed" | "spawn_nonzero_exit" | "remote_behind_access";
 
 export class CliError<Code extends string = string> extends Error {
   static {
@@ -46,6 +47,15 @@ export class CliError<Code extends string = string> extends Error {
     return new CliError(
       "spawn_nonzero_exit",
       `${ctx.command} exited with ${detail}`,
+      undefined,
+      undefined,
+    );
+  }
+
+  static remoteBehindAccess(ctx: { url: string }): CliError<CoreCliErrorCode> {
+    return new CliError(
+      "remote_behind_access",
+      `Cloudflare Access turned away the request to ${ctx.url}. Set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET to an Access service token's client ID and secret.`,
       undefined,
       undefined,
     );

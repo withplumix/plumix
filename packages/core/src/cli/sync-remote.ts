@@ -7,6 +7,7 @@ import type {
   SyncScope,
   SyncSettleReport,
 } from "../context/runtime-adapter.js";
+import { remoteFetch } from "./remote-fetch.js";
 import { dumpWireStream, SYNC_WIRE_TYPE, writeWireInto } from "./sync-wire.js";
 import { assertSameHeads, SyncError } from "./sync.js";
 
@@ -59,7 +60,7 @@ export function remoteSyncEnd(options: RemoteSyncEndOptions): SyncEnd {
   const { owners } = options;
   if (options.url === undefined) throw SyncError.remoteUrlMissing();
   const url = options.url;
-  const send = options.fetch ?? ((input, init) => fetch(input, init));
+  const send = options.fetch ?? remoteFetch;
   const token = once(options.apiToken);
 
   async function request(
