@@ -4,7 +4,7 @@ import type { Mailer } from "../auth/contract/mailer.js";
 import type { AppContext } from "./app-context.js";
 import { testConfig } from "../test/config.js";
 import { createDispatcherHarness } from "../test/dispatcher.js";
-import { createAppContext, withSignal } from "./app.js";
+import { consoleLogger, createAppContext, withSignal } from "./app.js";
 
 function captureMailer(): { mailer: Mailer; sent: string[] } {
   const sent: string[] = [];
@@ -452,5 +452,37 @@ describe("createAppContext ctx.signal", () => {
 
     expect(ctx.signal).toBeInstanceOf(AbortSignal);
     expect(ctx.signal.aborted).toBe(false);
+  });
+});
+
+describe("consoleLogger", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test("hands the console an error with its cause chain", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const error = new Error("Failed query", {
+      cause: new Error("D1_ERROR: overloaded", { cause: "retry later" }),
+    });
+
+    consoleLogger.error("dispatch_failed", { error, path: "/blog" });
+
+    expect(consoleError).toHaveBeenCalledWith("dispatch_failed", {
+      path: "/blog",
+      error: {
+        name: "Error",
+        message: "Failed query",
+        stack: error.stack,
+        cause: {
+          name: "Error",
+          message: "D1_ERROR: overloaded",
+          stack: (error.cause as Error).stack,
+          cause: "retry later",
+        },
+      },
+    });
   });
 });
