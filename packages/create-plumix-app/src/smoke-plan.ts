@@ -143,7 +143,11 @@ export function planInstall(
  * the installed package declares them.
  */
 export interface RuntimeSmokeFields {
-  /** Serves the built output. Runs in a shell, with `PORT` set. */
+  /**
+   * Serves the built output. Runs in a shell with `PORT=0`, binds whatever
+   * port the system hands it, and prints that port as {@link listeningPort}
+   * reads it.
+   */
   readonly start?: string;
   /** Command prefix that runs the `plumix` CLI. */
   readonly cli?: string;
@@ -175,6 +179,17 @@ export function planBoot(
     doctor: `${cli} doctor`,
     start,
   };
+}
+
+/**
+ * A server may print URLs on other ports first, and output arrives in
+ * chunks, so a port counts only once its line ends.
+ */
+export function listeningPort(output: string): number | undefined {
+  const match = /(?:listening|Ready) on https?:\/\/\S+:(\d+)\/?\r?\n/.exec(
+    stripVTControlCharacters(output),
+  );
+  return match?.[1] === undefined ? undefined : Number(match[1]);
 }
 
 export interface ScaffolderManifest {
