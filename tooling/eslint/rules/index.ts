@@ -5,6 +5,7 @@ import { maxCommentLength } from "./max-comment-length.js";
 import { noBareDate } from "./no-bare-date.js";
 import { noBareObjectInput } from "./no-bare-object-input.js";
 import { noChainedTypeAssertion } from "./no-chained-type-assertion.js";
+import { noCoreTableWrite } from "./no-core-table-write.js";
 import { noErrorMessageInUi } from "./no-error-message-in-ui.js";
 import { noForgedApp } from "./no-forged-app.js";
 import { noJsdocInFunctionBody } from "./no-jsdoc-in-function-body.js";
@@ -32,6 +33,7 @@ export const plumixPlugin: ESLint.Plugin = {
     "no-bare-date": noBareDate,
     "no-bare-object-input": noBareObjectInput,
     "no-chained-type-assertion": noChainedTypeAssertion,
+    "no-core-table-write": noCoreTableWrite,
     "no-error-message-in-ui": noErrorMessageInUi,
     "no-forged-app": noForgedApp,
     "no-jsdoc-in-function-body": noJsdocInFunctionBody,

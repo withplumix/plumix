@@ -832,6 +832,32 @@ describe("plumix/no-error-message-in-ui", () => {
   });
 });
 
+describe("plumix/no-core-table-write", () => {
+  const coreTableWriteLines = async (fixture: string) => {
+    const instance = new ESLint({
+      cwd: fixturesDir,
+      overrideConfigFile: true,
+      overrideConfig: [...pluginConfig()],
+    });
+    const [result] = await instance.lintFiles([fixture]);
+    return (result?.messages ?? [])
+      .filter((message) => message.ruleId === "plumix/no-core-table-write")
+      .map((message) => message.line);
+  };
+
+  it("rejects a core table write in a plugin's source", async () => {
+    await expect(
+      coreTableWriteLines("src/core-table-write.plugin.ts"),
+    ).resolves.toEqual([4]);
+  });
+
+  it("lets a plugin's tests seed core tables", async () => {
+    await expect(
+      coreTableWriteLines("src/core-table-write.plugin.test.ts"),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("lingui/no-unlocalized-strings under the strict config", () => {
   const strict = new ESLint({
     cwd: fixturesDir,

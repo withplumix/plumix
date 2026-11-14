@@ -42,6 +42,7 @@ export function pluginConfig(): readonly Linter.Config[] {
           NO_IMPERATIVE_REGISTER_PLUGIN_PAGE_SELECTOR,
           NO_INTERNAL_MODULE_AUGMENTATION_SELECTOR,
         ],
+        "plumix/no-core-table-write": "error",
       },
     },
     // Only `src/admin/` renders into the admin shell; the rest of a plugin
