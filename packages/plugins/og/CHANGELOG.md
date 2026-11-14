@@ -1,5 +1,40 @@
 # @plumix/plugin-og
 
+## 0.6.0
+
+### Minor Changes
+
+- [#3636](https://github.com/withplumix/plumix/pull/3636) [`2c25235`](https://github.com/withplumix/plumix/commit/2c2523551edb15a84f657719734476e4f4e3d142) Thanks [@nasyrov](https://github.com/nasyrov)! - Removes `tag` from `CardKey`: `cardKey.of` and `cardKey.entry` return only the `id` the card's URL is digested from. An entry card is no longer purged from the CDN when its entry is edited or trashed; the edit publishes a new card URL, and the old card stays stored until it expires.
+
+- [#3569](https://github.com/withplumix/plumix/pull/3569) [`8f67976`](https://github.com/withplumix/plumix/commit/8f679764db9522e3c1403ebe7ae1a78e1ae5ea5a) Thanks [@nasyrov](https://github.com/nasyrov)! - Subscribes the generated card through `seo.ogImage` from `@plumix/plugin-seo`, which replaced the `seo:og_image` string name. A page's `og:image` is the same card as before. The plugin now needs `@plumix/plugin-seo` 0.5.0 or later.
+
+- [#3491](https://github.com/withplumix/plumix/pull/3491) [`65a1e0c`](https://github.com/withplumix/plumix/commit/65a1e0c275d5d163584f3183362ad4c3dcac757c) Thanks [@nasyrov](https://github.com/nasyrov)! - Declares the plugin's RPC router in its descriptor's type, so a test site that installs it lists its procedures on `site.rpc.og`. The plugin now depends on `@orpc/server`, since its published types name it.
+
+### Patch Changes
+
+- [#3228](https://github.com/withplumix/plumix/pull/3228) [`4bc3649`](https://github.com/withplumix/plumix/commit/4bc36492cda3c6f3d331eece0735de1ad9fc3eee) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `drizzle-orm` to 0.45.4 and `@tanstack/react-query` to 5.104.2 / `@tanstack/react-router` to 1.170.42 in the framework, the runtimes and the first-party plugins, `@lingui/core` and `@lingui/react` to 6.9.1, the `@orpc/*` packages to 1.15.6, `react-hook-form` to 7.90.0, `vitest` to 5.0.4 and `@playwright/test` to 1.64.0 in the framework, `vite` to 8.3.4 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.63.1, `wrangler` 4.149) in `@plumix/runtime-cloudflare`.
+
+- [#3555](https://github.com/withplumix/plumix/pull/3555) [`bcec2f0`](https://github.com/withplumix/plumix/commit/bcec2f03e5e34009ac8f967e1ff00cbec0d9cffe) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `@tanstack/react-query` to 5.105.0 and `@orpc/server` to 1.16.1 in the framework and the first-party plugins, `@tanstack/react-router` to 1.170.46 in the framework, `plugin-og` and `plugin-seo`, the other `@orpc/*` packages to 1.16.1, the `@tiptap/*` packages to 3.32.0, `vitest` to 5.0.5 and `@playwright/test` to 1.64.1 in the framework, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.66.0, `wrangler` 4.154) in `@plumix/runtime-cloudflare`.
+
+- [#3611](https://github.com/withplumix/plumix/pull/3611) [`1cbb204`](https://github.com/withplumix/plumix/commit/1cbb204d5c15dd605c67c419cf4e7c2cd6e74764) Thanks [@nasyrov](https://github.com/nasyrov)! - Raises dependency floors: `react` and `react-dom` to 19.3.1 and `@tanstack/react-query` to 5.105.2 in the framework and the first-party plugins, the `@lingui/*` packages to 6.11.0 in the framework and `plugin-forms`, `radix-ui` to 1.8.1, `react-hook-form` to 7.91.0 and `@hookform/resolvers` to 7 in the framework, `vite` to 8.3.5 in the framework and the runtimes, and the Cloudflare toolchain (`@cloudflare/vite-plugin` 1.67.0, `wrangler` 4.156.1) in `@plumix/runtime-cloudflare`.
+
+- [#3423](https://github.com/withplumix/plumix/pull/3423) [`f8b937b`](https://github.com/withplumix/plumix/commit/f8b937baead5a683f827242f2320baad10374ae3) Thanks [@nasyrov](https://github.com/nasyrov)! - Adds `ctx.registerDebugPanel`, `ctx.registerErrorPanel` and `ctx.registerErrorHint`, and removes the `debug:panels`, `error_page:panels` and `error_page:hints` filters they replace.
+
+  - An error panel shows only for the errors its `visible(error)` accepts, and every error when `visible` is unset. A hint takes a `matches(error)` and shows after core's hints.
+  - An id that core or another plugin already registered fails boot. Before, the last panel with an id won.
+  - A `render`, `visible` or `matches` that throws hides only its own item and is logged through the site's logger. Before, a panel that failed to render showed a "failed to render" notice.
+  - A plugin can no longer remove or reorder another plugin's panels or hints.
+  - A runtime adapter adds hints for its platform's errors with the new `RuntimeAdapter.errorHints`. They show after core's and before any plugin's.
+  - The three registrations do nothing outside `plumix dev`.
+
+  Breaking: replace `ctx.addFilter("debug:panels", (panels) => [...panels, panel])` with `ctx.registerDebugPanel(panel)`, and do the same for the error page's panels and hints. A hint registration needs an `id` and a `matches(error)`.
+
+  The og plugin registers its debug panel this way, and the Cloudflare runtime offers its missing-binding hint through `errorHints`. Both need this release of `plumix`.
+
+- [#3656](https://github.com/withplumix/plumix/pull/3656) [`a89ffcd`](https://github.com/withplumix/plumix/commit/a89ffcd8c5459690de72a7943a1d85910b1f3d90) Thanks [@nasyrov](https://github.com/nasyrov)! - Stores a plugin archive's card under what resolving its page read, so an archive whose `resolve` reads through `ctx.cache.reads` or `compileEntryQuery` has its card retired by the same write that retires the page.
+
+- [#3422](https://github.com/withplumix/plumix/pull/3422) [`569ca9a`](https://github.com/withplumix/plumix/commit/569ca9a2abb42368a7bd790ce15fba5a902ed542) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the theme's cards and tokens from `ctx.theme` in `setup`, now that `theme:ready` is gone. Requires `plumix` 0.27.0 or later.
+
 ## 0.5.1
 
 ### Patch Changes
