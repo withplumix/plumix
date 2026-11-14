@@ -7,6 +7,7 @@ import type { EntryPage } from "./entry-listing.js";
 import { ACCESS_POLICY_META_KEY } from "../../access/contract/meta-key.js";
 import { anonymousPolicy, authenticatedPolicy } from "../../access/policy.js";
 import { requestStore } from "../../context/stores.js";
+import { sql } from "../../db/index.js";
 import { entryQuery } from "../../entries/query.js";
 import { definePlugin } from "../../plugin/define.js";
 import { testSite } from "../../test/site.js";
@@ -62,6 +63,41 @@ async function listingCost(
   return context.telemetry
     .getSpans()
     .filter((span) => span.name.startsWith("db:")).length;
+}
+
+/**
+ * The statements a listing sends that narrow by term, each planned with the
+ * params it was bound to, so the plan is the one the site's database runs.
+ */
+async function termNarrowedPlans(query: EntryQuery): Promise<string[][]> {
+  const context = site.context;
+  await requestStore.run(context, async () => {
+    await listEntryPage(context, query, { page: 1, perPage: 20 });
+  });
+  const statements = context.telemetry
+    .getSpans()
+    .filter((span) => span.name.startsWith("db:"))
+    .map((span) => ({
+      text: span.attributes["db.sql"] as string,
+      params: (span.attributes["db.params"] ?? []) as unknown[],
+    }))
+    .filter(({ text }) => text.includes('"entry_term"."term_id" = ?'));
+  return Promise.all(
+    statements.map(async ({ text, params }) => {
+      const pieces = text.split("?");
+      const bound = sql.join(
+        pieces.map((piece, i) =>
+          i < params.length
+            ? sql`${sql.raw(piece)}${params[i]}`
+            : sql.raw(piece),
+        ),
+      );
+      const plan = await context.db.all<{ detail: string }>(
+        sql`EXPLAIN QUERY PLAN ${bound}`,
+      );
+      return plan.map((step) => step.detail);
+    }),
+  );
 }
 
 /** The listing a query gives, failing the test where it gives none. */
@@ -191,6 +227,31 @@ describe("listEntryPage paging", () => {
       "third",
       "second",
       "first",
+    ]);
+  });
+
+  test("a term archive finds its entries from the term index alone", async () => {
+    const term = await site.factory.category.create({ slug: "tennis" });
+    const tagged = await site.factory.entry.create({
+      type: "post",
+      status: "published",
+      publishedAt: new Date("2026-03-04T00:00:00.000Z"),
+    });
+    await site.factory.entryTerm.create({
+      entryId: tagged.id,
+      termId: term.id,
+    });
+
+    // The count and the page each narrow by the term.
+    expect(
+      await termNarrowedPlans(entryQuery().inTerm("category", "tennis")),
+    ).toEqual([
+      expect.arrayContaining([
+        expect.stringContaining("COVERING INDEX entry_term_term_id_idx"),
+      ]),
+      expect.arrayContaining([
+        expect.stringContaining("COVERING INDEX entry_term_term_id_idx"),
+      ]),
     ]);
   });
 

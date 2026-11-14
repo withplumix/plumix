@@ -50,6 +50,13 @@
       "when": 1794003085117,
       "tag": "0006_oauth_refresh_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794648047952,
+      "tag": "0007_entry_term_covering_index",
+      "breakpoints": true
     }
   ]
 }

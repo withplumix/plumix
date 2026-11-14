@@ -19,7 +19,7 @@ export const entryTerm = sqliteTable(
   }),
   (table) => [
     primaryKey({ columns: [table.entryId, table.termId] }),
-    index("entry_term_term_id_idx").on(table.termId),
+    index("entry_term_term_id_idx").on(table.termId, table.entryId),
   ],
 );
 
