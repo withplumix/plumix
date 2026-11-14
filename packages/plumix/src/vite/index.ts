@@ -429,17 +429,22 @@ export async function emitPlumixSources(
   cwd: string,
   explicitConfig?: string,
   options?: LoadConfigOptions,
-): Promise<{ configPath: string; runtime: RuntimeAdapter }> {
-  const { configPath, runtime } = await regenerate(
+): Promise<{
+  configPath: string;
+  config: PlumixConfig;
+  runtime: RuntimeAdapter;
+}> {
+  const { configPath, config, runtime } = await regenerate(
     cwd,
     explicitConfig,
     options,
   );
-  return { configPath, runtime };
+  return { configPath, config, runtime };
 }
 
 interface Regenerated {
   readonly configPath: string;
+  readonly config: PlumixConfig;
   readonly runtime: RuntimeAdapter;
   readonly manifest: PlumixManifest;
   readonly registry: PluginRegistry;
@@ -529,6 +534,7 @@ async function regenerate(
 
   return {
     configPath,
+    config,
     runtime: config.runtime,
     manifest,
     registry,

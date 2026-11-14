@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import { isCliError } from "@plumix/core/cli";
 
-import { invalidateFile, parseDevArgs } from "./dev-command.js";
+import { denyPatterns, invalidateFile, parseDevArgs } from "./dev-command.js";
 
 function codeThrownBy(run: () => unknown): string | false {
   try {
@@ -130,5 +130,25 @@ describe("invalidateFile — the runner's evaluated-module cache", () => {
 
     expect(invalidateFile(modules, "/app/plumix.config.ts")).toBe(true);
     expect(entry.evaluated).toBe(false);
+  });
+});
+
+describe("denyPatterns", () => {
+  test("refuses each path and everything under it", () => {
+    expect(
+      denyPatterns(["/site/data/site.sqlite", "/site/data/media"]),
+    ).toEqual([
+      "/site/data/site.sqlite",
+      "/site/data/site.sqlite/**",
+      "/site/data/media",
+      "/site/data/media/**",
+    ]);
+  });
+
+  test("escapes the glob syntax a path holds, so it matches only itself", () => {
+    expect(denyPatterns(["/s[1]/{a,b}/(x)!+@*?\\y"])).toEqual([
+      "/s\\[1\\]/\\{a,b\\}/\\(x\\)\\!\\+\\@\\*\\?\\\\y",
+      "/s\\[1\\]/\\{a,b\\}/\\(x\\)\\!\\+\\@\\*\\?\\\\y/**",
+    ]);
   });
 });

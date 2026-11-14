@@ -238,3 +238,9 @@ export function diskStorage(config: DiskStorageConfig): DiskObjectStorage {
 
   return { kind: "disk", config, connect: () => connected };
 }
+
+export function isDiskStorage(storage: {
+  readonly kind: string;
+}): storage is DiskObjectStorage {
+  return storage.kind === "disk";
+}

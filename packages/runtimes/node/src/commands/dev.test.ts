@@ -36,11 +36,11 @@ import { auth } from "plumix/auth";
 import { definePlugin } from "plumix/plugin";
 import { defineTheme, fallback } from "plumix/theme";
 import { plumix } from "plumix";
-import { node, nodeSqlite } from "@plumix/runtime-node";
+import { diskStorage, node, nodeSqlite } from "@plumix/runtime-node";
 import { greeting } from "./greeting.mjs";
 import { tag } from "./dep.mjs";
 
-const sqlite = nodeSqlite({ path: ${JSON.stringify(join(dir, "site.sqlite"))} });
+const sqlite = nodeSqlite({ path: "data/site.sqlite" });
 const database = {
   ...sqlite,
   connect: (...args) => {
@@ -69,6 +69,7 @@ const probes = definePlugin("probes", { setup: (ctx) => {
 export default plumix({
   runtime: node(),
   database,
+  storage: diskStorage({ dir: "data/media" }),
   auth: auth({ passkey: { rpName: "x", rpId: "localhost", origin: "http://localhost:3000" } }),
   theme: defineTheme({
     templates: [fallback(() => null)],
@@ -91,6 +92,7 @@ let adminDir: string;
 let server: ViteDevServer;
 let listen: MockInstance<Server["listen"]>;
 let undoSourceConfigs: () => void;
+let previousCwd: string;
 
 /** Read per request: a restart binds a fresh ephemeral port. */
 function origin(): string {
@@ -157,6 +159,10 @@ beforeAll(async () => {
   );
 
   dir = realpathSync(mkdtempSync(join(tmpdir(), "plumix-node-dev-")));
+  // The cwd a relative `nodeSqlite()` or `diskStorage()` path resolves
+  // against, as `plumix dev` run from the project root has it.
+  previousCwd = process.cwd();
+  process.chdir(dir);
   // `.ts`, as a scaffolded project has: the config is re-evaluated through
   // jiti's transform, where a native `.mjs` import is cached for the process.
   writeFileSync(join(dir, CONFIG_FILE), config(dir));
@@ -170,8 +176,10 @@ beforeAll(async () => {
   mkdirSync(dep, { recursive: true });
   writeFileSync(join(dep, "package.json"), JSON.stringify({ name: "my-dep" }));
   writeFileSync(join(dep, "index.js"), 'module.exports = { tag: "dep" };\n');
+  mkdirSync(join(dir, "data/media/objects/2026/11"), { recursive: true });
+  writeFileSync(join(dir, "data/media/objects/2026/11/draft.png"), "draft");
   await applyCoreTestSchema(
-    nodeSqlite({ path: join(dir, "site.sqlite") }).connect(
+    nodeSqlite({ path: join(dir, "data/site.sqlite") }).connect(
       {},
       new Request("http://localhost/"),
       schema,
@@ -198,6 +206,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await server.close();
+  process.chdir(previousCwd);
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
   undoSourceConfigs();
@@ -262,6 +271,28 @@ describe("plumix dev on the node runtime", { timeout: 240_000 }, () => {
 
     expect(refused.status).toBe(403);
     expect(refused.body).not.toContain("import");
+  });
+
+  test.each([
+    "/data/site.sqlite",
+    "/data/site.sqlite-wal",
+    "/data/media/objects/2026/11/draft.png",
+  ])("%s, which a slot keeps on disk, is refused", async (path) => {
+    const response = await fetch(`${origin()}${path}`);
+
+    expect(response.status).toBe(403);
+  });
+
+  test("Vite's own deny list still refuses .env", async () => {
+    const response = await fetch(`${origin()}/.env`);
+
+    expect(response.status).toBe(403);
+  });
+
+  test("a source module beside the slots' files is still served", async () => {
+    const response = await fetch(`${origin()}/greeting.mjs`);
+
+    expect(response.status).toBe(200);
   });
 
   test("editing a module the config imports changes what the next request serves, without a restart, and releases the replaced site's connections", async () => {

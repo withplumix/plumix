@@ -1,8 +1,11 @@
+import { resolve } from "node:path";
 import type { CommandDefinition } from "plumix";
 import type { DevCommandOptions, DevEntry } from "plumix/vite";
 
 import type { BunSite } from "../site.js";
 import { bun, isBunRuntime } from "../adapter.js";
+import { databaseFile, isBunSqlite } from "../bun-sqlite.js";
+import { isDiskStorage } from "../disk-storage.js";
 import { ASSETS_DIR_ENV, PROJECT_ROOT_ENV } from "../entry-constants.js";
 import { createAssetsLayer } from "../http/assets.js";
 import { createImageLayer } from "../http/images.js";
@@ -18,6 +21,19 @@ type BunDevEntry = DevEntry & Partial<Pick<BunSite, "dispose">>;
 export function bunDevOptions(cwd: string): DevCommandOptions<BunDevEntry> {
   return {
     environment: bunServerEnvironment,
+    // Where `bunSqlite()` and `diskStorage()` open them: the database under
+    // the project root, the storage dir under the process cwd.
+    privatePaths(config) {
+      const paths: string[] = [];
+      if (isBunSqlite(config.database)) {
+        const file = databaseFile(config.database.config, cwd);
+        paths.push(file, `${file}-wal`, `${file}-shm`, `${file}-journal`);
+      }
+      if (config.storage && isDiskStorage(config.storage)) {
+        paths.push(resolve(config.storage.config.dir));
+      }
+      return paths;
+    },
     stagedFiles: (root) => {
       const assets = createAssetsLayer({ root });
       return createDevMiddleware((request) => assets.serve(request), {
