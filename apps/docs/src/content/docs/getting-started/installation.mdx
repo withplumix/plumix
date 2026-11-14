@@ -124,7 +124,7 @@ Tables of the site's own, declared by a plugin inside the project, get their own
 
 ## Adding a sign-in method later
 
-The wizard's sign-in question saves you an edit. It locks nothing in. Picking GitHub OAuth adds a `github(...)` provider to the `auth` block and writes `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` into `.env`. Picking magic links adds a `magicLink` block and sets `mailer: consoleMailer()`, which logs the sign-in link to the terminal instead of sending mail. Both are edits to `plumix.config.ts` you can make by hand afterwards.
+The wizard's sign-in question saves you an edit. It locks nothing in. Picking GitHub OAuth adds a `github(...)` provider to the `auth` block and writes `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` into `.env`. Picking magic links adds a `magicLink` block and no mailer: `plumix dev` catches each sign-in mail for you, and `plumix build` fails until you set a top-level `mailer` that sends through a real transport. Both are edits to `plumix.config.ts` you can make by hand afterwards.
 
 Cloudflare Access appears in the same list when the runtime is Cloudflare. It replaces the request authenticator rather than adding a login form, so the identity provider in front of the worker decides who the user is.
 

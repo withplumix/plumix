@@ -24,6 +24,9 @@ export {
   scheduledTaskTimeoutMs,
   scheduledTasksFor,
 } from "../runtime/contract/schedules.js";
+// Here so the CLI can report a config mistake without reaching through core's
+// root barrel.
+export { ConfigError } from "../config.errors.js";
 export { contributorRoleSnippet } from "./contributor-role.js";
 export { CORE_DATA_MIGRATIONS } from "./data-migrations.js";
 export { CORE_MIGRATIONS_FOLDER } from "./migrations.js";

@@ -10,6 +10,8 @@ import {
   planSmokeCombos,
   summarizePlaywrightFailures,
   undeclaredSmokePackages,
+  unmailedBuildFailure,
+  withStubMailer,
 } from "./smoke-plan.js";
 import { REPO_ROOT } from "./test-support.js";
 
@@ -101,6 +103,19 @@ describe("planSmokeCombos", () => {
       .map((combo) => combo.name);
 
     expect(devEditor).toEqual(["bun-all-plugins", "node-all-plugins"]);
+  });
+
+  it("expects the mailer check only in each runtime's all-auth combo, which scaffolds magic link", () => {
+    const registry: Registry = {
+      runtimes: [runtime("bun", { packageManager: "bun" }), runtime("node")],
+      plugins: [plugin("media")],
+    };
+
+    const magicLink = planSmokeCombos(registry)
+      .filter((combo) => combo.magicLink)
+      .map((combo) => combo.name);
+
+    expect(magicLink).toEqual(["bun-all-auth", "node-all-auth"]);
   });
 });
 
@@ -274,6 +289,48 @@ describe("doctorFailure", () => {
   it("fails output with no ok finding, as when the runtime exports no diagnose", () => {
     expect(doctorFailure(snapshot)).toBe(
       "plumix doctor reported no deploy finding, so the runtime's diagnose never ran",
+    );
+  });
+});
+
+describe("unmailedBuildFailure", () => {
+  it("passes a build refused with magic_link_requires_mailer", () => {
+    expect(
+      unmailedBuildFailure(
+        "error magic_link_requires_mailer: `auth.magicLink` requires a top-level `mailer`.\n",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("fails a build that reports the refusal as unexpected", () => {
+    expect(
+      unmailedBuildFailure(
+        "error UNEXPECTED: ConfigError: `auth.magicLink` requires a top-level `mailer`.\n",
+      ),
+    ).toBe(
+      "plumix build without a mailer did not fail with magic_link_requires_mailer",
+    );
+  });
+
+  it("fails a build that failed for another reason", () => {
+    expect(unmailedBuildFailure("error config_invalid: Invalid config\n")).toBe(
+      "plumix build without a mailer did not fail with magic_link_requires_mailer",
+    );
+  });
+});
+
+describe("withStubMailer", () => {
+  it("adds a mailer that sends nowhere as the config's first slot", () => {
+    const source = "const config = plumix({\n  runtime: node(),\n});\n";
+
+    expect(withStubMailer(source)).toBe(
+      "const config = plumix({\n  mailer: { send: () => Promise.resolve() },\n  runtime: node(),\n});\n",
+    );
+  });
+
+  it("refuses a config it cannot find the plumix() call in", () => {
+    expect(() => withStubMailer("export default {};\n")).toThrow(
+      "no `const config = plumix({` line to add a mailer to",
     );
   });
 });

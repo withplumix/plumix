@@ -15,6 +15,7 @@ import type {
   RuntimeAdapter,
 } from "@plumix/core";
 import {
+  assertMagicLinkHasMailer,
   collectNamedTemplates,
   configuredSlotsOf,
   generateSchemaSource,
@@ -281,6 +282,7 @@ export function plumix(options: PlumixVitePluginOptions = {}): Plugin {
         base.publicDir = ".plumix/public";
       }
       const { config } = await loadConfig(scanRoot, options.configFile);
+      if (env.command === "build") assertMagicLinkHasMailer(config);
       const merged = config.vite
         ? (mergeConfig(
             base,

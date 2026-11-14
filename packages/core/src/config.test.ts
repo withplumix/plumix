@@ -97,20 +97,6 @@ test("plumix() preserves the top-level mailer slot", () => {
   expect(config.mailer).toBe(mailer);
 });
 
-test("plumix() requires mailer when auth.magicLink is configured", () => {
-  const authWithMagicLink = auth({
-    passkey: {
-      rpName: "mock",
-      rpId: "cms.example",
-      origin: "https://cms.example",
-    },
-    magicLink: { siteName: "mock" },
-  });
-  expect(() =>
-    plumix({ runtime, database, auth: authWithMagicLink, theme }),
-  ).toThrow(/magicLink.*requires.*mailer/);
-});
-
 test("plumix() resolves i18n input into a registry and stores it on the config", () => {
   const config = plumix({
     runtime,
@@ -175,7 +161,7 @@ test("plumix() normalizes a configured basePath to its canonical form", () => {
   expect(config.basePath).toBe("/custom-directory");
 });
 
-test("plumix() accepts auth.magicLink when paired with a top-level mailer", () => {
+test("plumix() loads auth.magicLink with no mailer, which only a build or boot needs", () => {
   const authWithMagicLink = auth({
     passkey: {
       rpName: "mock",
@@ -184,9 +170,8 @@ test("plumix() accepts auth.magicLink when paired with a top-level mailer", () =
     },
     magicLink: { siteName: "mock" },
   });
-  const mailer = { send: () => Promise.resolve() };
   expect(() =>
-    plumix({ runtime, database, auth: authWithMagicLink, theme, mailer }),
+    plumix({ runtime, database, auth: authWithMagicLink, theme }),
   ).not.toThrow();
 });
 

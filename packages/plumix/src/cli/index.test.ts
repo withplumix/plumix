@@ -27,7 +27,15 @@ const command = (overrides: Partial<CommandDefinition>): CommandDefinition => ({
  */
 const registrations: string[] = [];
 
-function testConfig(): PlumixConfig {
+function testConfig(
+  siteAuth = auth({
+    passkey: {
+      rpName: "Plumix Test",
+      rpId: "cms.example",
+      origin: "https://cms.example",
+    },
+  }),
+): PlumixConfig {
   return plumix({
     runtime: {
       name: "test",
@@ -35,13 +43,7 @@ function testConfig(): PlumixConfig {
       generateEntry: () => "",
     },
     database: { kind: "test", connect: () => ({ db: {} }) },
-    auth: auth({
-      passkey: {
-        rpName: "Plumix Test",
-        rpId: "cms.example",
-        origin: "https://cms.example",
-      },
-    }),
+    auth: siteAuth,
     plugins: [
       definePlugin("probe", {
         setup: (ctx) => {
@@ -79,6 +81,19 @@ describe("resolveCommandApp", () => {
     await resolveCommandApp(command({}), testConfig(), "build");
 
     expect(registrations).not.toContain("probe/chart view");
+  });
+
+  test("builds the app for a magic-link site with no mailer, which only serving needs", async () => {
+    const config = testConfig(
+      auth({
+        passkey: { rpName: "t", rpId: "t", origin: "https://t" },
+        magicLink: { siteName: "t" },
+      }),
+    );
+
+    const resolved = await resolveCommandApp(command({}), config, "migrate");
+
+    expect(resolved.config).toBe(config);
   });
 
   test("skips the eager build when the command defers the app to its runtime", async () => {
@@ -201,10 +216,7 @@ describe("runCommand", () => {
   });
 });
 
-/**
- * A config that records whether it was evaluated as `plumix dev`, the way
- * core's `plumix()` reads it to let a dev site go without a mailer.
- */
+/** A config that records whether it was evaluated as `plumix dev`. */
 const DEV_PROBE = `
 (globalThis as unknown as Record<string, unknown>).__plumixConfigDev =
   process.env.PLUMIX_DEV ?? "";

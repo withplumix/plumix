@@ -15,8 +15,7 @@ export function assembleConfig(
     );
 
   // The core imports are merged in with everything else so an auth method's
-  // `github` folds into the one `from "plumix/auth"` line and its
-  // `consoleMailer` into the one `from "plumix"` line.
+  // `github` folds into the one `from "plumix/auth"` line.
   const authImports = authMethods.flatMap((method) => method.imports ?? []);
   const importLines = mergeImports(
     [

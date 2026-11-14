@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 // Deliberately the root barrel while `report.ts` uses `@plumix/core/cli`: it
 // proves the two specifiers resolve to one class.
 import { CliError } from "@plumix/core";
+import { ConfigError } from "@plumix/core/cli";
 
 import { PlumixCliError } from "./errors.js";
 import { badge, exitWithError } from "./report.js";
@@ -101,6 +102,15 @@ describe("exitWithError", () => {
     expect(out).toContain("config_invalid: Invalid config shape");
     expect(out).toContain("Default export must be");
     expect(out.trimEnd().split("\n")).toHaveLength(2);
+  });
+
+  test("reports a config mistake by its code and hint, not as unexpected", () => {
+    const out = capture(ConfigError.magicLinkRequiresMailer());
+
+    expect(out.trimEnd().split("\n")).toEqual([
+      "error magic_link_requires_mailer: `auth.magicLink` requires a top-level `mailer`.",
+      "  → Set `mailer` in plumix.config.ts to a `Mailer` that sends through a real transport, such as Resend, Postmark or Amazon SES.",
+    ]);
   });
 
   test("reports a CliError built through core's root barrel", () => {

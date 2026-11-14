@@ -219,6 +219,25 @@ describe("runCli", () => {
     expect(config).toContain("authenticator: cfAccess(");
   });
 
+  test.each(["cloudflare", "node", "bun"])(
+    "--auth magic-link on %s leaves the mailer for the site to configure",
+    async (runtime) => {
+      const { io } = captureIO();
+      const target = join(tmp, `magic-link-${runtime}`);
+
+      const code = await run(
+        [target, "-y", "--runtime", runtime, "--auth", "magic-link"],
+        io,
+      );
+
+      expect(code).toBe(0);
+      const config = readFileSync(join(target, "plumix.config.ts"), "utf8");
+      expect(config).toContain("magicLink:");
+      expect(config).not.toContain("mailer:");
+      expect(config).not.toContain("consoleMailer");
+    },
+  );
+
   test("exits 1 listing the available methods for an unknown --auth id", async () => {
     const { io, stderr } = captureIO();
     const target = join(tmp, "bad-auth");

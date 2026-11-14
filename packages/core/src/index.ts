@@ -26,6 +26,7 @@ export { checkImportedMeta } from "./cli/import-meta.js";
 export type { ImportedMeta, ImportedMetaOwner } from "./cli/import-meta.js";
 export * from "./config.js";
 export { defineConfig, plumix } from "./runtime/define-config.js";
+export { assertMagicLinkHasMailer } from "./runtime/magic-link-mailer.js";
 export type {
   RoleDeclaration,
   RoleGrants,

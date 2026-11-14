@@ -89,7 +89,7 @@ Surveyed 2026-10-31.
   the admin shell becomes eager.
 - **A CLI command never imports a view.** It evaluates the config outside Vite,
   where a view's CSS import can't load, and it never renders, so the CLI builds
-  its app with `skipBlockViews`.
+  its app with `operatorCommand`.
 - **Shortcodes keep their synchronous `render`.** They are text-only string
   macros by contract, not views.
 

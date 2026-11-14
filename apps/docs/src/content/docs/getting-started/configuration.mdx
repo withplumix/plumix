@@ -48,7 +48,7 @@ export default plumix({
 
 `plumix()` returns a resolved config rather than the object you passed. Six slots gain a default on the way through. A missing `theme` becomes the built-in welcome theme, a missing `plugins` becomes an empty array, a missing `redirects` becomes an empty array, a missing `routes` keeps every framework route, a missing `i18n` becomes English only, and a missing `basePath` becomes `""`. That last one is normalization as well as defaulting, so `docs`, `/docs` and `/docs/` all resolve to `/docs`.
 
-One cross-slot rule is checked here rather than at request time: `auth.magicLink` without a `mailer` throws at build. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt. `plumix dev` skips the check, because it catches mail when no mailer is set.
+One cross-slot rule is checked later, but still before any request: `auth.magicLink` without a `mailer` fails `plumix build` and a production boot with `magic_link_requires_mailer`. Email sign-in with nothing to send the email through would otherwise fail silently on the first sign-in attempt. `plumix dev` skips the check, because it catches mail when no mailer is set, and so do operator commands such as `plumix migrate`, which never send a sign-in link.
 
 Every slot below is optional unless it appears under "Required slots". Leaving one out is a decision with a consequence rather than an oversight. With no `cdn` slot every public page renders live; with no `storage` slot there is nowhere for uploads to go; with no `mcp` or `api` block the dispatcher returns 404 for those paths before it imports either handler graph.
 

@@ -26,6 +26,11 @@ export interface SmokeCombo {
    * Chromium, through the installed Playwright kit.
    */
   readonly devEditor?: boolean;
+  /**
+   * Scaffolds magic link, so the unedited build must fail for want of a mailer
+   * before the smoke adds one and goes on.
+   */
+  readonly magicLink?: boolean;
 }
 
 /**
@@ -75,6 +80,7 @@ export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
           authIds.join(","),
         ],
         packageManager,
+        magicLink: authIds.includes("magic-link"),
       },
       // Every plugin, so the published declarations of the whole graph and
       // the islands `plumix/vite` scans all meet the native compiler.
@@ -236,4 +242,29 @@ export function doctorFailure(output: string): string | undefined {
     return "plumix doctor reported no deploy finding, so the runtime's diagnose never ran";
   }
   return undefined;
+}
+
+/** Why a magic-link build with no mailer did not fail as it must, if it didn't. */
+export function unmailedBuildFailure(output: string): string | undefined {
+  if (
+    stripVTControlCharacters(output).includes(
+      "error magic_link_requires_mailer: ",
+    )
+  ) {
+    return undefined;
+  }
+  return "plumix build without a mailer did not fail with magic_link_requires_mailer";
+}
+
+const CONFIG_CALL = "const config = plumix({\n";
+
+/** The scaffolded config with a mailer that sends nowhere. */
+export function withStubMailer(source: string): string {
+  if (!source.includes(CONFIG_CALL)) {
+    throw ScaffoldError.smokeConfigCallMissing();
+  }
+  return source.replace(
+    CONFIG_CALL,
+    `${CONFIG_CALL}  mailer: { send: () => Promise.resolve() },\n`,
+  );
 }

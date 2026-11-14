@@ -160,6 +160,8 @@ describe("plumix mail test", () => {
 
     expect(isCliError(error) && error.code).toBe("mail_not_configured");
     expect(isCliError(error) && error.hint).toContain("plumix({ mailer })");
+    expect(isCliError(error) && error.hint).toContain("real transport");
+    expect(isCliError(error) && error.hint).not.toContain("consoleMailer");
   });
 
   test.each([["test", "not-an-address"], ["test"]])(

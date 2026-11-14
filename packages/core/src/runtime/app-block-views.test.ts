@@ -62,7 +62,7 @@ describe("buildApp — block views", () => {
         auth: stubAuth,
         theme,
       }),
-      { skipBlockViews: true },
+      { operatorCommand: true },
     );
 
     expect(imports()).toBe(0);

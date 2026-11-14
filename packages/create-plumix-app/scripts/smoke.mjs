@@ -1,6 +1,8 @@
 // Scaffolds representative projects and proves they typecheck, pass their own
 // tests, build and serve: each built server is started, requested and stopped with SIGTERM
 // before the next combo.
+// A combo that scaffolds magic link first proves its unedited build fails for
+// want of a mailer, then adds one.
 // Each runtime's all-plugins project then runs `plumix dev` and drives the
 // editor in Chromium.
 //
@@ -26,7 +28,7 @@
 // Verdaccio and booting `plumix dev` on Cloudflare. It is slower and gates
 // releases. This is the fast per-commit canary.
 
-import { execFileSync, execSync, spawn } from "node:child_process";
+import { execFileSync, execSync, spawn, spawnSync } from "node:child_process";
 import {
   cpSync,
   createWriteStream,
@@ -62,6 +64,8 @@ const {
   planSmokeCombos,
   summarizePlaywrightFailures,
   undeclaredSmokePackages,
+  unmailedBuildFailure,
+  withStubMailer,
 } = await import(join(REPO, "packages/create-plumix-app/dist/smoke-plan.js"));
 
 const run = (cmd, args, cwd) =>
@@ -463,6 +467,26 @@ function assertDoctorClean(appDir) {
   if (failure !== undefined) throw new Error(`${failure}:\n${output}`);
 }
 
+/**
+ * A magic-link site with no mailer must not build, so a fresh scaffold can't
+ * ship one that drops every sign-in link. The rest of the combo then builds
+ * with a mailer that sends nowhere.
+ */
+function assertBuildNeedsMailer(appDir, packageManager) {
+  const build = spawnSync(packageManager, ["run", "build"], {
+    cwd: appDir,
+    encoding: "utf8",
+  });
+  const output = `${build.stdout}${build.stderr}`;
+  const failure =
+    build.status === 0
+      ? "plumix build without a mailer succeeded"
+      : unmailedBuildFailure(output);
+  if (failure !== undefined) throw new Error(`${failure}:\n${output}`);
+  const config = join(appDir, "plumix.config.ts");
+  writeFileSync(config, withStubMailer(readFileSync(config, "utf8")));
+}
+
 async function boot(appDir, combo) {
   const runtime = installedRuntime(appDir);
   const plan = planBoot(runtime.name, runtime.e2e);
@@ -588,6 +612,7 @@ async function smoke(combo, tarballs) {
     run(installer, installArgs, app);
     assertNothingFromRegistry(app, pm);
     if (combo.typescript7) assertTypeScript7(app);
+    if (combo.magicLink) assertBuildNeedsMailer(app, pm);
 
     run(pm, ["run", "typecheck"], app);
     run(pm, ["run", "test"], app);

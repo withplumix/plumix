@@ -729,7 +729,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
     return new PlumixCliError(
       "mail_not_configured",
       "The site has no mailer to send the test mail through",
-      "Set one with `plumix({ mailer })` in plumix.config.ts. `consoleMailer()` prints each mail to the terminal.",
+      "Set one with `plumix({ mailer })` in plumix.config.ts: a `Mailer` that sends through a real transport, such as Resend, Postmark or Amazon SES.",
       undefined,
     );
   }
