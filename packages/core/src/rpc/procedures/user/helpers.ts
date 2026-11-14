@@ -9,15 +9,13 @@ import {
 } from "../../../auth/rbac.js";
 import { and, eq, exists, isNull, ne } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
-import { base } from "../../base.js";
+import { coreBase } from "../../base.js";
 
 /**
  * The builder for a procedure that changes a user. Its mark lets a test find
  * every one; each calls `assertCanActOnUser` on the user it loads.
  */
-export const userWrite = base
-  .$meta<{ readonly modifiesUser?: true }>({})
-  .meta({ modifiesUser: true });
+export const userWrite = coreBase.meta({ modifiesUser: true });
 
 /**
  * Use as a WHERE predicate on the write itself, so two concurrent demotions

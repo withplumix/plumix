@@ -3,7 +3,7 @@ import { resolveApiTokenPreset } from "../../../../auth/token-presets.js";
 import { now } from "../../../../clock.js";
 import { auth } from "../../../../events-and-filters/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
-import { base } from "../../../base.js";
+import { coreBase } from "../../../base.js";
 import { apiTokensCreateInputSchema } from "./schemas.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -13,7 +13,8 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * prefix. No capability beyond a session: tokens inherit the user's
  * role at request time.
  */
-export const create = base
+export const create = coreBase
+  .meta({ createsCredential: true })
   .use(sessionAuthenticated)
   .input(apiTokensCreateInputSchema)
   .handler(async ({ input, context }) => {

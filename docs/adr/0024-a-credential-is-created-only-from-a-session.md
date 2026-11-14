@@ -16,8 +16,9 @@ login that survives revoking the token.
 The route needs to know what kind of credential resolved the caller, and only
 the authenticator knows that.
 
-> **A surface that creates a credential or a session for the caller admits
-> only a session credential. An API-token caller counts as anonymous there.**
+> **A surface that creates a credential or a session, for the caller or for
+> another user, admits only a session credential. An API-token caller counts
+> as anonymous there.**
 
 ## What this means
 
@@ -44,9 +45,15 @@ the authenticator knows that.
   API-token context is refused however it reached the procedure: over the
   wire, from an MCP tool, or through a nested `createRouterClient` call. It
   guards `auth.apiTokens.create`, `auth.deviceFlow.approve`,
-  `auth.oauthConsent.lookup`, `auth.oauthConsent.approve` and
-  `user.requestEmailChange`, and stays internal to core until a plugin needs
-  it. Passkey add-device and OAuth's `/authorize`, which need the whole user
+  `auth.oauthConsent.lookup`, `auth.oauthConsent.approve`,
+  `user.requestEmailChange` and `user.invite`, and stays internal to core
+  until a plugin needs it. An invite counts: it creates a sign-in credential
+  for the invitee that outlives the caller's own credential. Each procedure
+  that creates a credential carries `meta({ createsCredential: true })` on
+  core's `coreBase` (`rpc/base.ts`), and
+  `tests/feature/creating-a-credential-from-a-session.test.ts` reads the
+  marked procedures from the router and checks each refuses an API token.
+  Passkey add-device and OAuth's `/authorize`, which need the whole user
   row, call `authenticateSession(ctx)` in `auth/authenticator.ts`, which
   applies the same key.
 - **Capability checks are unchanged.** `ctx.tokenScopes` is the API token's

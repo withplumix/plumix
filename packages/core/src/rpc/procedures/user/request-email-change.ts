@@ -18,6 +18,7 @@ const EDIT_CAPABILITY = "user:edit";
  * layer.
  */
 export const requestEmailChangeProc = userWrite
+  .meta({ createsCredential: true })
   .use(sessionAuthenticated)
   .input(userRequestEmailChangeInputSchema)
   .handler(async ({ input, context, errors }) => {
