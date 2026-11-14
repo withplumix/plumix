@@ -40,6 +40,7 @@ flowchart LR
 | `applyBuiltMigrations`                                   | What a built server runtime runs before it listens                                                 | yes, `plumix/cli`                                               |
 | `migrateBeforeDeploy`, `migrateForDev`                   | The deploy and dev entry points                                                                    | `migrateBeforeDeploy` on `plumix/cli`; `migrateForDev` internal |
 | `applyCoreTestSchema`, `applyTestSchema`, `createTestDb` | Test DDL from the shipped histories                                                                | yes, `plumix/test`                                              |
+| `coreMigrationCount`                                     | How many migrations core ships, from its journal                                                   | yes, `plumix/test`                                              |
 | `pnpm migrations:check`                                  | Runs `db:generate` in every package that has one; fails when `migrations/` changes                 | repo only                                                       |
 
 Where migrations run on each runtime:
