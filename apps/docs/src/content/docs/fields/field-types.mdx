@@ -425,7 +425,7 @@ Converting happens in two ways, both through the same rules a save uses:
 
 A value no field type accepts, such as `"maybe"` under a `toggle`, is reported and never changed, because there is no correct value to pick for you. Edit those by hand.
 
-A plugin writing meta through `plumix/db` can avoid leaving such values in the first place by passing its bag through `settleMeta`. See [plumix/db](/getting-started/project-structure/#plumixdb).
+A plugin avoids leaving such values in the first place by writing meta through `ctx.entries`, `ctx.terms` or `ctx.settings.write`, which convert it as a save does. See [plumix/db](/getting-started/project-structure/#plumixdb).
 
 ## Retired types
 
