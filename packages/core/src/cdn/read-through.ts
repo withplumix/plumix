@@ -10,6 +10,7 @@ import {
   routeCdnKey,
 } from "./decision.js";
 import { responseIsShareable, sharingAfterRender } from "./sharing-verdict.js";
+import { isUniversalCopy, markUniversalCopy } from "./universal-copy.js";
 
 export function cdnCanKeySegments(cdn: ConnectedCdn): boolean {
   return cdn.store !== undefined || cdn.segmentVary !== undefined;
@@ -45,12 +46,14 @@ export async function readThrough(args: ReadThroughArgs): Promise<Response> {
     return render();
   }
 
+  const readsUniversal = decision.kind === "read-universal";
   return lookupOrRender({
     key: decision.key,
     cdn,
     defer,
     telemetry,
-    fact: { segment },
+    fact: readsUniversal ? { segment, universalRead: true } : { segment },
+    ...(readsUniversal ? { acceptsHit: isUniversalCopy } : {}),
     render,
     tags,
     settle: (fresh) => {
@@ -107,7 +110,12 @@ export async function readThroughRoute(
       const shared =
         responseIsShareable(fresh.status) &&
         routeResponseIsShareable(request, hasSession, fresh);
-      return { store: shared, decorate: shared, personal: false };
+      return {
+        store: shared,
+        decorate: shared,
+        universal: false,
+        personal: false,
+      };
     },
     render,
   });
@@ -131,6 +139,7 @@ function routeResponseIsShareable(
 interface Settled {
   readonly store: boolean;
   readonly decorate: boolean;
+  readonly universal: boolean;
   readonly personal: boolean;
 }
 
@@ -143,24 +152,34 @@ interface LookupArgs {
    * A bag, not a field: the route path has no segment, and `segment: undefined`
    * isn't a `JsonValue`.
    */
-  readonly fact: { readonly segment?: Segment };
+  readonly fact: {
+    readonly segment?: Segment;
+    readonly universalRead?: true;
+  };
+  /**
+   * Another copy under the anonymous key may differ by principal, as a
+   * policied page's teaser does.
+   */
+  readonly acceptsHit?: (hit: Response) => boolean;
   readonly render: () => Promise<Response>;
   readonly tags: () => readonly string[];
   readonly settle: (fresh: Response) => Settled;
 }
 
 async function lookupOrRender(args: LookupArgs): Promise<Response> {
-  const { key, cdn, defer, telemetry, fact, render, tags, settle } = args;
+  const { key, cdn, defer, telemetry, fact, acceptsHit, render, tags, settle } =
+    args;
   const store = cdn.store;
   // A storeless deploy misses by definition, so the fact names the regime
   // rather than reading as a failing cache.
   const originStore = store !== undefined;
 
   const hit = await store?.match(key);
-  if (hit) {
+  if (hit && (acceptsHit === undefined || acceptsHit(hit))) {
     telemetry.record("cdn", { ...fact, decision: "hit", originStore });
     return hit;
   }
+  await hit?.body?.cancel();
 
   const fresh = await render();
   const settled = settle(fresh);
@@ -178,7 +197,16 @@ async function lookupOrRender(args: LookupArgs): Promise<Response> {
 
   const entryTags = tags();
   // Cloned before `decorate` reads the body.
-  if (stored) defer(store.put(key, fresh.clone(), entryTags));
+  if (stored) {
+    const copy = fresh.clone();
+    defer(
+      store.put(
+        key,
+        settled.universal ? markUniversalCopy(copy) : copy,
+        entryTags,
+      ),
+    );
+  }
   // Core refuses a `Set-Cookie` response regardless of whether the provider
   // does.
   if (!settled.decorate || fresh.headers.has("set-cookie")) return fresh;

@@ -2323,8 +2323,10 @@ describe("dispatcher — public read-through CDN", () => {
     expect(put).toHaveBeenCalledOnce();
   });
 
-  test("a request carrying the session cookie bypasses the CDN", async () => {
-    const { cdn, match } = cdnStub(new Response("CACHED", { status: 200 }));
+  test("a request carrying the session cookie is never served a copy that is not universal", async () => {
+    const { cdn, match, put } = cdnStub(
+      new Response("CACHED", { status: 200 }),
+    );
     const h = await createDispatcherHarness({ cdn });
 
     const response = await h.dispatch(
@@ -2334,10 +2336,11 @@ describe("dispatcher — public read-through CDN", () => {
     );
 
     expect(await response.text()).not.toBe("CACHED");
-    expect(match).not.toHaveBeenCalled();
+    expect(match).toHaveBeenCalledOnce();
+    expect(put).not.toHaveBeenCalled();
   });
 
-  test("a custom authenticator's signed-in visitor bypasses the CDN", async () => {
+  test("a custom authenticator's signed-in visitor is never served a copy that is not universal", async () => {
     const { cdn, match, put } = cdnStub(
       new Response("CACHED", { status: 200 }),
     );
@@ -2350,7 +2353,7 @@ describe("dispatcher — public read-through CDN", () => {
     );
 
     expect(await response.text()).not.toBe("CACHED");
-    expect(match).not.toHaveBeenCalled();
+    expect(match).toHaveBeenCalledOnce();
     expect(put).not.toHaveBeenCalled();
   });
 

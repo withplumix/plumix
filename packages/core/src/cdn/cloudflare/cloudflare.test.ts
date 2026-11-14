@@ -9,6 +9,7 @@ import { describeCdnContract } from "../../test/conformance/cdn.js";
 import { applyClientCopy } from "../client-copy.js";
 import { cdnCanKeySegments, readThrough } from "../read-through.js";
 import { sharingAfterRender, sharingBeforeRender } from "../sharing-verdict.js";
+import { UNIVERSAL_COPY_HEADER } from "../universal-copy.js";
 import { cloudflare } from "./cloudflare.js";
 
 /**
@@ -394,6 +395,8 @@ describe("an origin store across builds", () => {
         request: new Request("https://site.test/"),
         privileged: false,
         ephemeralGrant: false,
+        authorization: false,
+        principalIsPersonal: false,
         accessSegment: null,
         page: { kind: "content", intent: "frontPage" },
         canKeySegments: cdnCanKeySegments(cdn),
@@ -454,15 +457,18 @@ describe("the client copy of a segment page served from the origin store", () =>
   });
 
   async function visit(
-    segment: Segment,
+    segment: Segment | null,
     headers?: Record<string, string>,
   ): Promise<Response> {
+    const privileged = headers?.cookie?.includes("plumix_session") === true;
     const writes: Promise<unknown>[] = [];
     const cdn = connect();
     const decision = sharingBeforeRender({
       request: new Request("https://site.test/members", { headers }),
-      privileged: false,
+      privileged,
       ephemeralGrant: false,
+      authorization: false,
+      principalIsPersonal: false,
       accessSegment: segment,
       page: { kind: "content", intent: "entry" },
       canKeySegments: cdnCanKeySegments(cdn),
@@ -513,6 +519,25 @@ describe("the client copy of a segment page served from the origin store", () =>
 
     expect(hit.headers.get("cache-control")).toBe(PAGE_FRESHNESS);
     expect(hit.headers.get("cache-tag")).toBe("e:7");
+  });
+
+  it("a session is served the copy an anonymous visit stored for a page with no policy", async () => {
+    await visit(null);
+
+    const hit = await visit(null, { cookie: "plumix_session=a" });
+
+    expect(await hit.text()).toBe("page");
+    expect(hit.headers.get("cache-control")).toBe("private, no-cache");
+    expect(hit.headers.has("cache-tag")).toBe(false);
+    expect(hit.headers.has(UNIVERSAL_COPY_HEADER)).toBe(false);
+  });
+
+  it("an anonymous hit of the universal copy leaves without its marker", async () => {
+    await visit(null);
+
+    const hit = await visit(null);
+
+    expect(hit.headers.has(UNIVERSAL_COPY_HEADER)).toBe(false);
   });
 });
 

@@ -74,6 +74,7 @@ import {
   STATIC_ASSET_EXT,
 } from "../route/index.js";
 import {
+  principalIsPersonal,
   renderIsPersonal,
   trackPrincipalReads,
 } from "../route/render/personal-render.js";
@@ -521,13 +522,23 @@ function ctxHasSession(ctx: AppContext): boolean {
   return requestHasSession(ctx.authenticator, ctx.request);
 }
 
+/** Read after the principal loads. */
 function requestSharingFacts(
   ctx: AppContext,
-): Pick<RequestFacts, "request" | "privileged" | "ephemeralGrant"> {
+): Pick<
+  RequestFacts,
+  | "request"
+  | "privileged"
+  | "authorization"
+  | "ephemeralGrant"
+  | "principalIsPersonal"
+> {
   return {
     request: ctx.request,
     privileged: requestIsPrivileged(ctx.request, ctxHasSession(ctx)),
+    authorization: ctx.request.headers.has("authorization"),
     ephemeralGrant: requestCarriesEphemeralGrant(ctx.request),
+    principalIsPersonal: principalIsPersonal(ctx),
   };
 }
 

@@ -28,7 +28,7 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
   if (user === null) return ctx;
   const adminBarViewer = adminAccessViewer(ctx, user);
   const verdict: RenderVerdict = {
-    personal: adminBarViewer !== null || localeIsPersonal(ctx),
+    personal: personalFromTheStart(ctx, adminBarViewer),
     adminBarViewer,
   };
   verdicts.set(ctx.memo, verdict);
@@ -64,6 +64,22 @@ export function trackPrincipalReads(ctx: AppContext): AppContext {
   return tracked;
 }
 
+/** Decided before the render, so a read the render makes can't change it. */
+export function principalIsPersonal(
+  ctx: Pick<AppContext, "user" | "plugins" | "request" | "config" | "locale">,
+): boolean {
+  const user = ctx.user;
+  if (user === null) return false;
+  return personalFromTheStart(ctx, adminAccessViewer(ctx, user));
+}
+
+function personalFromTheStart(
+  ctx: Pick<AppContext, "request" | "config" | "locale">,
+  adminBarViewer: AuthenticatedUser | null,
+): boolean {
+  return adminBarViewer !== null || localeIsPersonal(ctx);
+}
+
 /** The bar has nothing to offer a user who cannot open the admin. */
 function adminAccessViewer(
   ctx: Pick<AppContext, "plugins">,
@@ -81,7 +97,9 @@ function adminAccessViewer(
  * The context's locale was resolved with the principal; the request alone may
  * resolve to another, through the site's `i18n.resolveLocale` override.
  */
-function localeIsPersonal(ctx: AppContext): boolean {
+function localeIsPersonal(
+  ctx: Pick<AppContext, "request" | "config" | "locale">,
+): boolean {
   const anonymous = resolveLocale({
     request: ctx.request,
     user: null,

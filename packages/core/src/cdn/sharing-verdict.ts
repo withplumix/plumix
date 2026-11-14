@@ -34,7 +34,10 @@ export interface RequestFacts {
   readonly request: Request;
   /** Asked through the site's authenticator, never by sniffing the cookie. */
   readonly privileged: boolean;
+  /** An API-token request never reads the universal copy. */
+  readonly authorization: boolean;
   readonly ephemeralGrant: boolean;
+  readonly principalIsPersonal: boolean;
   /** `null` for a page with no access policy. */
   readonly accessSegment: Segment | null;
   readonly page: PageKind;
@@ -58,10 +61,30 @@ export type SharingDecision =
       readonly segment: Segment;
       readonly page: PageKind;
       readonly key: Request;
+      /** The page has no access policy, so its copy is every principal's. */
+      readonly universal: boolean;
+    }
+  /**
+   * A signed-in request to a page with no access policy: it may be served the
+   * universal anonymous copy, and its own render is never stored.
+   */
+  | {
+      readonly kind: "read-universal";
+      readonly segment: Segment;
+      readonly page: PageKind;
+      readonly key: Request;
     };
 
 export function sharingBeforeRender(facts: RequestFacts): SharingDecision {
   const segment = segmentFor(facts);
+  if (readsUniversalCopy(facts)) {
+    return {
+      kind: "read-universal",
+      segment,
+      page: facts.page,
+      key: segmentCdnKey(facts.request, "anonymous"),
+    };
+  }
   const reason = bypassReason(facts, segment);
   if (reason !== null) {
     return { kind: "bypass", segment, page: facts.page, reason };
@@ -71,7 +94,20 @@ export function sharingBeforeRender(facts: RequestFacts): SharingDecision {
     segment,
     page: facts.page,
     key: segmentCdnKey(facts.request, segment),
+    universal: segment === "anonymous" && facts.accessSegment === null,
   };
+}
+
+/**
+ * Only a session reads it: a credential or a grant may change the render, and
+ * so may a policy or a principal personal from the start.
+ */
+function readsUniversalCopy(facts: RequestFacts): boolean {
+  if (!facts.privileged || facts.authorization || facts.ephemeralGrant) {
+    return false;
+  }
+  if (facts.accessSegment !== null || facts.principalIsPersonal) return false;
+  return bypassReason(facts, "anonymous") === null;
 }
 
 /**
@@ -116,6 +152,7 @@ export interface AfterRenderVerdict {
   /** The edge copy is shared; only a GET fills an origin store. */
   readonly store: boolean;
   readonly decorate: boolean;
+  readonly universal: boolean;
   readonly clientCopy: ClientCopy;
 }
 
@@ -128,12 +165,23 @@ export function sharingAfterRender(
   render?: RenderFacts,
 ): AfterRenderVerdict {
   const clientCopy = clientCopyFor(decision);
-  const store =
-    decision.kind === "read-through" &&
+  if (decision.kind !== "read-through" || !rendersShareably(render)) {
+    return { store: false, decorate: false, universal: false, clientCopy };
+  }
+  return {
+    store: true,
+    decorate: clientCopy === "page",
+    universal: decision.universal,
+    clientCopy,
+  };
+}
+
+function rendersShareably(render: RenderFacts | undefined): boolean {
+  return (
     render !== undefined &&
     responseIsShareable(render.status) &&
-    !render.personal;
-  return { store, decorate: store && clientCopy === "page", clientCopy };
+    !render.personal
+  );
 }
 
 /** Gates decoration, so a transient 500 never leaves carrying page freshness. */
@@ -146,6 +194,7 @@ export function responseIsShareable(status: number): boolean {
  * document may leave shareable, on a hit as on a miss.
  */
 function clientCopyFor(decision: SharingDecision): ClientCopy {
+  if (decision.kind === "read-universal") return "universal-reader";
   if (decision.segment !== "anonymous") return "private";
   return decision.page.kind === "policied-route" ? "as-rendered" : "page";
 }
