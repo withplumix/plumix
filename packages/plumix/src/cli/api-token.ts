@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import type { CliError } from "@plumix/core/cli";
+import { remoteFetch } from "@plumix/core/cli";
 
 import { syncDeps } from "./commands/sync.js";
 import { PlumixCliError } from "./errors.js";
@@ -10,8 +11,7 @@ import { report } from "./report.js";
  * Mutable seam for tests — substitute the collaborator, not the module path.
  */
 export const remoteDeps = {
-  fetch: (url: string, init?: RequestInit): Promise<Response> =>
-    fetch(url, init),
+  fetch: remoteFetch,
   sleep: (seconds: number): Promise<void> =>
     new Promise((resolve) => setTimeout(resolve, seconds * 1000)),
 };

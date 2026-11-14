@@ -83,6 +83,12 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
+      "the fetch every CLI call to a deployed site goes through, which only " +
+      "`plumix`'s CLI and core's remote sync end call",
+    names: ["remoteFetch"],
+  },
+  {
+    reason:
       "which tables each core sync scope holds, which only `plumix`'s sync " +
       "command and core's sync contract read",
     names: ["CORE_SYNC_SCOPE_TABLES", "SYNC_AUTH_TABLES"],
@@ -425,6 +431,12 @@ const CURATED: Readonly<Record<string, Curated>> = {
           "the contributor role `plumix migrate` prints when it refuses to " +
           "run, which only `plumix`'s migrate command reads",
         names: ["contributorRoleSnippet"],
+      },
+      {
+        reason:
+          "the fetch every CLI call to a deployed site goes through, which " +
+          "only `plumix`'s CLI and core's remote sync end call",
+        names: ["remoteFetch"],
       },
       {
         reason:

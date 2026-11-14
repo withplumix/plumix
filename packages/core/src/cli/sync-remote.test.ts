@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/libsql";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import type { RuntimeSync } from "../context/runtime-adapter.js";
 import type { HandlerRegistry } from "../events-and-filters/registry.js";
@@ -58,3 +59,30 @@ async function remoteEnds(
 }
 
 describeSyncContract({ open: remoteEnds });
+
+describe("remoteSyncEnd", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  test("sends the Access service token when no fetch is given", async () => {
+    vi.stubEnv("CF_ACCESS_CLIENT_ID", "id.access");
+    vi.stubEnv("CF_ACCESS_CLIENT_SECRET", "s3cret");
+    const requests: Request[] = [];
+    vi.stubGlobal("fetch", (input: string, init?: RequestInit) => {
+      requests.push(new Request(input, init));
+      return Promise.resolve(Response.json({ heads: {} }));
+    });
+    const end = remoteSyncEnd({
+      url: REMOTE,
+      apiToken: () => Promise.resolve("pl_pat_x"),
+      owners: [],
+    });
+
+    await end.heads();
+
+    expect(requests[0]?.headers.get("cf-access-client-id")).toBe("id.access");
+    expect(requests[0]?.headers.get("cf-access-client-secret")).toBe("s3cret");
+  });
+});

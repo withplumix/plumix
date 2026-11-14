@@ -897,10 +897,11 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
     captureReport();
     const { project } = await deployedEnds();
     vi.stubEnv("PLUMIX_API_TOKEN", "");
-    const fetched = vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(Response.json({ cdn: "purged", failures: [] }));
-    vi.stubGlobal("fetch", fetched);
+    const requests: Request[] = [];
+    vi.stubGlobal("fetch", (input: string, init?: RequestInit) => {
+      requests.push(new Request(input, init));
+      return Promise.resolve(Response.json({ cdn: "purged", failures: [] }));
+    });
     const remote = await sync.open({
       ...openOptions(project.dir, "remote", { production: true }),
       apiToken: () => Promise.resolve("pat_cli"),
@@ -913,15 +914,14 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
     await remote.close();
 
     expect(settled).toEqual({ cdn: "purged", failures: [] });
-    expect(fetched).toHaveBeenCalledWith(
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.url).toBe(
       "https://example.com/_plumix/api/v1/system/sync/settle",
-      expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          authorization: "Bearer pat_cli",
-        }) as unknown,
-        body: JSON.stringify({ scopes: ["content"], direction: "push" }),
-      }),
+    );
+    expect(requests[0]?.method).toBe("POST");
+    expect(requests[0]?.headers.get("authorization")).toBe("Bearer pat_cli");
+    expect(await requests[0]?.text()).toBe(
+      JSON.stringify({ scopes: ["content"], direction: "push" }),
     );
   });
 });
