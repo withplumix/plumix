@@ -1,3 +1,6 @@
+import type { Redirect } from "./route.js";
+import { redirectOf } from "./route.js";
+
 export type PageEvent =
   | {
       readonly kind: "console";
@@ -51,6 +54,7 @@ interface AxeViolationSummary {
 
 export interface VerifyReport {
   readonly finalUrl: string;
+  readonly redirected?: Redirect;
   readonly consoleErrors: readonly ConsoleMessage[];
   readonly consoleWarnings: readonly ConsoleMessage[];
   readonly failedRequests: readonly FailedRequest[];
@@ -95,12 +99,14 @@ function summarizeViolation(violation: AxeViolation): AxeViolationSummary {
 }
 
 export function buildReport(input: {
+  readonly route: string;
   readonly finalUrl: string;
   readonly events: readonly PageEvent[];
   readonly axeViolations: readonly AxeViolation[];
 }): VerifyReport {
   return {
     finalUrl: input.finalUrl,
+    redirected: redirectOf(input.route, input.finalUrl),
     consoleErrors: input.events.flatMap(consoleError),
     consoleWarnings: input.events.flatMap(consoleWarning),
     failedRequests: input.events.flatMap(failedRequest),
@@ -108,9 +114,16 @@ export function buildReport(input: {
   };
 }
 
-/** What fails the run. A warning is reported but fails nothing. */
-export function hasProblems(report: VerifyReport): boolean {
+/**
+ * What fails the run: an error, or ending away from `expectedRoute`, where an
+ * alias that ends on its target has arrived. A warning fails nothing.
+ */
+export function hasProblems(
+  report: VerifyReport,
+  expectedRoute: string,
+): boolean {
   return (
+    redirectOf(expectedRoute, report.finalUrl) !== undefined ||
     report.consoleErrors.length > 0 ||
     report.failedRequests.length > 0 ||
     report.axeViolations.length > 0

@@ -169,6 +169,7 @@ export async function verifyPage(
   }
 
   const report = buildReport({
+    route: options.route,
     finalUrl,
     events,
     axeViolations: violations,

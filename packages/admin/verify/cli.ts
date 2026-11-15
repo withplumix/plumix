@@ -11,6 +11,7 @@ import type { VerifyReport } from "./report.js";
 import type { Site } from "./site.js";
 import { adminPageList, pageId } from "./page-list.js";
 import { hasProblems } from "./report.js";
+import { redirectOf } from "./route.js";
 import {
   findSite,
   playgroundSites,
@@ -127,9 +128,20 @@ function displayPath(path: string): string {
   return fromCaller.startsWith("..") ? path : fromCaller;
 }
 
-function summarize(report: VerifyReport, out: string, files: string[]): string {
+function summarize(
+  report: VerifyReport,
+  expectedRoute: string,
+  out: string,
+  files: string[],
+): string {
+  const { redirected } = report;
+  const missed = redirectOf(expectedRoute, report.finalUrl) !== undefined;
   return [
     `final URL  ${report.finalUrl}`,
+    ...(redirected === undefined
+      ? []
+      : [`redirected ${redirected.from} → ${redirected.to}`]),
+    ...(missed ? [`expected   ${expectedRoute}, not reached`] : []),
     `console    ${String(report.consoleErrors.length)} errors, ${String(report.consoleWarnings.length)} warnings`,
     `requests   ${String(report.failedRequests.length)} failed`,
     `axe        ${String(report.axeViolations.length)} violations`,
@@ -141,6 +153,7 @@ async function verify(values: {
   readonly site?: string;
   readonly as?: string;
   readonly open?: string;
+  readonly "expect-route"?: string;
   readonly seed?: string;
   readonly video: boolean;
   readonly out?: string;
@@ -193,8 +206,9 @@ async function verify(values: {
     VERIFY_FILES.report,
     ...(values.video ? [VERIFY_FILES.video] : []),
   ];
-  console.log(summarize(report, out, files));
-  return hasProblems(report) ? EXIT_PROBLEMS : 0;
+  const expectedRoute = values["expect-route"] ?? page.route;
+  console.log(summarize(report, expectedRoute, out, files));
+  return hasProblems(report, expectedRoute) ? EXIT_PROBLEMS : 0;
 }
 
 async function main(): Promise<number> {
@@ -203,6 +217,7 @@ async function main(): Promise<number> {
       site: { type: "string" },
       as: { type: "string" },
       open: { type: "string" },
+      "expect-route": { type: "string" },
       seed: { type: "string" },
       video: { type: "boolean", default: false },
       out: { type: "string" },
