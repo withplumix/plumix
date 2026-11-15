@@ -25,7 +25,7 @@ export interface DevErrorInfo {
   readonly hydrationDiff?: DevErrorHydrationDiff;
 }
 
-/** The server/client HTML pair a hydration mismatch (#1668) diffs. */
+/** The server/client HTML pair a hydration mismatch diffs. */
 export interface DevErrorHydrationDiff {
   /** The island's markup before `hydrateRoot` — the server (SSR) render. */
   readonly server: string;

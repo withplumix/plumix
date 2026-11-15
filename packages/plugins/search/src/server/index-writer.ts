@@ -97,8 +97,8 @@ export function currentExtractorVersion(ctx: AppContext): string {
 }
 
 /**
- * Drops the document of an id whose row is gone or whose type is no longer
- * indexable.
+ * Drops the document of an id whose row is gone or whose type has stopped
+ * being indexable.
  */
 export async function indexEntries(
   ctx: AppContext,

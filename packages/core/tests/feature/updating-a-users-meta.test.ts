@@ -163,7 +163,7 @@ describe("a user's meta, saved through user.update", () => {
   });
 });
 
-// The user half of #2440. A profile opened by its owner or an admin settles
+// A profile opened by its owner or an admin settles
 // like an entry does, and — users carrying `updatedAt` as entries do — without
 // reading as an edit.
 describe("user.get on an unsettled row", () => {

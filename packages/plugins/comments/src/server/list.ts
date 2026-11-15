@@ -21,7 +21,7 @@ export function createListHandler(config: ResolvedCommentsConfig) {
 
     // Deliberately without the submit route's `closeAfterDays` check: a
     // closed thread is read-only, not invisible — you can still page through
-    // old comments you can no longer reply to.
+    // old comments you can't reply to.
     const resolved = await resolveCommentableEntry(ctx, entryId, config);
     if (!resolved.ok) {
       return jsonResponse(

@@ -87,7 +87,7 @@ export function ThemeProvider({
 export function useTheme(): ThemeProviderState {
   const context = useContext(ThemeProviderContext);
   if (context === null) {
-    // eslint-disable-next-line no-restricted-syntax -- React hook-misuse guard; convention exception per umbrella #232
+    // eslint-disable-next-line no-restricted-syntax -- React hook-misuse guard, an exception to the named-error convention
     throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;

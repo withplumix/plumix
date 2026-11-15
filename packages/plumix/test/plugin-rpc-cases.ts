@@ -102,8 +102,7 @@ export function describeStubPluginRpc(): void {
       });
       const rpc = createPluginRpcClient<MenuRouter>("menu");
 
-      // A payload carrying a blob is posted as multipart `FormData`, not JSON —
-      // the branch that used to throw a bare SyntaxError inside the stub.
+      // A payload carrying a blob is posted as multipart `FormData`, not JSON.
       const result = await rpc.upload({
         file: new File(["hello world"], "a.txt", { type: "text/plain" }),
         name: "a.txt",

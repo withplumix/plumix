@@ -241,7 +241,7 @@ export async function handlePasskeyRegisterVerify(
       );
     }
     // An invite challenge completed here would enrol the invitee without
-    // consuming the token or running invite verify's checks (#2402).
+    // consuming the token or running invite verify's checks.
     if (
       verified.ceremony !== "bootstrap" &&
       verified.ceremony !== "add-device"

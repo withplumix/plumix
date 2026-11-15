@@ -42,7 +42,7 @@ export interface StyleField {
   /** Encode a selection to the stored string, or `null` to clear. Faithful
    *  inverse of {@link read} for a fixed token set. */
   write(selection: StyleSelection | null): string | null;
-  /** An option for any id, including one the theme no longer declares (label
+  /** An option for any id, including one the theme doesn't declare (label
    *  falls back to the id). Never throws. A bound function, so callers may pass
    *  it by reference. */
   readonly tokenOption: (id: string) => StyleTokenOption;

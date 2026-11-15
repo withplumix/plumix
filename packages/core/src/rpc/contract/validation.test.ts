@@ -22,7 +22,7 @@ describe("shared schema messages — translatable via setI18nResolver", () => {
     expect(result.success).toBe(false);
     const messages = result.issues?.map((i) => i.message) ?? [];
     // Whichever leaf fires (minLength or email), the message comes from
-    // the resolver — proof the shared schema is no longer hardcoded.
+    // the resolver — proof the shared schema is not hardcoded.
     expect(messages.some((m) => m.startsWith("[de] validate."))).toBe(true);
   });
 

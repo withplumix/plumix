@@ -403,7 +403,7 @@ describe("the /_plumix/image layer — the cache", () => {
 
     await slot.purge("/pic.png");
     expect(readdirSync(dir)).toHaveLength(1);
-    // A revalidation is no longer answered from the hash alone: the source
+    // A revalidation is not answered from the hash alone: the source
     // is resolved again, and it is that answer the browser gets.
     const revalidated = await get(origin, "src=/pic.png&w=320", {
       "if-none-match": etag ?? "",
@@ -659,7 +659,7 @@ describe("the /_plumix/image layer — basePath", () => {
     );
     expect(prefixed.status).toBe(200);
 
-    // The unprefixed route is no longer this site's: falls through, as an
+    // The unprefixed route isn't this site's: falls through, as an
     // unrelated path would.
     expect(await (await get(origin, "src=/pic.png&w=320")).text()).toBe(
       "fallthrough",

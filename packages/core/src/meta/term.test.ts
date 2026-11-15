@@ -282,7 +282,7 @@ describe("term meta: registration + round-trip via term.update", () => {
   });
 });
 
-// The term half of #2440: a row written around the pipeline settles when the
+// A term row written around the pipeline settles when the
 // term is opened, as an entry's does, so `term.meta` holds what it declared.
 describe("term.get settles an unsettled row", () => {
   test("hands back the settled value and writes it to the column", async () => {

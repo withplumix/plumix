@@ -28,7 +28,7 @@ export interface DatabaseContractBinding {
 export interface DatabaseContractOptions {
   /**
    * Bind a fresh, empty database for one case, sharing no tables with any
-   * previously returned one.
+   * other one it returns.
    */
   readonly connect: () =>
     DatabaseContractBinding | Promise<DatabaseContractBinding>;

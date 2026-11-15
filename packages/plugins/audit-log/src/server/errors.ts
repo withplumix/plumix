@@ -3,7 +3,7 @@ type AuditLogConfigErrorCode = "invalid_retention_max_age";
 /**
  * Audit-log config that would corrupt the log if accepted (a non-finite or
  * negative `maxAgeDays` puts the retention cutoff in the future or no-ops the
- * SQL). Named-error convention (#232).
+ * SQL).
  */
 export class AuditLogConfigError extends Error {
   static {

@@ -316,7 +316,7 @@ describe("plumix dev on the node runtime", { timeout: 240_000 }, () => {
       'import { tag as depTag } from "my-dep";\nexport const tag = depTag;\n',
     );
 
-    // The first answer that is no longer the old one is already the new
+    // The first answer that differs from the old one is already the new
     // module, not an error page from the re-bundle.
     await expect.poll(() => text("/probe/dep"), POLL).not.toBe("none");
     expect(await text("/probe/dep")).toBe("dep");

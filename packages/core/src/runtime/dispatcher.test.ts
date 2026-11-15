@@ -1238,8 +1238,8 @@ describe("dispatcher — asset-shaped 404 short-circuit", () => {
   });
 
   test("the short-circuit beats a hierarchical catch-all route that would otherwise claim the path", async () => {
-    // The #1491 trace: a pages-style `:path+` route matched `favicon.ico` and
-    // paid a slug lookup. The extension check must win over the route map.
+    // A pages-style `:path+` route would match `favicon.ico` and pay a slug
+    // lookup, so the extension check must win over the route map.
     const pages = definePlugin("test-pages", {
       setup: (ctx) => {
         ctx.registerEntryType("page", {
@@ -1636,7 +1636,7 @@ describe("dispatcher — plugin raw routes", () => {
   });
 });
 
-// The #2018 opt-out: a plain HTML form cannot set a custom header, so a route
+// A plain HTML form cannot set a custom header, so a route
 // that declared `formPost` accepts the submit on the Origin check alone.
 describe("dispatcher — form-post routes (#2018)", () => {
   const formPostPlugin = definePlugin("forms", {
@@ -1916,7 +1916,7 @@ describe("dispatcher — basePath (served under a subdirectory)", () => {
 
   test("an asset-shaped miss outside the base (/favicon.ico) gets the cacheable plain 404", async () => {
     // The browser's favicon probe targets the domain root, not the mount —
-    // it must hit the same cacheable asset-404 path as in-base misses (#1514).
+    // it must hit the same cacheable asset-404 path as in-base misses.
     const h = await createDispatcherHarness({
       config: { basePath: "/custom-directory" },
     });
@@ -3428,7 +3428,7 @@ describe("dispatcher — telemetry consumers", () => {
       ],
     ]);
 
-    // The lookup/store latency itself is spanned (#1494): the miss carries
+    // The lookup/store latency itself is spanned: the miss carries
     // `cdn: match` + `cdn: put`, the hit just `cdn: match` with the
     // outcome stamped.
     const spanNames = snapshots.map((s) =>
@@ -4197,7 +4197,7 @@ describe("dispatcher — dev error page", () => {
     // The request section carries the method and full URL.
     expect(body).toContain(`${DEV_ORIGIN}/`);
     // The timeline was collected even though the debug bar isn't configured —
-    // dev sampling is ensured independently of it (#1574).
+    // dev sampling is ensured independently of it.
     expect(body).not.toContain("No spans recorded");
     // Still no debug bar on the page.
     expect(body).not.toContain("plumix-debug-bar");

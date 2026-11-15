@@ -183,7 +183,7 @@ export function createSubmitHandler(
     const signed =
       token === null ? null : await verifyBound(ctx, form.slug, token);
     if (token !== null && signed === null) return refusal("Forbidden", 403);
-    // A kind the form no longer binds (cached pages after a `bind` change)
+    // A kind the form doesn't bind (cached pages after a `bind` change)
     // is stored as nothing rather than refused.
     const bound = signed?.type === bind ? signed : null;
 

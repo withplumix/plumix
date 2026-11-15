@@ -4,7 +4,7 @@ export const MAGIC_LINK_ERROR_CODES = [
   "token_expired",
   "account_disabled",
   // Signup-only — the click-the-link path provisioned a user, but the
-  // domain's allowlist row is no longer enabled at verify time, or the
+  // domain's allowlist row is disabled by verify time, or the
   // system is in zero-user state (bootstrap is passkey-only).
   "domain_not_allowed",
   "registration_closed",

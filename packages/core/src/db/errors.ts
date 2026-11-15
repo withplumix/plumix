@@ -92,7 +92,6 @@ type DbErrorCode = "no_row_count" | "visitor_namespace_missing";
 
 /**
  * A database driver did not answer the way `plumix/db` needs it to.
- * Named-error convention (#232).
  */
 export class DbError extends Error {
   static {

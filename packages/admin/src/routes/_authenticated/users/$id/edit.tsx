@@ -389,7 +389,7 @@ function UserEditForm({
   });
 
   const onSubmit = form.handleSubmit((values) => {
-    // What is sent is no longer dirty: only what is typed while it saves is.
+    // What is sent stops being dirty: only what is typed while it saves is.
     form.reset(values);
     updateUser.mutate(values);
   });

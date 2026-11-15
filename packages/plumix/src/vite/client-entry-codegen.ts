@@ -14,7 +14,7 @@ export function generateClientEntrySource(themeCss: readonly string[]): string {
   // Install the dev-only client error tools (island dialog, terminal
   // forwarder, compile/import overlay) from the one dev script injected on
   // every public page (`devThemeStylesTag`), through the single core-owned
-  // install point (#1676).
+  // install point.
   lines.push("", DEV_CLIENT_INSTALL);
   if (themeCss.length === 0) {
     // Keeps the file a module: a dynamic `import()` alone does not, and a

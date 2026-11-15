@@ -7,7 +7,7 @@ type I18nConfigErrorCode =
 /**
  * i18n config invariant violated while resolving {@link plumix}'s `i18n`
  * block. The `code` discriminant carries which rule failed; the offending
- * value is interpolated into the message. Named-error convention (#232).
+ * value is interpolated into the message.
  */
 export class I18nConfigError extends Error {
   static {

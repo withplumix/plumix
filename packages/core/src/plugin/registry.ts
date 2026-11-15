@@ -150,8 +150,8 @@ export interface EntryTypeOptions {
 
 export interface EntryTypeAccess {
   /**
-   * Also applies when an entry's stored choice names a key no longer in {@link
-   * policies}.
+   * Also applies when an entry's stored choice names a key missing from
+   * {@link policies}.
    */
   readonly default: AccessPolicyFor<AppContext>;
   /**

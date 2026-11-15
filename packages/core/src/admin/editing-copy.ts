@@ -127,7 +127,7 @@ export function createEditingCopy<
     for (const listener of listeners) listener();
   };
   const publish = (): void => {
-    // Disposed: whatever answers now was about a copy no longer on screen.
+    // Disposed: whatever answers now was about a copy that has left the screen.
     if (disposed) return;
     const leaseMode = active
       ? editorLeaseMode(lease)

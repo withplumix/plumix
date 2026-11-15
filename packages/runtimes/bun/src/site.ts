@@ -145,7 +145,7 @@ function isEventStream(response: Response): boolean {
 /**
  * Everything the generated Bun entry does beyond importing and calling,
  * bar running the process. The generator holds imports and calls, never
- * control flow (#2303).
+ * control flow.
  */
 export function createBunSite({
   config,

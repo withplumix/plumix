@@ -308,7 +308,7 @@ export class MediaFieldBuilder<
 
   /**
    * Show this field only when every rule passes (one AND group).
-   * Replaces any previously declared condition; `.orVisibleWhen()`
+   * Replaces any condition declared before it; `.orVisibleWhen()`
    * adds alternatives.
    */
   visibleWhen(

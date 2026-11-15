@@ -16,7 +16,7 @@ describe("@plumix/plugin-pages", () => {
     const { registry } = await install();
     const page = registry.entryTypes.get("page");
     expect(page).toBeDefined();
-    // Label is a `MessageDescriptor` (slice 5 #674): plugins ship
+    // Label is a `MessageDescriptor`: plugins ship
     // descriptors so admin can resolve the translated string at render.
     expect(page?.label).toEqual({
       id: "plugin.pages.page.plural",

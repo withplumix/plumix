@@ -113,7 +113,7 @@ describe("a theme's design tokens", () => {
     };
 
     // Nothing else about the card moved: the palette is the whole difference,
-    // and the stored bytes it produced are no longer what the card renders.
+    // and the stored bytes it produced differ from what the card renders.
     expect(await etagOf("#b5472d")).not.toBe(await etagOf("#2d6fb5"));
   });
 });
@@ -254,7 +254,7 @@ describe("the bundled default card's palette", () => {
     };
 
     // One theme, one token sheet: where the card reads its ground from is the
-    // whole difference, and the bytes behind the old URL are no longer what it
+    // whole difference, and the bytes behind the old URL differ from what it
     // renders.
     expect(await etagOf()).not.toBe(await etagOf({ background: "paper" }));
   });

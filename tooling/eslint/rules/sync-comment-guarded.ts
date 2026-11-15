@@ -2,11 +2,8 @@ import { existsSync } from "node:fs";
 import * as path from "node:path";
 import type { Rule } from "eslint";
 
+import { blockProse, lineAt, startsOwnLine } from "./comment-block.js";
 import { groupIntoBlocks } from "./max-comment-length.js";
-
-type Comment = ReturnType<
-  Rule.RuleContext["sourceCode"]["getAllComments"]
->[number];
 
 const COUPLING =
   /\bmirrors\b|\bkeeps?\b(?:[^.]|\.(?!\s|$))*?\bin sync\b|\bkept in sync\b|\bmust match\b|\bmust stay in step\b/i;
@@ -15,34 +12,6 @@ const COUPLING =
 const TEST_FILE = /\.(test|spec)\.tsx?$/;
 
 const GUARD = /\bGuarded by:\s*(\S+)/;
-
-interface ProseLine {
-  readonly line: number;
-  readonly start: number;
-}
-
-/**
- * Joins a block's lines into one string, so a phrase wrapped onto the next
- * line still matches, and keeps where each line starts to map a match back.
- */
-function blockProse(block: readonly Comment[]): {
-  text: string;
-  lines: ProseLine[];
-} {
-  const parts: string[] = [];
-  const lines: ProseLine[] = [];
-  let offset = 0;
-  for (const comment of block) {
-    const first = comment.loc?.start.line ?? 0;
-    comment.value.split("\n").forEach((raw, index) => {
-      const text = raw.replace(/^[\s*]+/, "");
-      lines.push({ line: first + index, start: offset });
-      parts.push(text);
-      offset += text.length + 1;
-    });
-  }
-  return { text: parts.join(" "), lines };
-}
 
 /** Lint runs from each package, so a guard path resolves from the repo root. */
 function repoRootOf(file: string): string {
@@ -53,10 +22,6 @@ function repoRootOf(file: string): string {
     dir = parent;
   }
   return dir;
-}
-
-function lineAt(lines: readonly ProseLine[], index: number): number {
-  return lines.filter((line) => line.start <= index).at(-1)?.line ?? 0;
 }
 
 export const syncCommentGuarded: Rule.RuleModule = {
@@ -78,11 +43,6 @@ export const syncCommentGuarded: Rule.RuleModule = {
   },
   create(context) {
     const { sourceCode } = context;
-    const startsOwnLine = (comment: Comment): boolean => {
-      const line = comment.loc?.start.line ?? 0;
-      const column = comment.loc?.start.column ?? 0;
-      return sourceCode.lines[line - 1]?.slice(0, column).trim() === "";
-    };
     const root = repoRootOf(context.filename);
     const report = (line: number, messageId: string, guard = ""): void => {
       context.report({
@@ -96,8 +56,10 @@ export const syncCommentGuarded: Rule.RuleModule = {
     };
     return {
       Program() {
-        const comments = sourceCode.getAllComments();
-        for (const block of groupIntoBlocks(comments, startsOwnLine)) {
+        const blocks = groupIntoBlocks(sourceCode.getAllComments(), (comment) =>
+          startsOwnLine(sourceCode, comment),
+        );
+        for (const block of blocks) {
           const prose = blockProse(block);
           const coupling = COUPLING.exec(prose.text);
           if (coupling === null) continue;

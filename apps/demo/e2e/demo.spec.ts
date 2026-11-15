@@ -22,7 +22,7 @@ test("visitor enters the demo, creates a post, and it persists", async ({
   editor,
 }) => {
   // The public showcase renders for cookieless visitors; the demo pill carries
-  // the "Try the editor" CTA (it used to live in the theme header).
+  // the "Try the editor" CTA.
   await page.goto("/");
   await expect(page.getByTestId("try-editor")).toBeVisible();
   await expect(page.getByTestId("post-card").first()).toBeVisible();

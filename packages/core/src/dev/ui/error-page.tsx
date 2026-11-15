@@ -38,7 +38,7 @@ export function DevErrorPage({
 }: {
   readonly error: DevErrorInfo;
   /**
-   * The request-scoped context sections (#1598). Present on the server page,
+   * The request-scoped context sections. Present on the server page,
    * absent on the client overlay and the boot-error fallback — the page then
    * shows just the exception, hints, and stack.
    */
@@ -559,8 +559,8 @@ function FrameButton({
         <span className="plumix-dev-error__frame-loc">{location}</span>
       </button>
       {editor !== undefined ? (
-        // A plain anchor to the editor's URL scheme — zero-JS, no round-trip
-        // (#1581). The OS hands the `scheme://…` URL to the configured editor.
+        // A plain anchor to the editor's URL scheme — zero-JS, no round-trip.
+        // The OS hands the `scheme://…` URL to the configured editor.
         <a
           className="plumix-dev-error__open"
           href={buildEditorUrl(editor, frame, editorPathMap)}

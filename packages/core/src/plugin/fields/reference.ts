@@ -323,7 +323,7 @@ export class ReferenceFieldBuilder<
   /**
    * Show this field only when every rule passes (one AND group) — rules
    * come from sibling fields' condition factories. Replaces any
-   * previously declared condition; `.orVisibleWhen()` adds alternatives.
+   * condition declared before it; `.orVisibleWhen()` adds alternatives.
    */
   visibleWhen(
     ...rules: MetaFieldConditionRule[]

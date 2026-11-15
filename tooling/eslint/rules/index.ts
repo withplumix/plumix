@@ -8,6 +8,7 @@ import { noChainedTypeAssertion } from "./no-chained-type-assertion.js";
 import { noCoreTableWrite } from "./no-core-table-write.js";
 import { noErrorMessageInUi } from "./no-error-message-in-ui.js";
 import { noForgedApp } from "./no-forged-app.js";
+import { noHistoryComment } from "./no-history-comment.js";
 import { noJsdocInFunctionBody } from "./no-jsdoc-in-function-body.js";
 import { noModuleMocking } from "./no-module-mocking.js";
 import { noNonTestidQueries } from "./no-non-testid-queries.js";
@@ -36,6 +37,7 @@ export const plumixPlugin: ESLint.Plugin = {
     "no-core-table-write": noCoreTableWrite,
     "no-error-message-in-ui": noErrorMessageInUi,
     "no-forged-app": noForgedApp,
+    "no-history-comment": noHistoryComment,
     "no-jsdoc-in-function-body": noJsdocInFunctionBody,
     "no-module-mocking": noModuleMocking,
     "no-non-testid-queries": noNonTestidQueries,

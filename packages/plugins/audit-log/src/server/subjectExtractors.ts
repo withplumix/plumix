@@ -1,6 +1,4 @@
 // Per-subject-type extractor for the audit row's denormalized labels.
-// Plugins shipping their own subject types (term, comment, …) will
-// register their extractor here in follow-up slices (#179+).
 
 export interface SubjectInput {
   readonly id: number | string;
@@ -110,9 +108,8 @@ export function extractSubject(
 ): ResolvedSubject {
   const extractor = subjectExtractors[type];
   if (extractor) return extractor(entity);
-  // Unknown subject type — record what we can, label falls through.
-  // Slice #179 adds term + settings extractors; until then, anything
-  // unrecognized lands here so the row still surfaces in the feed.
+  // Unknown subject type — record what we can, so the row still surfaces in
+  // the feed.
   return {
     type,
     id: String(entity.id),

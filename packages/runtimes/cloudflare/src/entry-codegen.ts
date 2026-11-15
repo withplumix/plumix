@@ -87,7 +87,7 @@ export function generateEntry({ configModule }: EntrySourceOptions): string {
     "    const app = await appPromise;",
     "    handler ??= createRuntimeHandler(app);",
     // `?.` rather than a guard: an adapter with no `scheduled` reports
-    // nothing, and a report of nothing fails nothing (#2361).
+    // nothing, and a report of nothing fails nothing.
     "    const report = await handler.scheduled?.(event, invocation(env, ctx));",
     "    surfaceScheduledFailure(report, event);",
     "  },",

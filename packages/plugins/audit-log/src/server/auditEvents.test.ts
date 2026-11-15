@@ -467,7 +467,7 @@ describe("registerAuditEvents — settings surface", () => {
 });
 
 // ──────────────────────────────────────────────────────────────────
-// Backfill — one assertion per previously-uncovered audit row
+// Backfill — one assertion per audit row the tests above leave uncovered
 // ──────────────────────────────────────────────────────────────────
 
 const subjectEntry = {

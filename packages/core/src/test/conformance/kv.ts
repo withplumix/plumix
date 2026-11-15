@@ -9,7 +9,7 @@ const SHORT_TTL_SECONDS = 5;
 export interface KvContractOptions {
   /**
    * Bind a store for one case. Every case gets its own, so the returned store
-   * must start empty and must not share keys with a previously returned one.
+   * must start empty and must not share keys with another one it returns.
    */
   readonly connect: () => ConnectedKv | Promise<ConnectedKv>;
   /**

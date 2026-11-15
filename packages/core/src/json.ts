@@ -1,6 +1,6 @@
 /**
  * A JSON-serializable value — the sanctioned alternative to a dictionary of
- * `unknown` for data crossing a serialization boundary (#1811).
+ * `unknown` for data crossing a serialization boundary.
  *
  * Enforced by type only — nothing checks the value at runtime.
  */

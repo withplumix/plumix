@@ -8,8 +8,8 @@ import { isBunRuntime } from "../adapter.js";
 export const loadPlumixVite = loadOnce(() => import("plumix/vite"));
 
 /**
- * No `bun` export condition: it pulls React's Bun-only server build (Nitro
- * #4259), so the bundle resolves with Vite's server defaults.
+ * No `bun` export condition: it pulls React's Bun-only server build
+ * (nitrojs/nitro#4259), so the bundle resolves with Vite's server defaults.
  */
 export function bunServerEnvironment(
   runtime: RuntimeAdapter,

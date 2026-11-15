@@ -10,8 +10,8 @@ export function readPreviewToken(ctx: AppContext): string | null {
 }
 
 /**
- * Null once the minter can no longer edit the entry, so a link lives only as
- * long as that right. Trash is never previewable.
+ * Null once the minter loses the right to edit the entry, so a link lives only
+ * as long as that right. Trash is never previewable.
  */
 export async function previewGrantFor(
   ctx: AppContext,

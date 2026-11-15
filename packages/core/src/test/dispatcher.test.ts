@@ -76,7 +76,7 @@ const cookieProbe = definePlugin("cookie-probe", {
 });
 
 // The runtime builds the stored context before authentication, so a signed-in
-// request is only ever signed in through its session (#2343 hid behind this).
+// request is only ever signed in through its session.
 describe("createDispatcherHarness sign-in", () => {
   test("`as` signs the request in through its session, not the request store", async () => {
     const h = await createDispatcherHarness({

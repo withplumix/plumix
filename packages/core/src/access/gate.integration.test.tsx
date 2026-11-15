@@ -250,7 +250,7 @@ function memoryCdn() {
 
 /**
  * An entry type whose single/archive routes require login and are cached
- * under the shared `authenticated` segment (the "explicit opt-in" of #1740) …
+ * under the shared `authenticated` segment, by explicit opt-in …
  */
 const membersPlugin = definePlugin("member-articles", {
   setup: (ctx) => {
@@ -393,7 +393,7 @@ describe("access gate — segment-keyed caching (#1740)", () => {
 
     const [stored] = [...store.values()];
     // Unchanged vocabulary: one publish of the article purges every segment
-    // variant because they all share this tag set (#1740 AC3).
+    // variant because they all share this tag set.
     expect(stored?.tags).toContain("t:article");
     expect(stored?.tags).toContain(`e:${String(entry.id)}`);
   });

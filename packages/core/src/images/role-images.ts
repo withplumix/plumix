@@ -159,8 +159,8 @@ function readPath<TLeaf extends v.GenericSchema>(
 }
 
 /**
- * Roles are rejected under repeaters, so an array on the path means the bag no
- * longer matches its fields.
+ * Roles are rejected under repeaters, so an array on the path means the bag
+ * has drifted from its fields.
  */
 function isBag(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

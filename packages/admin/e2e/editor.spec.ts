@@ -1850,8 +1850,7 @@ test.describe("editor revision preview", () => {
     ).toBeVisible();
   });
 
-  // Regression guard for #1559: the visual editor's header must carry the
-  // revision-history trigger (it was dropped in the Puck-removal refactor), and
+  // The visual editor's header must carry the revision-history trigger, and
   // selecting a row must open that revision via `?revision=<id>`.
   test("the header Revisions button opens the sheet and a row previews a revision", async ({
     page,

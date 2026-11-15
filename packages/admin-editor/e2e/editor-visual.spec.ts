@@ -409,7 +409,7 @@ test.describe("editor playground", () => {
     await expect(editor).toContainText("standalone harness");
 
     // The same stable editor instance must swap to the next block's body — no
-    // content bleed from the previously selected block.
+    // content bleed from the block selected before it.
     await canvas.locator('[data-plumix-id="col-left-text"]').click();
     await expect(editor).toContainText("Left column");
     await expect(editor).not.toContainText("standalone harness");
@@ -491,7 +491,7 @@ test.describe("editor playground", () => {
   }) => {
     await page.goto("/");
     // The canvas forwards a wheel to the host from a listener it adds once it
-    // mounts, so a wheel sent before then is dropped and nothing pans (#2582).
+    // mounts, so a wheel sent before then is dropped and nothing pans.
     await page
       .frameLocator(CANVAS_FRAME)
       .locator('[data-plumix-id="heading-1"]')

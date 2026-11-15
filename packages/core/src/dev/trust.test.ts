@@ -56,7 +56,7 @@ describe("isTrustedDevRequest", () => {
 
 // The dev server's own Vite middlewares answer ahead of the worker and so never
 // see a `Request` — they hold a Node `req.headers.host`, which is the same
-// signal one field earlier (#2007).
+// signal one field earlier.
 describe("isTrustedDevHost", () => {
   afterEach(() => void vi.unstubAllEnvs());
 

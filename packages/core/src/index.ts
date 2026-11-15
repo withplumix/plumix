@@ -120,7 +120,7 @@ export { projectCoreCatalogLocales } from "./runtime/catalog-locales.js";
 export type { PlumixApp } from "./runtime/app.js";
 // Dev-only: the generated worker entry references this under its
 // `process.env.PLUMIX_DEV` gate to serve the dev error page when app
-// construction throws; it tree-shakes out of production builds (#1601).
+// construction throws; it tree-shakes out of production builds.
 export { renderDevBootErrorResponse } from "./dev/server/boot.js";
 export type * from "./runtime/contract/bindings.js";
 export { createPlumixDispatcher } from "./runtime/dispatcher.js";
@@ -239,7 +239,7 @@ export type {
 } from "./meta/contract/bags.js";
 export { readEntryType } from "./entries/read-service.js";
 export { entryPolicyAdmits } from "./entries/entry-access.js";
-// A capability named by the resource it guards (#2436): the registry spells
+// A capability named by the resource it guards: the registry spells
 // the string, so a pooled type's namespace is never written by hand.
 export {
   entryCapability,
@@ -252,7 +252,7 @@ export type {
   EntryCapability,
   TermCapability,
 } from "./access/contract/capability.js";
-// The entry edit gate (#2416), so a plugin asks whether a caller may edit a
+// The entry edit gate, so a plugin asks whether a caller may edit a
 // row instead of assembling an `entry:<type>:*` string and missing the
 // namespace a pooled type gates under.
 export {
@@ -262,7 +262,7 @@ export {
   canEditEntry,
 } from "./entries/editability.js";
 export type { EntryEditErrors } from "./entries/editability.js";
-// The entry change feed (#2121): read a bounded batch, do the work, then
+// The entry change feed: read a bounded batch, do the work, then
 // acknowledge it.
 export { ackEntryChanges, readEntryChanges } from "./entries/change-feed.js";
 export type { EntryChange } from "./entries/change-feed.js";
@@ -271,7 +271,7 @@ export { memoBatch } from "./context/memo.js";
 export type { RequestMemo } from "./context/memo.js";
 // Exposed for plugin routes that own an expensive-to-produce payload — a
 // generated social card, a derived image — so each route doesn't restate the
-// storage and ETag round-trips (#1958).
+// storage and ETag round-trips.
 export { serveRenderedAsset } from "./storage/rendered-asset.js";
 export type { RenderedAssetArgs } from "./storage/rendered-asset.js";
 // So a plugin naming the page (`og:url`, a sitemap `<loc>`) cannot disagree

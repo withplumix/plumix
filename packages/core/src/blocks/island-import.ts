@@ -13,8 +13,8 @@ export function cacheBustUrl(url: string, now: number): string {
 const importFailures = new WeakSet();
 
 /**
- * A deploy landing mid-page-load leaves the page pointing at chunks the CDN no
- * longer serves. The retry's failure is the one that rejects.
+ * A deploy landing mid-page-load leaves the page pointing at chunks the CDN
+ * has stopped serving. The retry's failure is the one that rejects.
  */
 export async function importWithRetry<T>(
   load: (url: string) => Promise<T>,
@@ -45,7 +45,7 @@ export interface ReloadablePage {
 }
 
 /**
- * A tab opened before a deploy imports chunks the new build no longer serves.
+ * A tab opened before a deploy imports chunks the new build doesn't serve.
  * Recording the URL first means a chunk broken in this build too can't loop.
  */
 export function reloadOnImportFailure(

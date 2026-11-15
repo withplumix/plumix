@@ -1,9 +1,8 @@
 import type { EntrySourceOptions } from "plumix";
 
 /**
- * The Node entry: imports and calls only. Everything it used to spell out —
- * the shutdown protocol, the cron start, the serve chain — is
- * `createNodeSite`; see the rule stated there (#2303).
+ * The Node entry: imports and calls only. The shutdown protocol, the cron
+ * start and the serve chain are `createNodeSite`; see the rule stated there.
  */
 export function generateEntry({ configModule }: EntrySourceOptions): string {
   const lines = [

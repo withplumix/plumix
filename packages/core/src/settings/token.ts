@@ -38,7 +38,7 @@ function isMarkerOf(group: string) {
   return and(eq(settings.group, group), eq(settings.key, SETTINGS_CREATED_KEY));
 }
 
-/** Moves the marker from `from` to `to`; `false` when it no longer holds `from`. */
+/** Moves the marker from `from` to `to`; `false` when it doesn't hold `from`. */
 async function moveMarker(
   db: Db,
   group: string,

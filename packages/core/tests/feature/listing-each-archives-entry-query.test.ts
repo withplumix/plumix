@@ -7,7 +7,7 @@ import { testSite } from "../../src/test/site.js";
 
 /**
  * Every built-in archive lists its own entry query (ADR 0008). Each seed here
- * is one the hand-written listings and the feeds used to disagree on.
+ * is one a hand-written listing and a feed could disagree on.
  */
 const archiveQueriesPlugin = definePlugin("archive-queries", {
   setup: (ctx) => {

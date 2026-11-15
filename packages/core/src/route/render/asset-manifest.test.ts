@@ -153,7 +153,7 @@ describe("bundledCssTags", () => {
   });
 
   test("serve mode emits nothing even when a stale build manifest is present", () => {
-    // #1492: a manifest left on disk by a prior `plumix build` must not
+    // A manifest left on disk by a prior `plumix build` must not
     // emit links the dev server would 404 on.
     const manifest: AssetManifest = {
       "src/theme/index.ts": {

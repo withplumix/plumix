@@ -180,7 +180,7 @@ const testBlog = definePlugin("test_blog", {
       entryTypes: ["post"],
       fields: [
         // Nested in a group, which is where an appearance box tends to put it
-        // — and the shape the field walk this chain used to do could not see.
+        // — a shape the field walk has to descend into.
         {
           key: FEATURED_GROUP_KEY,
           label: "Social",

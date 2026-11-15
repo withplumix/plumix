@@ -94,7 +94,7 @@ export function createDevEndpoints(server: ViteDevServer): DevEndpoint[] {
 /**
  * Registers every {@link createDevEndpoints} endpoint. Called ahead of the
  * @cloudflare/vite-plugin proxy, so these requests never reach the worker, and
- * each answers only a loopback host (#2007) on its own origin.
+ * each answers only a loopback host on its own origin.
  */
 export function serveDevEndpoints(server: ViteDevServer): void {
   for (const endpoint of createDevEndpoints(server)) {

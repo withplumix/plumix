@@ -153,7 +153,7 @@ describe("dateTargets", () => {
   const forDate = dateTargets(probe);
 
   // `matchesIdentity` compares `match.month ?? null`, so a spread could carry
-  // a present key that no longer reads as unset.
+  // a present key that fails to read as unset.
   test("an unset component is absent from the match, not undefined", () => {
     const year = forDate(2026).selected.match;
     expect(year).toEqual({ nodeKind: "date", type: "date", year: 2026 });
