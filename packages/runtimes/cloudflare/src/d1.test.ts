@@ -635,7 +635,11 @@ describe("d1() adapter — credential reads (session: 'auto')", () => {
     ).db as Parameters<typeof factoriesFor>[0];
     await applyCoreTestSchema(seed);
     const factories = factoriesFor(seed);
-    const user = await factories.user.create({ email: "ada@example.test" });
+    // An author, whose role may hold API tokens.
+    const user = await factories.user.create({
+      email: "ada@example.test",
+      role: "author",
+    });
     const minted = await factories.apiToken.create({ userId: user.id });
     const sessionToken = "session-token-for-ada";
     await factories.session.create({

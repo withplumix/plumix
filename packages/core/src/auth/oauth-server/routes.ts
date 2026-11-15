@@ -10,7 +10,7 @@ import {
   methodNotAllowed,
   redirectTo,
 } from "../../runtime/contract/http.js";
-import { createApiToken } from "../api-tokens.js";
+import { createApiToken, mayCreateApiTokens } from "../api-tokens.js";
 import { authenticateSession } from "../authenticator.js";
 import {
   authorizationParamsSchema,
@@ -60,6 +60,11 @@ export async function handleAuthorize(ctx: AppContext): Promise<Response> {
   const { request } = validated;
   const session = await authenticateSession(ctx);
   if (session !== null) {
+    if (!mayCreateApiTokens(ctx.plugins, session.user.role)) {
+      return redirectTo(
+        authorizationResponseUrl(ctx, request, { error: "access_denied" }),
+      );
+    }
     const { requested, covered } = await checkOAuthGrant(
       ctx.db,
       ctx.plugins,
@@ -140,6 +145,7 @@ async function exchangeCode(
     {
       grantId: grant.id,
       userId: code.userId,
+      ownerRole: grant.ownerRole,
       clientId: code.clientId,
       resource: code.resource,
       scopes: code.scopes,
@@ -186,6 +192,9 @@ async function issueTokens(
   access: ApprovedAccess,
   clientName: string,
 ): Promise<Response> {
+  if (!mayCreateApiTokens(ctx.plugins, access.ownerRole)) {
+    return oauthError("invalid_grant");
+  }
   const minted = await createApiToken(ctx.db, {
     userId: access.userId,
     name: clientName,

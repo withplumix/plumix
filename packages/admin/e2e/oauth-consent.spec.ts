@@ -116,6 +116,32 @@ test.describe("/auth/authorize", () => {
       REQUEST.get("client_id"),
     );
   });
+
+  test("a person without user:create_tokens goes back to /authorize without asking", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": {
+        user: {
+          id: 1,
+          email: "reviewer@example.test",
+          name: "Reviewer",
+          avatarUrl: null,
+          role: "reviewer",
+          capabilities: ["admin:access", "entry:post:read"],
+        },
+        needsBootstrap: false,
+      },
+      "/auth/oauthConsent/lookup": lookup(),
+    });
+    await answerNavigation(page, "**/_plumix/oauth/authorize?**");
+
+    await page.goto(CONSENT_PATH);
+
+    await expect(page).toHaveURL(
+      new RegExp(`/_plumix/oauth/authorize\\?.*scope=draft`),
+    );
+  });
 });
 
 test.describe("/auth/authorize signed out", () => {

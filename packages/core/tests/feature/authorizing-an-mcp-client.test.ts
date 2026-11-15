@@ -127,6 +127,21 @@ describe("a refused authorization request", () => {
     },
   );
 
+  test("from a signed-in member, who lacks user:create_tokens, is sent back as access_denied without consent", async () => {
+    const member = await site.factory.member.create();
+
+    const location = locationOf(
+      await authorize(site, authorizationParams(await pkce()), member),
+    );
+
+    expect(location.origin + location.pathname).toBe(REDIRECT_URI);
+    expect(Object.fromEntries(location.searchParams)).toEqual({
+      error: "access_denied",
+      state: "xyz",
+      iss: "https://cms.example",
+    });
+  });
+
   test("naming a resource other than the MCP URL is sent back as invalid_target", async () => {
     const user = await site.factory.editor.create();
     const params = authorizationParams(await pkce(), {

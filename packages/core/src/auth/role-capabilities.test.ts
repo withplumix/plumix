@@ -66,6 +66,7 @@ const PINNED_GRANTS: Readonly<Record<DefaultRole, readonly string[]>> = {
     "term:category:read",
     "term:region:assign",
     "term:region:read",
+    "user:create_tokens",
     "user:edit_own",
   ],
   editor: [
@@ -106,6 +107,7 @@ const PINNED_GRANTS: Readonly<Record<DefaultRole, readonly string[]>> = {
     "term:region:edit",
     "term:region:manage",
     "term:region:read",
+    "user:create_tokens",
     "user:edit_own",
     "user:list",
   ],
@@ -152,6 +154,7 @@ const PINNED_GRANTS: Readonly<Record<DefaultRole, readonly string[]>> = {
     "term:region:manage",
     "term:region:read",
     "user:create",
+    "user:create_tokens",
     "user:delete",
     "user:edit",
     "user:edit_own",

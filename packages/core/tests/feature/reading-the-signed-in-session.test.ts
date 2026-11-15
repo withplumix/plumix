@@ -4,7 +4,14 @@ import { SESSION_COOKIE_NAME } from "../../src/auth/cookies.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
 
-const site = await testSite({ plugins: [] });
+const site = await testSite({
+  plugins: [],
+  config: {
+    roles: {
+      reader: { can: { entry: { post: ["read"] }, user: ["create_tokens"] } },
+    },
+  },
+});
 
 /** Reads the session with a cookie whose token no session row holds. */
 function sessionWithUnknownCookie() {
@@ -153,15 +160,17 @@ describe("the session read with an API token", () => {
   });
 
   test("for a token with no scopes, holds the role's capabilities", async () => {
-    const member = await site.factory.user.create();
+    const reader = await site.factory.user.create({ role: "reader" });
     const { secret } = await site
-      .actingAs(member)
+      .actingAs(reader)
       .rpc.auth.apiTokens.create({ name: "agent", scopes: null });
 
     const page = await sessionWithToken(secret);
 
     page.assertOk().assertJson({
-      json: { user: { capabilities: ["entry:post:read", "user:edit_own"] } },
+      json: {
+        user: { capabilities: ["entry:post:read", "user:create_tokens"] },
+      },
     });
   });
 });

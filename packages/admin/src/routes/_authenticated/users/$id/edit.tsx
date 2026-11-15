@@ -247,7 +247,6 @@ function UserEditRoute(): ReactNode {
   const canPromote = otherUserCap("user:promote");
   const canDisable = otherUserCap("user:edit");
   const canDelete = otherUserCap("user:delete");
-  const canManageOtherTokens = otherUserCap("user:manage_tokens");
   // Editors can view via `user:list` without `user:edit`.
   const canSave = isSelf
     ? hasCap(session.capabilities, "user:edit_own")
@@ -268,7 +267,7 @@ function UserEditRoute(): ReactNode {
       canSave={canSave}
       canDisable={canDisable}
       canDelete={canDelete}
-      canManageOtherTokens={canManageOtherTokens}
+      sessionCapabilities={session.capabilities}
       metaBoxes={metaBoxes}
     />
   );
@@ -295,7 +294,7 @@ function UserEditForm({
   canSave,
   canDisable,
   canDelete,
-  canManageOtherTokens,
+  sessionCapabilities,
   metaBoxes,
 }: {
   target: User & { readonly etag: string };
@@ -305,11 +304,12 @@ function UserEditForm({
   canSave: boolean;
   canDisable: boolean;
   canDelete: boolean;
-  canManageOtherTokens: boolean;
+  sessionCapabilities: readonly string[];
   metaBoxes: readonly UserMetaBoxManifestEntry[];
 }): ReactNode {
   const navigate = useNavigate();
   const label = useLabel();
+  const canCreateTokens = hasCap(sessionCapabilities, "user:create_tokens");
   const roles = getRoles();
   const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<MessageDescriptor | null>(
@@ -626,14 +626,14 @@ function UserEditForm({
       ) : null}
       {isSelf ? <SessionsCard /> : null}
 
-      {/* API tokens — self can mint + revoke own; admins with
-          `user:manage_tokens` see + revoke (not mint, by design)
+      {/* API tokens — self revokes own and mints with `user:create_tokens`;
+          admins with `user:manage_tokens` see + revoke (not mint, by design)
           another user's. */}
       {isSelf && isSurfaceOffered("selfApiTokens") ? (
-        <SelfApiTokensCard />
+        <SelfApiTokensCard canCreate={canCreateTokens} />
       ) : null}
       {!isSelf &&
-      canManageOtherTokens &&
+      hasCap(sessionCapabilities, "user:manage_tokens") &&
       isSurfaceOffered("otherUsersApiTokens") ? (
         <AdminApiTokensCard userId={target.id} />
       ) : null}

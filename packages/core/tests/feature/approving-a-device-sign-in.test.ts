@@ -91,6 +91,25 @@ describe("looking up a device code", () => {
 });
 
 describe("approving a device code", () => {
+  test("is refused to a member, who lacks user:create_tokens, and leaves the code pending", async () => {
+    const { userCode } = await site.factory.deviceCode.create();
+
+    const approving = site
+      .actingAs("member")
+      .rpc.auth.deviceFlow.approve({ userCode, tokenName: "cli" });
+
+    await expect(approving).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "user:create_tokens" },
+    });
+    const row = await site.context.db
+      .select()
+      .from(deviceCodes)
+      .where(eq(deviceCodes.userCode, userCode))
+      .get();
+    expect(row?.status).toBe("pending");
+  });
+
   test("binds the code to the approving user", async () => {
     const editor = await site.factory.editor.create();
     const { userCode } = await site.factory.deviceCode.create();

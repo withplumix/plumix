@@ -493,9 +493,19 @@ describe("MCP endpoint — a plugin write tool", () => {
 
   test("refuses a layout change from a writer without edit_layout", async () => {
     const h = await mcpHarness({
-      config: { plugins: [blog, writer], roles: CONTRIBUTOR_ROLE },
+      config: {
+        plugins: [blog, writer],
+        roles: {
+          ...CONTRIBUTOR_ROLE,
+          // Holds `user:create_tokens` so its token works at all.
+          tokenContributor: {
+            extends: "contributor",
+            can: { user: ["create_tokens"] },
+          },
+        },
+      },
     });
-    const user = await h.factory.user.create({ role: "contributor" });
+    const user = await h.factory.user.create({ role: "tokenContributor" });
     const { secret } = await h.factory.apiToken.create({
       userId: user.id,
       scopes: null,

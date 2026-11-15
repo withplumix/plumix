@@ -471,6 +471,11 @@ msgstr ""
 #~ msgstr "مشترك"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.empty.description.self"
+#~ msgstr "أصدر رمزاً أعلاه لـ CLI / خادم MCP / بوت CI الخاص بك."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — لا يمكن اختيار الأبناء كأب."
@@ -2403,11 +2408,6 @@ msgstr "مِلكي"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.empty.description.self"
-msgstr "أصدر رمزاً أعلاه لـ CLI / خادم MCP / بوت CI الخاص بك."
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.idle"
 msgstr "إصدار الرمز"
 
@@ -4054,6 +4054,11 @@ msgstr "اسم الرمز"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
 msgstr "الرموز التي أصدرها هذا المستخدم. يمكنك إبطال أي منها — الإصدار يتطلب جلسة متصفح موثقة لصاحب الحساب."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.ownTokens"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

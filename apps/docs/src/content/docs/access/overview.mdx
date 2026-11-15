@@ -19,7 +19,7 @@ Four nouns carry the access model.
 - An **authenticator** decides who a request is. It reads credentials and returns a user or `null`. It never mints a session and never sets a cookie.
 - A **capability** is a permission string a role grants. Code asks `ctx.auth.can(entryCapability("recipe", "publish"))` instead of comparing roles by hand.
 
-Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote` and `settings:manage`. Core ships eighteen. Nine are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other nine are flat.
+Capabilities come in two shapes. A per-type capability carries three segments, `<entity>:<type>:<action>`, as in `entry:recipe:publish` or `term:cuisine:manage`. An entity-level capability carries two, `<entity>:<action>`, with no type segment at all, as in `user:list`, `user:promote` and `settings:manage`. Core ships nineteen. Nine are the `entry:post:*` set, baked into core whether or not you install the blog plugin that registers the `post` entry type; the other ten are flat.
 
 `ctx.user` is a projection of the user row rather than the row itself, carrying `id`, `email`, `name`, `avatarUrl`, `role` and the stored `meta` bag, the same on every surface. `name` and `avatarUrl` are `null` when the user never set them. Nothing on it is a credential. It is still personal data, and core's own documentation says so, so keep the whole object out of third-party logging and analytics. `email`, `name` and whatever a plugin wrote into `meta` all ride along.
 
@@ -208,6 +208,8 @@ One check sits outside it, and token scopes do not reach it. The admin shell and
 Gate content on a capability. `capabilityPolicy(capability)` from `plumix/auth` reads through `ctx.auth.can`, so token scopes narrow it too. It grants a viewer who holds the capability the `capability:<name>` segment, answers 403 to a signed-in viewer without it, and sends an anonymous visitor to sign-in. Everyone holding the capability shares one cached copy of the page, whatever role grants it.
 
 Not every signed-in principal is staff. `author`, `editor` and `admin` hold `admin:access`, and a role you declare opens the admin only when its `can` grants `admin: ["access"]`. Plumix redirects a signed-in user without it, such as a `member`, to the site root rather than hand over a shell whose every call would answer 403. `member` is the role open signup hands out, and the one a theme's own membership area is built on.
+
+API tokens follow `user:create_tokens`, which `author` and `editor` hold by default and `member` does not. A user needs it to mint a token, whether from the profile's API tokens card, by approving a CLI's device code, or by connecting an app over OAuth, and a token works only while its owner's role still holds it. Take it out of a role and that role's tokens stop working at their next request, answered as an invalid token would be. Revoking one's own token never needs it.
 
 ## Gated entries on every surface
 

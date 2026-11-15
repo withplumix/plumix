@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Pkce } from "../support/mcp-client.js";
+import { eq } from "../../src/db/index.js";
+import { users } from "../../src/db/schema/users.js";
 import { testSite } from "../../src/test/site.js";
 import {
   approve,
@@ -73,6 +75,24 @@ describe("a refused code exchange", () => {
     await exchange(site, exchangeForm(code, keys));
 
     const { status, body } = await exchange(site, exchangeForm(code, keys));
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "invalid_grant" });
+  });
+
+  test("a code whose owner has since lost user:create_tokens is invalid_grant", async () => {
+    const keys = await pkce();
+    const user = await site.factory.editor.create();
+    const redirect = await approve(site, user, authorizationParams(keys));
+    await site.context.db
+      .update(users)
+      .set({ role: "member" })
+      .where(eq(users.id, user.id));
+
+    const { status, body } = await exchange(
+      site,
+      exchangeForm(redirect.searchParams.get("code") ?? "", keys),
+    );
 
     expect(status).toBe(400);
     expect(body).toEqual({ error: "invalid_grant" });

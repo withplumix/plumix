@@ -6,12 +6,14 @@ import {
 import { resolveScope } from "../../../../auth/oauth-server/scopes.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { coreBase } from "../../../base.js";
+import { requireCapability } from "../../../require-capability.js";
 import { oauthConsentApproveInputSchema } from "./schemas.js";
 import { validatedRequest } from "./validated.js";
 
 export const approve = coreBase
   .meta({ createsCredential: true })
   .use(sessionAuthenticated)
+  .use(requireCapability("user:create_tokens"))
   .input(oauthConsentApproveInputSchema)
   .handler(async ({ input, context, errors }) => {
     const request = await validatedRequest(context, input, errors);

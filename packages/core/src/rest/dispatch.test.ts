@@ -279,9 +279,9 @@ describe("REST API — an entry's access policy", () => {
     expect(res.status).toBe(404);
   });
 
-  test("a signed-in member's list shows both", async () => {
+  test("a signed-in editor's list shows both", async () => {
     const { h } = await pagesHarness();
-    const { secret } = await mintPat(h, { role: "member" });
+    const { secret } = await mintPat(h, { role: "editor" });
 
     const res = await h.dispatch(bearerGet("/_plumix/api/v1/pages", secret));
 

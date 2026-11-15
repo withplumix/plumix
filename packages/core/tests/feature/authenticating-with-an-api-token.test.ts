@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
+import { eq } from "../../src/db/index.js";
+import { users } from "../../src/db/schema/users.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
+import { blog, MCP_URL } from "../support/mcp-client.js";
 
 const tokenProbe = definePlugin("token-probe", {
   setup: (ctx) => {
@@ -14,7 +17,21 @@ const tokenProbe = definePlugin("token-probe", {
   },
 });
 
-const site = await testSite({ plugins: [tokenProbe] });
+const site = await testSite({
+  plugins: [tokenProbe, blog],
+  config: { api: { enabled: true }, mcp: { enabled: true } },
+});
+
+/** A token minted while its owner was an editor, whose role is now `member`. */
+async function tokenOfADemotedEditor(): Promise<string> {
+  const editor = await site.factory.editor.create();
+  const { secret } = await site.factory.apiToken.create({ userId: editor.id });
+  await site.context.db
+    .update(users)
+    .set({ role: "member" })
+    .where(eq(users.id, editor.id));
+  return secret;
+}
 
 function listTokens(secret: string): ReturnType<typeof site.visit> {
   return site.visit("/_plumix/rpc/auth/apiTokens/list", {
@@ -79,6 +96,42 @@ describe("an api token on rpc", () => {
     });
 
     const page = await listTokens(secret);
+
+    expect(page.status).toBe(401);
+  });
+});
+
+describe("a token whose owner no longer holds user:create_tokens", () => {
+  test("is refused with 401 on REST", async () => {
+    const secret = await tokenOfADemotedEditor();
+
+    const page = await site.visit("/_plumix/api/v1/posts", {
+      headers: { authorization: `Bearer ${secret}` },
+    });
+
+    expect(page.status).toBe(401);
+  });
+
+  test("is refused with 401 on rpc", async () => {
+    const secret = await tokenOfADemotedEditor();
+
+    const page = await listTokens(secret);
+
+    expect(page.status).toBe(401);
+  });
+
+  test("is refused with 401 on MCP", async () => {
+    const secret = await tokenOfADemotedEditor();
+
+    const page = await site.visit(MCP_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    });
 
     expect(page.status).toBe(401);
   });
