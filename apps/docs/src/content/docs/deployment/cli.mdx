@@ -47,7 +47,7 @@ plumix deploy --help
 
 ### `dev`
 
-Starts the dev server. What it wraps is the runtime's: on Cloudflare it is Vite with `@cloudflare/vite-plugin`, and it accepts `--port` and `--inspector-port`; on Node it is Vite alone, and it accepts `--port` and `--host`. Neither runtime has the CLI build the app up front — `dev` opts out via `deferApp` on both, so a broken config renders as a boot-error page in the browser instead of aborting the terminal before the server is up.
+Starts the dev server. What it wraps is the runtime's: on Cloudflare it is Vite with `@cloudflare/vite-plugin`, and it accepts `--port` and `--inspector-port`; on Node it is Vite alone, and it accepts `--port` and `--host`. A port flag given `0` leaves the OS to pick a free port, which the server prints. Neither runtime has the CLI build the app up front — `dev` opts out via `deferApp` on both, so a broken config renders as a boot-error page in the browser instead of aborting the terminal before the server is up.
 
 Before the server starts, `dev` migrates the local database. When the site's own tables are ahead of its `migrations/`, it writes the next migration there, as [`migrate generate`](#migrate) does, and prints the file to commit. It then applies every owner's pending migrations and then every pending data migration, as `plumix migrate` does, adopting a database set up by an earlier release. When drizzle-kit needs a rename answered and has no terminal to ask in, `dev` stops with the same advice `migrate generate` gives. On a runtime whose commands module exports no `migrations`, it migrates nothing.
 

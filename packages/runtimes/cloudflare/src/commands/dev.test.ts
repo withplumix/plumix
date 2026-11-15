@@ -69,11 +69,18 @@ describe("parseDevArgs", () => {
     ).toEqual({ port: 3020, inspectorPort: 9320 });
   });
 
+  test("passes port 0 through on both flags, for the OS to pick", () => {
+    expect(parseDevArgs(["--port", "0", "--inspector-port", "0"])).toEqual({
+      port: 0,
+      inspectorPort: 0,
+    });
+  });
+
   test("rejects an --inspector-port that is not a port, in both forms", () => {
     expect(codeThrownBy(() => parseDevArgs(["--inspector-port", "abc"]))).toBe(
       "port_flag_out_of_range",
     );
-    expect(codeThrownBy(() => parseDevArgs(["--inspector-port=0"]))).toBe(
+    expect(codeThrownBy(() => parseDevArgs(["--inspector-port=-1"]))).toBe(
       "port_flag_out_of_range",
     );
   });

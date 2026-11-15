@@ -20,6 +20,10 @@ describe("parsePortFlag", () => {
     expect(parsePortFlag("--port", "65535")).toBe(65535);
   });
 
+  test("returns 0, which leaves the OS to pick a free port", () => {
+    expect(parsePortFlag("--port", "0")).toBe(0);
+  });
+
   test("rejects a flag given no value, naming the flag", () => {
     const error = thrown(() => parsePortFlag("--inspector-port", undefined));
     expect(isCliError(error) && error.code).toBe("port_flag_missing_value");
@@ -28,13 +32,13 @@ describe("parsePortFlag", () => {
     );
   });
 
-  test.each(["", "abc", "0", "-1", "65536", "3030.5"])(
+  test.each(["", " ", "abc", "-1", "65536", "3030.5"])(
     "rejects %j as out of range",
     (raw) => {
       const error = thrown(() => parsePortFlag("--port", raw));
       expect(isCliError(error) && error.code).toBe("port_flag_out_of_range");
       expect(isCliError(error) && error.message).toBe(
-        `--port value "${raw}" must be a number between 1 and 65535`,
+        `--port value "${raw}" must be a number between 0 and 65535`,
       );
     },
   );
