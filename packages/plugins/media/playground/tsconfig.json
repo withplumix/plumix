@@ -27,5 +27,5 @@
       ]
     }
   },
-  "include": ["plumix.config.ts", "seed.ts", ".plumix"]
+  "include": ["plumix.config.ts", "seed.ts", "steps", ".plumix"]
 }
