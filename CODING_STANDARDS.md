@@ -76,8 +76,11 @@ rules.
 Lint enforces the mechanical part in all linted code, tests included: a comment block stays within
 30 words, code examples aside (`plumix/max-comment-length`); a comment on a declaration or member is
 `/** */` (`plumix/prefer-jsdoc`); no `/** */` sits inside a function body
-(`plumix/no-jsdoc-in-function-body`); and no code is left commented out
-(`sonarjs/no-commented-code`).
+(`plumix/no-jsdoc-in-function-body`); no code is left commented out
+(`sonarjs/no-commented-code`); and no comment says "for now", "previously", "no longer", "we
+changed" or "used to", or names a ticket as `#123` (`plumix/no-history-comment`). An upstream
+reference stays: `owner/repo#123`, a full URL, or `#123` after a project whose tracker is not on
+GitHub, named in the rule's `UPSTREAM_PROJECTS` ("WordPress Trac #55895").
 
 Every `eslint-disable` directive ends in `-- <reason>` saying why the rule is wrong there
 (`@eslint-community/eslint-comments/require-description`).

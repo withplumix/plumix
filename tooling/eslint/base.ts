@@ -139,7 +139,7 @@ export const baseConfig = defineConfig(
       ],
     },
   },
-  // Named-errors convention (umbrella #232): production `src/` code may not
+  // Named-errors convention: production `src/` code may not
   // `throw new Error(...)` — use a factory from the area's errors.ts.
   {
     files: PRODUCTION_SOURCE,
@@ -157,6 +157,7 @@ export const baseConfig = defineConfig(
     plugins: { sonarjs: sonarjsPlugin },
     rules: {
       "plumix/max-comment-length": "error",
+      "plumix/no-history-comment": "error",
       "plumix/no-jsdoc-in-function-body": "error",
       "plumix/prefer-jsdoc": "error",
       "plumix/sync-comment-guarded": "error",

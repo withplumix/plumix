@@ -51,6 +51,7 @@ beforeAll(async () => {
 /** The comment rules judge prose, not code, and have fixtures of their own. */
 const COMMENT_RULES = new Set([
   "plumix/max-comment-length",
+  "plumix/no-history-comment",
   "plumix/no-jsdoc-in-function-body",
   "plumix/prefer-jsdoc",
 ]);
@@ -339,6 +340,31 @@ describe("plumix/sync-comment-guarded", () => {
         "src/sync-comment.violations.ts",
       ),
     ).resolves.toEqual([{ messageId: "unguarded", line: 3 }]);
+  });
+});
+
+describe("plumix/no-history-comment", () => {
+  const historyReports = messageIdReports("plumix/no-history-comment");
+
+  it("rejects a bare ticket number and a history word", async () => {
+    await expect(
+      historyReports("src/history-comment.violations.ts"),
+    ).resolves.toEqual([
+      { messageId: "ticket", line: 1 },
+      { messageId: "history", line: 4 },
+    ]);
+  });
+
+  it("applies in test files too", async () => {
+    await expect(
+      historyReports("src/history-comment.violations.test.ts"),
+    ).resolves.toEqual([{ messageId: "ticket", line: 3 }]);
+  });
+
+  it("permits an owner/repo reference upstream", async () => {
+    await expect(
+      historyReports("src/history-comment.allowed.ts"),
+    ).resolves.toEqual([]);
   });
 });
 
