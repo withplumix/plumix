@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
-import { createServer } from "node:net";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Browser, BrowserContextOptions, Page } from "@playwright/test";
@@ -20,6 +19,8 @@ import {
   playgroundWebServer,
   superviseWebServer,
 } from "@plumix/core/test/playwright";
+
+import { listeningURL } from "./listening-url.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "../../..");
 
@@ -77,23 +78,6 @@ export async function siteRegistry(site: Site): Promise<PluginRegistry> {
   return registry;
 }
 
-function freePort(): Promise<number> {
-  return new Promise((resolvePort, reject) => {
-    const server = createServer();
-    server.once("error", reject);
-    server.listen(0, () => {
-      const address = server.address();
-      server.close(() => {
-        if (address === null || typeof address === "string") {
-          reject(new Error("The OS gave no port to listen on."));
-          return;
-        }
-        resolvePort(address.port);
-      });
-    });
-  });
-}
-
 async function isReady(url: string): Promise<boolean> {
   try {
     const response = await fetch(url, { redirect: "manual" });
@@ -103,11 +87,12 @@ async function isReady(url: string): Promise<boolean> {
   }
 }
 
+/** Resolves with the URL the playground printed, once it serves `path` there. */
 function waitUntilReady(
-  url: string,
+  path: string,
   server: ChildProcess,
   output: () => string,
-): Promise<void> {
+): Promise<URL> {
   return new Promise((resolveReady, reject) => {
     const deadline = Date.now() + BOOT_TIMEOUT_MS;
     const onExit = (code: number | null) => {
@@ -119,16 +104,20 @@ function waitUntilReady(
     };
     server.once("exit", onExit);
     const poll = async () => {
-      if (await isReady(url)) {
+      const listening = listeningURL(output());
+      if (
+        listening !== undefined &&
+        (await isReady(new URL(path, listening).href))
+      ) {
         server.off("exit", onExit);
-        resolveReady();
+        resolveReady(listening);
         return;
       }
       if (Date.now() > deadline) {
         server.off("exit", onExit);
         reject(
           new Error(
-            `The playground did not serve ${url} within ${String(BOOT_TIMEOUT_MS / 1000)}s.\n${output()}`,
+            `The playground did not serve ${path} within ${String(BOOT_TIMEOUT_MS / 1000)}s.\n${output()}`,
           ),
         );
         return;
@@ -140,16 +129,16 @@ function waitUntilReady(
 }
 
 /**
- * Boots the playground the way its e2e suite does, from a wiped state, on a
- * free port. The server stops with this process however it ends.
+ * Boots the playground as its e2e suite does, from a wiped state, on ports
+ * the OS picks as it binds them. The server stops with this process however
+ * it ends.
  */
 export async function startSite(site: Site): Promise<RunningSite> {
-  const port = await freePort();
   const { command, url } = playgroundWebServer({
     configDir: REPO_ROOT,
     playground: relative(REPO_ROOT, site.dir),
-    port,
-    inspectorPort: await freePort(),
+    port: 0,
+    inspectorPort: 0,
   });
   // Spawned as Playwright spawns a web server: the supervisor leads its own
   // process group and kills it when our end of its stdin closes.
@@ -172,12 +161,14 @@ export async function startSite(site: Site): Promise<RunningSite> {
     await exited;
   };
   try {
-    await waitUntilReady(url, server, () => Buffer.concat(chunks).toString());
+    const listening = await waitUntilReady(new URL(url).pathname, server, () =>
+      Buffer.concat(chunks).toString(),
+    );
+    return { adminURL: new URL(ADMIN_PATH, listening).href, stop };
   } catch (error) {
     await stop();
     throw error;
   }
-  return { adminURL: `http://localhost:${String(port)}${ADMIN_PATH}`, stop };
 }
 
 /**
