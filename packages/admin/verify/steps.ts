@@ -34,15 +34,6 @@ export interface StepsOutcome {
   }[];
 }
 
-function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "then" in value &&
-    typeof value.then === "function"
-  );
-}
-
 /** Matchers that call `onPass` each time one holds; `not` and `resolves` included. */
 function countingMatchers<T extends object>(
   matchers: T,
@@ -57,11 +48,11 @@ function countingMatchers<T extends object>(
       if (typeof value !== "function") return value;
       return (...args: unknown[]) => {
         const result: unknown = Reflect.apply(value, target, args);
-        if (!isPromiseLike(result)) {
+        if (!(result instanceof Promise)) {
           onPass();
           return result;
         }
-        return result.then((settled) => {
+        return result.then((settled: unknown) => {
           onPass();
           return settled;
         });
