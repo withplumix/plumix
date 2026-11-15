@@ -3,7 +3,9 @@ import * as path from "node:path";
 import { Linter } from "eslint";
 import tseslint from "typescript-eslint";
 
+import effectsCeilings from "./ratchets/effects.json" with { type: "json" };
 import maxLinesCeilings from "./ratchets/max-lines.json" with { type: "json" };
+import { plumixPlugin } from "./rules/index.js";
 
 const REPO_ROOT = path.join(import.meta.dirname, "../..");
 
@@ -32,7 +34,16 @@ export const MAX_LINES: Ratchet = {
   ceilings: maxLinesCeilings,
 };
 
-export const RATCHETS: readonly Ratchet[] = [MAX_LINES];
+export const EFFECTS: Ratchet = {
+  list: "ratchets/effects.json",
+  ruleId: "plumix/max-effects",
+  limit: 0,
+  entry: (max) => ["error", { max }],
+  reportedCount: /^File has (\d+) effect hook calls/,
+  ceilings: effectsCeilings,
+};
+
+export const RATCHETS: readonly Ratchet[] = [MAX_LINES, EFFECTS];
 
 /** The ratchet's rule at its limit over `scope`, and at each listed file's ceiling. */
 export function ratchetConfig(
@@ -60,8 +71,15 @@ export function count(ratchet: Ratchet, file: string, source: string): number {
     source,
     {
       files: ["**/*.ts", "**/*.tsx"],
-      languageOptions: { parser: tseslint.parser },
+      // Each package config loaded in this process registers a candidate
+      // tsconfig root, and with two candidates and no root set the parser
+      // refuses every file.
+      languageOptions: {
+        parser: tseslint.parser,
+        parserOptions: { tsconfigRootDir: REPO_ROOT },
+      },
       linterOptions: { noInlineConfig: true },
+      plugins: { plumix: plumixPlugin },
       rules: { [ratchet.ruleId]: ratchet.entry(0) },
     },
     path.join(REPO_ROOT, file),

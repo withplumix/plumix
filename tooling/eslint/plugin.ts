@@ -7,6 +7,7 @@ import {
   noInternalImports,
 } from "./base.js";
 import { i18nConfig } from "./i18n.js";
+import { EFFECTS, ratchetConfig } from "./ratchet.js";
 import { reactConfig } from "./react.js";
 
 /**
@@ -52,6 +53,10 @@ export function pluginConfig(): readonly Linter.Config[] {
       ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
       rules: { "plumix/no-error-message-in-ui": "error" },
     },
+    ...ratchetConfig(EFFECTS, {
+      files: ["src/admin/**/*.ts", "src/admin/**/*.tsx"],
+      ignores: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test/**"],
+    }),
     // Compiled Lingui catalogs ship with /* eslint-disable */ headers;
     // tripping the unused-disable check on every build adds no signal.
     { ignores: ["locales/**"] },
