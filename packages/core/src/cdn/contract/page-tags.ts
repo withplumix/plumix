@@ -11,10 +11,10 @@ const wrapped = new WeakMap<WeakKey, WeakKey>();
 
 /**
  * Tags declared through `memo` go on `requestMemo`'s response: a reader with a
- * memo of its own still reads for the request.
+ * memo of its own still reads for the request, however deeply wrapped.
  */
 export function declareThrough(memo: WeakKey, requestMemo: WeakKey): void {
-  wrapped.set(memo, requestMemo);
+  wrapped.set(memo, requestMemoOf(requestMemo));
 }
 
 function requestMemoOf(memo: WeakKey): WeakKey {

@@ -1,11 +1,21 @@
 import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "../../src/context/app-context.js";
+import { resolvePrincipal } from "../../src/auth/principal.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
 
 const whoami = (_request: Request, ctx: AppContext): Response =>
   Response.json({ userId: ctx.user?.id ?? null });
+
+/** What a procedure the route reaches would resolve. */
+const whoResolves = async (
+  _request: Request,
+  ctx: AppContext,
+): Promise<Response> => {
+  const resolved = await resolvePrincipal(ctx, { kind: "configured" });
+  return Response.json({ userId: resolved?.user.id ?? null });
+};
 
 const probe = definePlugin("probe", {
   setup: (ctx) => {
@@ -21,6 +31,13 @@ const probe = definePlugin("probe", {
       auth: "public",
       cacheable: true,
       handler: whoami,
+    });
+    ctx.registerRoute({
+      method: "GET",
+      path: "/cached-resolve",
+      auth: "public",
+      cacheable: true,
+      handler: whoResolves,
     });
     ctx.registerRoute({
       method: "POST",
@@ -85,6 +102,16 @@ describe("a cacheable plugin route", () => {
     const page = await site
       .actingAs(user)
       .visit("/_plumix/probe/cached-whoami");
+
+    expect(userIdOf(page.body)).toBeNull();
+  });
+
+  test("resolves nobody below it even with a session", async () => {
+    const user = await site.factory.member.create();
+
+    const page = await site
+      .actingAs(user)
+      .visit("/_plumix/probe/cached-resolve");
 
     expect(userIdOf(page.body)).toBeNull();
   });

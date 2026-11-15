@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AccessPolicy } from "../../src/access/policy.js";
+import type { RequestAuthenticator } from "../../src/auth/authenticator.js";
 import type { AppContext } from "../../src/context/app-context.js";
 import {
   authenticatedPolicy,
@@ -9,6 +10,9 @@ import {
   definePolicy,
   grant,
 } from "../../src/access/policy.js";
+import { resolvePrincipal } from "../../src/auth/principal.js";
+import { eq } from "../../src/db/index.js";
+import { users } from "../../src/db/schema/users.js";
 import { compileEntryQuery, entryQuery } from "../../src/entries/query.js";
 import { definePlugin } from "../../src/plugin/define.js";
 import { testSite } from "../../src/test/site.js";
@@ -429,5 +433,55 @@ describe("public route dispatch — access policy", () => {
       .assertJson({ userId: admin.id })
       .assertHeader("cache-control", "private, no-store")
       .assertHeader("vary", "cookie");
+  });
+});
+
+/**
+ * Signs in by an `x-trusted-email` header it never reports through
+ * `hasSession`, so its requests reach the CDN read-through.
+ */
+const undeclaredHeader: RequestAuthenticator = {
+  async authenticate(request, db) {
+    const email = request.headers.get("x-trusted-email");
+    if (!email) return null;
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+    return user ? { user, credential: "session" } : null;
+  },
+};
+
+const undeclared = await testSite({
+  plugins: [
+    definePlugin("feeds", {
+      setup: (ctx) => {
+        ctx.registerPublicRoute({
+          path: "/feed",
+          cacheable: true,
+          handler: async (_request, appCtx) => {
+            const resolved = await resolvePrincipal(appCtx, {
+              kind: "configured",
+            });
+            return Response.json({
+              userId: appCtx.user?.id ?? null,
+              resolvedId: resolved?.user.id ?? null,
+            });
+          },
+        });
+      },
+    }),
+  ],
+  config: { auth: { authenticator: undeclaredHeader } },
+});
+
+describe("public route dispatch — CDN read-through", () => {
+  test("renders for nobody, even where the authenticator would resolve the reader", async () => {
+    const member = await undeclared.factory.member.create();
+
+    const page = await undeclared.visit("/feed", {
+      headers: { "x-trusted-email": member.email },
+    });
+
+    page.assertJson({ userId: null, resolvedId: null });
   });
 });

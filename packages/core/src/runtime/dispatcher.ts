@@ -1,5 +1,4 @@
 import type { AccessPolicy, Segment } from "../access/policy.js";
-import type { RequestAuthenticator } from "../auth/authenticator.js";
 import type { AuthMethodRouteMatch } from "../auth/declared-methods.js";
 import type * as AuthFlowRoutes from "../auth/flow-routes.js";
 import type { RequestFacts } from "../cdn/sharing-verdict.js";
@@ -8,6 +7,7 @@ import type { AuthMethodRoute } from "../plugin/auth-method.js";
 import type { RegisteredRawRoute } from "../plugin/manifest.js";
 import type { ContentRoute, PublicRouteMatch } from "../route/index.js";
 import type { PlumixApp } from "./app.js";
+import { anonymousContext } from "../access/anonymous-context.js";
 import { resolveCapability } from "../access/contract/capability.js";
 import {
   gateToResponse,
@@ -833,7 +833,9 @@ async function servePublicRoute(
       routeSharingAfterRender(decision).clientCopy,
     );
   }
-  const run = async () => match.route.handler(ctx.request, ctx, match.params);
+  const routeCtx = match.route.cacheable === true ? anonymousContext(ctx) : ctx;
+  const run = async () =>
+    match.route.handler(routeCtx.request, routeCtx, match.params);
   const cdn = ctx.cdn;
   if (match.route.cacheable !== true || cdn === undefined) return run();
   return readThroughRoute({
@@ -875,15 +877,6 @@ async function servePoliciedPublicRoute(
 }
 
 /**
- * For `formPost`-exempt requests. `hasSession` must be explicit, or
- * `requestHasSession` sniffs the cookie still on the request.
- */
-const anonymousAuthenticator: RequestAuthenticator = {
-  authenticate: () => Promise.resolve(null),
-  hasSession: () => false,
-};
-
-/**
  * Keyed on the header: the exemption is per request. Coupled to
  * `enforcePlumixCsrf`; a second way past its header check would keep the
  * session.
@@ -893,13 +886,7 @@ function withoutAmbientSession(
   ctx: AppContext,
 ): AppContext {
   if (route.formPost !== true || hasCsrfHeader(ctx.request)) return ctx;
-  const sessionless: AppContext = {
-    ...ctx,
-    authenticator: anonymousAuthenticator,
-    settings: rebindSettings(ctx.settings, () => sessionless),
-    ...rebindDispatch(ctx, () => sessionless),
-  };
-  return sessionless;
+  return anonymousContext(ctx);
 }
 
 function servedWithoutAmbientSession(
@@ -976,8 +963,10 @@ async function runPluginRawRoute(
   const gate = route.auth;
   if (gate === "public") {
     // Stored ignoring cookies, so it must not depend on who is asking.
-    const servesEveryone = route.cacheable === true;
-    const routeCtx = servesEveryone ? ctx : await withPublicReader(ctx);
+    const routeCtx =
+      route.cacheable === true
+        ? anonymousContext(ctx)
+        : await withPublicReader(ctx);
     return route.handler(routeCtx.request, routeCtx);
   }
 
