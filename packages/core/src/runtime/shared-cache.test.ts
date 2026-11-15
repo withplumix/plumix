@@ -1,7 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import type { RequestAuthenticator } from "../context/authenticator.js";
-import { defaultAuthenticator } from "../auth/authenticator.js";
+import {
+  sessionAuthenticator,
+  siteAuthenticator,
+} from "../auth/authenticator.js";
 import { SESSION_COOKIE_NAME } from "../auth/cookies.js";
 import { mayServeFromSharedCache } from "./shared-cache.js";
 
@@ -18,7 +21,8 @@ function site(
   } = {},
 ) {
   return {
-    authenticator: options.authenticator ?? defaultAuthenticator(),
+    authenticator:
+      options.authenticator ?? siteAuthenticator(sessionAuthenticator()),
     config: { basePath: options.basePath ?? "" },
   };
 }

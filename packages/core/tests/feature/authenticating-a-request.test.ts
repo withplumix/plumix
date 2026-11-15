@@ -99,4 +99,17 @@ describe("a configured authenticator", () => {
 
     page.assertJson({ json: { user: { id: editor.id } } });
   });
+
+  test("still resolves an API token, which core reads after it", async () => {
+    const editor = await trustingAHeader.factory.editor.create();
+    const { secret } = await trustingAHeader.factory.apiToken.create({
+      userId: editor.id,
+    });
+
+    const page = await readSession(trustingAHeader, {
+      authorization: `Bearer ${secret}`,
+    });
+
+    page.assertJson({ json: { user: { id: editor.id } } });
+  });
 });

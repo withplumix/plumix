@@ -84,11 +84,6 @@ export function requestHasSession(
   );
 }
 
-/** Refuses an audience-bound token, which works only on its own surface. */
-export function apiTokenAuthenticator(): RequestAuthenticator {
-  return audienceTokenAuthenticator(null);
-}
-
 /**
  * Also accepts a token bound to `audience`; `null` refuses every bound token.
  */
@@ -144,14 +139,11 @@ export function chainAuthenticators(
 }
 
 /**
- * Session cookie, then API token. Use `sessionAuthenticator()` alone to turn
- * API tokens off.
+ * The site's authenticator, which reads people, then core's API-token reader
+ * (ADR 0072). A bound token passes only on its own surface.
  */
-export function defaultAuthenticator(
-  policy: SessionPolicy = DEFAULT_SESSION_POLICY,
+export function siteAuthenticator(
+  people: RequestAuthenticator,
 ): RequestAuthenticator {
-  return chainAuthenticators(
-    sessionAuthenticator(policy),
-    apiTokenAuthenticator(),
-  );
+  return chainAuthenticators(people, audienceTokenAuthenticator(null));
 }

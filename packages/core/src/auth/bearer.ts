@@ -1,5 +1,5 @@
 /**
- * Must stay a superset of what `apiTokenAuthenticator` parses, so an
+ * Must stay a superset of what `audienceTokenAuthenticator` parses, so an
  * unparseable header fails closed to 401, not anonymous.
  */
 const BEARER = /^bearer\s+\S/i;

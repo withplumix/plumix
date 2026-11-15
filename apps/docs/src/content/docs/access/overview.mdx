@@ -108,7 +108,7 @@ The `auth` slot is not optional. A config without one does not type-check, and `
 
    The reasoning is what the header gate is for: stopping a cross-origin POST that rides on the visitor's ambient session authority. A public submit carries none, so an attacker forging one has merely submitted a form they could have submitted directly. That holds only while the handler never derives privilege from a session, so the dispatcher takes the session away rather than trust the handler to ignore it: on the request that took the exemption, `ctx.user` is null and `ctx.authenticator` resolves nobody — `authenticate` returns null and `hasSession` is false.
 
-   The exemption is per request, not per route. A JS-enhanced form posting to the same endpoint sets the header, passes the ordinary gate and reaches the handler with its session intact, so attributing a submission to a signed-in visitor still works wherever it is safe to. Your handler needs no branch for the difference: a public route already has to cope with a null `ctx.user`, which it gets whenever the request carries no session. Note that this swaps the authenticator, not the request. The session cookie is still on `ctx.request`, and `defaultAuthenticator()` is one import away, so a handler that goes looking recovers the user regardless — what is gone is the reading that looks like ordinary code.
+   The exemption is per request, not per route. A JS-enhanced form posting to the same endpoint sets the header, passes the ordinary gate and reaches the handler with its session intact, so attributing a submission to a signed-in visitor still works wherever it is safe to. Your handler needs no branch for the difference: a public route already has to cope with a null `ctx.user`, which it gets whenever the request carries no session. Note that this swaps the authenticator, not the request. The session cookie is still on `ctx.request`, and `sessionAuthenticator()` is one import away, so a handler that goes looking recovers the user regardless — what is gone is the reading that looks like ordinary code.
 
    A fourth gate, `auth: "development"`, is not about a principal at all: the route exists only while `plumix dev` is running and only for requests that reached it over loopback, and answers 404 otherwise. [The Dev Server](/going-further/dev-server/) covers what belongs behind it.
 
@@ -137,13 +137,13 @@ Signing out at `/_plumix/auth/signout` deletes the row and returns a cookie that
 
 An authenticator has one required method, `authenticate(request, db, scope)`, resolving to a user or to `null`. `scope.startingUserMeta` is the meta a new user starts with: an authenticator that creates the user it resolves stores it as that user's meta, so the user fields' defaults apply however the user was created. One that only looks users up can ignore it. Returning `null` means "no credential on this request", and the caller decides whether that is a 401 or an anonymous render. Throwing is reserved for a credential that was present and malformed, a bad signature or a replay. Nothing turns that throw into a typed error today. No call site wraps the authenticator, so on a plugin route or the admin shell the error reaches the dispatcher's one top-level catch, which logs `dispatch_failed` and answers `{ "error": "internal_error" }` at 500; on an RPC procedure it lands as an internal server error the same way. Return `null` for a malformed credential if you want the caller's 401 instead. A returned user comes with a required `credential` naming what resolved them. `"session"` is a credential binding a browser to the user, Plumix's own cookie or an identity provider's assertion. `"api-token"` is a credential that carries its own scopes, and it comes with a `tokenScopes` list, or `null` for an unscoped token, and with `apiToken: { id, name }`, which a revision made with that token records. A list narrows what that one request may do. `ctx.auth.can()` intersects the scopes with the role's capabilities, so a scoped credential holds fewer capabilities than its owner and never more. A surface that creates a credential for the caller, such as adding a passkey, accepts only a `"session"`, so an API token can never be turned into a sign-in.
 
-Out of the box Plumix chains two of them. The first reads the `plumix_session` cookie. The second reads `Authorization: Bearer pl_pat_…` and resolves it against the hashed `api_tokens` table. First non-null wins, so browser traffic and API clients both work with no configuration. Set `authenticator` in the auth config to replace the chain, and wrap your own with the API-token one if you want bearer credentials alongside it.
+A site's authenticator reads people. Out of the box it is `sessionAuthenticator()`, which reads the `plumix_session` cookie. Set `authenticator` in the auth config to read people another way, such as an identity provider's assertion, and chain `sessionAuthenticator()` beside it with `chainAuthenticators` to keep Plumix's own sign-in working too. API tokens are core's credential, not the authenticator's. On every surface that takes one, core reads `Authorization: Bearer pl_pat_…` after your authenticator and resolves it against the hashed `api_tokens` table, so API clients work whatever authenticator you set. First non-null wins, so a request carrying both a person's credential and a token resolves as the person. To turn tokens off, take `user:create_tokens` from every role.
 
 ### The hasSession contract
 
 A public page render skips authentication for traffic that carries no session. Loading a user on every anonymous hit would cost a database read per request and make the render depend on who is asking. The predicate that decides is `hasSession(request)`, the optional, synchronous method a custom authenticator owes the public render path. Omit it and the default applies, which is that the `plumix_session` cookie is present.
 
-That default is right for anything cookie-shaped and wrong for everything else. An authenticator carrying its credential in a header sees every public request as anonymous, so a signed-in principal gets the signed-out page and every capability-gated render decision takes the anonymous branch. Returning `false` opts out on purpose. The API-token authenticator does exactly that, because an API token belongs to an API client rather than to a browser session, and a cross-site navigation carrying an `Authorization` header should not touch the token's `lastUsedAt`.
+That default is right for anything cookie-shaped and wrong for everything else. An authenticator carrying its credential in a header sees every public request as anonymous, so a signed-in principal gets the signed-out page and every capability-gated render decision takes the anonymous branch. Returning `false` opts out on purpose. Core's API-token reader does exactly that, because an API token belongs to an API client rather than to a browser session, and a cross-site navigation carrying an `Authorization` header should not touch the token's `lastUsedAt`.
 
 The [shared cache](/deployment/cdn/) asks the same predicate, so what you answer here decides more than whether a user loads. On a page carrying no access policy, a request you call signed in bypasses the cache entirely, because its render may differ from the anonymous document every other visitor receives. A registered public route with no policy treats it the same way: it renders live with its principal and is never stored. A policied route is keyed by audience segment instead, and an entitled member reads that audience's entry rather than bypassing. A signed-in request that a policy grants `anonymous` still bypasses the cache, as it would with no policy. A render that reads the principal — `ctx.user`, `ctx.auth.can()`, `useUser()` — in a shared segment is personal: it is served to that member and never stored for the next one, which [CDN Caching](/deployment/cdn/) describes.
 
@@ -151,7 +151,6 @@ Declaring no session opens a narrow but real hole. Core then treats the request 
 
 ```ts
 import type { RequestAuthenticator } from "plumix/auth";
-import { apiTokenAuthenticator, chainAuthenticators } from "plumix/auth";
 import { eq } from "plumix/db";
 import { users } from "plumix/schema";
 
@@ -179,10 +178,7 @@ function proxyIdentity(): RequestAuthenticator {
   };
 }
 
-export const authenticator = chainAuthenticators(
-  proxyIdentity(),
-  apiTokenAuthenticator(),
-);
+export const authenticator = proxyIdentity();
 ```
 
 <Aside

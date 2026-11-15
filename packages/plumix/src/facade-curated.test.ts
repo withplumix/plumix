@@ -153,10 +153,10 @@ const CORE_WITHHELD: readonly Withholding[] = [
   },
   {
     reason:
-      "the bearer authenticator that also admits a token bound to one " +
-      "audience, which only core's MCP endpoint composes. A site composes " +
-      "`apiTokenAuthenticator`, which refuses every bound token.",
-    names: ["audienceTokenAuthenticator"],
+      "the API-token readers core composes itself: one that also admits a " +
+      "token bound to one audience, for core's MCP endpoint, and the chain " +
+      "that reads a token after a site's authenticator (ADR 0072)",
+    names: ["audienceTokenAuthenticator", "siteAuthenticator"],
   },
   {
     reason:

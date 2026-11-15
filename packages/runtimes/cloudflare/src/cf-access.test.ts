@@ -1,6 +1,6 @@
 import type { Db } from "plumix";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
-import { chainAuthenticators, defaultAuthenticator } from "plumix/auth";
+import { chainAuthenticators, sessionAuthenticator } from "plumix/auth";
 import {
   createDispatcherHarness,
   createTestDb,
@@ -100,7 +100,7 @@ describe("cfAccess — signOutUrl", () => {
       config: {
         auth: {
           authenticator: chainAuthenticators(
-            defaultAuthenticator(),
+            sessionAuthenticator(),
             cfAccess({
               teamDomain: TEAM_DOMAIN,
               audience: AUDIENCE,
