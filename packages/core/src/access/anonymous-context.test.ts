@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 
+import type { PrincipalPolicy } from "../auth/principal.js";
 import type { AppContext } from "../context/app-context.js";
-import { principalOf } from "../auth/principal.js";
+import { principalOf, resolvePrincipal } from "../auth/principal.js";
 import { withUser } from "../auth/with-user.js";
 import {
   declaredPageTags,
@@ -10,12 +11,15 @@ import {
 import { asc } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { publicEntryRows } from "../entries/visibility.js";
+import { defineEvent, defineFilter } from "../events-and-filters/define.js";
 import { HandlerRegistry } from "../events-and-filters/registry.js";
+import { settings } from "../events-and-filters/settings.js";
 import { definePlugin } from "../plugin/define.js";
 import { installPlugins } from "../runtime/install-plugins.js";
 import { createTestContext } from "../test/context.js";
 import { factoriesFor } from "../test/factories.js";
 import { createTestDb } from "../test/harness.js";
+import { buildRequest } from "../test/request.js";
 import { anonymousContext } from "./anonymous-context.js";
 import { CORE_CAPABILITIES } from "./contract/capability.js";
 import { ACCESS_POLICY_META_KEY } from "./contract/meta-key.js";
@@ -75,6 +79,29 @@ async function listedSlugs(ctx: AppContext): Promise<string[]> {
   return rows.map((row) => row.slug);
 }
 
+/** Signed in by cookie, not yet resolved: what a dispatched request carries. */
+async function sessionRequestContext(
+  handlers = new HandlerRegistry(),
+): Promise<AppContext> {
+  const ctx = await editorContext();
+  const editor = await factoriesFor(ctx.db).user.create({ role: "editor" });
+  const request = await buildRequest(ctx.db, "https://cms.example/", {
+    as: editor,
+  });
+  return createTestContext({
+    db: ctx.db,
+    plugins: ctx.plugins,
+    request,
+    handlers,
+  });
+}
+
+const POLICIES: readonly PrincipalPolicy[] = [
+  { kind: "configured" },
+  { kind: "session" },
+  { kind: "session-gated" },
+];
+
 function principalFields(ctx: AppContext) {
   const { user, tokenScopes, apiToken, credential, auth } = ctx;
   return { user, tokenScopes, apiToken, credential, auth };
@@ -99,6 +126,56 @@ describe("anonymousContext", () => {
     expect(anonymous.auth.can("entry:page:read")).toBe(false);
     expect(anonymous.db).toBe(ctx.db);
     expect(anonymous.plugins).toBe(ctx.plugins);
+  });
+
+  test.each(POLICIES)(
+    "resolves nobody under the $kind policy, though the request carries a session",
+    async (policy) => {
+      const ctx = await sessionRequestContext();
+
+      const resolved = await resolvePrincipal(anonymousContext(ctx), policy);
+
+      expect(resolved).toBeNull();
+      expect((await resolvePrincipal(ctx, policy))?.user.id).toBeDefined();
+    },
+  );
+
+  test("reports no session to a reader asking its authenticator", async () => {
+    const ctx = await sessionRequestContext();
+    const { authenticator, request } = anonymousContext(ctx);
+
+    expect(authenticator.hasSession?.(request)).toBe(false);
+    expect(
+      await authenticator.authenticate(request, ctx.db, {
+        startingUserMeta: {},
+      }),
+    ).toBeNull();
+  });
+
+  test("a context spread from it still reaches its handlers as nobody", async () => {
+    const pinged = defineEvent<null>("test:pinged");
+    const labelled = defineFilter<string>("test:labelled", { sync: false });
+    const heard: (boolean | undefined)[] = [];
+    const handlers = new HandlerRegistry();
+    const record = (appCtx: AppContext): void => {
+      heard.push(appCtx.authenticator.hasSession?.(appCtx.request));
+    };
+    handlers.on(settings.groupChanged, (_changes, appCtx) => record(appCtx));
+    handlers.on(pinged, (_payload, appCtx) => record(appCtx));
+    handlers.add(labelled, (value, _input, appCtx) => {
+      record(appCtx);
+      return value;
+    });
+    const derived = {
+      ...anonymousContext(await sessionRequestContext(handlers)),
+    };
+
+    await derived.settings.write("notes", { body: "A" });
+    await derived.events.emit(pinged, null);
+    await derived.filters.apply(labelled, "label");
+
+    expect(heard).toEqual([false, false, false]);
+    expect(await resolvePrincipal(derived, { kind: "configured" })).toBeNull();
   });
 
   test("holds the principal of a request no one is signed in to", async () => {
@@ -187,5 +264,13 @@ describe("anonymousContext", () => {
     declarePageTags(anonymousContext(ctx), ["read-by-the-reader"]);
 
     expect(declaredPageTags(ctx)).toEqual(["read-by-the-reader"]);
+  });
+
+  test("stores the request's response under a tag declared through it twice over", async () => {
+    const ctx = await editorContext();
+
+    declarePageTags(anonymousContext(anonymousContext(ctx)), ["listed"]);
+
+    expect(declaredPageTags(ctx)).toEqual(["listed"]);
   });
 });
