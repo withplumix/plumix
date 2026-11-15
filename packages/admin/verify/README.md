@@ -77,7 +77,8 @@ imports it.
 
 ## Tests
 
-`page-list.test.ts`, `report.test.ts` and `route.test.ts` are unit tests. The specs run in the
-admin's e2e suite as the `verify-admin` project: `verify-admin.spec.ts` runs the command against
-core's and media's playgrounds, and `page-list-walk.spec.ts` opens every page the seo playground
-lists as `admin`.
+`listening-url.test.ts`, `page-list.test.ts`, `report.test.ts` and `route.test.ts` are unit tests.
+The specs run in the admin's e2e suite as the `verify-admin` project: `verify-admin.spec.ts` runs
+the command against core's and media's playgrounds, `page-list-walk.spec.ts` opens every page the
+seo playground lists as `admin`, and `site.spec.ts` boots the feeds playground while another server
+takes each port the moment it is free.

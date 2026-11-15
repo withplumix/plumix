@@ -580,7 +580,7 @@ export class PlumixCliError extends CliError<PlumixCliErrorCode> {
   }): PlumixCliError {
     return new PlumixCliError(
       "port_flag_out_of_range",
-      `${ctx.flag} value "${ctx.raw}" must be a number between 1 and 65535`,
+      `${ctx.flag} value "${ctx.raw}" must be a number between 0 and 65535`,
       undefined,
       undefined,
     );
