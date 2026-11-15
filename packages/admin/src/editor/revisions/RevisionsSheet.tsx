@@ -210,6 +210,13 @@ export function RevisionsSheet({
         data-plumix-revisions-sheet=""
         className="overflow-y-auto"
         closeLabel={renderLabel(DIALOG_CLOSE_LABEL)}
+        // Radix hands Escape to the diff modal a few renders after it mounts;
+        // an Escape before that lands here and belongs to the modal.
+        onEscapeKeyDown={(event) => {
+          if (diffModalRevisionId === null) return;
+          event.preventDefault();
+          setDiffModalRevisionId(null);
+        }}
       >
         <SheetHeader>
           <SheetTitle>

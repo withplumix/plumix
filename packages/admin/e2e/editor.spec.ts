@@ -1985,6 +1985,37 @@ test.describe("editor revision preview", () => {
     await expect(page.getByTestId("revision-diff-modal")).toHaveCount(0);
   });
 
+  // Presses Escape the moment the modal is in the DOM, before Radix makes it
+  // the topmost layer, which a keypress from Playwright only sometimes hits.
+  test("an Escape pressed as the diff modal opens closes the modal and keeps the revisions sheet open", async ({
+    page,
+  }) => {
+    await installPreviewMocks(page);
+    await page.goto("entries/posts/1/edit");
+    await page.getByTestId("revisions-sheet-trigger").click();
+    await expect(page.getByTestId("revisions-sheet-list")).toBeVisible();
+    await page.evaluate(() => {
+      const observer = new MutationObserver(() => {
+        if (document.querySelector('[data-testid="revision-diff-modal"]')) {
+          observer.disconnect();
+          document.dispatchEvent(
+            new KeyboardEvent("keydown", {
+              key: "Escape",
+              bubbles: true,
+              cancelable: true,
+            }),
+          );
+        }
+      });
+      observer.observe(document, { childList: true, subtree: true });
+    });
+
+    await page.getByTestId("revisions-sheet-item-42-diff").click();
+
+    await expect(page.getByTestId("revision-diff-modal")).toHaveCount(0);
+    await expect(page.getByTestId("revisions-sheet-list")).toBeVisible();
+  });
+
   test("Load more fetches the next page of revisions from the previous cursor", async ({
     page,
   }) => {
