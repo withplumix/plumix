@@ -1,5 +1,5 @@
 import type { AuthSessionOutput } from "./schemas.js";
-import { authenticateTraced } from "../../../auth/authenticator.js";
+import { resolvePrincipal } from "../../../auth/principal.js";
 import { sessionUserOf } from "../../../auth/session-user.js";
 import { users } from "../../../db/schema/users.js";
 import { base } from "../../base.js";
@@ -10,14 +10,10 @@ import { base } from "../../base.js";
  */
 export const session = base.handler(
   async ({ context }): Promise<AuthSessionOutput> => {
-    const result = await authenticateTraced(context, context.authenticator);
-    if (result) {
+    const authed = await resolvePrincipal(context, { kind: "configured" });
+    if (authed) {
       return {
-        user: sessionUserOf(
-          result.user,
-          context.plugins,
-          result.credential === "api-token" ? result.tokenScopes : null,
-        ),
+        user: sessionUserOf(authed.user, context.plugins, authed.tokenScopes),
         needsBootstrap: false,
       };
     }
