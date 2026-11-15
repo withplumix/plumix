@@ -1,6 +1,48 @@
 import type { Rule } from "eslint";
 
 type SourceCode = Rule.RuleContext["sourceCode"];
+type Comment = ReturnType<SourceCode["getAllComments"]>[number];
+
+export function startsOwnLine(
+  sourceCode: SourceCode,
+  comment: Comment,
+): boolean {
+  const line = comment.loc?.start.line ?? 0;
+  const column = comment.loc?.start.column ?? 0;
+  return sourceCode.lines[line - 1]?.slice(0, column).trim() === "";
+}
+
+interface ProseLine {
+  readonly line: number;
+  readonly start: number;
+}
+
+/**
+ * Joins a block's lines into one string, so a phrase wrapped onto the next
+ * line still matches, and keeps where each line starts to map a match back.
+ */
+export function blockProse(block: readonly Comment[]): {
+  text: string;
+  lines: ProseLine[];
+} {
+  const parts: string[] = [];
+  const lines: ProseLine[] = [];
+  let offset = 0;
+  for (const comment of block) {
+    const first = comment.loc?.start.line ?? 0;
+    comment.value.split("\n").forEach((raw, index) => {
+      const text = raw.replace(/^[\s*]+/, "");
+      lines.push({ line: first + index, start: offset });
+      parts.push(text);
+      offset += text.length + 1;
+    });
+  }
+  return { text: parts.join(" "), lines };
+}
+
+export function lineAt(lines: readonly ProseLine[], index: number): number {
+  return lines.filter((line) => line.start <= index).at(-1)?.line ?? 0;
+}
 
 /**
  * A comment trailing code never joins the block, or any line-end remark would

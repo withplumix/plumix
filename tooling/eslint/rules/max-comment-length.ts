@@ -1,5 +1,7 @@
 import type { Rule } from "eslint";
 
+import { startsOwnLine } from "./comment-block.js";
+
 type Comment = ReturnType<
   Rule.RuleContext["sourceCode"]["getAllComments"]
 >[number];
@@ -55,17 +57,15 @@ export const maxCommentLength: Rule.RuleModule = {
   },
   create(context) {
     const { sourceCode } = context;
-    const startsOwnLine = (comment: Comment): boolean => {
-      const line = comment.loc?.start.line ?? 0;
-      const column = comment.loc?.start.column ?? 0;
-      return sourceCode.lines[line - 1]?.slice(0, column).trim() === "";
-    };
     return {
       Program() {
         const prose = sourceCode
           .getAllComments()
           .filter((comment) => !DIRECTIVE.test(comment.value));
-        for (const block of groupIntoBlocks(prose, startsOwnLine)) {
+        const blocks = groupIntoBlocks(prose, (comment) =>
+          startsOwnLine(sourceCode, comment),
+        );
+        for (const block of blocks) {
           const count = countWords(block);
           const first = block[0]?.loc;
           const last = block.at(-1)?.loc;
