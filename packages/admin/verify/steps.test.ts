@@ -27,6 +27,16 @@ describe("runSteps", () => {
     expect(outcome).toEqual({ passed: 1, failed: [] });
   });
 
+  it("keeps the rest of expect, such as its asymmetric matchers", async () => {
+    const outcome = await runSteps((assert) => {
+      assert({ url: "http://localhost/media/1.png" }).toEqual({
+        url: assert.any(String),
+      });
+    }, "steps.png");
+
+    expect(outcome).toEqual({ passed: 1, failed: [] });
+  });
+
   it("stops at the first assertion that fails and reports it with the screenshot", async () => {
     const outcome = await runSteps((assert) => {
       assert("Copy").toBe("Copy");
