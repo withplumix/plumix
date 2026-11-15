@@ -131,7 +131,7 @@ export function LayersTab(): ReactElement {
     return node ? holdsBlockOutside([node], registry, undefined) : false;
   };
 
-  // A copy would be a new instance, which a block the site no longer offers
+  // A copy would be a new instance, which a block the site has stopped offering
   // can't have; the block itself stays editable.
   const copyable = (id: string): boolean => {
     const node = findBlock(tree, id, registry);

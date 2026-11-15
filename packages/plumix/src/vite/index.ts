@@ -236,7 +236,7 @@ function plumixPlugin(options: PlumixVitePluginOptions): Plugin {
       // to inject after the theme's own `link[]`.
       const build = {
         manifest: true,
-        // Vite strips legal comments on minify; `build.license` carries them (rolldown-vite#497).
+        // Vite strips legal comments on minify; `build.license` carries them (vitejs/rolldown-vite#497).
         license: { fileName: "THIRD-PARTY-NOTICES.md" },
       };
       // @cloudflare/vite-plugin falls back to its private entry only when no
@@ -366,7 +366,7 @@ function plumixPlugin(options: PlumixVitePluginOptions): Plugin {
       if (!options?.ssr) return null;
       if (id.endsWith(ORIG_QUERY)) return null;
       // `.js`/`.jsx` covers theme-shipped islands compiled by tsc — the
-      // `"use client"` directive survives in the dist file (#606).
+      // `"use client"` directive survives in the dist file.
       if (
         !id.endsWith(".tsx") &&
         !id.endsWith(".ts") &&
@@ -484,7 +484,7 @@ async function regenerate(
   cwd: string,
   explicitConfig: string | undefined,
   // The dev watcher forces a fresh config eval on `plumix.config.ts` edits;
-  // cold-start callers share the cached one (#1102).
+  // cold-start callers share the cached one.
   options?: LoadConfigOptions,
 ): Promise<Regenerated> {
   const { config, configPath } = await loadConfig(cwd, explicitConfig, options);

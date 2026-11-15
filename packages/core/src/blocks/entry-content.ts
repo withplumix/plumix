@@ -9,7 +9,7 @@ export interface EntryContent {
 /**
  * Stamp a `BlockNode[]` with the current envelope so externally-built
  * content (seeds, migrations, fixtures) survives the runtime
- * `isEntryContent` guard instead of silently rendering blank (#607).
+ * `isEntryContent` guard instead of silently rendering blank.
  */
 export function defineEntryContent(blocks: readonly BlockNode[]): EntryContent {
   return { version: "plumix.v2", blocks };

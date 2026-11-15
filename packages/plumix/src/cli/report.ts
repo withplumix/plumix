@@ -58,7 +58,7 @@ function causeText(cause: unknown): string | undefined {
 export function exitWithError(error: unknown): never {
   if (isCliError(error)) {
     report.error(`${error.code}: ${error.message}`);
-    // Without it a CI log names the file that failed but never why (#1883).
+    // Without it a CI log names the file that failed but never why.
     const cause = causeText(error.cause);
     if (cause) report.detail(cause);
     if (error.hint) report.hint(error.hint);

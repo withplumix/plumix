@@ -16,7 +16,7 @@ const UNKNOWN_URL = `${DEV_ORIGIN}/no-such-page`;
 
 /**
  * The same page reached the way an off-box client reaches an exposed dev server
- * — through the tunnel's or the container's own hostname, not loopback (#2007).
+ * — through the tunnel's or the container's own hostname, not loopback.
  */
 const REMOTE_URL = "https://cms.example/no-such-page";
 

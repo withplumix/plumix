@@ -454,7 +454,7 @@ describe("the card route", () => {
 
       // What a developer opening the card URL in a browser sends.
       // The dev error page is loopback-only, which is where a developer
-      // opening the card URL is (#2007).
+      // opening the card URL is.
       const response = await harness.fetch(
         `${DEV_ORIGIN}${await cardPath(harness, id)}`,
         { headers: { accept: "text/html" } },

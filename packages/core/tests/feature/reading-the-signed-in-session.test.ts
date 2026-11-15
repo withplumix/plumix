@@ -175,7 +175,7 @@ const shop = definePlugin("shop", {
       capabilityType: "product",
     });
     // …AND an entry type that shares the core `post` capability namespace,
-    // which used to produce duplicate `post:*` entries in the session's
+    // which must not produce duplicate `post:*` entries in the session's
     // capability list.
     ctx.registerEntryType("news", {
       label: "News",

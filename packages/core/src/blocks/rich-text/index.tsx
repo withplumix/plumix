@@ -5,9 +5,8 @@ export const richTextBlock = defineBlock({
   title: { id: "block.core.rich-text.title", message: "Rich text" },
   icon: "Type",
   category: "text",
-  // Authors still mentally call this "paragraph" — the catalog search
-  // matches name/title/keywords, so it needs an explicit hook to find
-  // rich-text after the legacy paragraph block was removed in #473.
+  // Authors call this "paragraph", and the catalog search matches only
+  // name/title/keywords, so it needs an explicit hook to find rich-text.
   keywords: [
     { id: "block.core.rich-text.keyword.paragraph", message: "paragraph" },
     { id: "block.core.rich-text.keyword.text", message: "text" },

@@ -82,8 +82,8 @@ describe("shouldInjectDemoToolbar", () => {
     expect(shouldInjectDemoToolbar(req("/posts/hello"))).toBe(true);
   });
 
-  // The anonymous showcase now carries the "Try the editor" CTA in the pill
-  // (it used to live in the theme header), so it's injected there too.
+  // The anonymous showcase carries the "Try the editor" CTA in the pill, so
+  // it's injected there too.
   test("shows the pill on the anonymous showcase", () => {
     expect(shouldInjectDemoToolbar(req("/posts/hello"))).toBe(true);
   });

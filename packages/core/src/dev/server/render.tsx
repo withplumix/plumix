@@ -95,7 +95,7 @@ export function renderDevErrorPage(
   };
   // Vite substitutes the literal at bundle time; unset means VS Code.
   const editor = resolveEditorTemplate(process.env.PLUMIX_EDITOR);
-  // And the optional path remap from `PLUMIX_EDITOR_PATH_MAP` (#1627), which
+  // And the optional path remap from `PLUMIX_EDITOR_PATH_MAP`, which
   // rewrites the on-server frame path to the editor host's when the dev server
   // runs in a container or on a remote box.
   const editorPathMap = resolveEditorPathMap(

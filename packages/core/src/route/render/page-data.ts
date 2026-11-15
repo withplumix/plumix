@@ -104,9 +104,8 @@ export async function archiveData(
   return {
     node: { kind: "entryType", entryType },
     data,
-    // SSR-side: descriptor labels fall back to source text until the
-    // ctx.config.i18n route wiring lands (slice 11 #680 covered tRPC errors;
-    // route titles pending).
+    // SSR-side: descriptor labels fall back to source text, because route
+    // titles are not translated.
     title: registered
       ? labelSourceText(registered.labels?.plural ?? registered.label)
       : entryType,

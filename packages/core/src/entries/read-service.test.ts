@@ -395,7 +395,7 @@ describe("readEntryType", () => {
   });
 });
 
-// Reference meta resolution in the shared read pipeline (#1507): admin
+// Reference meta resolution in the shared read pipeline: admin
 // oRPC reads and REST projection both ride these two functions, so
 // resolved values asserted here cover both surfaces' data.
 describe("reference meta resolution", () => {

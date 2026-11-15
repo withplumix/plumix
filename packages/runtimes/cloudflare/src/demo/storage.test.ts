@@ -169,7 +169,7 @@ describe("initializeDemoStorage", () => {
     );
     expect(reinit).toBe(true);
 
-    // The new column exists (a query touching it no longer throws) and the old
+    // The new column exists (a query touching it doesn't throw) and the old
     // seed row was replaced, not duplicated.
     const rows = await sql.query("SELECT color FROM widget");
     expect(rows).toHaveLength(1);

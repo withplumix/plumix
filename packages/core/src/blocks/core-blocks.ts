@@ -40,9 +40,8 @@ export type CoreBlockName =
   | "core/table-cell";
 
 /**
- * `core/html` sat outside this list from #327, on the understanding that a site
- * wanting the raw-HTML escape hatch would register it explicitly. No such route
- * exists: `isReservedBlockName` rejects every `core/` name (#1884).
+ * `core/html` belongs here: a site can't register it itself, because
+ * `isReservedBlockName` rejects every `core/` name.
  */
 export const coreBlocks: readonly BlockSpec[] = Object.freeze([
   richTextBlock,

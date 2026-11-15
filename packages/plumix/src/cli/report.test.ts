@@ -46,7 +46,7 @@ describe("exitWithError", () => {
   }
 
   test("prints the cause, not just the code and generic hint", () => {
-    // The #1883 failure: a config importing a workspace dist CI hadn't built.
+    // A config importing a workspace dist CI hadn't built.
     const out = capture(
       PlumixCliError.configLoadFailed({
         configPath: "playground/plumix.config.ts",

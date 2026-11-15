@@ -105,7 +105,7 @@ describe("DevErrorPage", () => {
   });
 
   test("omits the empty stack fallback when only a component stack is present", () => {
-    // A hydration mismatch (#1667) carries React's component stack but no JS
+    // A hydration mismatch carries React's component stack but no JS
     // stack — the "(no stack available)" fallback would be redundant noise
     // above the component-stack section that actually names the island.
     const html = renderToStaticMarkup(

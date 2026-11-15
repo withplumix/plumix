@@ -129,7 +129,7 @@ describe("handleDebugRequests", () => {
     expect(html).toContain('data-testid="plumix-debug-panel-request"');
   });
 
-  // The property #2425 exists for: `dev.panels` is panel-layer config, so the
+  // `dev.panels` is panel-layer config, so the
   // surface with no bar in it honours it identically to the one with a bar.
   test("omits a panel `dev.panels` switches off, with no bar in sight", async () => {
     const dev = createDevRuntime({ bar: false, panels: { request: false } });

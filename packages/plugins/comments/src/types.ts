@@ -1,7 +1,7 @@
 /**
  * The four-state moderation lifecycle. `trash` is a recoverable
  * soft-delete; `spam` is retained for heuristics; hard removal is a
- * separate purge action (slice #963).
+ * separate purge action.
  */
 export const COMMENT_STATUSES = [
   "pending",

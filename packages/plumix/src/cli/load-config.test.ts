@@ -46,7 +46,7 @@ describe("loadConfig", () => {
     const first = await loadConfig(dir);
     const second = await loadConfig(dir);
 
-    // The fan-out across CLI + Vite hooks (#1102) collapses to one evaluation.
+    // The fan-out across CLI + Vite hooks collapses to one evaluation.
     expect(evalCount()).toBe(1);
     expect(second.config).toBe(first.config);
   });

@@ -253,7 +253,7 @@ export function renderErrorThroughTheme(
   args: RenderErrorArgs,
 ): Promise<string> {
   // Same phase span as the happy path — without it the error render's queries
-  // dangle directly under `dispatch` in the trace (#1491).
+  // dangle directly under `dispatch` in the trace.
   return args.ctx.telemetry.span("render", (s) => {
     s.set("render.node", `error: ${ERROR_VARIANTS[args.kind].tier}`);
     return renderErrorThroughThemeInner(args);
@@ -463,7 +463,7 @@ interface RenderTreeArgs {
   readonly htmlAllowlist: HtmlAllowlist;
   readonly chrome: RenderChrome;
   readonly catalog: CompiledCatalog;
-  /** The theme's `css: []` paths, linked in dev to avoid FOUC (#1701). */
+  /** The theme's `css: []` paths, linked in dev to avoid FOUC. */
   readonly themeCss: readonly string[];
   readonly viewTransitions: ResolvedViewTransitions | null;
   readonly editMode: EditModeDecision;
@@ -561,7 +561,7 @@ async function renderTree({
       : null,
     createElement(TemplateAdapter),
   );
-  // The bulk of `render` self-time (#1494).
+  // The bulk of `render` self-time.
   const authContext = {
     basePath: ctx.config.basePath,
     methods: ctx.authMethods,

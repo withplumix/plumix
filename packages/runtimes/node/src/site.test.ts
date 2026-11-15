@@ -214,7 +214,7 @@ describe("createNodeSite — scheduled", () => {
     const overrides: CronOverrides = {
       lease: false,
       logger: quiet(),
-      // @ts-expect-error -- a test seam, not an embedder's override (#2461)
+      // @ts-expect-error -- a test seam, not an embedder's override
       db: undefined,
     };
 

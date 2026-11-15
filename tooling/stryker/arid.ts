@@ -120,7 +120,7 @@ function declaresFunction(path: NodePath): boolean {
 
 /**
  * Runs when the module loads, before the runner switches a mutant on, so its mutants survive
- * whatever the tests do (stryker-js#6144). A function declared there runs later and is mutated.
+ * whatever the tests do (stryker-mutator/stryker-js#6144). A function declared there runs later and is mutated.
  */
 function runsAtImport(path: NodePath): boolean {
   return path.getFunctionParent() === null && !declaresFunction(path);

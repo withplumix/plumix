@@ -1547,8 +1547,8 @@ describe("archive-type feeds", () => {
   });
 
   test("a type with no archive page leaves its name to a plugin archive's feed", async () => {
-    // The type feed used to sit at `/<type name>/feed` whether or not the type
-    // had a page there, and took this path from the archive that does.
+    // A type feed at `/<type name>/feed` whether or not the type has a page
+    // there would take this path from the archive that does.
     const colliding = definePlugin("colliding", {
       setup: (ctx) => {
         ctx.registerEntryType("events", { label: "Events", isPublic: true });

@@ -25,7 +25,7 @@ seedAuthContext({
 });
 
 const rootElement = document.getElementById("root");
-// eslint-disable-next-line no-restricted-syntax -- React boot guard; convention exception per umbrella #232
+// eslint-disable-next-line no-restricted-syntax -- React boot guard, an exception to the named-error convention
 if (!rootElement) throw new Error("Missing #root element");
 
 /**

@@ -6,7 +6,7 @@ type ContextErrorCode =
 /**
  * Request/app-context invariant violated: an accessor outside
  * `requestStore.run()`, a malformed extension map, or `ctx.cache` outside a
- * plugin's code. Named-error convention (#232).
+ * plugin's code.
  */
 export class ContextError extends Error {
   static {

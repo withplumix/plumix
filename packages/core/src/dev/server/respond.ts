@@ -22,7 +22,7 @@ export function devErrorResponse(
       return jsonResponse(devErrorJson(err, hints), { status: 500 });
     }
     // Context is read from the same request-scoped collectors the debug bar
-    // uses (#1598); dev sampling is ensured without the bar, so it is populated
+    // uses; dev sampling is ensured without the bar, so it is populated
     // either way.
     const context = collectDevErrorContext(ctx);
     const panels = collectDevErrorPanels(dev, err, ctx);

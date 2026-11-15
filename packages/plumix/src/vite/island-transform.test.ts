@@ -217,7 +217,7 @@ describe("transformUseClientModule", () => {
     expect(out).toContain(`Component: __orig["Counter"]`);
     expect(out).toContain(`exportName: "Counter"`);
     expect(out).toContain(`chunkUrl: "/src/Counter.tsx"`);
-    // The raw props flow straight through — the shim no longer bakes the
+    // The raw props flow straight through — the shim doesn't bake the
     // split/serialize/attribute logic inline.
     expect(out).toContain("props");
   });

@@ -82,8 +82,7 @@ interface RevisionListItem {
   readonly authorEmail: string | null;
   /**
    * Author-supplied label for the revision. `null` when unset; the
-   * row UI renders an em dash placeholder so existing rows pre-#289
-   * slice 3 stay legible.
+   * row UI renders an em dash placeholder so an unlabelled row stays legible.
    */
   readonly message: string | null;
   /** The API token the change was made with, as named when it was made. */

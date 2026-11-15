@@ -141,7 +141,7 @@ describe("requestEmailChange", () => {
       mail: site.context.mail,
     });
 
-    // The first link no longer verifies — the row was purged before
+    // The first link fails to verify — the row was purged before
     // the second insert.
     await expect(verifyEmailChange(db, first.token)).rejects.toMatchObject({
       code: "token_invalid",

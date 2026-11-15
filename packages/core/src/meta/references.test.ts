@@ -1519,7 +1519,7 @@ describe("resolveReferences (theme-facing id-only helper)", () => {
 });
 
 // What keeps a request that runs several resolve batches from hydrating
-// the ids they share once per batch (#2506).
+// the ids they share once per batch.
 describe("reference hydration memo (request-scoped)", () => {
   // `photoProfilePlugin` is here for its `photo` lookup adapter; the field
   // the bags are read through is this one, declared beside them.

@@ -39,7 +39,7 @@ export const SEGMENT_KEY_PARAM = "__plumix_segment";
 
 /**
  * The build that rendered a stored page; a deploy never reads another build's
- * entry, whose asset URLs it no longer serves.
+ * entry, whose asset URLs it doesn't serve.
  */
 export const BUILD_KEY_PARAM = "__plumix_build";
 

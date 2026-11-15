@@ -969,7 +969,7 @@ async function resolveGroup(
     const key = principalKey(ctx);
     const groupKey = referenceGroupKey(target);
     // Tagged by id, so the entity's own write in this request drops the
-    // entry — a memoized miss included (#2517).
+    // entry — a memoized miss included.
     const tagsFor = (id: string): readonly string[] =>
       adapter.kind === undefined ? [] : hydratedEntityTags(adapter.kind, id);
     const payloads = await memoBatch(
@@ -1081,8 +1081,8 @@ function takeWritableSlot(
 type MetaContainer = unknown[] | ResolvedMeta;
 
 /**
- * A leaf or missing key reads as `undefined`: the storage shape no longer
- * matches the declared structure.
+ * A leaf or missing key reads as `undefined`: the storage shape has drifted
+ * from the declared structure.
  */
 function readContainer(
   container: unknown,
@@ -1262,7 +1262,7 @@ export function settleStoredMeta(
   const upserts = new Map<string, JsonValue>();
   const unconvertible: string[] = [];
   for (const [key, value] of Object.entries(bag ?? {})) {
-    // An unregistered key belongs to a plugin that is no longer installed, so
+    // An unregistered key belongs to a plugin that has been uninstalled, so
     // its shape is unknown and it passes through, as the decode leaves it.
     const field = scope.findField(key);
     const next = field

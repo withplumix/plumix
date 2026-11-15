@@ -31,7 +31,7 @@ const extensionsByName: Readonly<Record<string, Mark>> = {
 /**
  * Every core mark's Tiptap extension, in `coreMarks` order — consumed by the
  * editor's richtext field. Editor-only: the server never imports this, keeping
- * ProseMirror out of the worker bundle (#1205).
+ * ProseMirror out of the worker bundle.
  */
 export const coreMarkExtensions: readonly Mark[] = Object.freeze(
   coreMarks

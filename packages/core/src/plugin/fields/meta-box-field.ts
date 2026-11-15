@@ -306,7 +306,7 @@ export interface ReferenceTarget<TScope = unknown> {
 
 /**
  * Stored as the bare user id string; reads return `null` when the user is gone
- * or no longer matches scope.
+ * or falls outside the scope.
  */
 export interface UserMetaBoxField extends MetaBoxFieldBase {
   readonly inputType: "user";

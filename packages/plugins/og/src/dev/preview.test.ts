@@ -119,7 +119,7 @@ describe("the preview route", () => {
 
     // A theme-authored `render` and whatever template deps its card declared,
     // run against an unauthenticated request — so the gate is the dev server's
-    // environment variable *and* a loopback request (#2007).
+    // environment variable *and* a loopback request.
     (await harness.fetch("/_plumix/og/preview")).assertStatus(404);
     (await harness.fetch("/_plumix/og/preview/0.svg")).assertStatus(404);
   });

@@ -2,7 +2,7 @@
 // inline `<style>` text.
 
 export const devTokens = {
-  /** Full-page dev error surface and its client overlays (#1580 seed). */
+  /** Full-page dev error surface and its client overlays. */
   errorPage: {
     bg: "#16181d",
     surface: "#1e2128",
@@ -164,7 +164,7 @@ export const DEV_ERROR_CSS = `
   tab-size: 2;
 }
 
-/* React component stack — surfaced by the client island overlay (#1603). */
+/* React component stack — surfaced by the client island overlay. */
 .plumix-dev-error__component-stack {
   margin: 2rem 0 0;
 }
@@ -184,7 +184,7 @@ export const DEV_ERROR_CSS = `
   tab-size: 2;
 }
 
-/* Server-vs-client render pair for a hydration mismatch (#1668) — two panes
+/* Server-vs-client render pair for a hydration mismatch — two panes
    side by side on a wide page, stacked on narrow, so the diverging markup reads
    next to its counterpart. */
 .plumix-dev-error__hydration-diff {
@@ -277,7 +277,7 @@ export const DEV_ERROR_CSS = `
   border-color: var(--plumix-deverr-accent);
 }
 
-/* Open-in-editor: a compact icon link beside each frame (#1581). */
+/* Open-in-editor: a compact icon link beside each frame. */
 .plumix-dev-error__open {
   display: flex;
   flex: none;
@@ -404,9 +404,9 @@ export const DEV_ERROR_CSS = `
   color: var(--plumix-deverr-fg);
 }
 
-/* Request / route / database / timeline / application context (#1598).
+/* Request / route / database / timeline / application context.
    minmax(0, 1fr) caps the column so inner overflow-x/word-break contain wide
-   SQL rows and header values instead of widening the page (#1695). */
+   SQL rows and header values instead of widening the page. */
 .plumix-dev-error__context {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -414,7 +414,7 @@ export const DEV_ERROR_CSS = `
   margin-top: 2.5rem;
 }
 
-/* Plugin-contributed panels (#1626) — same section language as the context. */
+/* Plugin-contributed panels — same section language as the context. */
 .plumix-dev-error__panels {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

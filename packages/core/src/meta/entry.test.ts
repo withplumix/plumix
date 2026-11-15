@@ -484,7 +484,7 @@ describe("entry.get settles an unsettled row", () => {
 });
 
 // The settle writes from a snapshot, so the row can move under it; seeding the
-// column the snapshot no longer describes reaches the race without a timing
+// column the snapshot is stale for reaches the race without a timing
 // seam.
 describe("writeSettledMeta", () => {
   const snapshot = { count: "7" };

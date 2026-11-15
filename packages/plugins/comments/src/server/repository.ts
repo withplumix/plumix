@@ -56,8 +56,8 @@ export async function clampParent(
 
 /**
  * How many approved comments an email already has — the trust-policy
- * lookup that lets `first_time` moderation auto-approve a returning,
- * previously-approved commenter.
+ * lookup that lets `first_time` moderation auto-approve a returning commenter
+ * with an approved comment.
  */
 export async function countPriorApproved(
   ctx: AppContext,

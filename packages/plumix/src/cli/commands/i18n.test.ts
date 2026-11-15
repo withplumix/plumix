@@ -655,7 +655,7 @@ describe("i18nCommand", () => {
       mkdirSync(localesDir, { recursive: true });
       const enPo = join(localesDir, "en.po");
       // Catalog starts with `removed.in.source` active. Extract with
-      // --clean would demote it to `#~` obsolete (msgid no longer in
+      // --clean would demote it to `#~` obsolete (msgid absent from
       // source); `activeMsgids` filters obsoletes, so the gate sees
       // the id as removed.
       writeFileSync(

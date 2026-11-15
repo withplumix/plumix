@@ -547,7 +547,7 @@ describe("theme-level flat dep declarations", () => {
   test("template array form replaces the theme's slugs for that kind", async () => {
     // Override semantics: the matched template's `settings: ["author-info"]`
     // takes the entire slot — `site-info` is NOT inherited from the
-    // theme. To extend instead, use the function form (TDD #3).
+    // theme. To extend instead, use the function form.
     const theme = defineTheme({
       settings: ["site-info"],
       templates: [
@@ -691,8 +691,8 @@ describe("theme-level flat dep declarations", () => {
   });
 
   test("legacy nested `templateDeps: {}` on the theme throws at defineTheme", () => {
-    // Pre-#614 shape. The runtime guard makes sure migrations don't
-    // silently no-op when consumers forget to lift the keys to root.
+    // The runtime guard makes sure migrations don't silently no-op when
+    // consumers forget to lift the keys to root.
     const legacy = {
       templateDeps: { settings: ["site-info"] },
       templates: { index: () => null },

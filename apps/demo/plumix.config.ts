@@ -47,8 +47,7 @@ export default plumix({
   theme: blogTheme,
   // Deploys this example as the anonymous demo sandbox: provides runtime /
   // database / auth as the per-session Durable Object, synthetic admin, and
-  // demo runtime wrapper. Folded in unconditionally for now — see #1351 for
-  // decoupling this from the scaffolder template.
+  // demo runtime wrapper.
   ...demoPreset({
     binding: "DEMO_DO",
     loadSql: () => import("./demo-sql").then((m) => m.demoSql()),

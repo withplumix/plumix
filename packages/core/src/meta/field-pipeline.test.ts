@@ -755,7 +755,7 @@ describe("a composite .sanitize() cannot smuggle a value past a cell's gates", (
   });
 
   test("a cell rejected after a reorder anchors on the repeater, not a moved index", async () => {
-    // Post-sanitize row positions no longer address anything the admin
+    // Post-sanitize row positions fail to address anything the admin
     // rendered, so pointing at one would highlight the wrong row and show
     // the author a valid value.
     const links = repeater("links")

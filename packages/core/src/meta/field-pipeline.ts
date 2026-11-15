@@ -472,7 +472,7 @@ async function runRepeaterPipeline(
 }
 
 /**
- * After a `.sanitize()` row positions no longer name what the caller sent, so
+ * After a `.sanitize()` row positions stop naming what the caller sent, so
  * cell errors anchor on the repeater rather than highlight the wrong row.
  */
 async function settleRepeaterRows(

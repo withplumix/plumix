@@ -484,7 +484,7 @@ describe("a repeater", () => {
   });
 });
 
-// Two ways a nested repeater used to disagree with the row it sits in.
+// Two ways a nested repeater could disagree with the row it sits in.
 describe("a repeater inside a repeater row", () => {
   const nested = defineForm("survey", {
     fields: [

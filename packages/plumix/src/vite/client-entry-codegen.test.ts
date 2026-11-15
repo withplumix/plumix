@@ -41,7 +41,7 @@ describe("generateClientEntrySource", () => {
       const source = generateClientEntrySource(css);
       // Gated on `import.meta.hot` so it tree-shakes out of a production build.
       expect(source).toContain("if (import.meta.hot)");
-      // Installed from the single core-owned entry point (#1676), not from the
+      // Installed from the single core-owned entry point, not from the
       // blocks dev-error subpath.
       expect(source).toContain('import("plumix/core/dev-client")');
       expect(source).toContain(

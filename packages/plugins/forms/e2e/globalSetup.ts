@@ -64,7 +64,7 @@ export default async function globalSetup(): Promise<void> {
     },
     userAgent: "e2e/1.0",
   });
-  // A form the config no longer declares: the inbox reads its columns
+  // A form the config doesn't declare: the inbox reads its columns
   // off this row's own snapshot, so it stays readable regardless.
   const retired = await seed.create({
     form: "retired",

@@ -7,11 +7,11 @@ export interface ErrorDetail {
   readonly componentStack?: string;
   /**
    * The island's server markup, captured before `hydrateRoot` — carried only on
-   * a `plumix:island-hydration-mismatch` signal (#1668), paired with
+   * a `plumix:island-hydration-mismatch` signal, paired with
    * {@link client} for the overlay's server-vs-client diff.
    */
   readonly server?: string;
-  /** The island's markup after React's recovery re-render (#1668). */
+  /** The island's markup after React's recovery re-render. */
   readonly client?: string;
 }
 
