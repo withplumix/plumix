@@ -2,9 +2,10 @@ import { stripVTControlCharacters } from "node:util";
 import type { BrowserContext, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
-import type { Seeded } from "./site.js";
-
 export type Expect = typeof expect;
+
+/** Each kind of record a playground's seeder wrote, by the names it gave them. */
+export type Seeded = Readonly<Record<string, readonly string[]>>;
 
 /**
  * What a `--steps` file's default export takes. `page` and `context` are the

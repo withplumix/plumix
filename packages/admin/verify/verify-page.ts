@@ -4,8 +4,8 @@ import { join } from "node:path";
 import type { Browser, Page } from "@playwright/test";
 
 import type { PageEvent, VerifyReport } from "./report.js";
-import type { Seeded, Site } from "./site.js";
-import type { Steps, StepsOutcome } from "./steps.js";
+import type { Site } from "./site.js";
+import type { Seeded, Steps, StepsOutcome } from "./steps.js";
 import { axeViolations } from "../e2e/support/axe.js";
 import { buildReport } from "./report.js";
 import { signIn } from "./site.js";
