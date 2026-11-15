@@ -42,8 +42,9 @@
     "publint": "publint",
     "test:mutation": "node ../../scripts/test-mutation-package.ts",
     "test:unit": "vitest run",
-    "test:e2e": "playwright test --project chromium",
-    "typecheck": "tsc --noEmit"
+    "test:e2e": "playwright test --project chromium --project verify-admin",
+    "typecheck": "tsc --noEmit",
+    "verify:admin": "tsx verify/cli.ts"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",

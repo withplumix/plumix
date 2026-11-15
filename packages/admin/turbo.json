@@ -7,7 +7,22 @@
       // (#321). The `cache: false` that sat here arrived inside an unrelated
       // feature PR with no reason given, and it pinned the repository's
       // longest suite — 130 tests — to running on every commit.
-      "dependsOn": ["build", "^build", "plumix#build"]
+      //
+      // The `verify-admin` project boots core's and the seo plugin's
+      // playgrounds, which consume packages `^build` never reaches. Their own
+      // suites boot the same playgrounds and wipe the state they share, so
+      // this suite waits for theirs rather than racing it.
+      "dependsOn": [
+        "build",
+        "^build",
+        "plumix#build",
+        "@plumix/runtime-cloudflare#build",
+        "@plumix/plugin-blog#build",
+        "@plumix/plugin-media#build",
+        "@plumix/plugin-seo#build",
+        "@plumix/core#test:e2e",
+        "@plumix/plugin-seo#test:e2e"
+      ]
     }
   }
 }

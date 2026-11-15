@@ -864,9 +864,15 @@ const CURATED: Readonly<Record<string, Curated>> = {
       {
         reason:
           "this repo's own e2e plumbing — the port offset its suites share " +
-          "under a parallel `turbo run test:e2e`, and a chunk build that " +
-          "resolves shims out of plumix's source tree (`plumixAdminSrc`)",
-        names: ["resolveE2EPort", "buildAdminPluginChunkForE2E"],
+          "under a parallel `turbo run test:e2e`, a chunk build that " +
+          "resolves shims out of plumix's source tree (`plumixAdminSrc`), " +
+          "and the playground boot `pnpm verify:admin` runs outside Playwright",
+        names: [
+          "resolveE2EPort",
+          "buildAdminPluginChunkForE2E",
+          "playgroundWebServer",
+          "superviseWebServer",
+        ],
       },
     ],
   },

@@ -67,7 +67,7 @@ Admin routes (`packages/admin/src/routes/`):
 
 **Roles.** Roles are declared in the site's config ([ADR 0055](../adr/0055-a-role-is-a-set-of-capabilities-declared-in-code.md)); the admin assigns them to users but never edits what they grant, and has no roles screen. The manifest carries each role's name and label (`roleEntries` in `plugin/manifest-types.ts`), and the user screens build their role pickers from it (`getRoles` in `lib/manifest.ts`). A stored role the config doesn't declare shows as "Unknown role" (`users/-role-name.tsx`).
 
-**Tests.** Unit tests sit beside the code (`packages/admin/src/lib/*.test.ts`, `packages/admin-editor/src`). The admin e2e specs (`packages/admin/e2e/*.spec.ts`) run against `vite preview` of the built admin with RPC mocked (`e2e/support/rpc-mock.ts`), so they check the built `dist/`, not a live server; the visual editor's run against `playground/`. The real-server path is covered by the scaffold smoke.
+**Tests.** Unit tests sit beside the code (`packages/admin/src/lib/*.test.ts`, `packages/admin-editor/src`). The admin e2e specs (`packages/admin/e2e/*.spec.ts`) run against `vite preview` of the built admin with RPC mocked (`e2e/support/rpc-mock.ts`), so they check the built `dist/`, not a live server; the visual editor's run against `playground/`. `pnpm verify:admin` (`packages/admin/verify/`) opens a page on a playground's live server as a given role, and its `verify-admin` e2e project walks the pages a playground's manifest lists. The real-server path is covered by the scaffold smoke.
 
 ## Invariants
 

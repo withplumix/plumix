@@ -39,8 +39,17 @@ export type { Mailbox } from "./mailbox.js";
 export type { OpenPlaygroundDbOptions } from "./open-playground-db.js";
 export { openPlaygroundDb } from "./open-playground-db.js";
 export type { Passkey } from "./passkey.js";
-export type { PlumixE2EConfigOptions } from "./playwright-config.js";
-export { definePlumixE2EConfig, resolveE2EPort } from "./playwright-config.js";
+export type {
+  PlaygroundWebServer,
+  PlaygroundWebServerOptions,
+  PlumixE2EConfigOptions,
+} from "./playwright-config.js";
+export {
+  definePlumixE2EConfig,
+  playgroundWebServer,
+  resolveE2EPort,
+  superviseWebServer,
+} from "./playwright-config.js";
 export { runtimeSpec } from "./runtime-spec.js";
 export { CONTENT_LIST_ROWS, PNG_1X1 } from "./site-fixtures.js";
 export type { PlumixWorkerOptions } from "./test.js";

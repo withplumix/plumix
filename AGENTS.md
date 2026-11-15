@@ -40,6 +40,7 @@ Run everything from the root. Most root scripts run the turbo task of the same n
 | `test:e2e`                        | Playwright, in the packages that have an `e2e/` suite.                                                              |
 | `test:mutation`                   | Mutates the lines a branch changed and lists each one no unit test notices. Not run by CI or `test`.                |
 | `docs:screenshots`                | Recapture the docs screenshots (needs Docker; see `CONTRIBUTING.md`).                                               |
+| `verify:admin`                    | Open an admin page on a playground as a role; write screenshots and a report (`packages/admin/verify/README.md`).   |
 | `i18n:check`                      | Fails when `<Trans>`/`defineMessage` strings change without `lingui extract`.                                       |
 | `knip`                            | Unused files, exports and dependencies.                                                                             |
 | `migrations:check`                | Regenerates each table-owning package's migration history, then fails naming any whose `migrations/` changed.       |

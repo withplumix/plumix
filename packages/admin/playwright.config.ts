@@ -58,6 +58,17 @@ export default defineConfig({
   ...config,
   projects: [
     ...(config.projects ?? []),
+    // `pnpm verify:admin` boots its own playground, so this project uses the
+    // preview server above for nothing; it shares the config to share the run.
+    {
+      name: "verify-admin",
+      testDir: "./verify",
+      // As for the screenshots: vitest's `*.test.ts` sit beside the spec.
+      testMatch: "**/*.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+      // A run migrates and boots a playground before it opens a page.
+      timeout: 300_000,
+    },
     {
       name: "screenshots",
       testDir: "./screenshots",

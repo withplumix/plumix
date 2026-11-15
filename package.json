@@ -35,6 +35,7 @@
     "test:mutation": "node scripts/test-mutation.ts",
     "test:unit": "turbo run test:unit --concurrency=2",
     "typecheck": "turbo run typecheck",
+    "verify:admin": "pnpm --silent --dir packages/admin verify:admin",
     "version-packages": "changeset version"
   },
   "devDependencies": {
