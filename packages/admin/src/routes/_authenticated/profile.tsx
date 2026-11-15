@@ -1,3 +1,4 @@
+import { ROUTE_ALIASES } from "@/lib/route-aliases.js";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 /**
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
   beforeLoad: ({ context }) => {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
     throw redirect({
-      to: "/users/$id/edit",
+      to: ROUTE_ALIASES["/profile"],
       params: { id: context.user.id },
     });
   },

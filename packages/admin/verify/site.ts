@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { createServer } from "node:net";
 import { join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import type { Browser, BrowserContextOptions, Page } from "@playwright/test";
 import type { ChildProcess } from "node:child_process";
 
 import type { PluginRegistry, PlumixConfig } from "@plumix/core";
@@ -14,6 +15,7 @@ import {
 } from "@plumix/core";
 import { factoriesFor } from "@plumix/core/test";
 import {
+  actingAs,
   openPlaygroundDb,
   playgroundWebServer,
   superviseWebServer,
@@ -34,6 +36,7 @@ export interface RunningSite {
 }
 
 const CONFIG_FILE = "plumix.config.ts";
+const SEEDER_FILE = "seed.ts";
 const PLUGINS_DIR = join(REPO_ROOT, "packages/plugins");
 const ADMIN_PATH = "/_plumix/admin/";
 /** As long as `definePlumixE2EConfig` gives a playground to come up. */
@@ -200,5 +203,53 @@ export async function seedSite(
     }
   } finally {
     db.$client.close();
+  }
+}
+
+/** Each kind of record a playground's seeder wrote, by the names it gave them. */
+export type Seeded = Readonly<Record<string, readonly string[]>>;
+
+/**
+ * A playground's `seed.ts` default export: writes `count` of each record its
+ * plugin keeps, through `page`, an admin page signed in as an admin.
+ */
+type Seeder = (page: Page, count: number) => Promise<Seeded>;
+
+type StorageState = Exclude<
+  BrowserContextOptions["storageState"],
+  string | undefined
+>;
+
+/** A session for a new user of `role`. */
+export async function signIn(site: Site, role: string): Promise<StorageState> {
+  const db = await openPlaygroundDb({ cwd: site.dir });
+  try {
+    const { storageState } = await actingAs(db, role);
+    return { cookies: [...storageState.cookies], origins: [] };
+  } finally {
+    db.$client.close();
+  }
+}
+
+/** Runs the playground's seeder, when it has one, on the running site. */
+export async function runSeeder(
+  site: Site,
+  browser: Browser,
+  adminURL: string,
+  count: number,
+): Promise<Seeded | undefined> {
+  const file = join(site.dir, SEEDER_FILE);
+  if (!existsSync(file)) return undefined;
+  const { default: seed } = (await import(pathToFileURL(file).href)) as {
+    readonly default: Seeder;
+  };
+  const context = await browser.newContext({
+    baseURL: adminURL,
+    storageState: await signIn(site, "admin"),
+  });
+  try {
+    return await seed(await context.newPage(), count);
+  } finally {
+    await context.close();
   }
 }

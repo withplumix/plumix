@@ -8,6 +8,7 @@ const FINAL_URL = "http://localhost:4000/_plumix/admin/users";
 describe("buildReport", () => {
   it("reports a console error with where it was logged", () => {
     const report = buildReport({
+      route: "/users",
       finalUrl: FINAL_URL,
       events: [
         {
@@ -30,6 +31,7 @@ describe("buildReport", () => {
 
   it("reports a console warning apart from the errors", () => {
     const report = buildReport({
+      route: "/users",
       finalUrl: FINAL_URL,
       events: [{ kind: "console", type: "warning", text: "Deprecated prop" }],
       axeViolations: [],
@@ -43,6 +45,7 @@ describe("buildReport", () => {
 
   it("reports an uncaught exception as a console error", () => {
     const report = buildReport({
+      route: "/users",
       finalUrl: FINAL_URL,
       events: [
         {
@@ -60,6 +63,7 @@ describe("buildReport", () => {
 
   it("reports a response with a 4xx or 5xx status as a failed request", () => {
     const report = buildReport({
+      route: "/users",
       finalUrl: FINAL_URL,
       events: [
         {
@@ -94,6 +98,7 @@ describe("buildReport", () => {
 
   it("counts a request as failed from status 400 up, not a success or a redirect", () => {
     const report = buildReport({
+      route: "/users",
       finalUrl: FINAL_URL,
       events: [200, 302, 399, 400].map((status) => ({
         kind: "response" as const,
@@ -111,6 +116,7 @@ describe("buildReport", () => {
 
   it("reports a request that got no response, with why", () => {
     const report = buildReport({
+      route: "/users",
       finalUrl: FINAL_URL,
       events: [
         {
@@ -134,6 +140,7 @@ describe("buildReport", () => {
 
   it("reports each axe violation with the elements it found it on", () => {
     const report = buildReport({
+      route: "/users",
       finalUrl: FINAL_URL,
       events: [],
       axeViolations: [
@@ -159,6 +166,17 @@ describe("buildReport", () => {
         targets: ["[data-testid='users-heading']", "#root button.primary"],
       },
     ]);
+  });
+
+  it("reports where a page that ended on another route sent the browser", () => {
+    const report = buildReport({
+      route: "/users/create",
+      finalUrl: "http://localhost:4000/_plumix/admin/users?page=1&role=all",
+      events: [],
+      axeViolations: [],
+    });
+
+    expect(report.redirected).toEqual({ from: "/users/create", to: "/users" });
   });
 });
 
@@ -192,12 +210,31 @@ describe("hasProblems", () => {
       },
     ],
   ])("is true for %s", (_, findings) => {
-    expect(hasProblems({ ...clean, ...findings })).toBe(true);
+    expect(hasProblems({ ...clean, ...findings }, "/users")).toBe(true);
   });
 
   it("is false for a report with only console warnings", () => {
     expect(
-      hasProblems({ ...clean, consoleWarnings: [{ text: "Deprecated prop" }] }),
+      hasProblems(
+        { ...clean, consoleWarnings: [{ text: "Deprecated prop" }] },
+        "/users",
+      ),
+    ).toBe(false);
+  });
+
+  it("is true when the page ended on a route other than the one expected", () => {
+    expect(hasProblems(clean, "/users/create")).toBe(true);
+  });
+
+  it("is false when the page ended on the route expected, past its query", () => {
+    expect(
+      hasProblems(
+        {
+          ...clean,
+          finalUrl: "http://localhost:4000/_plumix/admin/users?page=1&role=all",
+        },
+        "/users",
+      ),
     ).toBe(false);
   });
 });

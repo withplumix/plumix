@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:cloudflare",
+    "@playwright/test": "catalog:",
     "@plumix/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",

@@ -136,7 +136,8 @@ const config: KnipConfig = {
     // Playgrounds — same shape as apps/*: `plumix.config.ts` is the
     // consumer entry, not visible to knip without an explicit hint.
     "packages/plugins/media/playground": {
-      entry: ["plumix.config.ts"],
+      // `pnpm verify:admin --seed` imports seed.ts by path.
+      entry: ["plumix.config.ts", "seed.ts"],
     },
     "packages/plugins/menu/playground": {
       entry: ["plumix.config.ts"],
