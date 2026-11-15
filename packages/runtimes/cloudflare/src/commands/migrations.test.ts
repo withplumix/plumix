@@ -7,6 +7,7 @@ import type { GetPlatformProxyOptions, PlatformProxy } from "wrangler";
 import { createDispatcherHarness } from "plumix/test";
 import { describeRunContract } from "plumix/test/conformance";
 import {
+  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
@@ -44,9 +45,9 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-function writeWrangler(d1: readonly object[]): void {
+function writeWrangler(d1: readonly object[], at = dir): void {
   writeFileSync(
-    join(dir, "wrangler.jsonc"),
+    join(at, "wrangler.jsonc"),
     JSON.stringify({
       name: "site",
       main: ".plumix/worker.ts",
@@ -138,45 +139,55 @@ function stubWrangler(binding: object = {}): WranglerCall[] {
 }
 
 describe("a wipe of the local D1, on workerd", () => {
-  // wrangler loads on first use, and a cold load alone can outlast a test.
+  // Opening loads wrangler and boots workerd, which can outlast a test alone.
+  let wipeDir: string;
+  let db: Awaited<ReturnType<typeof open>>;
+
   beforeAll(async () => {
-    await import("wrangler");
+    wipeDir = mkdtempSync(join(tmpdir(), "plumix-cf-wipe-"));
+    writeWrangler([D1_ENTRY], wipeDir);
+    db = await migrations.open({
+      cwd: wipeDir,
+      config: app.config,
+      location: "site",
+      binding: undefined,
+      targetValues: {},
+    });
+  });
+
+  afterAll(async () => {
+    await db.close();
+    rmSync(wipeDir, { recursive: true, force: true });
   });
 
   test("drops every table, foreign keys and tracking tables included, and leaves D1's own", async () => {
-    writeWrangler([D1_ENTRY]);
-    const db = await open("site");
-    try {
-      await db.migrate({
-        migrationsFolder: fileURLToPath(
-          new URL("../../../../core/migrations", import.meta.url),
-        ),
-        migrationsTable: "__drizzle_migrations_core",
-      });
-      await db.batch(
-        [
-          "CREATE TABLE parent (id integer PRIMARY KEY AUTOINCREMENT)",
-          "CREATE TABLE child (parent_id integer REFERENCES parent (id) ON DELETE CASCADE)",
-          "CREATE TABLE child_log (parent_id integer)",
-          "CREATE TRIGGER child_deleted AFTER DELETE ON child BEGIN INSERT INTO child_log VALUES (old.parent_id); END",
-          "CREATE VIRTUAL TABLE notes USING fts5(body)",
-          "INSERT INTO parent DEFAULT VALUES",
-          "INSERT INTO child (parent_id) VALUES (1)",
-        ].map((sql) => ({ sql, params: [] })),
-      );
+    await db.migrate({
+      migrationsFolder: fileURLToPath(
+        new URL("../../../../core/migrations", import.meta.url),
+      ),
+      migrationsTable: "__drizzle_migrations_core",
+    });
+    await db.batch(
+      [
+        "CREATE TABLE parent (id integer PRIMARY KEY AUTOINCREMENT)",
+        "CREATE TABLE child (parent_id integer REFERENCES parent (id) ON DELETE CASCADE)",
+        "CREATE TABLE child_log (parent_id integer)",
+        "CREATE TRIGGER child_deleted AFTER DELETE ON child BEGIN INSERT INTO child_log VALUES (old.parent_id); END",
+        "CREATE VIRTUAL TABLE notes USING fts5(body)",
+        "INSERT INTO parent DEFAULT VALUES",
+        "INSERT INTO child (parent_id) VALUES (1)",
+      ].map((sql) => ({ sql, params: [] })),
+    );
 
-      await db.wipe();
+    await db.wipe();
 
-      const left = await db.all(
-        "SELECT type, name FROM sqlite_master ORDER BY name",
-      );
-      expect(
-        left.filter(({ name }) => !String(name).startsWith("_cf_")),
-      ).toEqual([{ type: "table", name: "sqlite_sequence" }]);
-      expect(left.length).toBeGreaterThan(1);
-    } finally {
-      await db.close();
-    }
+    const left = await db.all(
+      "SELECT type, name FROM sqlite_master ORDER BY name",
+    );
+    expect(left.filter(({ name }) => !String(name).startsWith("_cf_"))).toEqual(
+      [{ type: "table", name: "sqlite_sequence" }],
+    );
+    expect(left.length).toBeGreaterThan(1);
   });
 });
 

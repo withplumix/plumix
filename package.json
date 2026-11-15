@@ -30,7 +30,7 @@
     "smoke": "node .github/scripts/smoke.mjs",
     "smoke:scaffold": "turbo run smoke:scaffold",
     "surface:check": "turbo run surface:check",
-    "test": "turbo run test:unit",
+    "test": "pnpm test:unit",
     "test:e2e": "turbo run test:e2e --concurrency=4",
     "test:mutation": "node scripts/test-mutation.ts",
     "test:unit": "turbo run test:unit --concurrency=2",

@@ -2,8 +2,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { CommandContext, PlumixApp } from "plumix";
+import type { PlatformProxy } from "wrangler";
 import { coreMigrationCount, createDispatcherHarness } from "plumix/test";
 import {
+  afterAll,
   afterEach,
   beforeAll,
   beforeEach,
@@ -21,9 +23,48 @@ let app: PlumixApp;
 let dir: string;
 let events: string[];
 
+/**
+ * One workerd for the file, a fresh database per case that applies: booting
+ * per case cost a third of each, past 5s on a busy runner.
+ */
+const LOCAL_DATABASES = 3;
+let localDir: string;
+let local: PlatformProxy;
+let usedDatabases = 0;
+
 beforeAll(async () => {
   ({ app } = await createDispatcherHarness());
+  localDir = mkdtempSync(join(tmpdir(), "plumix-cf-deploy-local-"));
+  const configPath = join(localDir, "wrangler.json");
+  writeFileSync(
+    configPath,
+    JSON.stringify({
+      name: "local",
+      compatibility_date: "2026-04-01",
+      d1_databases: Array.from({ length: LOCAL_DATABASES }, (_, i) => ({
+        binding: `DB${String(i)}`,
+        database_name: `local-${String(i)}`,
+        database_id: `00000000-0000-0000-0000-00000000000${String(i)}`,
+      })),
+    }),
+  );
+  local = await getPlatformProxy({ configPath, persist: false });
 });
+
+afterAll(async () => {
+  await local.dispose();
+  rmSync(localDir, { recursive: true, force: true });
+});
+
+/** A local D1 no other case has touched, standing in for the deployed one. */
+function freshDatabase(): PlatformProxy {
+  const binding = `DB${String(usedDatabases++)}`;
+  return {
+    ...local,
+    env: { DB: local.env[binding] },
+    dispose: () => Promise.resolve(),
+  };
+}
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "plumix-cf-deploy-"));
@@ -82,15 +123,11 @@ describe("plumix deploy", () => {
     // The remote database, stood in for by a local one: what matters is that
     // the apply reaches it through remote bindings before wrangler deploys.
     vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
-      async (options) => {
+      (options) => {
         events.push(`proxy remoteBindings=${String(options.remoteBindings)}`);
-        const proxy = await getPlatformProxy({
-          configPath: options.configPath,
-          persist: false,
-          remoteBindings: false,
-        });
+        const proxy = freshDatabase();
         const d1 = proxy.env.DB as D1Database;
-        return {
+        return Promise.resolve({
           ...proxy,
           dispose: async () => {
             const { results } = await d1
@@ -99,7 +136,7 @@ describe("plumix deploy", () => {
             events.push(`core applied ${String(results[0]?.n)}`);
             await proxy.dispose();
           },
-        };
+        });
       },
     );
 
@@ -165,16 +202,12 @@ describe("plumix deploy and plumix preview — targets", () => {
   test("deploy --env qa builds and ships qa after migrating qa's database", async () => {
     writeConfig({ env: { qa: { d1_databases: [d1("site-qa", "qa-id")] } } });
     vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
-      async (options) => {
+      (options) => {
         const config = JSON.parse(
           readFileSync(options.configPath ?? "", "utf8"),
         ) as { d1_databases: { database_id: string }[] };
         events.push(`migrate ${config.d1_databases[0]?.database_id ?? ""}`);
-        return getPlatformProxy({
-          configPath: options.configPath,
-          persist: false,
-          remoteBindings: false,
-        });
+        return Promise.resolve(freshDatabase());
       },
     );
     vi.spyOn(process.stderr, "write").mockReturnValue(true);
@@ -204,16 +237,12 @@ describe("plumix deploy and plumix preview — targets", () => {
       previews: { d1_databases: [d1("site-preview", "preview-id")] },
     });
     vi.spyOn(migrationsDeps, "getPlatformProxy").mockImplementation(
-      async (options) => {
+      (options) => {
         const config = JSON.parse(
           readFileSync(options.configPath ?? "", "utf8"),
         ) as { d1_databases: { database_id: string }[] };
         events.push(`migrate ${config.d1_databases[0]?.database_id ?? ""}`);
-        return getPlatformProxy({
-          configPath: options.configPath,
-          persist: false,
-          remoteBindings: false,
-        });
+        return Promise.resolve(freshDatabase());
       },
     );
     vi.spyOn(process.stderr, "write").mockReturnValue(true);
