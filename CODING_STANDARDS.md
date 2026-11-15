@@ -37,6 +37,10 @@ Explicit code is often better than compact code.
 A simplification changes how code reads, never what it does. Every output and behaviour stays the
 same.
 
+A production source file holds at most 600 lines of code, blank and comment lines aside
+(`max-lines`). The files still over it are listed in `tooling/eslint/ratchets/max-lines.json`, each
+held at its own count, which only goes down: split a listed file rather than raise its ceiling.
+
 ### Comments
 
 A comment is a smell. The default is none. Wanting to write one is a sign the code isn't saying

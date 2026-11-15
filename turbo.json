@@ -194,6 +194,19 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/**/playwright.config.ts"],
       "outputLogs": "new-only"
     },
+    "@plumix/eslint-config#test:unit": {
+      // The ratchet test counts the files each ratchet list names, which live
+      // in other packages. Without these inputs turbo would replay a pass for
+      // the change that shrinks a listed file and leaves its ceiling stale.
+      // Same `pkg#task` caveat as above: `^topo` is repeated.
+      "dependsOn": ["^topo"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/**/src/**/*.{ts,tsx}",
+        "!$TURBO_ROOT$/**/node_modules/**"
+      ],
+      "outputLogs": "new-only"
+    },
     "@plumix/core#test:unit": {
       // The block-text corpus test asserts against the demo site's seeded
       // content, which lives downstream of this package — `^topo` never reaches
