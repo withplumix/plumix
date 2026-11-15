@@ -65,20 +65,23 @@ export function serializeProps(
   options: SerializePropsOptions = {},
 ): string {
   const seen = new WeakSet();
-  const out: Record<string, Encoded> = {};
-  for (const [key, value] of Object.entries(props)) {
-    out[key] = encode(value, seen, options.displayName);
-  }
-  return JSON.stringify(out);
+  // `fromEntries`, here and below: assigning a `__proto__` key sets the
+  // prototype and drops the prop, where `fromEntries` keeps it as an own key.
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.entries(props).map(([key, value]) => [
+        key,
+        encode(value, seen, options.displayName),
+      ]),
+    ),
+  );
 }
 
 export function deserializeProps(payload: string): SerializedProps {
   const parsed = JSON.parse(payload) as Record<string, Encoded>;
-  const out: Record<string, unknown> = {};
-  for (const [key, encoded] of Object.entries(parsed)) {
-    out[key] = decode(encoded);
-  }
-  return out;
+  return Object.fromEntries(
+    Object.entries(parsed).map(([key, encoded]) => [key, decode(encoded)]),
+  );
 }
 
 function encode(
@@ -155,14 +158,16 @@ function encodeInner(
         PROP_TYPE.JSON,
         (value as readonly unknown[]).map((v) => encode(v, seen, displayName)),
       ];
-    default: {
-      const obj: Record<string, Encoded> = {};
-      const rec = value as Record<string, unknown>;
-      for (const key of Object.keys(rec)) {
-        obj[key] = encode(rec[key], seen, displayName);
-      }
-      return [PROP_TYPE.Value, obj];
-    }
+    default:
+      return [
+        PROP_TYPE.Value,
+        Object.fromEntries(
+          Object.entries(value as Record<string, unknown>).map(([key, v]) => [
+            key,
+            encode(v, seen, displayName),
+          ]),
+        ),
+      ];
   }
 }
 
@@ -225,9 +230,7 @@ function decodeValue(raw: unknown): DecodedValue {
   // The payload came out of `JSON.parse`, so a non-object here is a string,
   // number, boolean or null — every one of them a `DecodedValue` already.
   if (raw === null || typeof raw !== "object") return raw as DecodedValue;
-  const out: Record<string, DecodedValue> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    out[k] = decode(v as Encoded);
-  }
-  return out;
+  return Object.fromEntries(
+    Object.entries(raw).map(([k, v]) => [k, decode(v as Encoded)]),
+  );
 }

@@ -1,8 +1,67 @@
-import { describe, expect, test } from "vitest";
+import { test } from "@fast-check/vitest";
+import fc from "fast-check";
+import { describe, expect } from "vitest";
 
 import { deserializeProps, PROP_TYPE, serializeProps } from "./serialize.js";
 
+/**
+ * Leaves out NaN, -0, an invalid Date and a sparse array: the codec turns the
+ * first two into null and 0, and throws on the others.
+ */
+const scalar = fc.oneof(
+  fc.string(),
+  fc.double({ noNaN: true }).filter((n) => !Object.is(n, -0)),
+  fc.boolean(),
+  fc.constant(null),
+  fc.constant(undefined),
+  fc.bigInt(),
+  fc.date({ noInvalidDate: true }),
+  fc.webUrl().map((url) => new URL(url)),
+  fc
+    .tuple(fc.string(), fc.subarray(["d", "g", "i", "m", "s", "u", "y"]))
+    .map(
+      ([text, flags]) =>
+        new RegExp(
+          text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&"),
+          flags.join(""),
+        ),
+    ),
+  fc.uint8Array(),
+  fc.uint16Array(),
+  fc.uint32Array(),
+);
+
+const { prop } = fc.letrec((tie) => ({
+  prop: fc.oneof(
+    { depthSize: "small" },
+    scalar,
+    tie("array"),
+    tie("object"),
+    tie("map"),
+    tie("set"),
+  ),
+  array: fc.array(tie("prop"), { maxLength: 3 }),
+  object: fc.dictionary(fc.string(), tie("prop"), {
+    maxKeys: 3,
+    noNullPrototype: true,
+  }),
+  map: fc
+    .array(fc.tuple(tie("prop"), tie("prop")), { maxLength: 3 })
+    .map((entries) => new Map(entries)),
+  set: fc.array(tie("prop"), { maxLength: 3 }).map((values) => new Set(values)),
+}));
+
+const props = fc.dictionary(fc.string(), prop, { noNullPrototype: true });
+
 describe("serializeProps / deserializeProps", () => {
+  // A key such as `__proto__` turns up within hundreds of runs, not 100.
+  test.prop([props], { seed: 3714, numRuns: 1000 })(
+    "round-trips every value of every type the codec carries",
+    (props) => {
+      expect(deserializeProps(serializeProps(props))).toStrictEqual(props);
+    },
+  );
+
   test("round-trips a plain string under PROP_TYPE.Value", () => {
     const serialized = serializeProps({ title: "hello" });
     const parsed = JSON.parse(serialized) as Record<
@@ -37,6 +96,17 @@ describe("serializeProps / deserializeProps", () => {
   ])(
     "round-trips undefined in $where rather than turning it into null",
     ({ props }) => {
+      expect(deserializeProps(serializeProps(props))).toStrictEqual(props);
+    },
+  );
+
+  test.each([
+    { where: "a top-level prop", payload: '{"__proto__":"x"}' },
+    { where: "an object field", payload: '{"form":{"__proto__":"x"}}' },
+  ])(
+    "round-trips a key named __proto__ in $where as an own key",
+    ({ payload }) => {
+      const props = JSON.parse(payload) as Record<string, unknown>;
       expect(deserializeProps(serializeProps(props))).toStrictEqual(props);
     },
   );
