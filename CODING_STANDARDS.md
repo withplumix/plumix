@@ -115,6 +115,13 @@ An empty string in a config slot means the option is off, the same as `false` or
 out. Validation rejects only the shapes a ticket names as rejected; it does not turn an empty
 string into a boot error on its own.
 
+An effect (`useEffect`, `useLayoutEffect`) in admin UI code syncs with something outside React,
+such as the DOM, a timer or a subscription. Derive a value during render, handle an event in its
+handler, and fetch through TanStack Query instead
+([You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)).
+`plumix/max-effects` holds each file in `@plumix/admin`, `@plumix/admin-editor` and a plugin's
+`src/admin/` at its count in `tooling/eslint/ratchets/effects.json`, and every other file at none.
+
 Code adds nothing to a tool's output: no warning, deprecation notice or stray log in a build, test
 or lint run. A test that takes an error path spies on the log it expects. A suppressed false
 positive is filtered at its source by code and message, with a comment naming why.

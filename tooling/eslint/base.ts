@@ -7,7 +7,7 @@ import turboPlugin from "eslint-plugin-turbo";
 import { defineConfig, includeIgnoreFile } from "eslint/config";
 import tseslint from "typescript-eslint";
 
-import { MAX_LINES, ratchetConfig } from "./ratchet.js";
+import { EFFECTS, MAX_LINES, ratchetConfig } from "./ratchet.js";
 import { plumixPlugin } from "./rules/index.js";
 import { RETIRED_TIER_PENDING } from "./rules/test-tier-pending.js";
 
@@ -250,6 +250,15 @@ export const adminUiConfig = defineConfig({
   ignores: TEST_SOURCE,
   rules: { "plumix/no-error-message-in-ui": "error" },
 });
+
+/**
+ * Opted into by the admin and editor packages; plugins get it from
+ * `pluginConfig`. `@plumix/admin-ui` stays out: it holds the named hooks that
+ * wrap the effects UI code needs.
+ */
+export const adminEffectsConfig = defineConfig(
+  ratchetConfig(EFFECTS, { files: PRODUCTION_SOURCE, ignores: TEST_SOURCE }),
+);
 
 /**
  * Re-declares the rule over the production-source scope, since flat config

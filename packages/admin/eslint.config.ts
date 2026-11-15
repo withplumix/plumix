@@ -1,6 +1,10 @@
 import { defineConfig } from "eslint/config";
 
-import { adminUiConfig, baseConfig } from "@plumix/eslint-config/base";
+import {
+  adminEffectsConfig,
+  adminUiConfig,
+  baseConfig,
+} from "@plumix/eslint-config/base";
 import { i18nStrictConfig } from "@plumix/eslint-config/i18n";
 import { reactConfig } from "@plumix/eslint-config/react";
 
@@ -10,6 +14,7 @@ import { reactConfig } from "@plumix/eslint-config/react";
 export default defineConfig(
   baseConfig,
   adminUiConfig,
+  adminEffectsConfig,
   reactConfig,
   i18nStrictConfig,
   {

@@ -210,9 +210,17 @@ To see a task run that turbo wants to skip, pass `--force`. The `smoke:scaffold`
 
 A ratchet holds a per-file count at a limit and lists the files already over it in
 `tooling/eslint/ratchets/`, each at its own ceiling (`tooling/eslint/ratchet.ts`). Lint fails a file
-that passes its limit or ceiling. When you shrink a listed file, the `@plumix/eslint-config` unit
-test fails until you run `pnpm --filter @plumix/eslint-config ratchet:update` and commit the list.
-That script only lowers a ceiling or drops a file back under the limit; it never adds or raises one.
+that passes its limit or ceiling. There are two:
+
+- `max-lines.json`: code lines in production source, limit 600.
+- `effects.json`: calls to `useEffect`, `useLayoutEffect` and `useInsertionEffect`
+  (`plumix/max-effects`) in admin UI source, limit 0. It covers `@plumix/admin`,
+  `@plumix/admin-editor` and each plugin's `src/admin/`, and lists only the files that already call
+  one. All three hooks count, so swapping one for another cannot get past the cap.
+
+When you shrink a listed file, the `@plumix/eslint-config` unit test fails until you run
+`pnpm --filter @plumix/eslint-config ratchet:update` and commit the list. That script only lowers a
+ceiling or drops a file back under the limit; it never adds or raises one.
 
 ### Link validation
 
