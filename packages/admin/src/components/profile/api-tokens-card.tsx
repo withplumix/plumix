@@ -69,6 +69,7 @@ import {
   TableRow,
 } from "@plumix/admin-ui/table";
 import { Textarea } from "@plumix/admin-ui/textarea";
+import { useTimedFlag } from "@plumix/admin-ui/use-timed-flag";
 import { vMessage } from "@plumix/core/validation";
 
 import { AdminConnectedApps, SelfConnectedApps } from "./connected-apps.js";
@@ -746,14 +747,13 @@ function SecretShownDialog({
   onClose: () => void;
 }): ReactNode {
   const label = useLabel();
-  const [copied, setCopied] = useState(false);
+  const [copied, flashCopied, resetCopied] = useTimedFlag(2000);
 
   const copy = async (): Promise<void> => {
     if (!secret) return;
     try {
       await copyText(secret);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      flashCopied();
     } catch {
       const input = document.getElementById("api-tokens-secret-input");
       if (input instanceof HTMLInputElement) {
@@ -768,7 +768,7 @@ function SecretShownDialog({
       open={secret !== null}
       onOpenChange={(open) => {
         if (!open) {
-          setCopied(false);
+          resetCopied();
           onClose();
         }
       }}

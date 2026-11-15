@@ -279,6 +279,32 @@ test("a second save chains from the etag the first returned, before the list ref
   expect(saves).toEqual([200, 200]);
 });
 
+test("copying an item's URL says Copied, then offers Copy again", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("pages/media");
+  const confirmed = page.waitForResponse(
+    (r) => r.url().endsWith("/media/confirm") && r.status() === 200,
+  );
+  await page
+    .locator('[data-testid="media-library-upload"] input[type="file"]')
+    .setInputFiles({
+      name: "copied.png",
+      mimeType: "image/png",
+      buffer: PNG_1X1,
+    });
+  await confirmed;
+  await openDetailAlt(page, "copied");
+  const copy = page.getByTestId("media-detail-copy");
+
+  await copy.click();
+
+  await expect(copy).toHaveText("Copied");
+  await expect(copy).toHaveText("Copy");
+});
+
 test("admin page ships styled controls", async ({ page }) => {
   await page.goto("pages/media");
   await expect(page.getByTestId("media-library")).toBeVisible();

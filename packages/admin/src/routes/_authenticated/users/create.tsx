@@ -49,6 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plumix/admin-ui/select";
+import { useTimedFlag } from "@plumix/admin-ui/use-timed-flag";
 import { vMessage } from "@plumix/core/validation";
 
 import { USERS_LIST_DEFAULT_SEARCH } from "./-constants.js";
@@ -330,15 +331,12 @@ function InviteSuccess({
   onBackToList: () => void;
 }): ReactNode {
   const { i18n } = useLingui();
-  const [copied, setCopied] = useState(false);
+  const [copied, flashCopied] = useTimedFlag(2000);
 
   const copy = async (): Promise<void> => {
     try {
       await copyText(inviteUrl);
-      setCopied(true);
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
+      flashCopied();
     } catch {
       // The Clipboard API is blocked in insecure or iframed contexts; selecting
       // the input leaves a manual copy.

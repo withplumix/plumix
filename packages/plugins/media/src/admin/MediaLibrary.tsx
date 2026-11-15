@@ -31,6 +31,8 @@ import {
   Button,
   Input,
   Skeleton,
+  useDebouncedValue,
+  useTimedFlag,
 } from "plumix/admin/ui";
 import { authClient } from "plumix/auth/client";
 import { Trans, useLingui } from "plumix/i18n";
@@ -135,23 +137,6 @@ function mediaListKey(
 
 /** Matches the admin's DebouncedSearchInput interval for list-screen parity. */
 const SEARCH_DEBOUNCE_MS = 250;
-
-/**
- * Local debounce — the admin shell's DebouncedSearchInput lives behind
- * the `@/` alias and isn't part of the plugin-facing surface.
- */
-function useDebouncedValue(value: string, delayMs: number): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebounced(value);
-    }, delayMs);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delayMs]);
-  return debounced;
-}
 
 /**
  * Without `publicUrlBase` the plugin emits relative serve URLs, which break
@@ -1096,19 +1081,18 @@ function MediaDetailDrawer({
     mutationFn: lease.takeOver,
     onSuccess: onReload,
   });
-  const [copied, setCopied] = useState(false);
+  const [copied, flashCopied] = useTimedFlag(1500);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const isImage = item.mime.startsWith("image/");
   const absoluteUrl = toAbsoluteUrl(item.url);
   const copy = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(absoluteUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      flashCopied();
     } catch {
       /* user can copy from the visible URL */
     }
-  }, [absoluteUrl]);
+  }, [absoluteUrl, flashCopied]);
 
   return (
     <aside
@@ -1395,7 +1379,7 @@ function AltEditor({
   onSave: (alt: string) => void;
 }): ReactNode {
   const [draft, setDraft] = useState(value);
-  const [savedFlash, setSavedFlash] = useState(false);
+  const [savedFlash, flashSaved] = useTimedFlag(1200);
   const dirtyRef = useRef(false);
   const lastSavedRef = useRef(value);
   useEffect(() => {
@@ -1407,10 +1391,9 @@ function AltEditor({
     if (altNeedsSave(draft, value, lastSavedRef.current)) {
       lastSavedRef.current = draft;
       onSave(draft);
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 1200);
+      flashSaved();
     }
-  }, [draft, value, onSave]);
+  }, [draft, value, onSave, flashSaved]);
 
   return (
     <div className="relative">
