@@ -41,6 +41,17 @@ describe("serializeProps / deserializeProps", () => {
     },
   );
 
+  test.each([
+    { where: "a top-level prop", payload: '{"__proto__":"x"}' },
+    { where: "an object field", payload: '{"form":{"__proto__":"x"}}' },
+  ])(
+    "round-trips a key named __proto__ in $where as an own key",
+    ({ payload }) => {
+      const props = JSON.parse(payload) as Record<string, unknown>;
+      expect(deserializeProps(serializeProps(props))).toStrictEqual(props);
+    },
+  );
+
   test("round-trips Date", () => {
     const d = new Date("2026-01-01T12:00:00.000Z");
     const out = deserializeProps(serializeProps({ when: d })) as {
