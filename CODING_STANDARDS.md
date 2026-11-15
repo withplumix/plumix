@@ -474,6 +474,35 @@ matter.
 - **Never change a test just to make it pass**: the test may be the only thing that's right. When
   you can't tell which side is wrong, stop and say so.
 
+### Property tests
+
+A property test states a rule that holds for every input of a kind, and
+[fast-check](https://fast-check.dev) generates the inputs: `test.prop` from `@fast-check/vitest`,
+the arbitraries from `fast-check`. `packages/core/src/blocks/entry-content.test.ts` and
+`serialize.test.ts` beside it are the examples.
+
+- **When a property beats examples.** The code is a pure transform over more inputs than anyone
+  can pick by hand, and the rule is one sentence true of any input: a decoder gives back what its
+  encoder took, a second pass changes nothing, no output holds what a sanitiser removes. A rule
+  that holds only for chosen inputs stays an example test.
+- **Which tier.** It is a unit test, beside the source it checks, under every rule of the unit
+  tier. Each run generates values in memory, so a property never boots a site or a database per
+  run.
+- **Valid input comes from the real definition.** An arbitrary builds its values from what defines
+  them, such as the block registry, so a block added later is covered without editing the test.
+  Whatever it leaves out on purpose it names, with the reason, in a comment.
+- **The expected value is the input.** A property asserts a relation to its input (the decoded
+  value equals the input), never a value recomputed the way the code computes it. It asserts with
+  `expect`, so a failure prints the diff.
+- **Reproducible.** Each property passes a fixed `seed`, so every run, CI included, checks the same
+  inputs. A failure prints the `seed` and the `path` of the shrunk counterexample; passing both to
+  the same `test.prop` replays it. To search further, run it locally with another seed or more
+  runs, and keep the committed seed fixed.
+- **A bug it finds becomes an example.** The shrunk counterexample becomes an example test that
+  fails before the fix, so the case stays in the suite whatever the generator or seed becomes.
+- **Fast.** fast-check runs 100 inputs by default. Raise `numRuns` only with a comment saying what
+  fewer runs miss, and stay inside the unit tier's budget.
+
 ### TDD
 
 Every change is test-first, one cycle at a time:
