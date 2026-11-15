@@ -54,6 +54,7 @@ describe("an API token minted with a preset", () => {
         "entry:post:edit_own",
         "entry:post:read",
         "entry:post:read_revisions",
+        "user:create_tokens",
         "user:edit_own",
         "user:list",
       ],

@@ -7,6 +7,7 @@ import { apiTokens } from "../../db/schema/api_tokens.js";
 import { oauthAuthorizationCodes } from "../../db/schema/oauth_authorization_codes.js";
 import { oauthGrants } from "../../db/schema/oauth_grants.js";
 import { oauthRefreshTokens } from "../../db/schema/oauth_refresh_tokens.js";
+import { users } from "../../db/schema/users.js";
 import { encodeBase64url } from "../../encoding.js";
 import { generateToken, hashToken } from "../tokens.js";
 import { resolveScope } from "./scopes.js";
@@ -20,10 +21,19 @@ export async function findOAuthGrant(
   db: Db,
   userId: number,
   clientId: string,
-): Promise<{ id: number; scopes: readonly string[] } | null> {
+): Promise<{
+  id: number;
+  scopes: readonly string[];
+  ownerRole: string;
+} | null> {
   const row = await db
-    .select({ id: oauthGrants.id, scopes: oauthGrants.scopes })
+    .select({
+      id: oauthGrants.id,
+      scopes: oauthGrants.scopes,
+      ownerRole: users.role,
+    })
     .from(oauthGrants)
+    .innerJoin(users, eq(users.id, oauthGrants.userId))
     .where(
       and(eq(oauthGrants.userId, userId), eq(oauthGrants.clientId, clientId)),
     )
@@ -173,6 +183,7 @@ export async function issueRefreshToken(
 export interface ApprovedAccess {
   readonly grantId: number;
   readonly userId: number;
+  readonly ownerRole: string;
   readonly clientId: string;
   readonly resource: string;
   readonly scopes: readonly string[];
@@ -200,13 +211,15 @@ export async function findRefreshableAccess(
       userId: oauthGrants.userId,
       clientId: oauthGrants.clientId,
       grantScopes: oauthGrants.scopes,
+      ownerRole: users.role,
     })
     .from(oauthRefreshTokens)
     .innerJoin(oauthGrants, eq(oauthGrants.id, oauthRefreshTokens.grantId))
+    .innerJoin(users, eq(users.id, oauthGrants.userId))
     .where(eq(oauthRefreshTokens.id, refreshTokenId))
     .get();
   if (found?.clientId !== request.clientId) return "invalid_grant";
-  const { token: row, userId, clientId, grantScopes } = found;
+  const { token: row, userId, clientId, grantScopes, ownerRole } = found;
   if (row.rotatedAt !== null) {
     await revokeOAuthGrantTokens(db, {
       grantId: row.grantId,
@@ -223,6 +236,7 @@ export async function findRefreshableAccess(
     refreshTokenId,
     grantId: row.grantId,
     userId,
+    ownerRole,
     clientId,
     resource: row.resource,
     scopes: row.scopes.filter((scope) => grantScopes.includes(scope)),

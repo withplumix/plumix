@@ -4,18 +4,19 @@ import { now } from "../../../../clock.js";
 import { auth } from "../../../../events-and-filters/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { coreBase } from "../../../base.js";
+import { requireCapability } from "../../../require-capability.js";
 import { apiTokensCreateInputSchema } from "./schemas.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * The raw secret is returned exactly once; the DB stores only its hash and
- * prefix. No capability beyond a session: tokens inherit the user's
- * role at request time.
+ * prefix. A token inherits the user's role at request time.
  */
 export const create = coreBase
   .meta({ createsCredential: true })
   .use(sessionAuthenticated)
+  .use(requireCapability("user:create_tokens"))
   .input(apiTokensCreateInputSchema)
   .handler(async ({ input, context }) => {
     const expiresAt =

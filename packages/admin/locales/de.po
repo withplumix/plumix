@@ -471,6 +471,11 @@ msgstr ""
 #~ msgstr "Abonnent"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.empty.description.self"
+#~ msgstr "Erstellen Sie oben eines für Ihre CLI / Ihren MCP-Server / Ihren CI-Bot."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — Untergeordnete können nicht als übergeordnet ausgewählt werden."
@@ -2403,11 +2408,6 @@ msgstr "Meine"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.empty.description.self"
-msgstr "Erstellen Sie oben eines für Ihre CLI / Ihren MCP-Server / Ihren CI-Bot."
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.idle"
 msgstr "Token erstellen"
 
@@ -4054,6 +4054,11 @@ msgstr "Token-Name"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
 msgstr "Von diesem Benutzer erstellte Tokens. Sie können jedes davon widerrufen — das Erstellen erfordert die authentifizierte Browser-Sitzung des Besitzers."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.ownTokens"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

@@ -7,6 +7,7 @@ import {
 } from "../../src/auth/oauth-server/grants.js";
 import { eq } from "../../src/db/index.js";
 import { oauthRefreshTokens } from "../../src/db/schema/oauth_refresh_tokens.js";
+import { users } from "../../src/db/schema/users.js";
 import { testSite } from "../../src/test/site.js";
 import {
   approve,
@@ -149,6 +150,20 @@ describe("reusing a rotated refresh token", () => {
 });
 
 describe("a refused refresh", () => {
+  test("whose owner has since lost user:create_tokens is invalid_grant", async () => {
+    const user = await site.factory.editor.create();
+    const first = await tokenPair(site, user);
+    await site.context.db
+      .update(users)
+      .set({ role: "member" })
+      .where(eq(users.id, user.id));
+
+    const { status, body } = await refresh(site, first.refresh_token);
+
+    expect(status).toBe(400);
+    expect(body).toEqual({ error: "invalid_grant" });
+  });
+
   test("presented by another client is invalid_grant", async () => {
     const { refresh_token } = await tokenPair(
       site,

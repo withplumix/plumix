@@ -38,6 +38,27 @@ describe("a visitor", () => {
   });
 });
 
+describe("who may create an API token", () => {
+  test("a member, who lacks user:create_tokens, is refused", async () => {
+    const creating = site
+      .actingAs("member")
+      .rpc.auth.apiTokens.create({ name: "x" });
+
+    await expect(creating).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "user:create_tokens" },
+    });
+  });
+
+  test("an author may", async () => {
+    const created = await site
+      .actingAs("author")
+      .rpc.auth.apiTokens.create({ name: "x" });
+
+    expect(created.secret).toMatch(/^pl_pat_/);
+  });
+});
+
 describe("creating an API token", () => {
   test("returns its secret once, and listing never shows it", async () => {
     const editor = site.actingAs("editor");
@@ -131,6 +152,17 @@ describe("revoking an API token", () => {
       .where(eq(apiTokens.id, created.token.id))
       .get();
     expect(stored?.revokedAt).toBeInstanceOf(Date);
+  });
+
+  test("works for an owner who lacks user:create_tokens", async () => {
+    const member = await site.factory.member.create();
+    const theirs = await site.factory.apiToken.create({ userId: member.id });
+
+    const result = await site
+      .actingAs(member)
+      .rpc.auth.apiTokens.revoke({ id: theirs.row.id });
+
+    expect(result).toEqual({ id: theirs.row.id });
   });
 
   test("answers NOT_FOUND for another user's token, so it is no oracle", async () => {

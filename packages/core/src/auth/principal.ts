@@ -6,6 +6,7 @@ import type {
 } from "../context/app-context.js";
 import type { AuthResult } from "../context/authenticator.js";
 import type { User } from "../db/schema/users.js";
+import { mayCreateApiTokens } from "./api-tokens.js";
 import {
   audienceTokenAuthenticator,
   authenticateTraced,
@@ -71,6 +72,12 @@ export async function resolvePrincipal(
   );
   const credential = result && credentialOf(result);
   if (!result || !credential || !admits(policy, credential)) return null;
+  if (
+    credential.kind === "api-token" &&
+    !mayCreateApiTokens(ctx.plugins, result.user.role)
+  ) {
+    return null;
+  }
   return withUser(ctx, principalOf(result.user), credential);
 }
 

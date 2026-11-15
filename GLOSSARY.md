@@ -366,7 +366,7 @@ A pluggable strategy that maps a request to who the user is. Read-only — it re
 _Avoid_: guard
 
 **API token**:
-A credential for non-browser clients, whose scopes are capabilities, intersected with its owner's.
+Core's credential for non-browser clients, accepted on every surface that takes tokens while its owner holds `user:create_tokens`; its scopes are capabilities, intersected with its owner's.
 _Avoid_: PAT, personal access token, bearer token
 
 **Token audience**:

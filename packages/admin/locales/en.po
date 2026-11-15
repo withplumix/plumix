@@ -471,6 +471,11 @@ msgstr ""
 #~ msgstr "Subscriber"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.empty.description.self"
+#~ msgstr "Mint one above for your CLI / MCP server / CI bot."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — descendants can't be picked as parent."
@@ -2403,11 +2408,6 @@ msgstr "Mine"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.empty.description.self"
-msgstr "Mint one above for your CLI / MCP server / CI bot."
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.idle"
 msgstr "Mint token"
 
@@ -4054,6 +4054,11 @@ msgstr "Token name"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
 msgstr "Tokens minted by this user. You can revoke any of them — minting requires the owner's authenticated browser session."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.ownTokens"
+msgstr "Tokens you mint for a CLI, MCP server or CI bot show up here."
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

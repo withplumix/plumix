@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { adminBasePath } from "@/lib/admin-base.js";
+import { hasCap } from "@/lib/caps.js";
 import { orpc } from "@/lib/orpc.js";
 import { Trans } from "@lingui/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -38,18 +39,21 @@ export const Route = createFileRoute("/_authenticated/auth/authorize")({
 
 function AuthorizeRoute(): ReactNode {
   const request = Route.useSearch();
+  const { user } = Route.useRouteContext();
+  const mayConnect = hasCap(user.capabilities, "user:create_tokens");
   const lookup = useQuery({
     ...orpc.auth.oauthConsent.lookup.queryOptions({ input: request }),
     retry: false,
+    enabled: mayConnect,
   });
   const covered = lookup.data?.covered === true;
 
-  // Someone who signed in on the way here may already hold a grant that covers
-  // the request; `/authorize` then answers the client without asking again.
+  // A grant that already covers the request, or no right to connect an app:
+  // either way `/authorize` answers the client without asking.
   useEffect(() => {
-    if (covered)
+    if (covered || !mayConnect)
       window.location.replace(authorizeUrl(adminBasePath(), request));
-  }, [covered, request]);
+  }, [covered, mayConnect, request]);
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">

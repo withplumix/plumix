@@ -471,6 +471,11 @@ msgstr ""
 #~ msgstr "Передплатник"
 
 #. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+#~ msgid "apiTokens.empty.description.self"
+#~ msgstr "Створіть токен вище для вашого CLI / MCP-сервера / CI-бота."
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/terms/$name/$id/edit.tsx
 msgid "terms.edit.descendantsHint"
 msgstr " — нащадків не можна вибрати як батьківський елемент."
@@ -2403,11 +2408,6 @@ msgstr "Мої"
 
 #. js-lingui-explicit-id
 #: src/components/profile/api-tokens-card.tsx
-msgid "apiTokens.empty.description.self"
-msgstr "Створіть токен вище для вашого CLI / MCP-сервера / CI-бота."
-
-#. js-lingui-explicit-id
-#: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.create.submit.idle"
 msgstr "Створити токен"
 
@@ -4054,6 +4054,11 @@ msgstr "Назва токена"
 #: src/components/profile/api-tokens-card.tsx
 msgid "apiTokens.description.admin"
 msgstr "Токени, створені цим користувачем. Ви можете скасувати будь-який — створення потребує автентифікованого браузерного сеансу власника."
+
+#. js-lingui-explicit-id
+#: src/components/profile/api-tokens-card.tsx
+msgid "apiTokens.empty.description.ownTokens"
+msgstr ""
 
 #. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx

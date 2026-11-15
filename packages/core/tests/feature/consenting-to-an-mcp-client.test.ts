@@ -44,6 +44,20 @@ describe("consent", () => {
     expect(page.status).toBe(401);
   });
 
+  test("is refused to a member, who lacks user:create_tokens, and saves no grant", async () => {
+    const member = await site.factory.member.create();
+
+    const approving = approve(site, member, authorizationParams(await pkce()));
+
+    await expect(approving).rejects.toMatchObject({
+      code: "FORBIDDEN",
+      data: { capability: "user:create_tokens" },
+    });
+    await expect(
+      site.actingAs(member).rpc.auth.oauthGrants.list({}),
+    ).resolves.toEqual([]);
+  });
+
   test("is skipped when the person's grant to the client covers the scope", async () => {
     const user = await site.factory.editor.create();
     await connect(site, user, { scope: "draft" });

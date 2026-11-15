@@ -32,6 +32,9 @@ export const CORE_CAPABILITIES = Object.freeze({
   // Any user's API tokens. Separate from `user:edit` so a policy can grant
   // one without the other; users manage their own tokens without it.
   "user:manage_tokens": ADMIN_ONLY,
+  // Minting one's own API tokens; a token stops working once its owner
+  // loses it. Revoking one's own never needs it.
+  "user:create_tokens": AUTHORS,
   "settings:manage": ADMIN_ONLY,
 } as const satisfies Record<string, readonly DefaultRole[]>);
 

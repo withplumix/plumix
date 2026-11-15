@@ -37,7 +37,7 @@ Every write goes through the same procedures the admin calls. The token's capabi
 
    Pass it as the `mcp` slot of `plumix({ … })`.
 
-2. **Mint a token.** Open your profile in the admin (`/_plumix/admin/profile`), and in the API tokens card name the token after the agent, pick its permissions, and mint it. Copy the secret: it is shown once.
+2. **Mint a token.** Your role needs `user:create_tokens`, which `author`, `editor` and `admin` hold by default. Open your profile in the admin (`/_plumix/admin/profile`), and in the API tokens card name the token after the agent, pick its permissions, and mint it. Copy the secret: it is shown once.
 
 3. **Add the endpoint to your client.** With Claude Code:
 

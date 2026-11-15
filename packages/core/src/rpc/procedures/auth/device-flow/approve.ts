@@ -5,6 +5,7 @@ import {
 import { auth } from "../../../../events-and-filters/auth.js";
 import { sessionAuthenticated } from "../../../authenticated.js";
 import { coreBase } from "../../../base.js";
+import { requireCapability } from "../../../require-capability.js";
 import { assertLookupOk } from "./lookup-helpers.js";
 import { deviceFlowApproveInputSchema } from "./schemas.js";
 
@@ -16,6 +17,7 @@ import { deviceFlowApproveInputSchema } from "./schemas.js";
 export const approve = coreBase
   .meta({ createsCredential: true })
   .use(sessionAuthenticated)
+  .use(requireCapability("user:create_tokens"))
   .input(deviceFlowApproveInputSchema)
   .handler(async ({ input, context, errors }) => {
     const found = await lookupDeviceCodeByUserCode(context.db, input.userCode);

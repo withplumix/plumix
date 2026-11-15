@@ -276,6 +276,7 @@ export const AUTHED_ADMIN: AuthSessionOutput = {
       "entry:post:publish",
       "entry:post:read",
       "user:create",
+      "user:create_tokens",
       "user:delete",
       "user:edit",
       "user:edit_own",

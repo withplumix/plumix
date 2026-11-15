@@ -33,9 +33,12 @@ const site = await testSite({
   config: {
     api: { enabled: true },
     mcp: { enabled: true },
+    // Each holds `user:create_tokens` so its token works at all.
     roles: {
-      nobody: { can: {} },
-      settingsOnly: { can: { settings: ["manage"] } },
+      nobody: { can: { user: ["create_tokens"] } },
+      settingsOnly: {
+        can: { settings: ["manage"], user: ["create_tokens"] },
+      },
     },
   },
 });

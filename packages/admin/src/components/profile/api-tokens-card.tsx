@@ -157,8 +157,11 @@ interface TokenRow {
   readonly lastUsedAt: Date | string | null;
 }
 
-/** Split per mode so hook order stays stable without conditional hook calls. */
-export function SelfApiTokensCard(): ReactNode {
+/**
+ * Split per mode so hook order stays stable without conditional hook calls.
+ * Without `canCreate` the owner can still list and revoke.
+ */
+export function SelfApiTokensCard(props: { canCreate: boolean }): ReactNode {
   const queryClient = useQueryClient();
   const list = useQuery(orpc.auth.apiTokens.list.queryOptions({ input: {} }));
 
@@ -189,7 +192,7 @@ export function SelfApiTokensCard(): ReactNode {
       mode="self"
       tokens={list.data ?? []}
       isLoading={list.isLoading}
-      onMint={(input, cbs) => create.mutate(input, cbs)}
+      onMint={props.canCreate ? create.mutate : undefined}
       mintPending={create.isPending}
       onRevoke={(id, cbs) => revoke.mutate(id, cbs)}
       revokePending={revoke.isPending}
@@ -347,8 +350,8 @@ function ApiTokensCardView({
               <EmptyDescription>
                 {mode === "self" ? (
                   <Trans
-                    id="apiTokens.empty.description.self"
-                    message="Mint one above for your CLI / MCP server / CI bot."
+                    id="apiTokens.empty.description.ownTokens"
+                    message="Tokens you mint for a CLI, MCP server or CI bot show up here."
                   />
                 ) : (
                   <Trans

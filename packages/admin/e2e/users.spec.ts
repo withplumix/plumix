@@ -797,6 +797,33 @@ test.describe("/users/$id/edit — API tokens (self)", () => {
     await expect(page.getByTestId("api-tokens-row-tok-a")).toBeVisible();
   });
 
+  test("hides the mint form from a user without user:create_tokens, and still lists their tokens", async ({
+    page,
+  }) => {
+    await mockRpc(page, {
+      "/auth/session": {
+        user: {
+          id: 1,
+          email: "admin@example.test",
+          name: "Admin",
+          avatarUrl: null,
+          role: "reviewer",
+          capabilities: ["admin:access", "user:edit_own"],
+        },
+        needsBootstrap: false,
+      },
+      "/user/get": { ...self, role: "reviewer" },
+      ...SELF_EDIT_LISTS,
+      "/auth/apiTokens/list": [token({ id: "tok-a", name: "github-actions" })],
+    });
+
+    await page.goto("users/1/edit");
+    await expect(page.getByTestId("api-tokens-row-tok-a")).toBeVisible();
+    await expect(page.getByTestId("api-tokens-create-name-input")).toHaveCount(
+      0,
+    );
+  });
+
   test("mints a token + secret panel surfaces the once-shown secret", async ({
     page,
   }) => {

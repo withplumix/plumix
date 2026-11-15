@@ -1,11 +1,13 @@
 import type { Db } from "../context/app-context.js";
 import type { ApiToken } from "../db/schema/api_tokens.js";
 import type { User } from "../db/schema/users.js";
+import type { PluginRegistry } from "../plugin/manifest.js";
 import { now as currentTime } from "../clock.js";
 import { and, eq, gt, isNull, or } from "../db/index.js";
 import { apiTokens } from "../db/schema/api_tokens.js";
 import { users } from "../db/schema/users.js";
 import { encodeBase64url } from "../encoding.js";
+import { getCapabilityResolver } from "./rbac.js";
 import { hashToken } from "./tokens.js";
 
 /**
@@ -18,6 +20,20 @@ const AUDIENCE_TOKEN_PREFIX = "pl_aud_";
 const API_TOKEN_BODY_BYTES = 32;
 /** Short enough for a list cell, long enough to tell a user's tokens apart. */
 const PREFIX_DISPLAY_BODY_CHARS = 4;
+
+/**
+ * Whether `role` may mint API tokens. A token works only while its owner's
+ * role still may.
+ */
+export function mayCreateApiTokens(
+  plugins: PluginRegistry,
+  role: string,
+): boolean {
+  return getCapabilityResolver(plugins).hasCapability(
+    role,
+    "user:create_tokens",
+  );
+}
 
 export interface MintedApiToken {
   /** Raw token to ship to the client exactly once. Never persisted. */
