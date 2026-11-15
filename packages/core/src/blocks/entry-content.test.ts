@@ -2,7 +2,7 @@ import { test } from "@fast-check/vitest";
 import fc from "fast-check";
 import { describe, expect } from "vitest";
 
-import type { JsonValue } from "../json.js";
+import type { JsonObject, JsonValue } from "../json.js";
 import type { BlockInput, BlockRegistry, BlockSpec } from "./block-registry.js";
 import type { BlockNode } from "./render-block-tree.js";
 import { createBlockRegistry } from "./block-registry.js";
@@ -49,7 +49,9 @@ function inputValue(input: BlockInput): fc.Arbitrary<JsonValue> {
   if (input.field?.type === "number") {
     return fc.double({ noNaN: true, noDefaultInfinity: true });
   }
-  if (input.field?.type === "json") return fc.jsonValue();
+  if (input.field?.type === "json") {
+    return fc.jsonValue().map((value) => value as JsonValue);
+  }
   return text;
 }
 
@@ -102,10 +104,11 @@ function blockTrees(
         optional(attrs),
         nodeFields,
       )
-      .map(([id, attrs, fields]) => ({
+      .map(([id, attrs, fields]): BlockNode => ({
         id,
         name: spec.name,
-        attrs,
+        // `requiredKeys: []` leaves an input out, never sets it undefined.
+        attrs: attrs as JsonObject,
         ...fields,
       }));
     nodes.set(key, built);
