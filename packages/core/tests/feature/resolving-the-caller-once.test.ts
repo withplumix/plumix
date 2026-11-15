@@ -21,9 +21,17 @@ const mintToken: McpTool<ReturnType<typeof v.object>> = {
     mcpRouterClient(ctx).auth.apiTokens.create({ name: "wider", scopes: null }),
 };
 
+const readSession: McpTool<ReturnType<typeof v.object>> = {
+  name: "read_session",
+  description: "Test-only: reads the caller's session through RPC.",
+  inputSchema: v.object({}),
+  run: async (ctx) => mcpRouterClient(ctx).auth.session({}),
+};
+
 const minter = definePlugin("test-minter", {
   setup: (ctx) => {
     ctx.registerMcpTool(mintToken);
+    ctx.registerMcpTool(readSession);
   },
 });
 
@@ -39,6 +47,14 @@ function lastRequestSpans(on: TestSite): TelemetrySpan[] {
     ...span.children.flatMap(walk),
   ];
   return on.telemetry.snapshots.at(-1)?.spans.flatMap(walk) ?? [];
+}
+
+function touchesTokenLastUsed(span: TelemetrySpan): boolean {
+  const sql = span.attributes["db.sql"];
+  return (
+    typeof sql === "string" &&
+    sql.startsWith('update "api_tokens" set "last_used_at"')
+  );
 }
 
 describe("an MCP tool call", () => {
@@ -63,15 +79,22 @@ describe("an MCP tool call", () => {
     expect(call.result?.isError).toBeUndefined();
     const spans = lastRequestSpans(site);
     expect(spans.filter((span) => span.name === "auth")).toHaveLength(1);
-    expect(
-      spans.filter((span) => {
-        const sql = span.attributes["db.sql"];
-        return (
-          typeof sql === "string" &&
-          sql.startsWith('update "api_tokens" set "last_used_at"')
-        );
-      }),
-    ).toHaveLength(1);
+    expect(spans.filter(touchesTokenLastUsed)).toHaveLength(1);
+  });
+
+  test("validates its token once when the tool reads the session", async () => {
+    const editor = await site.factory.editor.create();
+    const { secret } = await site.factory.apiToken.create({
+      userId: editor.id,
+      name: "agent",
+    });
+
+    const call = await callTool(site, secret, "read_session", {});
+
+    expect(call.result?.isError).toBeUndefined();
+    const spans = lastRequestSpans(site);
+    expect(spans.filter((span) => span.name === "auth")).toHaveLength(1);
+    expect(spans.filter(touchesTokenLastUsed)).toHaveLength(1);
   });
 });
 
@@ -90,6 +113,18 @@ describe("a test site's context acting as a user", () => {
 
     const [row] = await site.context.db.select().from(entries);
     expect(row).toMatchObject({ id: created.id, authorId: editor.id });
+  });
+
+  test("reads the session of the user it acts as", async () => {
+    const editor = await site.factory.editor.create();
+    const client = createRouterClient(appRouter, {
+      context: site.actingAs(editor).context,
+    });
+
+    const session = await client.auth.session({});
+
+    expect(session.user).toMatchObject({ id: editor.id, role: "editor" });
+    expect(session.user?.capabilities).toContain("entry:post:edit_own");
   });
 });
 
