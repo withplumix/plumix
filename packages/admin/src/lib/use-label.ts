@@ -13,9 +13,7 @@ export function useLabel(): (label: Label) => string {
   const locale = i18n.locale;
   return useMemo(
     () => (label) => resolveLabel(label, i18n),
-    // `i18n` is the stable Lingui-context object; depending on `locale`
-    // forces re-creation only on locale flip.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Lingui switches locale inside the one stable `i18n`, so `locale` is the dep that changes
     [locale],
   );
 }

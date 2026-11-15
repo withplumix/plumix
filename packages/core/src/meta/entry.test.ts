@@ -240,7 +240,7 @@ describe("sanitizeMetaInput", () => {
       tag: {
         type: "string",
         sanitize: () => {
-          throw "boom"; // eslint-disable-line @typescript-eslint/only-throw-error
+          throw "boom"; // eslint-disable-line @typescript-eslint/only-throw-error -- the subject is a non-Error throw
         },
       },
     });

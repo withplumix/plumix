@@ -39,9 +39,7 @@ import type { ThemeDescriptor } from "./theme.js";
  */
 export type Theme = ThemeDescriptor;
 
-// Heterogeneous arrays of plugins/adapters need the framework-side slot typed
-// with `any` so each caller's concrete generic is accepted via bivariance.
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any -- heterogeneous plugin and adapter arrays accept each caller's concrete generic only through `any` */
 export type AnyPluginDescriptor = PluginDescriptor<any>;
 export type AnyDatabaseAdapter = DatabaseAdapter<any>;
 /* eslint-enable @typescript-eslint/no-explicit-any */

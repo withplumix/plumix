@@ -303,8 +303,7 @@ function buildColumns({
     header: ({ table }) => {
       const all = table.getIsAllPageRowsSelected();
       const some = table.getIsSomePageRowsSelected();
-      // "indeterminate" is Radix's CheckedState token, not translatable copy.
-      // eslint-disable-next-line lingui/no-unlocalized-strings
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- Radix's CheckedState token, not translatable copy
       const checked = all ? true : some ? "indeterminate" : false;
       return (
         <Checkbox

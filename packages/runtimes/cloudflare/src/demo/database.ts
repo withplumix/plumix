@@ -28,9 +28,8 @@ export function demoDatabase(config: DemoDatabaseConfig): DatabaseAdapter {
     // otherwise; DemoDB.query/batch already return positional rows.
     const shape = (rows: SqlStorageValue[][], method: string) => {
       if (method !== "get") return rows;
-      // `undefined` (not `[]`) on a miss, or drizzle maps a phantom row. The callback type doesn't
-      // model it, and the repo bans `!`.
-      // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style
+      // `undefined` (not `[]`) on a miss, or drizzle maps a phantom row.
+      // eslint-disable-next-line @typescript-eslint/non-nullable-type-assertion-style -- the callback type doesn't model a miss, and `!` is banned
       return rows.at(0) as SqlStorageValue[];
     };
     // NB: `drizzle(callback, batchCallback, config)` — the config (and thus

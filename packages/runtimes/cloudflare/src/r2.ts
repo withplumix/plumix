@@ -208,7 +208,7 @@ export function r2(config: R2Config): R2ObjectStorage {
             truncated: out.truncated,
           };
         },
-        // eslint-disable-next-line @typescript-eslint/require-await
+        // eslint-disable-next-line @typescript-eslint/require-await -- implements an async contract; a public URL needs no request
         async url(key, _opts?: UrlOptions): Promise<string | null> {
           // Without a public base, a raw storage key would leak publicly with
           // no published-status check; media proxies instead.

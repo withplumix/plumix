@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an augmentation target
 export interface PlumixEnv {}
 
 export type BindingName<T> = {

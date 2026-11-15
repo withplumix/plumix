@@ -262,7 +262,7 @@ describe("createTelemetryCollector", () => {
 
     expect(() =>
       telemetry.span("odd", () => {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        // eslint-disable-next-line @typescript-eslint/only-throw-error -- the subject is a non-Error throw
         throw "plain string";
       }),
     ).toThrow();

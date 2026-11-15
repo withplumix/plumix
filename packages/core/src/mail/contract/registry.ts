@@ -7,11 +7,11 @@ import type { JsonObject } from "../../json.js";
  * Each declared mail augments this, keyed by name, with its props; only
  * `defineMail` makes the mail exist at runtime.
  */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- an augmentation target
 export interface MailRegistry {}
 
 /** `keyof` of an empty interface is `never`; augmentation makes it a union. */
-// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents -- `never` only until a mail augments the registry
 export type MailName = keyof MailRegistry & string;
 
 /** What a mail's render functions read beside its props. */

@@ -23,7 +23,7 @@ interface Subscription {
    * One map holds every declaration's handlers, which is an existential
    * TypeScript can't spell; `emit` and `apply` undo the erasure.
    */
-  // eslint-disable-next-line plumix/no-unknown-return
+  // eslint-disable-next-line plumix/no-unknown-return -- the erased handler type; `emit` and `apply` restore it
   readonly handler: (...args: unknown[]) => unknown;
 }
 
@@ -59,7 +59,7 @@ export class HandlerRegistry {
   #subscribe(
     handlers: Map<string, Subscription[]>,
     declaration: { readonly id: string; readonly scope?: string },
-    // eslint-disable-next-line plumix/no-unknown-return
+    // eslint-disable-next-line plumix/no-unknown-return -- the erased handler type; `emit` and `apply` restore it
     handler: (...args: never[]) => unknown,
     options: SubscribeOptions,
   ): void {

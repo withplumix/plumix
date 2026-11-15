@@ -54,9 +54,7 @@ function wrapQueryTarget<T extends QueryTarget>(target: T): T {
 export function traceSqlClient(client: Client): Client {
   wrapQueryTarget(client);
 
-  // Only the zero-argument `transaction()` overload is deprecated, but a bare
-  // reference can't pick an overload.
-  /* eslint-disable @typescript-eslint/no-deprecated */
+  /* eslint-disable @typescript-eslint/no-deprecated -- only the zero-argument `transaction()` overload is deprecated, and a bare reference can't pick an overload */
   const rawTransaction = client.transaction.bind(client);
   client.transaction = async (mode?: TransactionMode) =>
     wrapQueryTarget(await rawTransaction(mode));

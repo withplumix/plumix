@@ -49,8 +49,7 @@ export function entryCopy(options: {
     },
     reload: () => {
       events?.discard();
-      // A cause code, not a display label.
-      // eslint-disable-next-line lingui/no-unlocalized-strings
+      // eslint-disable-next-line lingui/no-unlocalized-strings -- a cause code, not a display label
       return attempt("reload", options.reload);
     },
     onFailed: (err) => {

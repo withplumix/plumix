@@ -42,7 +42,7 @@ export const useRouteContext: typeof ReactRouter.useRouteContext =
  * `@deprecated`, and a bare re-export can't pick one, so the rule sees the
  * whole symbol as deprecated.
  */
-// eslint-disable-next-line @typescript-eslint/no-deprecated
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- only legacy call signatures are deprecated
 export const useBlocker: typeof ReactRouter.useBlocker = ns.useBlocker;
 export const useLoaderData: typeof ReactRouter.useLoaderData = ns.useLoaderData;
 export const useLoaderDeps: typeof ReactRouter.useLoaderDeps = ns.useLoaderDeps;

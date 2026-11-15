@@ -353,6 +353,26 @@ describe("sonarjs/no-commented-code", () => {
   });
 });
 
+describe("@eslint-community/eslint-comments/require-description", () => {
+  it.each(["src/disable-reason.ts", "src/disable-reason.test.ts"])(
+    "rejects a disable directive with no reason in %s",
+    async (fixture) => {
+      await expect(
+        reportsMatching(
+          fixture,
+          (ruleId) =>
+            ruleId === "@eslint-community/eslint-comments/require-description",
+        ),
+      ).resolves.toEqual([
+        {
+          ruleId: "@eslint-community/eslint-comments/require-description",
+          line: 1,
+        },
+      ]);
+    },
+  );
+});
+
 describe("plumix/no-chained-type-assertion", () => {
   it("rejects an assertion routed through unknown", async () => {
     await expect(
