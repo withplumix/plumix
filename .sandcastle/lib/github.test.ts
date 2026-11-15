@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   inspectPullRequest,
+  loopPullRequestsMergedIn,
   pushBranch,
   whyTheCheckoutIsBroken,
 } from "./github.js";
@@ -21,6 +22,38 @@ test("a merged PR is recovered even when its deleted head cannot be inspected", 
   process.env.PATH = `${bin}:${before}`;
   try {
     expect(inspectPullRequest(101).state).toBe("MERGED");
+  } finally {
+    process.env.PATH = before;
+    rmSync(bin, { recursive: true });
+  }
+});
+
+test("merged loop PRs are the gh account's PRs from a loop branch, searched month by month", () => {
+  const bin = mkdtempSync(join(tmpdir(), "ship-gh-"));
+  const before = process.env.PATH;
+  writeFileSync(
+    join(bin, "gh"),
+    `#!/usr/bin/env node
+const args = process.argv.slice(2);
+if (args[0] !== "pr" || args[1] !== "list" || !args.includes("@me")) process.exit(42);
+const search = args[args.indexOf("--search") + 1];
+const merged = {
+  "merged:2026-02-01..2026-02-28": [
+    { number: 10, headRefName: "feat/add-a-1a2b3c4d-7" },
+    { number: 11, headRefName: "fix/by-hand" },
+  ],
+  "merged:2026-03-01..2026-03-31": [{ number: 12, headRefName: "feat/add-b-8" }],
+}[search];
+if (!merged) process.exit(43);
+console.log(JSON.stringify(merged));
+`,
+  );
+  chmodSync(join(bin, "gh"), 0o755);
+  process.env.PATH = `${bin}:${before}`;
+  try {
+    expect([...loopPullRequestsMergedIn(["2026-02", "2026-03"])]).toEqual([
+      10, 12,
+    ]);
   } finally {
     process.env.PATH = before;
     rmSync(bin, { recursive: true });

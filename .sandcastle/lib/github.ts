@@ -20,6 +20,7 @@ import {
   retryWhatGitHubDropped,
   retryWhatGitHubDroppedNow,
 } from "./outage.js";
+import { MAIN_HISTORY_FORMAT } from "./post-merge-quality.js";
 import {
   DECISION_LABEL,
   HUMAN_LABEL,
@@ -1067,6 +1068,43 @@ export const loopPullRequestsInFlight = (): readonly Queued[] => {
     })),
   );
 };
+
+export const loopPullRequestsMergedIn = (
+  months: readonly string[],
+): ReadonlySet<number> =>
+  new Set(
+    months.flatMap((month) => {
+      const [year = 0, monthIndex = 0] = month.split("-").map(Number);
+      const lastDay = new Date(Date.UTC(year, monthIndex, 0)).getUTCDate();
+      return ghJson<readonly { number: number; headRefName: string }[]>([
+        "pr",
+        "list",
+        "-R",
+        REPO_SLUG,
+        "--state",
+        "merged",
+        "--author",
+        "@me",
+        "--search",
+        `merged:${month}-01..${month}-${lastDay}`,
+        "--limit",
+        "1000",
+        "--json",
+        "number,headRefName",
+      ]).flatMap(({ number, headRefName }) =>
+        ticketOfLoopBranch(headRefName) === undefined ? [] : [number],
+      );
+    }),
+  );
+
+export const mainHistorySince = (since: string): string =>
+  git([
+    "log",
+    MERGE_BASE,
+    `--since=${since}`,
+    `--format=${MAIN_HISTORY_FORMAT}`,
+    "--name-only",
+  ]);
 
 export function pullRequestForBranch(
   branch: string,

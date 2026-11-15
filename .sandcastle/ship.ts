@@ -1,6 +1,7 @@
 import { requestDrain } from "./lib/control.js";
 import { configureLogging } from "./lib/log.js";
 import { explainText, reportText, statusText } from "./lib/operations.js";
+import { postMergeQualityReport } from "./lib/post-merge-quality.js";
 import { ShipHistory } from "./lib/ship-history.js";
 import { readShipCommand } from "./lib/ship-options.js";
 
@@ -17,18 +18,29 @@ if (command.mode === "help") {
       ? "Drain requested. Active work reaches its next checkpoint; unfinished deliveries remain resumable."
       : "No running coordinator in this checkout.",
   );
-} else if (
-  command.mode === "status" ||
-  command.mode === "report" ||
-  command.mode === "explain"
-) {
+} else if (command.mode === "report") {
+  const history = new ShipHistory(root, "read");
+  console.log(`${reportText(history)}\n`);
+  const { loopPullRequestsMergedIn, mainHistorySince } =
+    await import("./lib/github.js");
+  try {
+    console.log(
+      postMergeQualityReport(history, new Date(), {
+        mainHistorySince,
+        loopPullRequestsMergedIn,
+      }),
+    );
+  } catch (error) {
+    console.log(
+      `Post-merge quality unavailable: ${String(error).split("\n")[0]}`,
+    );
+  }
+} else if (command.mode === "status" || command.mode === "explain") {
   const history = new ShipHistory(root, "read");
   console.log(
     command.mode === "explain"
       ? explainText(history, command.issue)
-      : command.mode === "report"
-        ? reportText(history)
-        : statusText(history),
+      : statusText(history),
   );
 } else if (command.mode === "run") {
   const { runShip } = await import("./ship-run.js");

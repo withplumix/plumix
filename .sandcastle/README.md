@@ -157,7 +157,10 @@ failure stops work instead of guessing a reset time.
 
 ## Operating the factory
 
-These commands read local files and do not need Docker, GitHub access, or Claude:
+These commands read local files and do not need Docker or Claude. Only
+`--report` reaches past the journals: it reads `origin/main` as last fetched,
+and asks GitHub which merged PRs the loop opened when no journal covers a month
+(see "Post-merge quality"):
 
 ```bash
 pnpm --dir .sandcastle ship --status
@@ -219,3 +222,33 @@ used to claim a speedup during implementation.
 
 CI runs this package's own tests and typecheck separately from workspace checks.
 The workspace mutation runner does not select this private harness.
+
+### Post-merge quality
+
+The report ends with a table of the last six months, by the UTC month a PR was
+squash-merged into `origin/main`. Loop-owned PRs sit beside every other PR,
+which is the baseline.
+
+- **Reverted.** A later commit whose subject starts `Revert "` names the PR,
+  either in a `Reverts owner/repo#N` line, as GitHub's revert button writes it,
+  or as the `(#N)` ending the quoted subject, as `git revert` writes it.
+  Reverting that revert puts the PR back, so it stops counting.
+- **Follow-up fix.** A `fix` commit merged within 7 days after the PR touches at
+  least one of the PR's files. Touching only some of them counts. The fix is a
+  later commit, so always a different PR, and it counts whoever opened it, the
+  loop included. Lockfiles and generated catalogs count like any other file. A
+  merge in the last 7 days can still gain one.
+- **Loop ownership.** A PR a ship journal tracked (`pr.tracked`) is loop-owned.
+  Journals live only in the checkout that ran the loop, so for the months up to
+  the first journal's, or every month when no journal tracks a PR, the report
+  asks GitHub for the merged PRs the gh account opened from a loop branch
+  (`feat/<slug>-<issue>`), the test the recovery of open loop-owned PRs already
+  uses. Run it as the account the loop runs under. The report names its source.
+
+**Proposed threshold, for the maintainer to confirm.** Over a calendar month,
+under 1% of loop-owned PRs reverted, and a follow-up-fix rate no higher than
+that month's baseline. Any increase in autonomy, such as more lanes, longer runs
+or fewer human reviews, waits for a month under both. A fixed follow-up bound
+such as 5% is out of reach under this definition, for the loop and the baseline
+alike: in a repository this busy, some fix touches a file most PRs touched
+within the week.
