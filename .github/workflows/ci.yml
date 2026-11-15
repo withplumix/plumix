@@ -32,6 +32,12 @@ jobs:
         with:
           turbo-cache: "false"
       - run: pnpm commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+      # Runs on each push, not on a title edit: the default `pull_request` types leave `edited` out.
+      - name: Keep "claude" out of the branch name and PR title
+        run: node scripts/check-pr-names.ts --branch="$PR_HEAD_REF" --title="$PR_TITLE"
+        env:
+          PR_HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
 
   changesets:
     name: Changesets

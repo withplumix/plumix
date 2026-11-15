@@ -1,45 +1,53 @@
 # Coding standards
 
+Each rule ends in a tag, as [`AGENTS.md`](./AGENTS.md) defines them: _Enforced by `<check>`._,
+_Partly enforced by `<check>`._ or _Judgement._ The questions under
+[Reviewing a test](#reviewing-a-test) and the [Review checklist](#review-checklist) restate rules
+tagged above, so they carry none.
+
 ## Interface design
 
 ### Deep modules
 
 Prefer deep modules, with a small interface over a deep implementation. A few methods with simple
-params hide complex logic behind them.
+params hide complex logic behind them. _Judgement._
 
 Avoid shallow modules, where a large interface has many methods that pass through to a thin
 implementation. When designing, ask whether you can reduce the number of methods, simplify the
-parameters, or hide more complexity inside.
+parameters, or hide more complexity inside. _Judgement._
 
 ### Design for testability
 
 1. **Accept dependencies, don't create them.** Pass external dependencies in rather than
-   constructing them internally.
+   constructing them internally. _Judgement._
 2. **Return results, don't produce side effects.** A function that returns a value is easier to
-   test than one that mutates state.
+   test than one that mutates state. _Judgement._
 3. **Keep the interface small.** Fewer methods need fewer tests, and fewer params make simpler test
-   setup.
+   setup. _Judgement._
 
 ## Readability
 
 Explicit code is often better than compact code.
 
-- Return early instead of wrapping the rest of a function in a branch.
+- Return early instead of wrapping the rest of a function in a branch. _Judgement._
 - Branch with `if`/`else` or a `switch` when there are more than two outcomes. Never nest
-  ternaries.
-- Name the intermediate steps of a long chain rather than writing one dense expression.
+  ternaries. _Judgement._
+- Name the intermediate steps of a long chain rather than writing one dense expression. _Judgement._
 - Inline an abstraction that only renames an expression (`isNotEmpty(items)` is
-  `items.length > 0`). Keep one that hides real logic or names a domain concept.
+  `items.length > 0`). Keep one that hides real logic or names a domain concept. _Judgement._
 - Give each function one concern. Merging two to save lines makes both harder to change.
-- Name things with the vocabulary in [`GLOSSARY.md`](./GLOSSARY.md).
+  _Judgement._
+- Name things with the vocabulary in [`GLOSSARY.md`](./GLOSSARY.md). _Judgement._
 - Declare top-level functions with `function`, and give exported ones an explicit return type.
+  _Judgement._
 
 A simplification changes how code reads, never what it does. Every output and behaviour stays the
-same.
+same. _Judgement._
 
 A production source file holds at most 600 lines of code, blank and comment lines aside
 (`max-lines`). The files still over it are listed in `tooling/eslint/ratchets/max-lines.json`, each
 held at its own count, which only goes down: split a listed file rather than raise its ceiling.
+_Enforced by `max-lines` and its ratchet._
 
 ### Comments
 
@@ -47,35 +55,38 @@ A comment is a smell. The default is none. Wanting to write one is a sign the co
 enough, so fix the code first:
 
 - A comment that explains a block: extract the block into a function named after the explanation.
-- A comment that explains a value: give it a named constant or variable.
+  _Judgement._
+- A comment that explains a value: give it a named constant or variable. _Judgement._
 - A comment that explains a parameter or state: give it a type that can't hold the wrong value, or
-  an assertion.
-- A comment that explains what a function does: rename the function.
+  an assertion. _Judgement._
+- A comment that explains what a function does: rename the function. _Judgement._
 
 What survives is the one thing code can't hold: **why**. That covers a constraint from outside the
 code, an invariant the types can't express, a choice that looks wrong but isn't, or a workaround
 for an upstream bug. One line where possible. A workaround links the upstream issue, so the next
-reader knows when to delete it.
+reader knows when to delete it. _Judgement._
 
 Never write:
 
-- **What the code does.** If a reader needs it, the names are wrong.
+- **What the code does.** If a reader needs it, the names are wrong. _Judgement._
 - **History.** No "now", "previously", "no longer", "we changed", PR or ticket numbers. The commit
-  and the PR body carry how the code came to be.
+  and the PR body carry how the code came to be. _Partly enforced by `plumix/no-history-comment`._
 - **Pointers that rot.** No lists of implementations, callers or the places a value flows to. No
-  "see ADR/§X" in place of a reason.
+  "see ADR/§X" in place of a reason. _Judgement._
 - **Restated types.** No `@param`/`@returns` that repeats the signature. No "Optional." on a `?`.
-- **Words for a reviewer.** No notes to whoever reads the diff.
-- **File headers** that summarise the module.
+  _Judgement._
+- **Words for a reviewer.** No notes to whoever reads the diff. _Judgement._
+- **File headers** that summarise the module. _Judgement._
 
 When a declaration or member needs a comment, make it `/** */`, because editors show it on hover and
 nothing shows a `//` there. Say only what its signature can't: a precondition, what it throws, a
 surprising behaviour. A code example for an extension point belongs there too. Inside a function
-body, use `//`; nothing hovers a local.
+body, use `//`; nothing hovers a local. _Partly enforced by `plumix/prefer-jsdoc` and
+`plumix/no-jsdoc-in-function-body`._
 
 When a change alters behaviour a comment describes, correct the comment or delete it. Don't replace
 it with something vaguer. When you edit a function, delete the comments in it that break these
-rules.
+rules. _Judgement._
 
 Lint enforces the mechanical part in all linted code, tests included: a comment block stays within
 30 words, code examples aside (`plumix/max-comment-length`); a comment on a declaration or member is
@@ -84,10 +95,11 @@ Lint enforces the mechanical part in all linted code, tests included: a comment 
 (`sonarjs/no-commented-code`); and no comment says "for now", "previously", "no longer", "we
 changed" or "used to", or names a ticket as `#123` (`plumix/no-history-comment`). An upstream
 reference stays: `owner/repo#123`, a full URL, or `#123` after a project whose tracker is not on
-GitHub, named in the rule's `UPSTREAM_PROJECTS` ("WordPress Trac #55895").
+GitHub, named in the rule's `UPSTREAM_PROJECTS` ("WordPress Trac #55895"). _Enforced by the rules it
+names._
 
 Every `eslint-disable` directive ends in `-- <reason>` saying why the rule is wrong there
-(`@eslint-community/eslint-comments/require-description`).
+(`@eslint-community/eslint-comments/require-description`). _Enforced by that rule._
 
 A comment that claims a coupling ("mirrors", "keep … in sync", "must match") is an invariant
 nothing checks. Collapse the duplication first, so one source holds the fact. When the copies
@@ -95,25 +107,27 @@ can't be collapsed, bind them with a test that fails when they drift, and name i
 `Guarded by: <repo-relative test path>` on one of the comment's lines. When the comment describes
 a resemblance rather than an invariant, reword it. `plumix/sync-comment-guarded` enforces this
 with no exceptions
-([ADR 0038](docs/adr/0038-a-coupled-invariant-is-collapsed-or-guarded-by-a-test.md)).
+([ADR 0038](docs/adr/0038-a-coupled-invariant-is-collapsed-or-guarded-by-a-test.md)). _Enforced by
+`plumix/sync-comment-guarded`._
 
 A `plumix/*` rule ships only when it has zero false positives on the tree: every hit is a genuine
 violation, with only the existing named escape hatches (`// Safety:`, `Not JSON:`). A baseline
 that only shrinks may list the genuine violations still awaiting a fix, never a false positive.
+_Judgement._
 
 **In review**, treat every added comment line as a finding until it passes these rules. Name the
 refactor that would make it unnecessary, or say which rule it breaks. Lint can't tell a why from a
-what; review can.
+what; review can. _Judgement._
 
 ## Correctness
 
 Handle every case a caller can actually produce, including empty, missing and failing input.
 Before you handle a state, check that real use can reach it. A guard for a state nothing reaches is
-a safety net nobody asked for.
+a safety net nobody asked for. _Judgement._
 
 An empty string in a config slot means the option is off, the same as `false` or leaving the slot
 out. Validation rejects only the shapes a ticket names as rejected; it does not turn an empty
-string into a boot error on its own.
+string into a boot error on its own. _Judgement._
 
 An effect (`useEffect`, `useLayoutEffect`) in admin UI code syncs with something outside React,
 such as the DOM, a timer or a subscription. Derive a value during render, handle an event in its
@@ -121,48 +135,51 @@ handler, and fetch through TanStack Query instead
 ([You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)).
 `plumix/max-effects` holds each file in `@plumix/admin`, `@plumix/admin-editor` and a plugin's
 `src/admin/` at its count in `tooling/eslint/ratchets/effects.json`, and every other file at none.
+_Partly enforced by `plumix/max-effects`._
 
 Code adds nothing to a tool's output: no warning, deprecation notice or stray log in a build, test
 or lint run. A test that takes an error path spies on the log it expects. A suppressed false
-positive is filtered at its source by code and message, with a comment naming why.
+positive is filtered at its source by code and message, with a comment naming why. _Judgement._
 
 ## Performance
 
 - Load a set of records in one query (`WHERE id IN (…)`), never one query per record. On the
-  client, send one request for the set, not one per item.
-- Keep work proportional to the input. Nothing quadratic over a list a user can grow.
+  client, send one request for the set, not one per item. _Judgement._
+- Keep work proportional to the input. Nothing quadratic over a list a user can grow. _Judgement._
 - The anonymous request path only gets cheaper. A query added to a logged-out render, cold start
-  included, needs a reason in the PR.
+  included, needs a reason in the PR. _Judgement._
 - When a query's cost matters, measure the exact statement the code builds, every predicate
   included, and read its `EXPLAIN QUERY PLAN`. A simplified copy can plan an index walk as a table
-  sort, or the reverse.
+  sort, or the reverse. _Judgement._
 
 ## User-facing text
 
 Everything a user reads goes through a Lingui descriptor (`useLabel`), never hardcoded English.
-That covers JSX text, `aria`, `title` and `alt` attributes, toasts and block metadata.
+That covers JSX text, `aria`, `title` and `alt` attributes, toasts and block metadata. _Partly
+enforced by `lingui/no-unlocalized-strings`, in `@plumix/admin` only._
 
 ## Compatibility
 
 TypeScript is the contract. Change a published API directly, so the type checker reports every
 caller that has to follow, and announce the break in the changeset. Don't keep the old shape alive
-beside the new one with a deprecated alias or a shim.
+beside the new one with a deprecated alias or a shim. _Judgement._
 
 ## Schema changes
 
 Never change a migration an install has already applied. To change what it did, add a new
-migration under a new name, because installs that ran the old one won't run it again.
+migration under a new name, because installs that ran the old one won't run it again. _Judgement._
 
 ## Security
 
 - Keep request data out of module scope. One isolate or process serves many users, so a
   module-level cache or variable that holds request or user data leaks it to the next request.
+  _Judgement._
 - Build SQL with drizzle's query builder or its `sql` template, which binds values. Pass `sql.raw`
-  only text the code wrote itself, never input.
+  only text the code wrote itself, never input. _Judgement._
 - Render user content as text. Markup from input reaches `dangerouslySetInnerHTML` only through
   `sanitizeHtml` with the site's allowlist. A URL from input becomes an `href`, a redirect or a
   navigation only after its scheme is checked against `http:` and `https:`. Parsing it is not
-  checking it.
+  checking it. _Judgement._
 
 ### Access
 
@@ -171,25 +188,26 @@ inside what their role and their token allow.
 
 - Every procedure, route, adapter and endpoint that reads or writes protected data checks, with
   `ctx.auth.can()` or `requireCapability`, the capability that guards that data. A broader
-  capability the caller happens to hold does not stand in for it.
-- A token's scopes narrow every check it reaches, on every surface, not only RPC.
+  capability the caller happens to hold does not stand in for it. _Judgement._
+- A token's scopes narrow every check it reaches, on every surface, not only RPC. _Judgement._
 - When two surfaces serve the same data (RPC, REST, MCP, sync, lookups, a public route), they run
-  the same check. A comment saying one matches the other is not a check.
+  the same check. A comment saying one matches the other is not a check. _Judgement._
 - A generic write (`update`, `duplicate`, an import) cannot reach a state or copy a value that a
   dedicated, guarded procedure owns. Copying a row copies a named list of fields, never the row.
+  _Judgement._
 - A token or link that grants access checks again, each time it is used, that the access still
-  holds.
+  holds. _Judgement._
 - A plugin's post type or taxonomy declares its capabilities. The defaults give authors write and
-  members read, which few plugin types want.
+  members read, which few plugin types want. _Judgement._
 - A derived store, such as a search index, a cached snapshot or a stored label, holds only what its
-  readers may read from the source.
+  readers may read from the source. _Judgement._
 - A dev-only endpoint checks the request's `Origin` and honours Vite's `server.fs.deny`. Any page
-  the developer has open can send it a request.
+  the developer has open can send it a request. _Judgement._
 - An agent in CI that reads text anyone can write gets no secret in its environment, and its tools
-  reach only the checkout.
+  reach only the checkout. _Judgement._
 - A fix for an access bug ships a regression test over every route, procedure, adapter or type of
   its kind, read from what is registered, not only over the one that broke. The next one added is
-  then covered without anyone writing a test for it.
+  then covered without anyone writing a test for it. _Judgement._
 
 ## Tests
 
@@ -201,7 +219,7 @@ workspace package and app; `.sandcastle`, the ship loop's own harness, sits outs
 and outside the tiers. Typecheck, lint, format, knip, publint, attw, `i18n:check`,
 `migrations:check` and the link check are **gates**, not tiers: they check code without running
 it, and a new check of that kind joins an existing gate. [Mutation testing](#mutation-testing) is
-neither: it reviews the unit tier.
+neither: it reviews the unit tier. _Judgement._
 
 | Tier  | Proves                                               | Lives in                                                                                      | Runs with             | CI job             |
 | ----- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------- | ------------------ |
@@ -223,33 +241,35 @@ Ask in order, and stop at the first yes:
    reacts, a form that posts, an upload through the UI, the editor under the keyboard and pointer,
    layout, focus.
 3. **Does it need what a consumer installs: the packed tarballs, a real package manager, the real
-   runtime binary serving a built project?** It's a smoke step.
+   runtime binary serving a built project?** It's a smoke step. _Judgement._
 
 The cases that look like a fourth kind each have a tier:
 
 - **A CLI command** is a unit test of its command function, called in-process with its arguments.
-  Running the installed binary in a scaffolded project is smoke.
+  Running the installed binary in a scaffolded project is smoke. _Judgement._
 - **A build's output.** A unit test may run Vite or esbuild in-process over a fixture it builds from
   source, and assert on what that build produced: a chunk's size, a dev module tree-shaken out.
+  _Judgement._
 - **A published package's surface.** What a package exports and declares is checked by the publish
-  gates (publint, attw and the `tooling/published-surface` roster), not by a test.
+  gates (publint, attw and the `tooling/published-surface` roster), not by a test. _Judgement._
 - **A behaviour only a browser has**: the DOMPurify sanitizer, an island's loading strategy,
   WebAuthn. It is an e2e spec that loads the module in a page of its suite's site and drives it with
   `page.evaluate`. A matrix of inputs is one test per input, declared in a loop at the top of the
-  spec.
+  spec. _Judgement._
 - **A runtime server's process behaviour.** The request rules (timeouts, body limits, trusted
   proxies) are unit tests of the handler. That the built server starts on the runtime, answers, and
   exits within its deadline on `SIGTERM` is smoke. That it opens one listener is a unit test of what
-  the adapter's entry hands the runtime.
+  the adapter's entry hands the runtime. _Judgement._
 
 A behaviour is tested once, in the lowest tier that can observe it. A higher tier proves the parts
 connect, not the rules a lower tier already covers. When e2e or smoke finds a bug in logic, the fix
 starts with a unit test that reproduces it. A test that a lower tier now covers, or that checks
-behaviour the code no longer has, is deleted.
+behaviour the code no longer has, is deleted. _Judgement._
 
 A change that adds or edits a test case brings that case in line with this section: a case in the
 wrong tier moves to the right one, and a case that breaks a rule below is rewritten. The rest of its
 file moves with the change that next edits it. Review holds every added or edited case to it.
+_Judgement._
 
 ### Where a file goes
 
@@ -266,6 +286,7 @@ A package or site lays its tests out this way:
 | `playground/`    | a package's site, run by hand and driven by its e2e; a site has none, since it is its own                   |
 
 A suite still under `e2e/` moves to `tests/e2e/` with the change that ports it to the test site.
+_Judgement._
 
 A test of a package as a whole, its configuration or its exports, stays in the package's `test/`
 folder (see Unit below).
@@ -280,28 +301,28 @@ on the package's own runtime wherever Vitest runs on it: Node, and Bun for the B
 (`bun --bun`,
 [ADR 0019](docs/adr/0019-a-runtime-adapter-uses-its-runtimes-primitives-and-is-tested-on-that-runtime.md)).
 The Cloudflare adapter's suite runs on Node, and its playground e2e and the smoke prove it on
-workerd. It reads source: `pnpm test:unit` needs no build.
+workerd. It reads source: `pnpm test:unit` needs no build. _Judgement._
 
 - **It may use** the real collaborators, the in-memory database from the test harness (built from
   the shipped migration histories), a temporary directory it creates and removes, and the fakes in
-  the shared test kits.
+  the shared test kits. _Judgement._
 - **It stays inside the process.** No browser, no simulated DOM (`jsdom`, `happy-dom`, a
   `@vitest-environment` docblock), no child process, no network beyond a listener on `127.0.0.1`
   port 0 that the test opens and closes itself (a runtime adapter testing its server primitive),
   no `dist/`, no sleeps. A child process is allowed only where how a process starts and stops is
   the behaviour under test (the e2e harness's process cleanup); such a file is named in
   `TESTS_OF_PROCESS_HANDLING` in `tooling/eslint/base.ts`. The `plumix/test-tier` lint rule reports
-  DOM APIs and child processes in a unit test.
+  DOM APIs and child processes in a unit test. _Partly enforced by `plumix/test-tier`._
 - **A React hook keeps its logic in functions it calls**, and the unit test calls those. The hook's
-  wiring to React is covered where a component uses it, in e2e.
+  wiring to React is covered where a component uses it, in e2e. _Judgement._
 - **A component keeps its logic in functions it calls.** Which state it shows (a validation error,
   an empty list, a control a role may not use) is decided by a function the component calls, and
   the unit test calls that function for each state. The unit test may also render the component
   to a string. What the rendered DOM does when a user acts on it is e2e, for the journeys a user
-  takes, not for every state the function already covers.
+  takes, not for every state the function already covers. _Judgement._
 - **An upload is a value.** Call the procedure with a native `File` (`fakeFile`, `fakeImage`); Node
   has `File`, `Blob`, `FormData` and `fetch`. One test of the wire format sends it through the RPC
-  link into the handler in-process.
+  link into the handler in-process. _Judgement._
 
 ```ts
 // packages/core/src/entries/read-service.test.ts; authedCtx and listInput are this file's helpers
@@ -321,25 +342,27 @@ test("clamps a member to published entries by default", async () => {
 An e2e test drives a running Plumix site in Chromium with Playwright, the way a visitor or an
 editor does. Each package with a user-facing surface (the admin, the editor, a plugin, a runtime's
 playground) owns one suite in its `tests/e2e/` folder (`e2e/` until the suite is ported), against
-a site on its own ports.
+a site on its own ports. _Judgement._
 
 - **It proves a journey, or a behaviour only a browser has**: the page renders, the control
   reacts, the request lands, the result shows. The rules behind it are already unit tests; e2e
-  checks they reach the screen.
+  checks they reach the screen. _Judgement._
 - **It seeds with the helpers in `plumix/test/playwright`.** The suite's `globalSetup` creates the
   shared state: `openPlaygroundDb` opens the migrated database and `actingAs` creates a user and
   its session, saved as the `storageState` every page starts with. A test that needs its own rows
   writes them at its start with `openPlaygroundDb`, and the `plumixDbBaseline` fixture restores the
   database between tests. Past seeding, a test acts through the page (navigation, input,
-  `page.evaluate`) and asserts on what the page shows.
+  `page.evaluate`) and asserts on what the page shows. _Judgement._
 - **It queries by test id only** (`page.getByTestId`, `[data-testid=…]`); the
   `plumix/no-non-testid-queries` lint rule enforces it. Add a `data-testid` to the markup when none
-  exists.
+  exists. _Enforced by `plumix/no-non-testid-queries`._
 - **It waits on the page, never on the clock.** Wait for the element whose listener it drives
   before it dispatches input: a click, key or wheel sent straight after navigation races that
   listener's mount. Use Playwright's auto-waiting assertions; a `waitForTimeout` is a bug.
+  _Judgement._
 - **A drag goes through `dragTo`**, from `@plumix/core/test/playwright` inside the framework and
   `plumix/test/playwright` outside it, never through a `boundingBox()` read that aims `page.mouse`.
+  _Judgement._
 
 ```ts
 // packages/plugins/media/e2e/media.spec.ts, the upload steps of this test
@@ -385,101 +408,107 @@ Cloudflare project from it and boots `plumix dev`.
   build, start, answer and stop, and does it hold what an install must (the staged catalogs,
   nothing fetched from the registry)? A step that asserts feature behaviour belongs in e2e, and a
   rule belongs in a unit test. The one exception is the editor spec under `plumix dev`, which asks
-  whether the installed project's dev module graph links, not whether the editor works.
+  whether the installed project's dev module graph links, not whether the editor works. _Judgement._
 - **A new smoke check is a new step in `smoke:scaffold`'s loop**, so every runtime gets it, never
   a new harness or a new job. The editor spec is a step of that loop that runs Playwright, with its
-  report and traces uploaded by the same job.
+  report and traces uploaded by the same job. _Judgement._
 - **It reads only what a consumer gets**: the tarballs and the scaffolded project, never the
   workspace's source. The editor spec is copied into the project and imports only what the project
   installed; the smoke adds `BlockRenderer` to the scaffolded theme first, because the scaffold's
-  entry template renders no content.
+  entry template renders no content. _Judgement._
 
 ### Test doubles
 
 Use the real thing when it is fast and deterministic. Otherwise use a fake the owner provides. Stub
-only a boundary Plumix doesn't own, and keep it narrow.
+only a boundary Plumix doesn't own, and keep it narrow. _Judgement._
 
 1. **Real.** Collaborators inside Plumix, and the in-memory database, are used as they are.
+   _Judgement._
 2. **Fake.** The package that owns an interface ships its fake in its test kit, and the fake has
    tests of its own beside it. The test kit is `plumix/test` for what another package's tests use,
    and the package's own `src/test/` for a fake only its own tests use. A runtime's slots pass the
    shared conformance suites (`plumix/test/conformance`), which is what keeps the fakes honest. Add
-   a new fake there, as high up as every caller can use it.
+   a new fake there, as high up as every caller can use it. _Judgement._
 3. **Stub.** Only a boundary outside Plumix: a third-party HTTP API, the clock, randomness, a
    platform global (`vi.stubGlobal`). A slot Plumix defines, like the `Mailer`, has a fake:
    `fakeMail` from `plumix/test`, which the dispatcher and RPC harnesses install as `h.mail`,
    records what was sent. Inject the dependency when the code doesn't take one yet: add the seam to
-   the source.
+   the source. _Judgement._
 4. **Never mock a module.** `vi.mock` couples a test to where code lives; the
    `plumix/no-module-mocking` lint rule rejects it. Wrap a third-party type behind an interface
-   Plumix owns and double that.
+   Plumix owns and double that. _Enforced by `plumix/no-module-mocking`._
 
 A failure path is a unit test too: make the fake or stub fail (a rejected send, a storage error,
-a timeout) and assert what the caller does with it.
+a timeout) and assert what the caller does with it. _Judgement._
 
 Assert on the outcome (the returned value, the stored state, the captured mail), not on which
 functions ran. A spy is for an outgoing effect at a boundary, and it asserts only the arguments that
-matter.
+matter. _Judgement._
 
 ### Writing a test
 
 - **Test code meets the production bar.** Every naming, readability and review rule for code
   applies to tests, except that a test repeats itself where that makes it read on its own. A suite
-  nobody can read gets discarded, so a messy test is rewritten, not tolerated.
+  nobody can read gets discarded, so a messy test is rewritten, not tolerated. _Partly enforced by
+  lint, which runs on tests._
 - **One behaviour per test, named for it**: a sentence about the behaviour, "publishing a draft
   makes it readable", never the method it calls ("publish() calls save()"). The `describe` names
-  the subject. The name and the failure message say what broke.
+  the subject. The name and the failure message say what broke. _Judgement._
 - **The domain's words.** A test's name, its `describe` and its helpers use the vocabulary in
   [`GLOSSARY.md`](./GLOSSARY.md) (entry, term, principal, segment) the way the code does, and a
   helper reads in those words (`h.factory.draft.create`, `actingAs(db, "admin")`), so a test reads
-  like the behaviour it checks.
+  like the behaviour it checks. _Judgement._
 - **One act per test.** The act is the one call whose behaviour the test names; arrange may call
   the public API to reach the starting state. A second act is a second test, or a row of `it.each`.
+  _Judgement._
 - **Arrange, act, assert, in straight-line code.** No branches or loops: a test that branches can
   pass on the branch that checked nothing. Use `it.each` for one case per input. Repeat the values
   that matter in each test rather than hiding them in a helper, and write literals inline; give a
-  value a name only when its meaning is not obvious from the literal.
+  value a name only when its meaning is not obvious from the literal. _Judgement._
 - **Expected values come from outside the code**: a literal, a worked example, the spec. A value
   copied from the output, or recomputed the way the code computes it, can't fail. The one place an
   expected value is read off the code is a **characterization test**: before a structural change
   to code no test covers, pin what it does today, in the same change, with a name that says so
-  ("keeps today's slug for a title with emoji").
+  ("keeps today's slug for a title with emoji"). _Judgement._
 - **Cover the requirement and its edge cases, not the lines a change touched.** If breaking the
   rule a test names leaves it green, rewrite it or delete it. Don't test a value that is statically
-  defined, or logic that was removed.
+  defined, or logic that was removed. _Judgement._
 - **Deterministic and hermetic.** Fake the clock (`vi.useFakeTimers`, an injected `now`), seed
   randomness, and wait on a condition, never a delay. Each test builds its own state and passes in
   any order. A test gives the same result on every OS a contributor develops on: it reads nothing
   only one OS has (`/proc`), and where the outcome depends on a host capability (which image
   encoders exist) it pins that capability (`Bun.Image.backend = "bun"`) or takes it through a seam.
+  _Judgement._
 - **A flaky test is a bug.** Unit tests never retry, and lint rejects a `test.retry` in a
   Vitest config. E2E retries twice on CI (the shared Playwright config), so a slow runner does not
   block a merge, and a test Playwright reports as flaky is fixed in the change that finds it. When
   its cause lies outside that change, open an issue and skip the test with `test.skip` and the
   issue number in its name; lint rejects a skip whose title names no issue. A skip for a platform
   that lacks what the test needs (`test.skipIf`, or a conformance case a capability rules out)
-  names that capability.
+  names that capability. _Partly enforced by `plumix/test-tier`._
 - **Fast.** A unit test runs in milliseconds. Vitest's 5s timeout catches hangs, it is not a
   budget: a unit test over one second is profiled before merge
-  ([`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test)).
+  ([`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test)). _Judgement._
 - **Expected values are written out.** No snapshot or screenshot baselines (`toMatchSnapshot`,
   `toMatchInlineSnapshot`, `toHaveScreenshot`): a reviewer reads the expected value in the test.
   The docs screenshots are docs assets, regenerated by `pnpm docs:screenshots`; the e2e job's diff
-  of them is a gate that they were regenerated, not a test.
+  of them is a gate that they were regenerated, not a test. _Judgement._
 - **Translated output.** Unit tests resolve compiled catalogs to empty ones, so a test that asserts
   on translated text hands the committed `.po` in as a catalog
-  ([ADR 0036](docs/adr/0036-a-mail-is-declared-by-name.md)).
+  ([ADR 0036](docs/adr/0036-a-mail-is-declared-by-name.md)). _Judgement._
 - **A type contract is a unit test.** Assert it with `expectTypeOf` in the module's `*.test.ts`;
   the typecheck gate is what checks it, because the test files are in each package's program.
+  _Judgement._
 - **A performance property is a count**: the queries a call runs, the bytes a chunk ships. Assert
   the count, never elapsed time. Benchmarks and load tests are not tests: they run by hand against
-  a deployed site, never in CI.
+  a deployed site, never in CI. _Judgement._
 - **Coverage is tracked, not targeted.** No package sets a threshold. A test exists to check a
-  behaviour, never to raise the number.
+  behaviour, never to raise the number. _Judgement._
 - **Seed with the fishery factories**, not raw writes, and reuse the shared helpers in
   `plumix/test` and `@plumix/core/test`. Put a new test in the suite that already covers the area.
+  _Judgement._
 - **Never change a test just to make it pass**: the test may be the only thing that's right. When
-  you can't tell which side is wrong, stop and say so.
+  you can't tell which side is wrong, stop and say so. _Judgement._
 
 ### Property tests
 
@@ -491,24 +520,25 @@ the arbitraries from `fast-check`. `packages/core/src/blocks/entry-content.test.
 - **When a property beats examples.** The code is a pure transform over more inputs than anyone
   can pick by hand, and the rule is one sentence true of any input: a decoder gives back what its
   encoder took, a second pass changes nothing, no output holds what a sanitiser removes. A rule
-  that holds only for chosen inputs stays an example test.
+  that holds only for chosen inputs stays an example test. _Judgement._
 - **Which tier.** It is a unit test, beside the source it checks, under every rule of the unit
   tier. Each run generates values in memory, so a property never boots a site or a database per
-  run.
+  run. _Judgement._
 - **Valid input comes from the real definition.** An arbitrary builds its values from what defines
   them, such as the block registry, so a block added later is covered without editing the test.
-  Whatever it leaves out on purpose it names, with the reason, in a comment.
+  Whatever it leaves out on purpose it names, with the reason, in a comment. _Judgement._
 - **The expected value is the input.** A property asserts a relation to its input (the decoded
   value equals the input), never a value recomputed the way the code computes it. It asserts with
-  `expect`, so a failure prints the diff.
+  `expect`, so a failure prints the diff. _Judgement._
 - **Reproducible.** Each property passes a fixed `seed`, so every run, CI included, checks the same
   inputs. A failure prints the `seed` and the `path` of the shrunk counterexample; passing both to
   the same `test.prop` replays it. To search further, run it locally with another seed or more
-  runs, and keep the committed seed fixed.
+  runs, and keep the committed seed fixed. _Judgement._
 - **A bug it finds becomes an example.** The shrunk counterexample becomes an example test that
   fails before the fix, so the case stays in the suite whatever the generator or seed becomes.
+  _Judgement._
 - **Fast.** fast-check runs 100 inputs by default. Raise `numRuns` only with a comment saying what
-  fewer runs miss, and stay inside the unit tier's budget.
+  fewer runs miss, and stay inside the unit tier's budget. _Judgement._
 
 ### TDD
 
@@ -522,7 +552,7 @@ Every change is test-first, one cycle at a time:
 4. **Refactor** only on green, as its own step and its own commit, with the tests unchanged. A
    commit either changes behaviour or changes structure, never both.
 5. **Repeat** from the list. Add to the list what each cycle teaches; never write all the tests
-   first.
+   first. _Judgement._
 
 ### Reviewing a test
 
@@ -542,29 +572,30 @@ operator swapped, a value emptied) and runs the unit tests that cover it. A chan
 is a survivor, and the summary lists each surviving line once
 ([ADR 0049](docs/adr/0049-mutation-testing-reviews-the-lines-a-branch-changed.md)). It is neither a
 tier nor a gate: it asks a question of the unit tier, CI does not run it, and no score is a target.
-Run it before asking for review, and when reviewing a branch.
+Run it before asking for review, and when reviewing a branch. _Judgement._
 
 Read a survivor as a question about the behaviour on its line:
 
 - **Survived:** a test ran the line and still passed with it changed. If the change breaks
   something the issue, an ADR or the code's own comment promises, write the unit test that fails on
   it, asserting the behaviour, not the mutation. Check it by editing the line into the mutant by
-  hand: the test fails, and passes again once the line is back.
-- **No test runs:** the line is untested. Start with a test that reaches it.
+  hand: the test fails, and passes again once the line is back. _Judgement._
+- **No test runs:** the line is untested. Start with a test that reaches it. _Judgement._
 - **Dismiss** a survivor only for a reason you can name: the change cannot be observed, or the only
   test that could catch it would assert an implementation detail. A behaviour an e2e spec or another
   package's suite already covers counts, since the run sees only the package's own unit tests. Say
-  which and why where the review records it.
+  which and why where the review records it. _Judgement._
 
 Never add an assertion only to kill a mutant, and never change production code to move a result.
 A dismissal that keeps coming back is a rule for `tooling/stryker/arid.ts`, not a comment in
-source.
+source. _Judgement._
 
 ### Timeouts
 
 Override a timeout only as a last resort. Profile the slow test first and fix what the profile
 shows. Keep an override only when the whole suite's timings call for it, not its single slowest
 test. [`docs/agents/testing.md`](docs/agents/testing.md#a-slow-test) has the usual causes.
+_Judgement._
 
 ## Review checklist
 
