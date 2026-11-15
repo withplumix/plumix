@@ -3,12 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Browser, Page } from "@playwright/test";
 
-import { actingAs, openPlaygroundDb } from "@plumix/core/test/playwright";
-
 import type { PageEvent, VerifyReport } from "./report.js";
-import type { Site } from "./site.js";
+import type { Seeded, Site } from "./site.js";
 import { axeViolations } from "../e2e/support/axe.js";
 import { buildReport } from "./report.js";
+import { signIn } from "./site.js";
 
 export interface VerifyPageOptions {
   readonly browser: Browser;
@@ -19,6 +18,8 @@ export interface VerifyPageOptions {
   readonly route: string;
   readonly out: string;
   readonly video: boolean;
+  /** What `--seed` wrote through the playground's seeder, for the report. */
+  readonly seeded?: Seeded;
 }
 
 /** What `verifyPage` writes to `out`, beside a `video.webm` when asked for. */
@@ -55,16 +56,6 @@ const PHONE_LIGHT: View = {
   file: VERIFY_FILES.phoneLight,
 };
 const SKELETON = "[data-slot='skeleton']";
-
-async function signIn(site: Site, role: string) {
-  const db = await openPlaygroundDb({ cwd: site.dir });
-  try {
-    const { storageState } = await actingAs(db, role);
-    return { cookies: [...storageState.cookies], origins: [] };
-  } finally {
-    db.$client.close();
-  }
-}
 
 function recordEvents(page: Page): readonly PageEvent[] {
   const events: PageEvent[] = [];
@@ -181,6 +172,7 @@ export async function verifyPage(
         site: options.site.name,
         role: options.role,
         route: options.route,
+        seeded: options.seeded,
         ...report,
       },
       null,

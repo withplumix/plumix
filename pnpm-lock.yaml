@@ -1967,6 +1967,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:cloudflare
         version: 5.20261104.1
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.64.1
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript

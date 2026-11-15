@@ -79,3 +79,27 @@ test("a page that sends the role elsewhere is reported as a redirect and fails t
     redirected: { from: "/users/create", to: "/users" },
   });
 });
+
+test("seeding a plugin's playground stores the records its seeder writes and lists them", async () => {
+  await verifyAdmin([
+    "--site",
+    "media",
+    "--as",
+    "editor",
+    "--open",
+    "pages-media",
+    "--seed",
+    "3",
+    "--out",
+    out,
+  ]);
+
+  const report: unknown = JSON.parse(
+    await readFile(join(out, "report.json"), "utf8"),
+  );
+  expect(report).toMatchObject({
+    seeded: { media: ["seed-1.png", "seed-2.png", "seed-3.png"] },
+    consoleErrors: [],
+    failedRequests: [],
+  });
+});

@@ -20,11 +20,12 @@
     // real consumers isn't what we're verifying here.
     "paths": {
       "plumix": ["../../../plumix/src/index.ts"],
+      "plumix/test/playwright": ["../../../plumix/src/test/playwright.ts"],
       "@plumix/plugin-media": ["../src/index.ts"],
       "@plumix/runtime-cloudflare": [
         "../../../runtimes/cloudflare/src/index.ts"
       ]
     }
   },
-  "include": ["plumix.config.ts", ".plumix"]
+  "include": ["plumix.config.ts", "seed.ts", ".plumix"]
 }

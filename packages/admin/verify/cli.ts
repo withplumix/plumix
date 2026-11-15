@@ -16,6 +16,7 @@ import {
   findSite,
   playgroundSites,
   REPO_ROOT,
+  runSeeder,
   seedSite,
   siteRegistry,
   startSite,
@@ -183,6 +184,10 @@ async function verify(values: {
     if (seed !== undefined) await seedSite(site, registry, seed);
     const browser = await chromium.launch();
     try {
+      const seeded =
+        seed === undefined
+          ? undefined
+          : await runSeeder(site, browser, running.adminURL, seed);
       report = await verifyPage({
         browser,
         site,
@@ -191,6 +196,7 @@ async function verify(values: {
         route: page.route,
         out,
         video: values.video,
+        seeded,
       });
     } finally {
       await browser.close();
