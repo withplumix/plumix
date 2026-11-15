@@ -155,6 +155,40 @@ finish or report their limit; subsequent calls wait until the latest recorded
 reset. Restarting preserves that wait. An unrecognised limit or authentication
 failure stops work instead of guessing a reset time.
 
+## Admin verification
+
+A ticket whose diff touches the admin or a render path (`RENDER_AND_ADMIN_PATHS` in
+`lib/gates.ts`) is shown running before it ships, with `pnpm verify:admin`
+(`packages/admin/verify/README.md`). The analyst's handoff carries a verification
+plan: the pages, the roles that must and must not reach each one, and the behaviour
+a step file scripts. The implementer writes or extends that step file in the
+playground's `steps/` folder and ends with the commands to rerun, one per line:
+
+```text
+<verify-admin>
+pnpm verify:admin --site core --as editor --open /users/create --expect-route /users
+</verify-admin>
+```
+
+A change no page can show, such as a token no screen renders differently, declares
+`none: <reason>` instead. The reviewer judges the reason and the PR states it. A
+fixer may declare again; the latest declaration stands.
+
+The `verify-admin` gate runs last in `GATES` when the diff matches and Chromium
+launches. It builds, then reruns each declared command with `--out` set to
+`.cache/sandcastle/verify-admin/runs/<n>` in the worktree, which git ignores, and
+fails on an admin diff that declared nothing. Any rebase that moves the branch
+reruns it, so its evidence covers the commit the final review approves. The final
+review reads each run's `report.json` and screenshots, and the PR's Evidence lists
+each command with its summary line on that commit. No CI check runs it, so a
+failure the fixer declines blocks the ticket instead of being waived to CI, and no
+failing CI check maps to it. A repair reads the declaration back from the PR body
+and reruns the gate with the rest of `GATES`.
+
+Each gate run's folder is copied to `runs/<run>/evidence/<phase>/` in the phase
+journal. The gate event's `artifacts` names the copy, so `--explain` shows it next
+to the gate's log.
+
 ## Operating the factory
 
 These commands read local files and do not need Docker, GitHub access, or Claude:

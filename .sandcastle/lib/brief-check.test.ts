@@ -85,6 +85,33 @@ describe("checkBrief", () => {
       brief: JSON.stringify(brief, null, 2),
     });
   });
+  test("an admin ticket's verification plan reaches the implementer", async () => {
+    const verification = [
+      "core /users/create: admin reaches it, editor is sent to /users",
+      "media pages-media as editor, --seed 3: extend packages/plugins/media/playground/steps/copy-url.ts to copy twice",
+    ];
+
+    const next = await checkBrief(
+      async () => ranWith(briefCheckBlock({ ...ready, verification })),
+      TICKET,
+      { exists: everyFileExists, isOpen: nothingOpen, context: FRESH },
+    );
+
+    expect(
+      next.next === "implement" && JSON.parse(next.brief ?? "{}"),
+    ).toMatchObject({
+      verification,
+    });
+  });
+
+  test("the prompt's example hands over a verification plan", () => {
+    const example = readBriefCheckTag(
+      readFileSync(join(PROMPT_DIR, "check-brief.md"), "utf8"),
+    );
+
+    expect(example?.verification).toEqual([expect.any(String)]);
+  });
+
   test("a brief resting on a false premise is parked before implementation, naming each one", async () => {
     const mailer = {
       claim: "log the transport used",

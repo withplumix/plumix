@@ -31,6 +31,18 @@ untouched (generated files, another ticket's ground, a published surface the
 brief does not change) in `protectedPaths`: they are constraints the implementer
 follows, not questions. Keep the plan within this issue's scope.
 
+When the change shows in the admin or a rendered page (`packages/admin`,
+`packages/admin-editor`, `packages/admin-ui`, `packages/core/src/blocks`,
+`packages/core/src/route` or `apps/`), hand over a verification plan in
+`verification`, one entry per page: the playground (`pnpm verify:admin --list`
+names each one's pages; `packages/admin/verify/README.md` has the flags), the
+page, the roles that must reach it and the roles that must not, whether it needs
+`--seed`, and the behaviour a step script must show. Name a step file that
+already exists under a playground's `steps/` folder; describe a new one by what
+it does and the playground it belongs to. When no page shows the change, say so
+in one entry and why: the implementer declares that opt-out, and the reviewer
+judges it.
+
 Settle every choice you can yourself, and write it into the plan with the
 document or code that settles it: where docs go, which pattern to follow, how
 to name a thing, which tier a test sits in. The architecture pages, ADRs,
@@ -76,7 +88,7 @@ with `claim`, `evidence` and `why`, never a bare string; leave the array empty
 when there are none. The example shows one so you see its shape.
 
 <brief-check>
-{ "ok": false, "falsePremises": [{ "claim": "what the brief says", "evidence": "path/to/file.ts:42", "why": "what acting on it as written would break" }], "acceptance": ["observable behaviour"], "plan": ["first failing test and implementation step"], "evidence": ["path/to/file.ts:42 and what it establishes"], "questions": [], "waitingOn": [], "protectedPaths": ["path/the/implementer/must/not/change"] }
+{ "ok": false, "falsePremises": [{ "claim": "what the brief says", "evidence": "path/to/file.ts:42", "why": "what acting on it as written would break" }], "acceptance": ["observable behaviour"], "plan": ["first failing test and implementation step"], "evidence": ["path/to/file.ts:42 and what it establishes"], "questions": [], "waitingOn": [], "protectedPaths": ["path/the/implementer/must/not/change"], "verification": ["core /users/create: admin reaches it, editor ends on /users; new steps/create-user.ts in packages/core/playground submits the form and sees the user listed"] }
 </brief-check>
 
 <promise>COMPLETE</promise>

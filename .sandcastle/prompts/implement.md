@@ -47,8 +47,41 @@ what the change affects, never a whole suite or the whole workspace:
   inside the package, which passes the spec to Playwright with the package's own config.
 
 After this phase the harness runs only the fast repo-wide checks (check-no-major, commitlint,
-format, i18n, knip, publint, typecheck) and hands you any failure. Lint, the full unit suite,
-e2e and attw run in CI, and a CI failure comes back to you as a repair.
+format, i18n, knip, publint, typecheck) and the admin verification below, and hands you any
+failure. Lint, the full unit suite, e2e and attw run in CI, and a CI failure comes back to you
+as a repair.
+
+## Admin verification
+
+When the branch changes `packages/admin`, `packages/admin-editor`, `packages/admin-ui`,
+`packages/core/src/blocks`, `packages/core/src/route` or `apps/`, show the change on a running
+admin with `pnpm verify:admin` (`packages/admin/verify/README.md`), following the analyst's
+verification plan:
+
+- write or extend the step file in the owning playground's `steps/` folder, listed in its
+  `tsconfig.json` and as a knip entry;
+- where the behaviour is new, run the step file before the change and watch it fail, then
+  after it and watch it pass;
+- one run per role the plan names: a role that must not reach a page runs with
+  `--expect-route` set to where it must end up.
+
+Declare the final commands in a `<verify-admin>` block, one per line, without `--out`: the
+harness runs them again on the commit it publishes, writes their reports and screenshots where
+the reviewer reads them, and lists each command and its summary in the PR's Evidence. Do not
+list them there yourself.
+
+<verify-admin>
+pnpm verify:admin --site media --as editor --open pages-media --seed 3 --steps packages/plugins/media/playground/steps/copy-url.ts
+pnpm verify:admin --site core --as editor --open /users/create --expect-route /users
+</verify-admin>
+
+When no page can show the change, such as a token no screen renders differently, declare that
+instead, with the reason. The reviewer judges the reason; an admin change with no block fails the
+harness's check.
+
+<verify-admin>
+none: the reason no verify:admin run can show this change
+</verify-admin>
 
 Commit on the branch you are on. Never create, switch or rename a branch, even when the
 ticket names one: the harness owns this branch, and a commit anywhere else never reaches the

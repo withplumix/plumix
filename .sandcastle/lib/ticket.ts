@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { cpSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 
@@ -20,7 +20,7 @@ import { checkBrief, planningContext } from "./brief-check.js";
 import { decideOnTheBranch } from "./decide.js";
 import { prepareDelivery } from "./delivery.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
-import { GATES, GATES_AFTER_A_RESOLVED_REBASE, runGates } from "./gates.js";
+import { GATES, gatesAfterLanding, runGates } from "./gates.js";
 import {
   assignToSelf,
   branchCarriesWork,
@@ -44,6 +44,13 @@ import {
   SETUP_STEPS,
 } from "./sandbox.js";
 import { reviewChecklist } from "./standards.js";
+import {
+  declareVerification,
+  publishedVerification,
+  readVerificationTag,
+  verificationForReview,
+  withVerificationEvidence,
+} from "./verify-admin.js";
 
 /**
  * Opus implements, fixes, resolves conflicts and repairs; Sonnet reviews. On
@@ -269,6 +276,9 @@ const EMIT_THE_PULL_REQUEST = `End with the <pr> block the prompt describes: a t
 /** A first edit is discarded and the review runs again on the commit it was given. */
 const READ_ONLY_ATTEMPTS = 2;
 
+const headOf = async (sandbox: Executor): Promise<string> =>
+  (await sandbox.exec("git rev-parse HEAD")).stdout.trim();
+
 const fileExists = async (sandbox: Executor, path: string): Promise<boolean> =>
   (await sandbox.exec(`test -f '${path}'`)).exitCode === 0;
 
@@ -312,6 +322,7 @@ export const reviewBranch = async (
   round: number | string,
   pullRequestBody: string,
   mutation: string,
+  verification: string,
 ): Promise<Review | null> => {
   const phase = `review#${round}`;
   const reviewer = REVIEWER;
@@ -322,6 +333,7 @@ export const reviewBranch = async (
       BASE: MERGE_BASE,
       PR_BODY: pullRequestBody,
       MUTATION: mutation,
+      VERIFICATION: verification,
       CHECKLIST: reviewChecklist(),
       SCOPE: reviewScope(round),
     },
@@ -375,6 +387,7 @@ export interface Fixer {
 export const fixerFor = (
   runAgentPhase: RunAgentPhase,
   session: string | undefined,
+  declare: (verification: string) => Promise<void> = async () => {},
 ): Fixer => {
   let sessionToResume = session;
   return {
@@ -388,7 +401,9 @@ export const fixerFor = (
       });
       sessionToResume = fixed.iterations.at(-1)?.sessionId ?? sessionToResume;
       const pullRequestCopy = readPullRequestTag(fixed.stdout);
-      if (fixed.commits.length > 0 || pullRequestCopy)
+      const verification = readVerificationTag(fixed.stdout);
+      if (verification) await declare(verification);
+      if (fixed.commits.length > 0 || pullRequestCopy || verification)
         return { declined: null, pullRequestCopy };
       const notThisBranch = taggedBlock(fixed.stdout, "not-this-branch");
       if (notThisBranch)
@@ -567,12 +582,27 @@ export const commitsTheBranchCarries = async (
   return exitCode === 0 ? Number(stdout.trim()) || 0 : 0;
 };
 
+/** Copies a gate's evidence out of the worktree; returns where the copy is. */
+type Retain = (folder: string, phase: string) => string;
+
+export const retainIn =
+  (worktreePath: string, runDir: string): Retain =>
+  (folder, phase) => {
+    const named = join(runDir, "evidence", phase.replace(/[^a-z0-9]+/gi, "-"));
+    let kept = named;
+    for (let attempt = 2; existsSync(kept); attempt += 1)
+      kept = `${named}-${attempt}`;
+    cpSync(join(worktreePath, folder), kept, { recursive: true });
+    return kept;
+  };
+
 export const gatesUntilGreen = async (
   sandbox: Executor,
   gates: readonly Gate[],
   journal: Pick<Journal, "record">,
   fixer: Fixer,
   label: string,
+  retain: Retain = (folder) => folder,
 ): Promise<GateOutcome> => {
   let fixRoundsUsed = 0;
   const waived: WaivedGate[] = [];
@@ -586,10 +616,11 @@ export const gatesUntilGreen = async (
       {
         stopAtFirstFailure: true,
         retryAFailureOnce: true,
-        onResult: (result) =>
+        onResult: (result) => {
+          const phase = `gate:${result.name}#${label}.${round}`;
           journal.record(
             {
-              phase: `gate:${result.name}#${label}.${round}`,
+              phase,
               kind: "gate",
               startedAt: result.startedAt,
               durationMs: result.durationMs,
@@ -597,9 +628,13 @@ export const gatesUntilGreen = async (
               detail: result.skippedBecause,
               command: result.command,
               exitCode: result.exitCode,
+              ...(result.artifacts !== undefined && {
+                artifacts: [retain(result.artifacts, phase)],
+              }),
             },
             result.output,
-          ),
+          );
+        },
       },
     );
     const [failure] = failures;
@@ -617,6 +652,14 @@ export const gatesUntilGreen = async (
       `fix#${label}.${round}`,
       asGateFailureBrief(failure),
     );
+    const noCheckInCi = gates.some(
+      ({ name, notInCi }) => name === failure.name && notInCi,
+    );
+    if (declined && noCheckInCi)
+      return {
+        blocked: `\`${failure.command}\` failed and no CI check reruns it, so it was not waived: ${declined.reason}`,
+        waived,
+      };
     if (declined) {
       say(`--- waived \`${failure.command}\`: CI decides ---`);
       waived.push({ command: failure.command, reason: declined.reason });
@@ -801,10 +844,16 @@ export const shipTicket = async (
       )) ??
       readPullRequestTag(implemented.stdout) ??
       fallbackPullRequestCopy(ticket);
+    const declare = (verification: string) =>
+      declareVerification(sandbox, verification);
+    const declared = readVerificationTag(implemented.stdout);
+    if (declared) await declare(declared);
     const fixer = fixerFor(
       runAgentPhase,
       implemented.iterations.at(-1)?.sessionId,
+      declare,
     );
+    const retain = retainIn(sandbox.worktreePath, journal.dir);
 
     const decideOnce = replanning(history, ticket.number, (reason) =>
       decideOnTheBranch(runAgentPhase, ticket, reason),
@@ -818,7 +867,7 @@ export const shipTicket = async (
           reviewHead(ticket.number, history, {
             head: () => reviewableHead(sandbox),
             review: () =>
-              reviewedWithoutEdits(sandbox, () =>
+              reviewedWithoutEdits(sandbox, async () =>
                 reviewBranch(
                   runAgentPhase,
                   journal,
@@ -826,6 +875,7 @@ export const shipTicket = async (
                   pass,
                   pullRequestBody,
                   mutation,
+                  await verificationForReview(sandbox),
                 ),
               ),
           }),
@@ -842,10 +892,12 @@ export const shipTicket = async (
       journal,
       fixer,
       "final",
+      retain,
     );
     if (gates.blocked) return { status: "blocked", reason: gates.blocked };
 
     say("\n--- land ---");
+    const gatedHead = await headOf(sandbox);
     const onMain = await rebaseOntoLatestMain(
       sandbox,
       syncRepoToMain,
@@ -859,13 +911,18 @@ export const shipTicket = async (
           )
         ).unfinished,
     );
-    if (onMain === "resolved") {
+    const afterLanding = gatesAfterLanding(
+      onMain,
+      (await headOf(sandbox)) !== gatedHead,
+    );
+    if (afterLanding.length > 0) {
       const regated = await gatesUntilGreen(
         sandbox,
-        GATES_AFTER_A_RESOLVED_REBASE,
+        afterLanding,
         journal,
         fixer,
-        "resolved",
+        onMain,
+        retain,
       );
       if (regated.blocked)
         return { status: "blocked", reason: regated.blocked };
@@ -875,10 +932,13 @@ export const shipTicket = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
+    const withEvidence = async (body: string) =>
+      withVerificationEvidence(body, await publishedVerification(sandbox));
     const published = await reviewBeforePublishing(
       {
-        review: (pullRequestBody) =>
-          reviewHead(ticket.number, history, {
+        review: async (pullRequestBody) => {
+          const body = await withEvidence(pullRequestBody);
+          return reviewHead(ticket.number, history, {
             head: () => reviewableHead(sandbox),
             review: () =>
               reviewedWithoutEdits(sandbox, async () =>
@@ -887,27 +947,34 @@ export const shipTicket = async (
                   journal,
                   ticket,
                   "publish",
-                  pullRequestBody,
+                  body,
                   await surveyMutants(sandbox),
+                  await verificationForReview(sandbox),
                 ),
               ),
-          }),
+          });
+        },
         fixer,
         decide: decideOnce,
         regate: async () =>
-          (await gatesUntilGreen(sandbox, GATES, journal, fixer, "publish"))
-            .blocked,
+          (
+            await gatesUntilGreen(
+              sandbox,
+              GATES,
+              journal,
+              fixer,
+              "publish",
+              retain,
+            )
+          ).blocked,
       },
       reviewed.pullRequestCopy,
     );
     if (published.status === "blocked") return published;
-    const { pullRequestCopy } = published;
+    const { title } = published.pullRequestCopy;
+    const body = await withEvidence(published.pullRequestCopy.body);
     await pushBranch(branch, sandbox.worktreePath);
-    const pullRequest = openPullRequest(
-      branch,
-      pullRequestCopy.title,
-      pullRequestCopy.body,
-    );
+    const pullRequest = openPullRequest(branch, title, body);
 
     history.record({ type: "pr.tracked", ticket, pullRequest });
 
