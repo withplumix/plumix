@@ -206,6 +206,14 @@ Turborepo skips a task when nothing it reads has changed, so most pull requests 
 
 To see a task run that turbo wants to skip, pass `--force`. The `smoke:scaffold` task is never cached: it asks whether _this commit_ breaks a generated project, so it can't trust a replayed result. The builds it depends on are cached as usual, and `create-plumix-app` declares every package it packs as a devDependency so turbo builds them first.
 
+### Ratchets
+
+A ratchet holds a per-file count at a limit and lists the files already over it in
+`tooling/eslint/ratchets/`, each at its own ceiling (`tooling/eslint/ratchet.ts`). Lint fails a file
+that passes its limit or ceiling. When you shrink a listed file, the `@plumix/eslint-config` unit
+test fails until you run `pnpm --filter @plumix/eslint-config ratchet:update` and commit the list.
+That script only lowers a ceiling or drops a file back under the limit; it never adds or raises one.
+
 ### Link validation
 
 The `Links` CI job checks every local link offline with [lychee](https://lychee.cli.rs), `#anchor` fragments included. Repository prose links are ordinary relative paths. Docs pages under `apps/docs/src/content/docs` link to Starlight routes (`/fields/text/#reserved-names`), which the job reads as the `.mdx` file at that path, so a page must not set its own `slug`. For the form a docs link takes, see [`apps/docs/README.md`](apps/docs/README.md).

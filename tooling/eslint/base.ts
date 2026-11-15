@@ -7,6 +7,7 @@ import turboPlugin from "eslint-plugin-turbo";
 import { defineConfig, includeIgnoreFile } from "eslint/config";
 import tseslint from "typescript-eslint";
 
+import { MAX_LINES, ratchetConfig } from "./ratchet.js";
 import { plumixPlugin } from "./rules/index.js";
 import { RETIRED_TIER_PENDING } from "./rules/test-tier-pending.js";
 
@@ -187,6 +188,9 @@ export const baseConfig = defineConfig(
       "@typescript-eslint/no-unnecessary-type-parameters": "error",
     },
   },
+  // Agents read a whole file and copy what they find, so a long one gathers
+  // local copies of shared logic.
+  ratchetConfig(MAX_LINES, { files: PRODUCTION_SOURCE, ignores: TEST_SOURCE }),
   // Runs on tests because forging is a test-file habit. A distinct rule since
   // the react config re-declares `no-restricted-syntax` over `src/`.
   {
