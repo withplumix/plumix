@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -101,5 +101,77 @@ test("seeding a plugin's playground stores the records its seeder writes and lis
     seeded: { media: ["seed-1.png", "seed-2.png", "seed-3.png"] },
     consoleErrors: [],
     failedRequests: [],
+  });
+});
+
+test("running steps counts each assertion that holds and captures where they ended", async () => {
+  await verifyAdmin([
+    "--site",
+    "media",
+    "--as",
+    "editor",
+    "--open",
+    "pages-media",
+    "--seed",
+    "2",
+    "--steps",
+    join(
+      import.meta.dirname,
+      "../../plugins/media/playground/steps/copy-url.ts",
+    ),
+    "--out",
+    out,
+  ]);
+
+  expect(await readdir(out)).toContain("steps.png");
+  const report: unknown = JSON.parse(
+    await readFile(join(out, "report.json"), "utf8"),
+  );
+  expect(report).toMatchObject({ steps: { passed: 3, failed: [] } });
+});
+
+test("a step that fails reports its assertion and fails the run", async () => {
+  const steps = join(out, "fails.ts");
+  await writeFile(
+    steps,
+    `export default async ({ page, expect }) => {
+      await expect(page.getByTestId("no-such-control")).toBeVisible({ timeout: 1000 });
+    };\n`,
+  );
+
+  const run = verifyAdmin([
+    "--site",
+    "core",
+    "--as",
+    "admin",
+    "--open",
+    "users",
+    "--steps",
+    steps,
+    "--out",
+    out,
+  ]);
+
+  await expect(run).rejects.toMatchObject({
+    code: 1,
+    stdout: expect.stringContaining(
+      "steps      0 passed, 1 failed, at steps.png\n  expect(locator).toBeVisible() failed\n",
+    ),
+  });
+  const report: unknown = JSON.parse(
+    await readFile(join(out, "report.json"), "utf8"),
+  );
+  expect(report).toMatchObject({
+    steps: {
+      passed: 0,
+      failed: [
+        {
+          message: expect.stringContaining(
+            "Locator: getByTestId('no-such-control')",
+          ),
+          screenshot: "steps.png",
+        },
+      ],
+    },
   });
 });

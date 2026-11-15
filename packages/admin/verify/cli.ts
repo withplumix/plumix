@@ -1,6 +1,8 @@
 // `pnpm verify:admin`: open an admin page on a playground as a role, and write
 // its screenshots and a report. `--list` prints the pages a playground serves.
+import { existsSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { chromium } from "@playwright/test";
 
@@ -9,6 +11,7 @@ import { roleEntries } from "@plumix/core/manifest";
 import type { AdminPage } from "./page-list.js";
 import type { VerifyReport } from "./report.js";
 import type { Site } from "./site.js";
+import type { Steps } from "./steps.js";
 import { adminPageList, pageId } from "./page-list.js";
 import { hasProblems } from "./report.js";
 import { redirectOf } from "./route.js";
@@ -24,7 +27,7 @@ import {
 import { VERIFY_FILES, verifyPage } from "./verify-page.js";
 
 const USAGE = `Usage:
-  pnpm verify:admin --site <playground> --as <role> --open <route|page-id> [--seed <n>] [--video] [--out <dir>]
+  pnpm verify:admin --site <playground> --as <role> --open <route|page-id> [--seed <n>] [--steps <file>] [--video] [--out <dir>]
   pnpm verify:admin --list [--site <playground>]`;
 
 const EXIT_PROBLEMS = 1;
@@ -54,6 +57,18 @@ function parseCount(value: string | undefined): number | undefined {
     );
   }
   return count;
+}
+
+/** Loaded before the site boots, so a missing or broken file fails at once. */
+async function loadSteps(file: string): Promise<Steps> {
+  const path = resolve(CALLER_DIR, file);
+  if (!existsSync(path)) {
+    throw new UsageError(`--steps names no file: ${path}.`);
+  }
+  const { default: steps } = (await import(pathToFileURL(path).href)) as {
+    readonly default: Steps;
+  };
+  return steps;
 }
 
 function siteNamed(name: string): Site {
@@ -129,6 +144,17 @@ function displayPath(path: string): string {
   return fromCaller.startsWith("..") ? path : fromCaller;
 }
 
+function summarizeSteps(steps: VerifyReport["steps"]): string[] {
+  if (steps === undefined) return [];
+  const passed = `${String(steps.passed)} passed`;
+  const [failure] = steps.failed;
+  if (failure === undefined) return [`steps      ${passed}`];
+  return [
+    `steps      ${passed}, ${String(steps.failed.length)} failed, at ${failure.screenshot}`,
+    ...failure.message.split("\n").map((line) => `  ${line}`.trimEnd()),
+  ];
+}
+
 function summarize(
   report: VerifyReport,
   expectedRoute: string,
@@ -146,6 +172,7 @@ function summarize(
     `console    ${String(report.consoleErrors.length)} errors, ${String(report.consoleWarnings.length)} warnings`,
     `requests   ${String(report.failedRequests.length)} failed`,
     `axe        ${String(report.axeViolations.length)} violations`,
+    ...summarizeSteps(report.steps),
     `wrote      ${displayPath(out)}/{${files.join(",")}}`,
   ].join("\n");
 }
@@ -156,6 +183,7 @@ async function verify(values: {
   readonly open?: string;
   readonly "expect-route"?: string;
   readonly seed?: string;
+  readonly steps?: string;
   readonly video: boolean;
   readonly out?: string;
 }): Promise<number> {
@@ -163,6 +191,8 @@ async function verify(values: {
   const role = required(values.as, "--as");
   const open = required(values.open, "--open");
   const seed = parseCount(values.seed);
+  const steps =
+    values.steps === undefined ? undefined : await loadSteps(values.steps);
 
   const registry = await siteRegistry(site);
   const roles = roleEntries(registry.roles).map((entry) => entry.name);
@@ -197,6 +227,7 @@ async function verify(values: {
         out,
         video: values.video,
         seeded,
+        steps,
       });
     } finally {
       await browser.close();
@@ -209,6 +240,7 @@ async function verify(values: {
     VERIFY_FILES.desktopLight,
     VERIFY_FILES.desktopDark,
     VERIFY_FILES.phoneLight,
+    ...(steps === undefined ? [] : [VERIFY_FILES.steps]),
     VERIFY_FILES.report,
     ...(values.video ? [VERIFY_FILES.video] : []),
   ];
@@ -225,6 +257,7 @@ async function main(): Promise<number> {
       open: { type: "string" },
       "expect-route": { type: "string" },
       seed: { type: "string" },
+      steps: { type: "string" },
       video: { type: "boolean", default: false },
       out: { type: "string" },
       list: { type: "boolean", default: false },

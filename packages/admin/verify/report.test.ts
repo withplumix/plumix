@@ -209,6 +209,20 @@ describe("hasProblems", () => {
         ],
       },
     ],
+    [
+      "a failed step",
+      {
+        steps: {
+          passed: 1,
+          failed: [
+            {
+              message: 'Expected: "Copy"\nReceived: "Copied"',
+              screenshot: "steps.png",
+            },
+          ],
+        },
+      },
+    ],
   ])("is true for %s", (_, findings) => {
     expect(hasProblems({ ...clean, ...findings }, "/users")).toBe(true);
   });
@@ -219,6 +233,12 @@ describe("hasProblems", () => {
         { ...clean, consoleWarnings: [{ text: "Deprecated prop" }] },
         "/users",
       ),
+    ).toBe(false);
+  });
+
+  it("is false for a report whose steps all passed", () => {
+    expect(
+      hasProblems({ ...clean, steps: { passed: 2, failed: [] } }, "/users"),
     ).toBe(false);
   });
 

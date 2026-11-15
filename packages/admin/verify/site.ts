@@ -20,6 +20,7 @@ import {
   superviseWebServer,
 } from "@plumix/core/test/playwright";
 
+import type { Seeded } from "./steps.js";
 import { listeningURL } from "./listening-url.js";
 
 export const REPO_ROOT = resolve(import.meta.dirname, "../../..");
@@ -196,9 +197,6 @@ export async function seedSite(
     db.$client.close();
   }
 }
-
-/** Each kind of record a playground's seeder wrote, by the names it gave them. */
-export type Seeded = Readonly<Record<string, readonly string[]>>;
 
 /**
  * A playground's `seed.ts` default export: writes `count` of each record its

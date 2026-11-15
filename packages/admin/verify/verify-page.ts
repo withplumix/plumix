@@ -4,10 +4,12 @@ import { join } from "node:path";
 import type { Browser, Page } from "@playwright/test";
 
 import type { PageEvent, VerifyReport } from "./report.js";
-import type { Seeded, Site } from "./site.js";
+import type { Site } from "./site.js";
+import type { Seeded, Steps, StepsOutcome } from "./steps.js";
 import { axeViolations } from "../e2e/support/axe.js";
 import { buildReport } from "./report.js";
 import { signIn } from "./site.js";
+import { runSteps } from "./steps.js";
 
 export interface VerifyPageOptions {
   readonly browser: Browser;
@@ -20,6 +22,8 @@ export interface VerifyPageOptions {
   readonly video: boolean;
   /** What `--seed` wrote through the playground's seeder, for the report. */
   readonly seeded?: Seeded;
+  /** Run on a fresh desktop load once the screenshots are taken. */
+  readonly steps?: Steps;
 }
 
 /** What `verifyPage` writes to `out`, beside a `video.webm` when asked for. */
@@ -27,6 +31,7 @@ export const VERIFY_FILES = {
   desktopLight: "desktop-light.png",
   desktopDark: "desktop-dark.png",
   phoneLight: "phone-light.png",
+  steps: "steps.png",
   report: "report.json",
   video: "video.webm",
 } as const;
@@ -121,6 +126,30 @@ async function capture(page: Page, path: string): Promise<void> {
   });
 }
 
+/** Its screenshot shows the page where the steps stopped: at their end, or at a failure. */
+async function runPageSteps(
+  page: Page,
+  path: string,
+  steps: Steps,
+  options: VerifyPageOptions,
+): Promise<StepsOutcome> {
+  await open(page, path, DESKTOP_LIGHT);
+  const outcome = await runSteps(
+    (expect) =>
+      steps({
+        page,
+        context: page.context(),
+        expect,
+        seeded: options.seeded ?? {},
+        role: options.role,
+        site: options.site.name,
+      }),
+    VERIFY_FILES.steps,
+  );
+  await capture(page, join(options.out, VERIFY_FILES.steps));
+  return outcome;
+}
+
 /**
  * Signs in a new user of `role` and writes `VERIFY_FILES` to `out`. The report
  * covers every load; axe scans only the desktop light one.
@@ -152,6 +181,10 @@ export async function verifyPage(
     await open(page, path, view);
     await capture(page, join(out, view.file));
   }
+  const steps =
+    options.steps === undefined
+      ? undefined
+      : await runPageSteps(page, path, options.steps, options);
 
   await context.close();
   if (videoDir !== undefined) {
@@ -159,12 +192,15 @@ export async function verifyPage(
     await rm(videoDir, { recursive: true, force: true });
   }
 
-  const report = buildReport({
-    route: options.route,
-    finalUrl,
-    events,
-    axeViolations: violations,
-  });
+  const report: VerifyReport = {
+    ...buildReport({
+      route: options.route,
+      finalUrl,
+      events,
+      axeViolations: violations,
+    }),
+    steps,
+  };
   await writeFile(
     join(out, VERIFY_FILES.report),
     `${JSON.stringify(

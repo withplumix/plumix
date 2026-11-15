@@ -1,4 +1,5 @@
 import type { Redirect } from "./route.js";
+import type { StepsOutcome } from "./steps.js";
 import { redirectOf } from "./route.js";
 
 export type PageEvent =
@@ -59,6 +60,8 @@ export interface VerifyReport {
   readonly consoleWarnings: readonly ConsoleMessage[];
   readonly failedRequests: readonly FailedRequest[];
   readonly axeViolations: readonly AxeViolationSummary[];
+  /** Present when the run was given `--steps`. */
+  readonly steps?: StepsOutcome;
 }
 
 const FIRST_ERROR_STATUS = 400;
@@ -115,8 +118,9 @@ export function buildReport(input: {
 }
 
 /**
- * What fails the run: an error, or ending away from `expectedRoute`, where an
- * alias that ends on its target has arrived. A warning fails nothing.
+ * What fails the run: an error, a failed step, or ending away from
+ * `expectedRoute`, where an alias that ends on its target has arrived. A
+ * warning fails nothing.
  */
 export function hasProblems(
   report: VerifyReport,
@@ -126,6 +130,7 @@ export function hasProblems(
     redirectOf(expectedRoute, report.finalUrl) !== undefined ||
     report.consoleErrors.length > 0 ||
     report.failedRequests.length > 0 ||
-    report.axeViolations.length > 0
+    report.axeViolations.length > 0 ||
+    (report.steps?.failed.length ?? 0) > 0
   );
 }
