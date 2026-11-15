@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -11,7 +11,7 @@ import { defineTestConfig } from "./test-config.js";
 let root: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(join(tmpdir(), "plumix-test-config-"));
+  root = await realpath(await mkdtemp(join(tmpdir(), "plumix-test-config-")));
 });
 
 afterEach(async () => {

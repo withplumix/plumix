@@ -5,6 +5,11 @@ import { configDefaults, defineConfig } from "vitest/config";
 import { plumixSourceResolver } from "@plumix/vitest-config/source-resolver";
 import { NODE_TIER } from "@plumix/vitest-config/tiers";
 
+// Set before Vitest starts its workers, which read it at startup: `test.env`
+// arrives too late for a worker thread's clock.
+// eslint-disable-next-line turbo/no-undeclared-env-vars -- written, never read from the task's environment, so no turbo input
+process.env.TZ = "UTC";
+
 /**
  * `plumix/vite`'s `defineTestConfig` keeps its own copy of `./tiers.ts`'s
  * exclude, since this package sits below `plumix`; a test in `plumix` holds

@@ -271,6 +271,8 @@ It deletes the playground's local state, at each path its runtime's `plumix.e2e.
 
 Every spec shares the playground's one database. The suite runs on a single worker, and the `plumixDbBaseline` fixture restores the database after each attempt. It leaves each owner's `__drizzle_migrations_*` table alone. Pass `sharedDatabase: false` for a site that never serves from that database, such as one that creates a database per session. The suite then runs on parallel workers with no snapshot.
 
+Every page runs in UTC, so a date a spec expects renders the same on every machine. Set `use.timezoneId` on a project to test another zone.
+
 ### A drag
 
 `dragTo` from `plumix/test/playwright` drags with the mouse from one element to another. It waits until both elements have a box that has stopped moving, presses at the source, moves to the target in steps, and releases there. A list that re-renders as the page settles cannot make it aim at a stale position.
