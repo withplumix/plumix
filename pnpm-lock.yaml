@@ -184,8 +184,8 @@ catalogs:
       specifier: ^0.18.0
       version: 0.18.0
     '@playwright/test':
-      specifier: ^1.64.1
-      version: 1.64.1
+      specifier: ^1.65.0
+      version: 1.65.0
     '@types/node':
       specifier: ^24.19.1
       version: 24.19.1
@@ -513,7 +513,7 @@ importers:
         version: 5.20261104.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -669,7 +669,7 @@ importers:
     devDependencies:
       '@axe-core/playwright':
         specifier: 'catalog:'
-        version: 4.13.0(playwright-core@1.64.1)
+        version: 4.13.0(playwright-core@1.65.0)
       '@fontsource-variable/geist':
         specifier: ^5.3.0
         version: 5.3.0
@@ -699,7 +699,7 @@ importers:
         version: 1.16.1(@orpc/client@1.16.1)(@tanstack/query-core@5.106.0)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/admin-editor':
         specifier: workspace:*
         version: link:../admin-editor
@@ -886,7 +886,7 @@ importers:
         version: 6.12.0(@babel/core@7.29.7(supports-color@10.2.2))(react@19.3.1)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -1116,7 +1116,7 @@ importers:
         version: 0.18.5
       '@axe-core/playwright':
         specifier: 'catalog:'
-        version: 4.13.0(playwright-core@1.64.1)
+        version: 4.13.0(playwright-core@1.65.0)
       '@csstools/css-tokenizer':
         specifier: ^4.0.2
         version: 4.0.2
@@ -1128,7 +1128,7 @@ importers:
         version: 6.12.0(esbuild@0.28.2)(rolldown@1.2.16)(supports-color@10.2.2)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -1244,7 +1244,7 @@ importers:
     devDependencies:
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/admin':
         specifier: workspace:*
         version: link:../admin
@@ -1365,7 +1365,7 @@ importers:
         version: 1.16.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1469,7 +1469,7 @@ importers:
         version: 6.12.0(esbuild@0.28.2)(rolldown@1.2.16)(supports-color@10.2.2)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1573,7 +1573,7 @@ importers:
         version: 1.16.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1768,7 +1768,7 @@ importers:
         version: 0.18.5
       '@axe-core/playwright':
         specifier: 'catalog:'
-        version: 4.13.0(playwright-core@1.64.1)
+        version: 4.13.0(playwright-core@1.65.0)
       '@libsql/client':
         specifier: 'catalog:'
         version: 0.18.0
@@ -1780,7 +1780,7 @@ importers:
         version: 1.16.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1902,7 +1902,7 @@ importers:
         version: 1.16.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -1975,7 +1975,7 @@ importers:
         version: 5.20261104.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/typescript-config':
         specifier: workspace:*
         version: link:../../../../tooling/typescript
@@ -2018,7 +2018,7 @@ importers:
         version: 1.16.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2131,7 +2131,7 @@ importers:
         version: 1.16.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2240,7 +2240,7 @@ importers:
         version: 6.12.0(esbuild@0.28.2)(rolldown@1.2.16)(supports-color@10.2.2)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2393,7 +2393,7 @@ importers:
         version: 1.16.1
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2548,7 +2548,7 @@ importers:
         version: 1.16.1(@orpc/client@1.16.1)(@tanstack/query-core@5.106.0)
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint
@@ -2627,7 +2627,7 @@ importers:
         version: 0.18.5
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2728,7 +2728,7 @@ importers:
         version: 0.18.0
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -2823,7 +2823,7 @@ importers:
         version: 0.18.0
       '@playwright/test':
         specifier: 'catalog:'
-        version: 1.64.1
+        version: 1.65.0
       '@plumix/eslint-config':
         specifier: workspace:*
         version: link:../../../tooling/eslint
@@ -5780,8 +5780,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@playwright/test@1.64.1':
-    resolution: {integrity: sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==}
+  '@playwright/test@1.65.0':
+    resolution: {integrity: sha512-iGURLGuKDLakSEl7Pgfv8h7f+XLT+V861Wfhz0zlEl5nyFuKUopdkFBPKqTllTUp06aOwPuH8iuUEb3yp3MpbQ==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -9915,13 +9915,13 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
-  playwright-core@1.64.1:
-    resolution: {integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==}
+  playwright-core@1.65.0:
+    resolution: {integrity: sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==}
     engines: {node: '>=20'}
     hasBin: true
 
-  playwright@1.64.1:
-    resolution: {integrity: sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA==}
+  playwright@1.65.0:
+    resolution: {integrity: sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -11755,10 +11755,10 @@ snapshots:
     dependencies:
       yaml: 2.9.1
 
-  '@axe-core/playwright@4.13.0(playwright-core@1.64.1)':
+  '@axe-core/playwright@4.13.0(playwright-core@1.65.0)':
     dependencies:
       axe-core: 4.13.0
-      playwright-core: 1.64.1
+      playwright-core: 1.65.0
 
   '@babel/code-frame@7.29.7':
     dependencies:
@@ -13870,9 +13870,9 @@ snapshots:
   '@pagefind/windows-x64@1.5.2':
     optional: true
 
-  '@playwright/test@1.64.1':
+  '@playwright/test@1.65.0':
     dependencies:
-      playwright: 1.64.1
+      playwright: 1.65.0
 
   '@pnpm/constants@10.0.0': {}
 
@@ -18250,11 +18250,11 @@ snapshots:
 
   picomatch@4.0.7: {}
 
-  playwright-core@1.64.1: {}
+  playwright-core@1.65.0: {}
 
-  playwright@1.64.1:
+  playwright@1.65.0:
     dependencies:
-      playwright-core: 1.64.1
+      playwright-core: 1.65.0
 
   pofile-ts@4.0.3: {}
 
