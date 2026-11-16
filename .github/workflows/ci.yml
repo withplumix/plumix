@@ -179,10 +179,52 @@ jobs:
           if-no-files-found: warn
           retention-days: 5
 
-  test-e2e:
-    name: Test (e2e)
+  # On a core change, one runner took 16 min (#3761): admin's suite waits on core's and seo's
+  # (packages/admin/turbo.json), and core runs 298 specs on one worker. That chain is split with
+  # Playwright's `--shard`, which turbo hands every suite it runs; turbo hashes the argument, so
+  # each shard caches on its own. The other suites split by package, at most four per runner as
+  # the root script's `--concurrency=4` allows. `suites-c` takes every suite no other entry
+  # names, so a new suite runs somewhere.
+  test-e2e-shard:
+    name: Test (e2e, ${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: chain-1
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=1/8
+          - shard: chain-2
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=2/8
+          - shard: chain-3
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=3/8
+          - shard: chain-4
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=4/8
+          - shard: chain-5
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=5/8
+          - shard: chain-6
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=6/8
+          - shard: chain-7
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=7/8
+          - shard: chain-8
+            turbo: --filter=@plumix/core --filter=@plumix/admin -- --shard=8/8
+          - shard: suites-a
+            turbo: >-
+              --filter=@plumix-apps/demo --filter=@plumix/plugin-forms
+              --filter=@plumix/admin-editor
+          - shard: suites-b
+            turbo: >-
+              --filter=@plumix/plugin-menu --filter=@plumix/plugin-blog
+              --filter=@plumix/runtime-cloudflare --filter=@plumix/plugin-media
+          - shard: suites-c
+            turbo: >-
+              --filter=!@plumix/core --filter=!@plumix/admin --filter=!@plumix/plugin-seo
+              --filter=!@plumix-apps/demo --filter=!@plumix/plugin-forms
+              --filter=!@plumix/admin-editor --filter=!@plumix/plugin-menu
+              --filter=!@plumix/plugin-blog --filter=!@plumix/runtime-cloudflare
+              --filter=!@plumix/plugin-media
+            screenshots: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -190,13 +232,20 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           playwright: "true"
+          turbo-cache-key: ${{ matrix.shard }}
 
-      - run: pnpm test:e2e
+      # `--concurrency=4` as the root `test:e2e` script sets it; turbo.json says why.
+      - run: |
+          read -ra args <<< "$TURBO_ARGS"
+          pnpm exec turbo run test:e2e --concurrency=4 "${args[@]}"
+        env:
+          TURBO_ARGS: ${{ matrix.turbo }}
 
       # No `if: always()`: playwright clears `playwright-report/` and `test-results/` as it
       # starts, which would delete a failed suite's artifacts before the upload below.
       - name: Assert the committed docs screenshots are the ones the capture produces
         id: screenshots
+        if: matrix.screenshots
         run: |
           pnpm docs:screenshots
           git diff --exit-code -- apps/docs/src/assets/screenshots
@@ -214,7 +263,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-reports
+          name: playwright-reports-${{ matrix.shard }}
           path: |
             packages/*/playwright-report/
             packages/*/*/playwright-report/
@@ -224,6 +273,19 @@ jobs:
             apps/*/test-results/
           if-no-files-found: warn
           retention-days: 5
+
+  # The required check. `always()` so a failed, cancelled or skipped shard fails it rather than
+  # skipping it, which branch protection would read as passing.
+  test-e2e:
+    name: Test (e2e)
+    needs: test-e2e-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: test "$SHARDS" = success
+        env:
+          SHARDS: ${{ needs.test-e2e-shard.result }}
 
   publint:
     name: Publint
