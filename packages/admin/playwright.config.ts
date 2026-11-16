@@ -57,9 +57,11 @@ const captureEndpoint = process.env[CAPTURE_ENDPOINT_ENV];
 export default defineConfig({
   ...config,
   projects: [
-    ...(config.projects ?? []),
     // `pnpm verify:admin` boots its own playground, so this project uses the
     // preview server above for nothing; it shares the config to share the run.
+    //
+    // Listed first so `--shard` puts its slow files in shard 1, beside the
+    // light start of core's suite; last, they met core's heaviest specs.
     {
       name: "verify-admin",
       testDir: "./verify",
@@ -69,6 +71,7 @@ export default defineConfig({
       // A run migrates and boots a playground before it opens a page.
       timeout: 300_000,
     },
+    ...(config.projects ?? []),
     {
       name: "screenshots",
       testDir: "./screenshots",

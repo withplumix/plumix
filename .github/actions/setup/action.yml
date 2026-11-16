@@ -8,6 +8,9 @@ inputs:
   turbo-cache:
     description: "Restore and save the local turbo cache"
     default: "true"
+  turbo-cache-key:
+    description: "Tells apart the turbo caches of jobs that share an id, such as matrix shards"
+    default: ""
 
 runs:
   using: composite
@@ -21,9 +24,27 @@ runs:
       with:
         bun-version-file: ".bun-version"
 
+    # The installed Playwright, not the lockfile: it is what names the browser build it downloads.
     - if: inputs.playwright == 'true'
+      id: playwright
+      shell: bash
+      run: echo "version=$(pnpm --filter @plumix/admin exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+    - if: inputs.playwright == 'true'
+      id: playwright-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
+
+    - if: inputs.playwright == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
       shell: bash
       run: pnpm --filter @plumix/admin exec playwright install --with-deps chromium
+
+    # The system packages Chromium links against live outside the cached directory.
+    - if: inputs.playwright == 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: pnpm --filter @plumix/admin exec playwright install-deps chromium
 
     - if: inputs.turbo-cache == 'true'
       shell: bash
@@ -33,5 +54,5 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .turbo/cache
-        key: turbo-${{ github.job }}-${{ github.sha }}
-        restore-keys: turbo-${{ github.job }}-
+        key: turbo-${{ github.job }}${{ inputs.turbo-cache-key && format('-{0}', inputs.turbo-cache-key) || '' }}-${{ github.sha }}
+        restore-keys: turbo-${{ github.job }}${{ inputs.turbo-cache-key && format('-{0}', inputs.turbo-cache-key) || '' }}-
