@@ -2,7 +2,7 @@ import * as path from "node:path";
 import type { Linter } from "eslint";
 import { ESLint } from "eslint";
 import tseslint from "typescript-eslint";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { Ratchet } from "../ratchet.js";
 import { baseConfig } from "../base.js";
@@ -252,6 +252,12 @@ describe("effects in the admin packages' own configs", () => {
     )) as Linter.Config | undefined;
     return config?.rules?.["plumix/max-effects"];
   }
+
+  // Loading each package's config can outrun the 5s default on a contended
+  // runner; paying it here keeps each test's timeout a hang detector.
+  beforeAll(async () => {
+    await Promise.all(Object.keys(EFFECTS.ceilings).map(effectsEntry));
+  }, 60_000);
 
   it("holds each listed file at its ceiling", async () => {
     const entries = Object.keys(EFFECTS.ceilings).map(async (file) => [

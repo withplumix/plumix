@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { SharedAdminRuntimeSpecifier } from "@plumix/core/admin";
 import {
@@ -67,6 +67,12 @@ describe("shim roster", () => {
 });
 
 describe("shim drift vs upstream packages", () => {
+  // A shim reads `globalThis.plumix` once, on first import; another file in
+  // this worker may have imported it before the runtime above was set.
+  beforeAll(() => {
+    vi.resetModules();
+  });
+
   test.each(SHIMS)(
     "$name shim re-exports only bindings upstream still provides",
     async ({ name, load }) => {
