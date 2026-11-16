@@ -6,7 +6,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { plumixSourcePaths } from "@plumix/vitest-config/source-resolver";
 
-const JITI_TSCONFIG_PATHS = "JITI_TSCONFIG_PATHS";
+/**
+ * jiti tries each listed extension on a `./x.js` before its `.ts` sibling,
+ * about half of a config evaluation; workspace source imports only these.
+ */
+const JITI_EXTENSIONS = [".js", ".mjs", ".ts", ".tsx"];
 
 /**
  * A TS module names a sibling by its emitted `.js`; jiti maps that to `.ts`
@@ -35,8 +39,14 @@ export function loadConfigsFromSource(): () => void {
     join(dir, "tsconfig.json"),
     JSON.stringify({ compilerOptions: { paths: plumixSourcePaths() } }),
   );
-  const previous = process.env[JITI_TSCONFIG_PATHS];
-  process.env[JITI_TSCONFIG_PATHS] = dir;
+  const env: Record<string, string> = {
+    JITI_TSCONFIG_PATHS: dir,
+    JITI_EXTENSIONS: JSON.stringify(JITI_EXTENSIONS),
+  };
+  const previous = Object.fromEntries(
+    Object.keys(env).map((key) => [key, process.env[key]]),
+  );
+  Object.assign(process.env, env);
   // Bun has no `registerHooks`, and its own resolver already maps `./x.js` to
   // an `x.ts` or `x.tsx` sibling.
   const hooks =
@@ -52,8 +62,10 @@ export function loadConfigsFromSource(): () => void {
         });
   return () => {
     hooks?.deregister();
-    if (previous === undefined) delete process.env[JITI_TSCONFIG_PATHS];
-    else process.env[JITI_TSCONFIG_PATHS] = previous;
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     rmSync(dir, { recursive: true, force: true });
   };
 }
