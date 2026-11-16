@@ -244,7 +244,7 @@
     "esbuild": "catalog:",
     "eslint": "catalog:",
     "eslint-import-resolver-typescript": "^4.4.5",
-    "eslint-plugin-boundaries": "^7.4.1",
+    "eslint-plugin-boundaries": "^7.4.2",
     "fast-check": "^4.10.2",
     "prettier": "catalog:",
     "publint": "catalog:",
