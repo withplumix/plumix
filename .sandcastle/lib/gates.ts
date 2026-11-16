@@ -73,7 +73,7 @@ export const GATES_AFTER_A_RESOLVED_REBASE: readonly Gate[] = GATES.filter(
 export const GATES_LEFT_TO_CI: readonly Gate[] = [
   {
     name: "lint",
-    command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS} -- --cache --cache-location .cache/.eslintcache`,
+    command: `pnpm exec turbo run lint --continue ${TURBO_GATE_FLAGS}`,
   },
   {
     name: "test",
