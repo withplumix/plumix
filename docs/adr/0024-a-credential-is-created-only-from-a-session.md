@@ -8,7 +8,7 @@ mints no `plumix_session` cookie, a signed-in user looked anonymous and got
 promises could not be enrolled.
 
 Asking the configured authenticator instead exposes the opposite problem.
-`defaultAuthenticator()` also resolves API tokens. An API-token holder could
+The configured chain also resolves API tokens. An API-token holder could
 enrol a passkey they generated themselves, and `register/verify` would mint a
 full session for it. A scoped, revocable token would become a full-capability
 login that survives revoking the token.

@@ -5,12 +5,12 @@ import type { AuthResult, RequestAuthenticator } from "./authenticator.js";
 import { testSite } from "../test/site.js";
 import { createApiToken } from "./api-tokens.js";
 import {
-  apiTokenAuthenticator,
+  audienceTokenAuthenticator,
   authenticateSession,
   chainAuthenticators,
-  defaultAuthenticator,
   requestHasSession,
   sessionAuthenticator,
+  siteAuthenticator,
 } from "./authenticator.js";
 import { SESSION_COOKIE_NAME } from "./cookies.js";
 import { createSession } from "./sessions.js";
@@ -71,14 +71,18 @@ describe("sessionAuthenticator", () => {
   });
 });
 
-describe("apiTokenAuthenticator", () => {
+describe("audienceTokenAuthenticator(null)", () => {
   test("returns null when no Authorization header is present", async () => {
     const { db } = site.context;
     const request = new Request("https://cms.example/admin");
 
-    const user = await apiTokenAuthenticator().authenticate(request, db, {
-      startingUserMeta: {},
-    });
+    const user = await audienceTokenAuthenticator(null).authenticate(
+      request,
+      db,
+      {
+        startingUserMeta: {},
+      },
+    );
     expect(user).toBeNull();
   });
 
@@ -88,9 +92,13 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: "Basic dXNlcjpwYXNz" },
     });
 
-    const user = await apiTokenAuthenticator().authenticate(request, db, {
-      startingUserMeta: {},
-    });
+    const user = await audienceTokenAuthenticator(null).authenticate(
+      request,
+      db,
+      {
+        startingUserMeta: {},
+      },
+    );
     expect(user).toBeNull();
   });
 
@@ -109,9 +117,13 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: `Bearer ${secret}` },
     });
 
-    const result = await apiTokenAuthenticator().authenticate(request, db, {
-      startingUserMeta: {},
-    });
+    const result = await audienceTokenAuthenticator(null).authenticate(
+      request,
+      db,
+      {
+        startingUserMeta: {},
+      },
+    );
     expect(result?.user.id).toBe(seeded.id);
     // Default-minted token (no `scopes` arg) is unrestricted (null).
     expect(result).toMatchObject({
@@ -134,9 +146,13 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: `Bearer ${secret}` },
     });
 
-    const result = await apiTokenAuthenticator().authenticate(request, db, {
-      startingUserMeta: {},
-    });
+    const result = await audienceTokenAuthenticator(null).authenticate(
+      request,
+      db,
+      {
+        startingUserMeta: {},
+      },
+    );
     expect(result).toMatchObject({
       credential: "api-token",
       tokenScopes: ["entry:post:read", "settings:manage"],
@@ -149,14 +165,18 @@ describe("apiTokenAuthenticator", () => {
       headers: { authorization: "Bearer pl_pat_unknownsecret" },
     });
 
-    const result = await apiTokenAuthenticator().authenticate(request, db, {
-      startingUserMeta: {},
-    });
+    const result = await audienceTokenAuthenticator(null).authenticate(
+      request,
+      db,
+      {
+        startingUserMeta: {},
+      },
+    );
     expect(result).toBeNull();
   });
 });
 
-describe("chainAuthenticators / defaultAuthenticator", () => {
+describe("chainAuthenticators / siteAuthenticator", () => {
   test("first non-null wins, later authenticators are short-circuited", async () => {
     const { db } = site.context;
     const userA = await site.factory.user.create({});
@@ -256,7 +276,7 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
     );
   });
 
-  test("default chain authenticates via session cookie", async () => {
+  test("site chain authenticates via session cookie", async () => {
     const { db } = site.context;
     const seeded = await site.factory.user.create({});
     const { token } = await createSession(db, { userId: seeded.id });
@@ -264,13 +284,17 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
       headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` },
     });
 
-    const result = await defaultAuthenticator().authenticate(request, db, {
-      startingUserMeta: {},
-    });
+    const result = await siteAuthenticator(sessionAuthenticator()).authenticate(
+      request,
+      db,
+      {
+        startingUserMeta: {},
+      },
+    );
     expect(result?.user.id).toBe(seeded.id);
   });
 
-  test("default chain authenticates via bearer token when no session cookie is present", async () => {
+  test("site chain authenticates via bearer token when no session cookie is present", async () => {
     const { db } = site.context;
     const seeded = await site.factory.user.create({});
     const { secret } = await createApiToken(db, {
@@ -282,10 +306,41 @@ describe("chainAuthenticators / defaultAuthenticator", () => {
       headers: { authorization: `Bearer ${secret}` },
     });
 
-    const result = await defaultAuthenticator().authenticate(request, db, {
-      startingUserMeta: {},
-    });
+    const result = await siteAuthenticator(sessionAuthenticator()).authenticate(
+      request,
+      db,
+      {
+        startingUserMeta: {},
+      },
+    );
     expect(result?.user.id).toBe(seeded.id);
+  });
+  test("site chain reads the person ahead of a token on the same request", async () => {
+    const { db } = site.context;
+    const person = await site.factory.user.create({});
+    const tokenOwner = await site.factory.user.create({});
+    const { token } = await createSession(db, { userId: person.id });
+    const { secret } = await createApiToken(db, {
+      userId: tokenOwner.id,
+      name: "both",
+      expiresAt: null,
+    });
+    const request = new Request("https://cms.example/admin", {
+      headers: {
+        cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        authorization: `Bearer ${secret}`,
+      },
+    });
+
+    const result = await siteAuthenticator(sessionAuthenticator()).authenticate(
+      request,
+      db,
+      { startingUserMeta: {} },
+    );
+    expect(result).toMatchObject({
+      user: { id: person.id },
+      credential: "session",
+    });
   });
 });
 
@@ -344,8 +399,8 @@ describe("hasSession", () => {
     ).toBe(true);
   });
 
-  test("apiTokenAuthenticator never carries a public-render session (bearer is an API client)", () => {
-    const auth = apiTokenAuthenticator();
+  test("the API-token reader never carries a public-render session (bearer is an API client)", () => {
+    const auth = audienceTokenAuthenticator(null);
     expect(auth.hasSession?.(req())).toBe(false);
     expect(auth.hasSession?.(req({ authorization: "Bearer pl_pat_x" }))).toBe(
       false,
@@ -353,7 +408,7 @@ describe("hasSession", () => {
   });
 
   test("chainAuthenticators carries a session when any member does", () => {
-    const auth = defaultAuthenticator(); // session + apiToken
+    const auth = siteAuthenticator(sessionAuthenticator()); // session + API token
     expect(auth.hasSession?.(req())).toBe(false);
     expect(
       auth.hasSession?.(req({ cookie: `${SESSION_COOKIE_NAME}=abc` })),

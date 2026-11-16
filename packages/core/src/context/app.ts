@@ -38,7 +38,10 @@ import type {
 } from "./collector.js";
 import type { DevRuntime } from "./dev-runtime.js";
 import type { TelemetryCollector, TelemetryConsumer } from "./telemetry.js";
-import { defaultAuthenticator } from "../auth/authenticator.js";
+import {
+  sessionAuthenticator,
+  siteAuthenticator,
+} from "../auth/authenticator.js";
 import { resolveMailer } from "../auth/mailer/resolve.js";
 import { makeAuthCan } from "../auth/with-user.js";
 import { createBlockRegistry } from "../blocks/index.js";
@@ -314,7 +317,8 @@ export function createAppContext<TSchema extends Record<string, unknown>>(
     settings: bindSettings(settingsWrites, () => coreSchemaView),
     locale,
     authMethods: args.authMethods ?? NO_AUTH_METHODS,
-    authenticator: args.authenticator ?? defaultAuthenticator(),
+    authenticator:
+      args.authenticator ?? siteAuthenticator(sessionAuthenticator()),
     bootstrapAllowed: args.bootstrapAllowed ?? false,
     requestId,
     resolvedEntity: null,

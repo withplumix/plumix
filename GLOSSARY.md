@@ -362,7 +362,7 @@ _Avoid_: auth provider, login method
 The browser-side API a theme imports from `plumix/auth/client`: signing in and out, the session, and the signed-in user's own account (profile, email, locale, sessions, passkeys, linked OAuth accounts, a capability check). Every call acts on the session's user and resolves `{ data, error }`. See ADR 0050.
 
 **Authenticator**:
-A pluggable strategy that maps a request to who the user is. Read-only — it resolves credentials, it never mints sessions.
+A pluggable strategy that maps a request to the person behind it, from a session or an identity provider's assertion. Read-only.
 _Avoid_: guard
 
 **API token**:

@@ -45,7 +45,10 @@ import {
 } from "../admin-bar/core-nodes.js";
 import { barCatalogs } from "../admin-bar/i18n.js";
 import { assertAdminBarParentsRegistered } from "../admin-bar/validate.js";
-import { defaultAuthenticator } from "../auth/authenticator.js";
+import {
+  sessionAuthenticator,
+  siteAuthenticator,
+} from "../auth/authenticator.js";
 import { coreAuthMethods } from "../auth/core-methods.js";
 import { declareAuthMethods } from "../auth/declared-methods.js";
 import { resolvePasskeyConfig } from "../auth/passkey/config.js";
@@ -394,8 +397,9 @@ export async function buildApp(
 
   const passkey = resolvePasskeyConfig(config.auth.passkey);
   const sessionPolicy = config.auth.sessions ?? DEFAULT_SESSION_POLICY;
-  const authenticator =
-    config.auth.authenticator ?? defaultAuthenticator(sessionPolicy);
+  const authenticator = siteAuthenticator(
+    config.auth.authenticator ?? sessionAuthenticator(sessionPolicy),
+  );
   const bootstrapAllowed = config.auth.bootstrapVia === "first-method-wins";
   const declaredAuthMethods = declareAuthMethods({
     core: coreAuthMethods({ config, passkey, sessionPolicy }),

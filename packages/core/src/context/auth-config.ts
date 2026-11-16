@@ -45,8 +45,8 @@ export interface PlumixAuthInput<TRole extends string = string> {
   readonly oauth?: PlumixOAuthConfig;
   readonly magicLink?: PlumixMagicLinkConfig;
   /**
-   * Replacing it drops bearer tokens unless you chain
-   * `apiTokenAuthenticator()`. The built-in login routes stay mounted; firewall
+   * Reads people; defaults to `sessionAuthenticator(sessions)`. Core reads API
+   * tokens after it. The built-in login routes stay mounted; firewall
    * `/_plumix/auth/*` at the edge to disable them.
    */
   readonly authenticator?: RequestAuthenticator;
