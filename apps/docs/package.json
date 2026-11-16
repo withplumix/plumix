@@ -11,7 +11,8 @@
     "preview": "astro preview",
     "clean": "git clean -xdf .astro dist node_modules",
     "format": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
-    "lint": "astro sync && eslint",
+    "lint": "astro sync && eslint --cache --cache-location .cache/.eslintcache",
+    "lint:fix": "pnpm run lint --fix",
     "typecheck": "astro sync && astro check && tsc --noEmit"
   },
   "dependencies": {

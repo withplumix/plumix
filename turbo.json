@@ -108,8 +108,11 @@
     },
     "lint": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
-      // Same as `format`: the `.eslintcache` the root script asks for is not
-      // an output, and `turbo run lint` run directly writes none.
+      // Each package's `lint` script carries ESLint's `--cache` flags itself.
+      // Args passed after `--` enter the hash of every task in the run, so
+      // a root `turbo run lint -- --cache` missed every `^build` that
+      // `pnpm build` had cached. The `.eslintcache` is not an output: a hit
+      // means ESLint never runs, so restoring the file buys nothing.
       "outputs": [],
       "outputLogs": "new-only"
     },
@@ -120,6 +123,17 @@
       "dependsOn": ["^topo", "^build", "build", "i18n:compile"],
       "outputs": [],
       "outputLogs": "new-only"
+    },
+    "lint:fix": {
+      // Its own task rather than `lint -- --fix`, for the hash reason above.
+      // Uncached: it writes source files, which a hit would not restore.
+      "dependsOn": ["^topo", "^build", "i18n:compile"],
+      "cache": false
+    },
+    "@plumix/core#lint:fix": {
+      // Same reason as `@plumix/core#lint`.
+      "dependsOn": ["^topo", "^build", "build", "i18n:compile"],
+      "cache": false
     },
     "typecheck": {
       "dependsOn": ["^topo", "^build", "i18n:compile"],
