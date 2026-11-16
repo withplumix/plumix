@@ -3,7 +3,7 @@ import { basename, dirname, join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vitest/config";
 
-const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
+export const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 /**
  * The `packages:` globs. A package with no `dist` export, like a playground
