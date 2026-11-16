@@ -3215,6 +3215,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: catalog:vitest
         version: 5.0.5(vitest@5.0.5)
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
       eslint:
         specifier: 'catalog:'
         version: 10.14.0(jiti@2.7.0)(supports-color@10.2.2)
