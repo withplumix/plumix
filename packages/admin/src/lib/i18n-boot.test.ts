@@ -1,5 +1,5 @@
 import { i18n } from "@lingui/core";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import { setI18nResolver, vMessage } from "@plumix/core/validation";
 
@@ -28,6 +28,14 @@ const SHIPPED: AdminCatalogs = {
   editor: {},
   blocks: {},
 };
+
+// `i18n` is one global that `load` merges into, and a worker shares it across
+// test files; these tests assert a locale's whole catalog, so each starts empty.
+beforeEach(() => {
+  for (const locale of ["de", "de-AT", "de-DE", "en", "zh-CN"]) {
+    i18n.loadAndActivate({ locale, messages: {} });
+  }
+});
 
 afterEach(() => {
   setI18nResolver(null);
