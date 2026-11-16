@@ -18,6 +18,7 @@ process.env.TZ = "UTC";
 export const baseConfig = defineConfig({
   plugins: [plumixSourceResolver()],
   test: {
+    isolate: false,
     include: [...NODE_TIER.include],
     exclude: [...configDefaults.exclude, ...NODE_TIER.exclude],
     coverage: {

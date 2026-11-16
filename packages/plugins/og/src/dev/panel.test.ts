@@ -10,10 +10,13 @@ import {
   seedEntry,
 } from "../test/harness.js";
 
-// Hoisted above the imports: the dev loaders are fixed when their module
-// loads, as a dev build's constant fixes them. Unstubbed once loaded, so each
+// Hoisted above the imports, dropping the worker's earlier copy: the dev
+// loaders are fixed when their module loads. Unstubbed once loaded, so each
 // test sets its own.
-vi.hoisted(() => vi.stubEnv("PLUMIX_DEV", "1"));
+vi.hoisted(() => {
+  vi.stubEnv("PLUMIX_DEV", "1");
+  vi.resetModules();
+});
 vi.unstubAllEnvs();
 
 const PANEL = 'data-testid="plumix-debug-panel-og"';
