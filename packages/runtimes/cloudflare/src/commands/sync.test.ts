@@ -29,7 +29,15 @@ import { definePlugin, sync as syncEvents } from "plumix/plugin";
 import { entries } from "plumix/schema";
 import { createDispatcherHarness } from "plumix/test";
 import { describeSyncContract } from "plumix/test/conformance";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  test,
+  vi,
+} from "vitest";
 
 import { d1 } from "../d1.js";
 import { r2 } from "../r2.js";
@@ -53,47 +61,100 @@ const WRANGLER_CONFIG = {
   r2_buckets: [{ binding: "MEDIA", bucket_name: "site-media" }],
 };
 
+const MIGRATIONS_TABLE = "__drizzle_migrations_core";
+
 let app: PlumixApp;
-const opened: { dir: string; proxy: PlatformProxy }[] = [];
+const dirs: string[] = [];
+/** A test holds two states at most, so two workerds serve the whole file. */
+const proxies: PlatformProxy[] = [];
+let migratedTables: ReadonlySet<string>;
+let taken = 0;
+
+async function openMigrated(): Promise<PlatformProxy> {
+  const dir = mkdtempSync(join(tmpdir(), "plumix-cf-sync-"));
+  dirs.push(dir);
+  const configPath = join(dir, "wrangler.json");
+  writeFileSync(configPath, JSON.stringify(WRANGLER_CONFIG));
+  const { getPlatformProxy } = await import("wrangler");
+  const proxy = await getPlatformProxy({
+    configPath,
+    persist: { path: join(dir, ".wrangler/state/v3") },
+  });
+  await migrate(drizzle(proxy.env.DB as D1Database), {
+    migrationsFolder: CORE_MIGRATIONS,
+    migrationsTable: MIGRATIONS_TABLE,
+  });
+  return proxy;
+}
+
+async function tableNames(db: D1Database): Promise<string[]> {
+  const { results } = await db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'",
+    )
+    .all<{ name: string }>();
+  return results.map((row) => row.name);
+}
 
 beforeAll(async () => {
   ({ app } = await createDispatcherHarness());
-  // wrangler loads on first use, and a cold load alone can outlast a test.
-  await import("wrangler");
+  proxies.push(...(await Promise.all([openMigrated(), openMigrated()])));
+  migratedTables = new Set(await tableNames(proxies[0]?.env.DB as D1Database));
 });
 
-afterEach(async () => {
+afterAll(async () => {
+  for (const proxy of proxies.splice(0)) await proxy.dispose();
+  for (const dir of dirs.splice(0))
+    rmSync(dir, { recursive: true, force: true });
+});
+
+afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
-  for (const { dir, proxy } of opened.splice(0)) {
-    await proxy.dispose();
-    rmSync(dir, { recursive: true, force: true });
-  }
+  taken = 0;
 });
+
+/** Drops the tables a test created and empties the rest and the bucket. */
+async function resetToMigrated(proxy: PlatformProxy): Promise<void> {
+  const db = proxy.env.DB as D1Database;
+  const created = (await tableNames(db)).filter(
+    (name) => !migratedTables.has(name),
+  );
+  const emptied = [...migratedTables].filter(
+    (name) => name !== MIGRATIONS_TABLE,
+  );
+  await db.batch([
+    db.prepare("PRAGMA defer_foreign_keys = on"),
+    ...created.map((name) => db.prepare(`DROP TABLE "${name}"`)),
+    ...emptied.map((name) => db.prepare(`DELETE FROM "${name}"`)),
+    // entries' delete trigger writes here.
+    db.prepare("DELETE FROM entry_changes"),
+    db.prepare("DELETE FROM sqlite_sequence"),
+  ]);
+  const bucket = proxy.env.MEDIA as R2Bucket;
+  for (;;) {
+    const listed = await bucket.list();
+    if (listed.objects.length === 0) break;
+    await bucket.delete(listed.objects.map((object) => object.key));
+  }
+}
 
 interface State {
   readonly dir: string;
   readonly proxy: PlatformProxy;
 }
 
-/** A project directory with its own local D1 and R2, migrated. */
+/** A project directory over a migrated local D1 and R2 holding nothing. */
 async function localState(
   wranglerConfig: object = WRANGLER_CONFIG,
 ): Promise<State> {
+  const proxy = proxies[taken++];
+  if (proxy === undefined) throw new Error("no free local state");
+  await resetToMigrated(proxy);
   const dir = mkdtempSync(join(tmpdir(), "plumix-cf-sync-"));
-  const configPath = join(dir, "wrangler.json");
-  writeFileSync(configPath, JSON.stringify(wranglerConfig));
-  const { getPlatformProxy } = await import("wrangler");
-  const proxy = await getPlatformProxy({
-    configPath,
-    persist: { path: join(dir, ".wrangler/state/v3") },
-  });
-  opened.push({ dir, proxy });
-  await migrate(drizzle(proxy.env.DB as D1Database), {
-    migrationsFolder: CORE_MIGRATIONS,
-    migrationsTable: "__drizzle_migrations_core",
-  });
+  dirs.push(dir);
+  writeFileSync(join(dir, "wrangler.json"), JSON.stringify(wranglerConfig));
   return { dir, proxy };
 }
 
@@ -203,15 +264,9 @@ async function twoLocalStates(
   };
 }
 
-// Each case starts two miniflare instances; the contract's cases register in
-// a nested describe, so the timeout is the suite's.
-describe(
-  "cloudflare sync between two local states",
-  { timeout: 60_000 },
-  () => {
-    describeSyncContract({ open: twoLocalStates });
-  },
-);
+describe("cloudflare sync between two local states", () => {
+  describeSyncContract({ open: twoLocalStates });
+});
 
 const CONTENT: SyncScope = {
   name: "content",
@@ -287,7 +342,7 @@ function openOptions(
       {
         name: "core",
         migrationsFolder: CORE_MIGRATIONS,
-        migrationsTable: "__drizzle_migrations_core",
+        migrationsTable: MIGRATIONS_TABLE,
       },
     ],
     targetValues,
@@ -425,171 +480,157 @@ function post(
   return `INSERT INTO entries (id, type, title, slug, author_id, status) VALUES (${String(id)}, 'post', '${slug}', '${slug}', ${String(author)}, '${status}');`;
 }
 
-// Each case starts two miniflare instances.
-describe(
-  "cloudflare sync — a local import larger than one exec",
-  { timeout: 30_000 },
-  () => {
-    test("runs the script in several exec calls, none over the cap, and lands every row", async () => {
-      const { source, target } = await twoProjects();
-      vi.spyOn(syncDeps, "localExecBytes").mockReturnValue(2_000);
-      const posts = Array.from({ length: 40 }, (_, i) =>
-        post(i + 1, `post-${String(i + 1)}`),
-      );
-      await run(source, [ANN, ...posts].join("\n"));
-      await run(target, ANN);
-      const db = target.proxy.env.DB as D1Database;
-      const executed: number[] = [];
-      const recording = {
-        prepare: (sql: string) => db.prepare(sql),
-        exec: (script: string) => {
-          executed.push(new TextEncoder().encode(script).length);
-          return db.exec(script);
-        },
-      };
-      const reused = vi.mocked(migrationsDeps.getPlatformProxy);
-      const open = reused.getMockImplementation();
-      reused.mockImplementation(async (options) => {
-        if (open === undefined) throw new Error("no proxy to reuse");
-        const proxy = await open(options);
-        const persist = options.persist;
-        const intoTarget =
-          typeof persist === "object" &&
-          persist.path === join(target.dir, ".wrangler/state/v3");
-        if (!intoTarget) return proxy;
-        return { ...proxy, env: { ...proxy.env, DB: recording } };
-      });
-
-      await replace(source, target, [CONTENT]);
-
-      expect(executed.length).toBeGreaterThan(1);
-      expect(executed.every((bytes) => bytes <= 2_000)).toBe(true);
-      expect((await entrySlugs(target)).length).toBe(40);
-    });
-  },
-);
-
-// Each case starts two miniflare instances.
-describe(
-  "cloudflare sync — a self-referencing table across exec calls",
-  { timeout: 30_000 },
-  () => {
-    test("a row whose parent comes later in the dump lands after that parent, whatever call it falls in", async () => {
-      const { source, target } = await twoProjects();
-      vi.spyOn(syncDeps, "localExecBytes").mockReturnValue(2_000);
-      const posts = Array.from({ length: 40 }, (_, i) =>
-        post(i + 1, `post-${String(i + 1)}`),
-      );
-      await run(
-        source,
-        [ANN, ...posts, "UPDATE entries SET parent_id = 40 WHERE id = 1;"].join(
-          "\n",
-        ),
-      );
-      await run(target, ANN);
-
-      await replace(source, target, [CONTENT]);
-
-      expect(
-        await contractSite(target.proxy).execute(
-          "SELECT count(*) AS n, (SELECT parent_id FROM entries WHERE id = 1) AS parent FROM entries",
-        ),
-      ).toEqual([{ n: 40, parent: 40 }]);
-    });
-  },
-);
-
-describe(
-  "cloudflare sync — settling the local site",
-  { timeout: 30_000 },
-  () => {
-    // A site whose one `sync.after` handler is `listener`, on `binding`.
-    function settlingConfig(
-      listener: (ctx: AppContext) => Promise<void>,
-      binding = "DB",
-    ): PlumixConfig {
-      const probe = definePlugin("probe", {
-        setup: (ctx) => {
-          ctx.events.on(syncEvents.after, (_event, appCtx) => listener(appCtx));
-        },
-      });
-      return {
-        ...app.config,
-        database: d1({ binding }),
-        plugins: [probe],
-      };
-    }
-
-    test("runs inside the site on the platform proxy's env alone, reaching the local D1", async () => {
-      const { source } = await twoProjects();
-      await run(source, [ANN, post(1, "hello")].join("\n"));
-      vi.stubEnv("PLUMIX_SYNC_PROBE", "from the shell");
-      const seen: unknown[] = [];
-      const config = settlingConfig(async (ctx) => {
-        const rows = await ctx.db.select().from(entries);
-        seen.push(rows.length, "PLUMIX_SYNC_PROBE" in ctx.env);
-      });
-      const end = await sync.open({
-        ...openOptions(source.dir, "local", {}),
-        config,
-      });
-
-      const settled = await end.settle({
-        scopes: ["content"],
-        direction: "pull",
-      });
-      await end.close();
-
-      expect([settled.failures, seen]).toEqual([[], [1, false]]);
+describe("cloudflare sync — a local import larger than one exec", () => {
+  test("runs the script in several exec calls, none over the cap, and lands every row", async () => {
+    const { source, target } = await twoProjects();
+    vi.spyOn(syncDeps, "localExecBytes").mockReturnValue(2_000);
+    const posts = Array.from({ length: 40 }, (_, i) =>
+      post(i + 1, `post-${String(i + 1)}`),
+    );
+    await run(source, [ANN, ...posts].join("\n"));
+    await run(target, ANN);
+    const db = target.proxy.env.DB as D1Database;
+    const executed: number[] = [];
+    const recording = {
+      prepare: (sql: string) => db.prepare(sql),
+      exec: (script: string) => {
+        executed.push(new TextEncoder().encode(script).length);
+        return db.exec(script);
+      },
+    };
+    const reused = vi.mocked(migrationsDeps.getPlatformProxy);
+    const open = reused.getMockImplementation();
+    reused.mockImplementation(async (options) => {
+      if (open === undefined) throw new Error("no proxy to reuse");
+      const proxy = await open(options);
+      const persist = options.persist;
+      const intoTarget =
+        typeof persist === "object" &&
+        persist.path === join(target.dir, ".wrangler/state/v3");
+      if (!intoTarget) return proxy;
+      return { ...proxy, env: { ...proxy.env, DB: recording } };
     });
 
-    test("builds the site without importing a block view, which only a render needs", async () => {
-      const { source } = await twoProjects();
-      const imported: string[] = [];
-      const blocks = definePlugin("blocks", {
-        setup: (ctx) => {
-          ctx.registerBlock(
-            defineBlock({
-              name: "probe/chart",
-              view: () => {
-                imported.push("probe/chart");
-                return Promise.resolve({ default: () => null });
-              },
-            }),
-          );
-        },
-      });
-      const settling = settlingConfig(() => Promise.resolve());
-      const end = await sync.open({
-        ...openOptions(source.dir, "local", {}),
-        config: { ...settling, plugins: [...settling.plugins, blocks] },
-      });
+    await replace(source, target, [CONTENT]);
 
-      await end.settle({ scopes: ["content"], direction: "pull" });
-      await end.close();
+    expect(executed.length).toBeGreaterThan(1);
+    expect(executed.every((bytes) => bytes <= 2_000)).toBe(true);
+    expect((await entrySlugs(target)).length).toBe(40);
+  });
+});
 
-      expect(imported).toEqual([]);
+describe("cloudflare sync — a self-referencing table across exec calls", () => {
+  test("a row whose parent comes later in the dump lands after that parent, whatever call it falls in", async () => {
+    const { source, target } = await twoProjects();
+    vi.spyOn(syncDeps, "localExecBytes").mockReturnValue(2_000);
+    const posts = Array.from({ length: 40 }, (_, i) =>
+      post(i + 1, `post-${String(i + 1)}`),
+    );
+    await run(
+      source,
+      [ANN, ...posts, "UPDATE entries SET parent_id = 40 WHERE id = 1;"].join(
+        "\n",
+      ),
+    );
+    await run(target, ANN);
+
+    await replace(source, target, [CONTENT]);
+
+    expect(
+      await contractSite(target.proxy).execute(
+        "SELECT count(*) AS n, (SELECT parent_id FROM entries WHERE id = 1) AS parent FROM entries",
+      ),
+    ).toEqual([{ n: 40, parent: 40 }]);
+  });
+});
+
+describe("cloudflare sync — settling the local site", () => {
+  // A site whose one `sync.after` handler is `listener`, on `binding`.
+  function settlingConfig(
+    listener: (ctx: AppContext) => Promise<void>,
+    binding = "DB",
+  ): PlumixConfig {
+    const probe = definePlugin("probe", {
+      setup: (ctx) => {
+        ctx.events.on(syncEvents.after, (_event, appCtx) => listener(appCtx));
+      },
+    });
+    return {
+      ...app.config,
+      database: d1({ binding }),
+      plugins: [probe],
+    };
+  }
+
+  test("runs inside the site on the platform proxy's env alone, reaching the local D1", async () => {
+    const { source } = await twoProjects();
+    await run(source, [ANN, post(1, "hello")].join("\n"));
+    vi.stubEnv("PLUMIX_SYNC_PROBE", "from the shell");
+    const seen: unknown[] = [];
+    const config = settlingConfig(async (ctx) => {
+      const rows = await ctx.db.select().from(entries);
+      seen.push(rows.length, "PLUMIX_SYNC_PROBE" in ctx.env);
+    });
+    const end = await sync.open({
+      ...openOptions(source.dir, "local", {}),
+      config,
     });
 
-    test("stops with sync_site_unreachable when the site cannot reach its D1", async () => {
-      const { source } = await twoProjects();
-      const end = await sync.open({
-        ...openOptions(source.dir, "local", {}),
-        binding: "DB",
-        config: settlingConfig(() => Promise.resolve(), "MISSING"),
-      });
-
-      const settling = end.settle({ scopes: ["content"], direction: "pull" });
-
-      await expect(settling).rejects.toMatchObject({
-        code: "sync_site_unreachable",
-      });
-      await end.close();
+    const settled = await end.settle({
+      scopes: ["content"],
+      direction: "pull",
     });
-  },
-);
+    await end.close();
 
-describe("cloudflare sync — the import's report", { timeout: 30_000 }, () => {
+    expect([settled.failures, seen]).toEqual([[], [1, false]]);
+  });
+
+  test("builds the site without importing a block view, which only a render needs", async () => {
+    const { source } = await twoProjects();
+    const imported: string[] = [];
+    const blocks = definePlugin("blocks", {
+      setup: (ctx) => {
+        ctx.registerBlock(
+          defineBlock({
+            name: "probe/chart",
+            view: () => {
+              imported.push("probe/chart");
+              return Promise.resolve({ default: () => null });
+            },
+          }),
+        );
+      },
+    });
+    const settling = settlingConfig(() => Promise.resolve());
+    const end = await sync.open({
+      ...openOptions(source.dir, "local", {}),
+      config: { ...settling, plugins: [...settling.plugins, blocks] },
+    });
+
+    await end.settle({ scopes: ["content"], direction: "pull" });
+    await end.close();
+
+    expect(imported).toEqual([]);
+  });
+
+  test("stops with sync_site_unreachable when the site cannot reach its D1", async () => {
+    const { source } = await twoProjects();
+    const end = await sync.open({
+      ...openOptions(source.dir, "local", {}),
+      binding: "DB",
+      config: settlingConfig(() => Promise.resolve(), "MISSING"),
+    });
+
+    const settling = end.settle({ scopes: ["content"], direction: "pull" });
+
+    await expect(settling).rejects.toMatchObject({
+      code: "sync_site_unreachable",
+    });
+    await end.close();
+  });
+});
+
+describe("cloudflare sync — the import's report", () => {
   test("counts rows replaced, added and removed by primary key, and by the whole row in a table without one", async () => {
     const { source, target } = await twoProjects();
     const TAGS = "CREATE TABLE plugin_tags (entry_id integer, tag text);";
@@ -763,8 +804,7 @@ describe("cloudflare sync — the import's report", { timeout: 30_000 }, () => {
   });
 });
 
-// Each case starts two miniflare instances.
-describe("cloudflare sync — a plugin's scope", { timeout: 30_000 }, () => {
+describe("cloudflare sync — a plugin's scope", () => {
   const NOTES =
     "CREATE TABLE plugin_notes (id integer PRIMARY KEY, entry_id integer NOT NULL REFERENCES entries (id) ON DELETE CASCADE, body text)";
 
@@ -799,8 +839,7 @@ describe("cloudflare sync — a plugin's scope", { timeout: 30_000 }, () => {
   });
 });
 
-// Each case starts two miniflare instances.
-describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
+describe("cloudflare sync — the deployed end", () => {
   test("a pull exports each table through D1's export API, as `wrangler d1 export --remote` runs it", async () => {
     captureReport();
     const { project, deployed, calls } = await deployedEnds();
@@ -926,112 +965,105 @@ describe("cloudflare sync — the deployed end", { timeout: 30_000 }, () => {
   });
 });
 
-// Each case starts two miniflare instances.
-describe(
-  "cloudflare sync — the database a target names",
-  { timeout: 30_000 },
-  () => {
-    // The database the remote end reached, and the lines it announced.
-    async function reached(
-      wranglerConfig: object,
-      target: TargetOptionValues,
-    ): Promise<{ database: object | undefined; lines: string[] }> {
-      const lines = captureReport();
-      const project = await localState(wranglerWith(wranglerConfig));
-      const calls = reuseProxies([project], project);
-      const remote = await sync.open(
-        openOptions(project.dir, "remote", target),
-      );
-      await remote.close();
-      return { database: calls[0]?.config.d1_databases[0], lines };
-    }
+describe("cloudflare sync — the database a target names", () => {
+  // The database the remote end reached, and the lines it announced.
+  async function reached(
+    wranglerConfig: object,
+    target: TargetOptionValues,
+  ): Promise<{ database: object | undefined; lines: string[] }> {
+    const lines = captureReport();
+    const project = await localState(wranglerWith(wranglerConfig));
+    const calls = reuseProxies([project], project);
+    const remote = await sync.open(openOptions(project.dir, "remote", target));
+    await remote.close();
+    return { database: calls[0]?.config.d1_databases[0], lines };
+  }
 
-    test("--production reaches the top level's database and announces it", async () => {
-      expect(
-        await reached({ d1_databases: [PRODUCTION_D1] }, { production: true }),
-      ).toEqual({
-        database: { ...PRODUCTION_D1, remote: true },
-        lines: ["→ production (top level) · DB · site-prod"],
-      });
+  test("--production reaches the top level's database and announces it", async () => {
+    expect(
+      await reached({ d1_databases: [PRODUCTION_D1] }, { production: true }),
+    ).toEqual({
+      database: { ...PRODUCTION_D1, remote: true },
+      lines: ["→ production (top level) · DB · site-prod"],
     });
+  });
 
-    test("--env qa reaches env.qa's database", async () => {
-      const qa = {
-        binding: "DB",
-        database_name: "site-qa",
-        database_id: "qa-id",
-      };
+  test("--env qa reaches env.qa's database", async () => {
+    const qa = {
+      binding: "DB",
+      database_name: "site-qa",
+      database_id: "qa-id",
+    };
 
-      expect(
-        await reached(
-          {
-            d1_databases: [PRODUCTION_D1],
-            env: { qa: { d1_databases: [qa] } },
-          },
-          { env: "qa" },
-        ),
-      ).toEqual({
-        database: { ...qa, remote: true },
-        lines: ["→ qa (env.qa) · DB · site-qa"],
-      });
+    expect(
+      await reached(
+        {
+          d1_databases: [PRODUCTION_D1],
+          env: { qa: { d1_databases: [qa] } },
+        },
+        { env: "qa" },
+      ),
+    ).toEqual({
+      database: { ...qa, remote: true },
+      lines: ["→ qa (env.qa) · DB · site-qa"],
     });
+  });
 
-    test("--preview reaches the previews database, with the note that every Preview shares it", async () => {
-      const preview = {
-        binding: "DB",
-        database_name: "site-preview",
-        database_id: "preview-id",
-      };
+  test("--preview reaches the previews database, with the note that every Preview shares it", async () => {
+    const preview = {
+      binding: "DB",
+      database_name: "site-preview",
+      database_id: "preview-id",
+    };
 
-      expect(
-        await reached(
-          {
-            d1_databases: [PRODUCTION_D1],
-            previews: { d1_databases: [preview] },
-          },
-          { preview: true },
-        ),
-      ).toEqual({
-        database: { ...preview, remote: true },
-        lines: [
-          "→ preview (top-level previews) · DB · site-preview",
-          "  Every Worker Preview without a previews block of its own uses this database too.",
-        ],
-      });
+    expect(
+      await reached(
+        {
+          d1_databases: [PRODUCTION_D1],
+          previews: { d1_databases: [preview] },
+        },
+        { preview: true },
+      ),
+    ).toEqual({
+      database: { ...preview, remote: true },
+      lines: [
+        "→ preview (top-level previews) · DB · site-preview",
+        "  Every Worker Preview without a previews block of its own uses this database too.",
+      ],
     });
+  });
 
-    test("a deployed end with no target option fails before connecting", async () => {
-      captureReport();
-      const project = await localState(
-        wranglerWith({ d1_databases: [PRODUCTION_D1] }),
-      );
-      const calls = reuseProxies([project], project);
+  test("a deployed end with no target option fails before connecting", async () => {
+    captureReport();
+    const project = await localState(
+      wranglerWith({ d1_databases: [PRODUCTION_D1] }),
+    );
+    const calls = reuseProxies([project], project);
 
-      await expect(
-        sync.open(openOptions(project.dir, "remote", {})),
-      ).rejects.toMatchObject({ code: "sync_remote_target_missing" });
-      expect(calls).toEqual([]);
+    await expect(
+      sync.open(openOptions(project.dir, "remote", {})),
+    ).rejects.toMatchObject({ code: "sync_remote_target_missing" });
+    expect(calls).toEqual([]);
+  });
+
+  test("the local end is the database `plumix dev` uses, whatever the target options name", async () => {
+    captureReport();
+    const project = await localState(
+      wranglerWith({ d1_databases: [PRODUCTION_D1] }),
+    );
+    const calls = reuseProxies([project]);
+
+    const local = await sync.open(
+      openOptions(project.dir, "local", { production: true }),
+    );
+    await local.close();
+
+    expect(calls[0]?.options).toMatchObject({
+      persist: { path: join(project.dir, ".wrangler/state/v3") },
+      remoteBindings: false,
     });
-
-    test("the local end is the database `plumix dev` uses, whatever the target options name", async () => {
-      captureReport();
-      const project = await localState(
-        wranglerWith({ d1_databases: [PRODUCTION_D1] }),
-      );
-      const calls = reuseProxies([project]);
-
-      const local = await sync.open(
-        openOptions(project.dir, "local", { production: true }),
-      );
-      await local.close();
-
-      expect(calls[0]?.options).toMatchObject({
-        persist: { path: join(project.dir, ".wrangler/state/v3") },
-        remoteBindings: false,
-      });
-    });
-  },
-);
+  });
+});
 
 /** D1's cap on one SQL statement, which its import API holds a file's to. */
 const D1_STATEMENT_BYTES = 100_000;
