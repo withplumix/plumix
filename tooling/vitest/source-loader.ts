@@ -22,6 +22,12 @@ import {
 const WORKSPACE_MODULE = "plumix-workspace-source";
 
 /**
+ * jiti tries each listed extension on a `./x.js` before its `.ts` sibling,
+ * about half of a config evaluation; workspace source imports only these.
+ */
+const JITI_EXTENSIONS = [".js", ".mjs", ".ts", ".tsx"];
+
+/**
  * A TS module names a sibling by its emitted `.js`; Node finds the `.ts` or
  * `.tsx` file beside it only through this.
  */
@@ -88,8 +94,8 @@ function linkedPaths(
 export function loadConfigsFromSource(): () => void {
   const dir = mkdtempSync(join(tmpdir(), "plumix-source-paths-"));
   const paths = plumixSourcePaths();
-  // Bun has no `registerHooks`, and already imports what jiti resolves
-  // natively.
+  // Bun has no `registerHooks`, and its runtime plugins cannot redirect a bare
+  // specifier, so jiti transpiles workspace source there.
   const bun = "Bun" in globalThis;
   writeFileSync(
     join(dir, "tsconfig.json"),
@@ -98,7 +104,8 @@ export function loadConfigsFromSource(): () => void {
     }),
   );
   const env: Record<string, string> = { JITI_TSCONFIG_PATHS: dir };
-  if (!bun) env.JITI_NATIVE_MODULES = JSON.stringify([WORKSPACE_MODULE]);
+  if (bun) env.JITI_EXTENSIONS = JSON.stringify(JITI_EXTENSIONS);
+  else env.JITI_NATIVE_MODULES = JSON.stringify([WORKSPACE_MODULE]);
   const previous = Object.fromEntries(
     Object.keys(env).map((key) => [key, process.env[key]]),
   );
