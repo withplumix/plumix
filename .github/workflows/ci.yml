@@ -54,8 +54,31 @@ jobs:
       - name: Block >= 1.0.0 while in 0.x
         run: pnpm check-no-major
 
+  # Builds the workspace once into the turbo remote cache, so each job that `needs: build`
+  # restores this commit's `dist/` instead of every job rebuilding it cold at the same time.
+  # Turbo keys each artifact on the hash of its inputs, so a job never reads another commit's
+  # build: a miss rebuilds. A fork has no token and so no cache to warm, so the steps skip.
+  # The dependents run under `!cancelled()`: when this job fails, each one rebuilds and fails on
+  # its own, rather than being skipped, which a required check would count as a pass.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - if: env.TURBO_TOKEN != ''
+        uses: ./.github/actions/setup
+        with:
+          turbo-cache: "false"
+      - if: env.TURBO_TOKEN != ''
+        run: pnpm build
+
   lint:
     name: Lint
+    needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -63,7 +86,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run: pnpm lint
+      # Not `pnpm lint`: turbo hashes args after `--` into every task, `^build` included, so its
+      # ESLint cache flags would miss the Build job's cache. A fresh runner has no ESLint cache.
+      - run: pnpm exec turbo run lint --continue
 
   format:
     name: Format
@@ -78,6 +103,8 @@ jobs:
 
   typecheck:
     name: Typecheck
+    needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -102,6 +129,8 @@ jobs:
 
   migrations:
     name: Migrations
+    needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -115,6 +144,8 @@ jobs:
 
   i18n:
     name: i18n
+    needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -155,6 +186,8 @@ jobs:
 
   smoke:
     name: Smoke (scaffold)
+    needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -227,6 +260,8 @@ jobs:
 
   publint:
     name: Publint
+    needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -239,6 +274,8 @@ jobs:
 
   attw:
     name: Are The Types Wrong
+    needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
