@@ -5,8 +5,11 @@ inputs:
   playwright:
     description: "Install Chromium and its system dependencies for Playwright"
     default: "false"
+  playwright-save:
+    description: "Save the Playwright browsers on main. One job per run sets it, so jobs don't race for the key"
+    default: "false"
   turbo-cache:
-    description: "Restore and save the local turbo cache"
+    description: "Restore the local turbo cache, and save it on main"
     default: "true"
   turbo-cache-key:
     description: "Tells apart the turbo caches of jobs that share an id, such as matrix shards"
@@ -15,10 +18,11 @@ inputs:
 runs:
   using: composite
   steps:
+    # CI also runs on main, so only the Release workflow saves the store, as before.
     - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
       with:
         cache: true
-        save-cache: ${{ github.ref == 'refs/heads/main' }}
+        save-cache: ${{ github.ref == 'refs/heads/main' && github.workflow == 'Release' }}
 
     - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       with:
@@ -30,19 +34,27 @@ runs:
       shell: bash
       run: echo "version=$(pnpm --filter @plumix/admin exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
-    - if: inputs.playwright == 'true'
-      id: playwright-cache
+    # Main saves the browsers; every other ref restores main's copy (or its base branch's).
+    - if: inputs.playwright == 'true' && github.ref == 'refs/heads/main' && inputs.playwright-save == 'true'
+      id: playwright-cache-save
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/ms-playwright
         key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
 
-    - if: inputs.playwright == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
+    - if: inputs.playwright == 'true' && !(github.ref == 'refs/heads/main' && inputs.playwright-save == 'true')
+      id: playwright-cache-restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
+
+    - if: inputs.playwright == 'true' && steps.playwright-cache-save.outputs.cache-hit != 'true' && steps.playwright-cache-restore.outputs.cache-hit != 'true'
       shell: bash
       run: pnpm --filter @plumix/admin exec playwright install --with-deps chromium
 
     # The system packages Chromium links against live outside the cached directory.
-    - if: inputs.playwright == 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
+    - if: inputs.playwright == 'true' && (steps.playwright-cache-save.outputs.cache-hit == 'true' || steps.playwright-cache-restore.outputs.cache-hit == 'true')
       shell: bash
       run: pnpm --filter @plumix/admin exec playwright install-deps chromium
 
@@ -50,9 +62,18 @@ runs:
       shell: bash
       run: echo "TURBO_CACHE_DIR=.turbo/cache" >> "$GITHUB_ENV"
 
-    - if: inputs.turbo-cache == 'true'
+    # Main saves one entry per job per commit from an empty directory, so an entry holds only that
+    # commit's outputs; ci.yml's `prune-turbo-cache` keeps the newest. Every other ref restores
+    # main's newest. The `/` ends the job id, so `turbo-test/` never matches `turbo-test-e2e-…`.
+    - if: inputs.turbo-cache == 'true' && github.ref == 'refs/heads/main'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .turbo/cache
-        key: turbo-${{ github.job }}${{ inputs.turbo-cache-key && format('-{0}', inputs.turbo-cache-key) || '' }}-${{ github.sha }}
-        restore-keys: turbo-${{ github.job }}${{ inputs.turbo-cache-key && format('-{0}', inputs.turbo-cache-key) || '' }}-
+        key: turbo-${{ github.job }}${{ inputs.turbo-cache-key && format('-{0}', inputs.turbo-cache-key) || '' }}/${{ github.sha }}
+
+    - if: inputs.turbo-cache == 'true' && github.ref != 'refs/heads/main'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .turbo/cache
+        key: turbo-${{ github.job }}${{ inputs.turbo-cache-key && format('-{0}', inputs.turbo-cache-key) || '' }}/${{ github.sha }}
+        restore-keys: turbo-${{ github.job }}${{ inputs.turbo-cache-key && format('-{0}', inputs.turbo-cache-key) || '' }}/

@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: ["*"]
   merge_group:
+  # Gates nothing: it saves the caches that pull requests and the merge queue restore.
+  push:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -164,6 +167,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           playwright: "true"
+          playwright-save: "true"
       - run: pnpm smoke:scaffold
 
       # Where the editor spec each all-plugins combo runs under `plumix dev` writes them.
@@ -286,6 +290,34 @@ jobs:
       - run: test "$SHARDS" = success
         env:
           SHARDS: ${{ needs.test-e2e-shard.result }}
+
+  # Each job on main saves a turbo entry under a new key; keep only the newest per job.
+  prune-turbo-cache:
+    name: Prune turbo cache
+    if: always() && github.event_name == 'push'
+    needs:
+      - lint
+      - format
+      - typecheck
+      - migrations
+      - i18n
+      - test
+      - smoke
+      - test-e2e-shard
+      - publint
+      - attw
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - run: |
+          gh cache list --ref refs/heads/main --key turbo- --limit 1000 --json id,key,createdAt \
+            --jq 'group_by(.key | split("/")[0])[] | sort_by(.createdAt) | .[:-1][] | .id' |
+            xargs -r -n1 gh cache delete
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
 
   publint:
     name: Publint
