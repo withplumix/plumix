@@ -156,10 +156,17 @@ jobs:
       - run: pnpm --dir .sandcastle run ship --status
       - run: pnpm --dir .sandcastle run ship --report
 
-  smoke:
-    name: Smoke (scaffold)
+  # Twelve combos took 3-4 min on one runner, run one after another. CPU bounds them, so each
+  # shard runs its combos in parallel on its own runner. `SMOKE_SHARD` takes every third combo, so
+  # a combo a new runtime or plugin adds runs somewhere.
+  smoke-shard:
+    name: Smoke (scaffold, ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -167,8 +174,11 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           playwright: "true"
-          playwright-save: "true"
+          playwright-save: ${{ matrix.shard == 1 }}
+          turbo-cache-key: ${{ matrix.shard }}
       - run: pnpm smoke:scaffold
+        env:
+          SMOKE_SHARD: ${{ matrix.shard }}/3
 
       # Where the editor spec each all-plugins combo runs under `plumix dev` writes them.
       # Explicit paths, not `**/…`: that globber follows symlinks through `node_modules/.pnpm`.
@@ -176,12 +186,24 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: smoke-playwright-reports
+          name: smoke-playwright-reports-${{ matrix.shard }}
           path: |
             packages/create-plumix-app/playwright-report/
             packages/create-plumix-app/test-results/
           if-no-files-found: warn
           retention-days: 5
+
+  # As `test-e2e` below: one result for the shards, failing on a failed, cancelled or skipped one.
+  smoke:
+    name: Smoke (scaffold)
+    needs: smoke-shard
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: test "$SHARDS" = success
+        env:
+          SHARDS: ${{ needs.smoke-shard.result }}
 
   # On a core change, one runner took 16 min (#3761): admin's suite waits on core's and seo's
   # (packages/admin/turbo.json), and core runs 298 specs on one worker. That chain is split with
@@ -302,7 +324,7 @@ jobs:
       - migrations
       - i18n
       - test
-      - smoke
+      - smoke-shard
       - test-e2e-shard
       - publint
       - attw
@@ -390,6 +412,7 @@ jobs:
       - i18n
       - test
       - sandcastle
+      - smoke-shard
       - smoke
       - test-e2e-shard
       - test-e2e

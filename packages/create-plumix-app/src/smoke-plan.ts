@@ -11,6 +11,8 @@ import { ScaffoldError } from "./errors.js";
  */
 export interface SmokeCombo {
   readonly name: string;
+  /** The runtime id, which serves one combo at a time. */
+  readonly runtime: string;
   /** `create-plumix-app` arguments, ahead of the flags every combo shares. */
   readonly args: readonly string[];
   readonly packageManager: PackageManager;
@@ -56,11 +58,13 @@ export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
       // `--plugins=` for none: a bare `-y` takes the recommended plugins.
       {
         name: `${id}-blank`,
+        runtime: id,
         args: ["-y", "--runtime", id, "--plugins="],
         packageManager,
       },
       {
         name: `${id}-all-plugins`,
+        runtime: id,
         args: ["-y", "--runtime", id, "-p", selected.join(",")],
         packageManager,
         secondLocale: true,
@@ -71,6 +75,7 @@ export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
       // generated project that typechecks and builds proves it still fits.
       {
         name: `${id}-all-auth`,
+        runtime: id,
         args: [
           "-y",
           "--runtime",
@@ -86,6 +91,7 @@ export function planSmokeCombos(registry: Registry): readonly SmokeCombo[] {
       // the islands `plumix/vite` scans all meet the native compiler.
       {
         name: `${id}-typescript-7`,
+        runtime: id,
         args: ["-y", "--runtime", id, "-p", selected.join(",")],
         packageManager,
         typescript7: true,

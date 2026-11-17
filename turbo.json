@@ -248,6 +248,7 @@
     "smoke:scaffold": {
       // Asks whether this commit breaks a generated project; a replay can't answer that.
       "dependsOn": ["build", "^build"],
+      "passThroughEnv": ["SMOKE_SHARD"],
       "cache": false
     },
     "test:e2e": {
