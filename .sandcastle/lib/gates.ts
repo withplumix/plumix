@@ -1,10 +1,23 @@
 import type * as sandcastle from "@ai-hero/sandcastle";
 
+import { runDeclaredVerification } from "./verify-admin.js";
+
+export interface GateRun {
+  readonly exitCode: number;
+  readonly output: string;
+  /** A folder in the worktree holding the run's evidence. */
+  readonly artifacts?: string;
+}
+
 export interface Gate {
   readonly name: string;
   readonly command: string;
   readonly appliesWhen?: (changedPaths: readonly string[]) => boolean;
   readonly requires?: string;
+  /** Runs in place of `command`, for a gate whose commands the branch declares. */
+  readonly run?: (sandbox: Executor) => Promise<GateRun>;
+  /** No CI check reruns it, so a failure the fixer declines blocks instead of being left to CI. */
+  readonly notInCi?: true;
 }
 
 export interface GateFailure {
@@ -22,6 +35,7 @@ export interface GateResult {
   readonly exitCode?: number;
   readonly skippedBecause?: string;
   readonly output?: string;
+  readonly artifacts?: string;
 }
 
 const touches =
@@ -41,6 +55,20 @@ const RENDER_AND_ADMIN_PATHS = [
 
 const TURBO_GATE_FLAGS = "--filter=...[origin/main] --output-logs=errors-only";
 
+const CHROMIUM =
+  "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"";
+
+/** No CI check runs it, so no failing check maps to it; a repair reruns it with the rest of `GATES`. */
+const VERIFY_ADMIN: Gate = {
+  name: "verify-admin",
+  command:
+    "pnpm verify:admin, once for each command the <verify-admin> block declares",
+  appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
+  requires: CHROMIUM,
+  run: runDeclaredVerification,
+  notInCi: true,
+};
+
 export const GATES: readonly Gate[] = [
   { name: "check-no-major", command: "pnpm check-no-major" },
   {
@@ -58,6 +86,7 @@ export const GATES: readonly Gate[] = [
     name: "typecheck",
     command: `pnpm exec turbo run typecheck ${TURBO_GATE_FLAGS}`,
   },
+  VERIFY_ADMIN,
 ];
 
 /**
@@ -65,10 +94,20 @@ export const GATES: readonly Gate[] = [
  * the 27 gate minutes per ticket on 2026-10-23. The implementer runs the tests it
  * touched, and a repair runs whichever of these CI failed.
  */
-/** A resolved conflict changes how the code fits together, which typecheck catches; the rest passed on this diff minutes before. */
-export const GATES_AFTER_A_RESOLVED_REBASE: readonly Gate[] = GATES.filter(
-  ({ name }) => name === "typecheck",
-);
+const TYPECHECK = GATES.filter(({ name }) => name === "typecheck");
+
+/**
+ * A resolved conflict changes how the code fits together, which typecheck
+ * catches; the rest passed on this diff minutes before. Any move of the branch
+ * changes what the admin serves, so its evidence is retaken on the commit that ships.
+ */
+export const gatesAfterLanding = (
+  landed: "rebased" | "resolved" | "kept",
+  headMoved: boolean,
+): readonly Gate[] => {
+  if (landed === "resolved") return [...TYPECHECK, VERIFY_ADMIN];
+  return landed === "rebased" && headMoved ? [VERIFY_ADMIN] : [];
+};
 
 export const GATES_LEFT_TO_CI: readonly Gate[] = [
   {
@@ -83,8 +122,7 @@ export const GATES_LEFT_TO_CI: readonly Gate[] = [
     name: "e2e",
     command: `pnpm exec turbo run test:e2e ${TURBO_GATE_FLAGS}`,
     appliesWhen: touches(RENDER_AND_ADMIN_PATHS),
-    requires:
-      "pnpm --filter @plumix/admin exec node -e \"require('@playwright/test').chromium.launch().then((b) => b.close())\"",
+    requires: CHROMIUM,
   },
   {
     name: "attw",
@@ -138,6 +176,22 @@ const GATE_BEHIND_EACH_CI_CHECK: Readonly<Record<string, string>> = {
 export const gateBehindCheck = (checkName: string): Gate | undefined => {
   const gateName = GATE_BEHIND_EACH_CI_CHECK[checkName];
   return [...GATES, ...GATES_LEFT_TO_CI].find(({ name }) => name === gateName);
+};
+
+const reaped = (sandbox: Executor): Executor => ({
+  exec: (command) => sandbox.exec(underAnOrphanReaper(command)),
+});
+
+/** A plain command keeps its output only when it fails; a gate that runs its own commands always keeps it. */
+const runGate = async (
+  gate: Gate,
+  sandbox: Executor,
+): Promise<Partial<GateRun> & Pick<GateRun, "exitCode">> => {
+  if (gate.run) return gate.run(reaped(sandbox));
+  const { exitCode, stdout, stderr } = await reaped(sandbox).exec(gate.command);
+  return exitCode === 0
+    ? { exitCode }
+    : { exitCode, output: `${stdout}\n${stderr}` };
 };
 
 export interface GateRunOutcome {
@@ -195,9 +249,7 @@ export const runGates = async (
 
     const runOnce = async (): Promise<GateResult> => {
       const attemptStartedAtMs = Date.now();
-      const { exitCode, stdout, stderr } = await sandbox.exec(
-        underAnOrphanReaper(gate.command),
-      );
+      const { exitCode, output, artifacts } = await runGate(gate, sandbox);
       return {
         name: gate.name,
         command: gate.command,
@@ -205,9 +257,8 @@ export const runGates = async (
         durationMs: Date.now() - attemptStartedAtMs,
         outcome: exitCode === 0 ? "ok" : "fail",
         exitCode,
-        ...(exitCode !== 0 && {
-          output: `${stdout}\n${stderr}`.slice(-8000),
-        }),
+        ...(output !== undefined && { output: output.slice(-8000) }),
+        ...(artifacts !== undefined && { artifacts }),
       };
     };
 

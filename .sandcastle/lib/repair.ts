@@ -16,8 +16,8 @@ import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import {
   gateBehindCheck,
   GATES,
-  GATES_AFTER_A_RESOLVED_REBASE,
   GATES_LEFT_TO_CI,
+  gatesAfterLanding,
 } from "./gates.js";
 import {
   branchOfPullRequest,
@@ -45,10 +45,18 @@ import {
   gatesUntilGreen,
   IMPLEMENTER,
   readDeclinedTag,
+  retainIn,
   reviewBeforePublishing,
   reviewBranch,
   reviewedWithoutEdits,
 } from "./ticket.js";
+import {
+  declarationInPullRequest,
+  declareVerification,
+  publishedVerification,
+  verificationForReview,
+  withVerificationEvidence,
+} from "./verify-admin.js";
 
 export const SCREENSHOT_DIFF_STEP =
   "Assert the committed images are the ones the capture produces";
@@ -300,6 +308,15 @@ export const repairPullRequest = async (
   });
 
   try {
+    const copy = JSON.parse(
+      gh(["pr", "view", String(pullRequest.number), "--json", "title,body"]),
+    ) as PullRequestCopy;
+    const declare = (verification: string) =>
+      declareVerification(sandbox, verification);
+    const declared = declarationInPullRequest(copy.body);
+    if (declared) await declare(declared);
+    const retain = retainIn(sandbox.worktreePath, journal.dir);
+
     say(`\n--- repair #${pullRequest.number}: rebase onto main ---`);
     const headBefore = (await sandbox.exec("git rev-parse HEAD")).stdout.trim();
     const rebase = await sandbox.exec("git rebase origin/main");
@@ -352,6 +369,7 @@ export const repairPullRequest = async (
     const fixer = fixerFor(
       runAgentPhase,
       owner && existsSync(owner.path) ? owner.id : undefined,
+      declare,
     );
     const brief = asCiEvidenceBrief(ticket, pullRequest, {
       logs,
@@ -401,10 +419,12 @@ export const repairPullRequest = async (
         journal,
         fixer,
         "repair",
+        retain,
       );
       if (gates.blocked) return declined(gates.blocked);
     }
 
+    const gatedHead = (await sandbox.exec("git rev-parse HEAD")).stdout.trim();
     const onMain = await rebaseOntoLatestMain(
       sandbox,
       syncRepoToMain,
@@ -418,13 +438,21 @@ export const repairPullRequest = async (
           )
         ).unfinished,
     );
-    if (onMain === "resolved" && !refusal.conflicted) {
+    const afterLanding = refusal.conflicted
+      ? []
+      : gatesAfterLanding(
+          onMain,
+          (await sandbox.exec("git rev-parse HEAD")).stdout.trim() !==
+            gatedHead,
+        );
+    if (afterLanding.length > 0) {
       const regated = await gatesUntilGreen(
         sandbox,
-        GATES_AFTER_A_RESOLVED_REBASE,
+        afterLanding,
         journal,
         fixer,
-        "resolved",
+        onMain,
+        retain,
       );
       if (regated.blocked) return declined(regated.blocked);
     }
@@ -433,13 +461,15 @@ export const repairPullRequest = async (
         "  the latest main conflicts, so the branch is pushed as it was gated",
       );
     }
-    const copy = JSON.parse(
-      gh(["pr", "view", String(pullRequest.number), "--json", "title,body"]),
-    ) as PullRequestCopy;
+    const withEvidence = async (body: string) => {
+      const evidence = await publishedVerification(sandbox);
+      return evidence ? withVerificationEvidence(body, evidence) : body;
+    };
     const published = await reviewBeforePublishing(
       {
-        review: (pullRequestBody) =>
-          reviewHead(ticket.number, history, {
+        review: async (pullRequestBody) => {
+          const body = await withEvidence(pullRequestBody);
+          return reviewHead(ticket.number, history, {
             head: () => reviewableHead(sandbox),
             review: () =>
               reviewedWithoutEdits(sandbox, async () =>
@@ -448,18 +478,28 @@ export const repairPullRequest = async (
                   journal,
                   ticket,
                   "repair-publish",
-                  pullRequestBody,
+                  body,
                   await surveyMutants(sandbox),
+                  await verificationForReview(sandbox),
                 ),
               ),
-          }),
+          });
+        },
         fixer,
         decide: replanning(history, ticket.number, (reason) =>
           decideOnTheBranch(runAgentPhase, ticket, reason),
         ),
         regate: async () =>
-          (await gatesUntilGreen(sandbox, GATES, journal, fixer, "repair"))
-            .blocked,
+          (
+            await gatesUntilGreen(
+              sandbox,
+              GATES,
+              journal,
+              fixer,
+              "repair",
+              retain,
+            )
+          ).blocked,
       },
       copy,
     );
@@ -467,14 +507,9 @@ export const repairPullRequest = async (
       return declined(
         published.reason.replace(/^Final commit/, "Final repair"),
       );
-    if (published.pullRequestCopy.body !== copy.body)
-      gh([
-        "pr",
-        "edit",
-        String(pullRequest.number),
-        "--body",
-        published.pullRequestCopy.body,
-      ]);
+    const body = await withEvidence(published.pullRequestCopy.body);
+    if (body !== copy.body)
+      gh(["pr", "edit", String(pullRequest.number), "--body", body]);
     await pushBranch(branch, sandbox.worktreePath);
     resolveReviewThreads(
       (refusal.reviewThreads ?? []).map(({ id }) => id),

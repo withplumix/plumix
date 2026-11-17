@@ -49,6 +49,18 @@ as the ticket pins it, and put your disagreement in `notes`.
   `notes` for leaving it.
 
 {{MUTATION}}
+- **Admin verification.** Below is how the admin ran for each role the
+  implementer declared. Read each `report.json` and look at each screenshot. A
+  contradiction with an acceptance criterion is a spec gap: a role reaches a
+  page it must not, or is sent away from one it must reach; the behaviour a
+  criterion names is not shown; or the report holds a console error, a failed
+  request, an axe violation or a failed step. When the diff changes the admin
+  or a rendered page, a criterion about how it looks or behaves that no
+  declared run covers is a spec gap, and so is an opt-out whose reason does not
+  hold for this diff.
+
+{{VERIFICATION}}
+
 - **Standards findings:** each "no" on the checklist, even one the PR
   description admits, is a spec gap with the item's number in `checklist`; the
   implementer fixes it without changing what the code does. A spec finding has

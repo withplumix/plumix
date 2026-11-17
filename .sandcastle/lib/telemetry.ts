@@ -76,6 +76,8 @@ export interface PhaseRecord {
   readonly command?: string;
   readonly exitCode?: number;
   readonly logFile?: string;
+  /** Where a gate's evidence, such as verify:admin's reports and screenshots, was kept. */
+  readonly artifacts?: readonly string[];
   readonly sessionFiles?: readonly string[];
   readonly sessionId?: string;
   readonly sessionFile?: string;

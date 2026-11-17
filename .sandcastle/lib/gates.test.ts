@@ -4,8 +4,8 @@ import type { Gate, GateResult } from "./gates.js";
 import {
   gateBehindCheck,
   GATES,
-  GATES_AFTER_A_RESOLVED_REBASE,
   GATES_LEFT_TO_CI,
+  gatesAfterLanding,
   runGates,
   underAnOrphanReaper,
 } from "./gates.js";
@@ -23,11 +23,76 @@ const gate = (name: string): Gate => ({ name, command: name });
 const THREE_GATES = [gate("typecheck"), gate("lint"), gate("knip")];
 const ignoreResults = () => {};
 
-describe("GATES_AFTER_A_RESOLVED_REBASE", () => {
-  test("only typecheck runs after a resolved conflict, since the other gates passed on the same diff minutes before", () => {
-    expect(GATES_AFTER_A_RESOLVED_REBASE.map(({ name }) => name)).toEqual([
-      "typecheck",
+describe("gatesAfterLanding", () => {
+  test("a resolved conflict reruns typecheck and the admin verification, since the other gates passed on the same diff minutes before", () => {
+    expect(gatesAfterLanding("resolved", true).map(({ name }) => name)).toEqual(
+      ["typecheck", "verify-admin"],
+    );
+  });
+
+  test("a clean rebase that moved the branch reruns the admin verification, so its evidence covers the commit that ships", () => {
+    expect(gatesAfterLanding("rebased", true).map(({ name }) => name)).toEqual([
+      "verify-admin",
     ]);
+  });
+
+  test("a rebase onto the main the branch already had reruns nothing", () => {
+    expect(gatesAfterLanding("rebased", false)).toEqual([]);
+  });
+
+  test("a branch kept as it was gated reruns nothing", () => {
+    expect(gatesAfterLanding("kept", false)).toEqual([]);
+  });
+});
+
+describe("the verify-admin gate", () => {
+  const verifyAdmin = GATES.find(({ name }) => name === "verify-admin");
+
+  test("runs before the push, with the fast gates", () => {
+    expect(verifyAdmin).toBeDefined();
+  });
+
+  test.each([
+    "packages/admin/src/routes/users.tsx",
+    "packages/admin-ui/src/button.tsx",
+    "packages/core/src/route/admin.ts",
+    "apps/docs/src/page.tsx",
+  ])("applies to a diff that touches %s", (path) => {
+    expect(verifyAdmin?.appliesWhen?.(["README.md", path])).toBe(true);
+  });
+
+  test.each([
+    "packages/core/src/db/schema.ts",
+    "packages/runtime-node/src/index.ts",
+    ".sandcastle/lib/gates.ts",
+  ])("does not apply to a diff that only touches %s", (path) => {
+    expect(verifyAdmin?.appliesWhen?.([path])).toBe(false);
+  });
+
+  test("needs the Chromium the e2e gate needs", () => {
+    const e2e = GATES_LEFT_TO_CI.find(({ name }) => name === "e2e");
+
+    expect(verifyAdmin?.requires).toBe(e2e?.requires);
+  });
+
+  test("is behind no CI check yet, so a red CI check never sends a repair to it", () => {
+    const checks = [
+      "Commitlint",
+      "Changesets",
+      "Lint",
+      "Format",
+      "Typecheck",
+      "Knip",
+      "i18n",
+      "Test",
+      "Test (e2e)",
+      "Publint",
+      "Are The Types Wrong",
+    ];
+
+    expect(checks.map((check) => gateBehindCheck(check)?.name)).not.toContain(
+      "verify-admin",
+    );
   });
 });
 
@@ -62,6 +127,51 @@ describe("runGates", () => {
 
     expect(ran).toEqual(["typecheck", "lint"]);
     expect(failures.map(({ name }) => name)).toEqual(["lint"]);
+  });
+});
+
+describe("a gate that runs its own commands", () => {
+  const ownCommands = (seen: string[]): Gate => ({
+    name: "verify-admin",
+    command: "the declared commands",
+    run: async (sandbox) => {
+      await sandbox.exec("pnpm verify:admin --site core");
+      return { exitCode: 0, output: "1 run clean", artifacts: ".cache/x" };
+    },
+  });
+
+  test("runs them under the orphan reaper", async () => {
+    const seen: string[] = [];
+    await runGates(
+      {
+        exec: async (command) => {
+          seen.push(command);
+          return { exitCode: 0, stdout: "", stderr: "", durationMs: 0 };
+        },
+      },
+      [ownCommands(seen)],
+      { stopAtFirstFailure: true, onResult: ignoreResults },
+    );
+
+    expect(seen).toContain(
+      underAnOrphanReaper("pnpm verify:admin --site core"),
+    );
+  });
+
+  test("keeps its output and the folder its evidence is in, even when it passes", async () => {
+    const results: GateResult[] = [];
+    await runGates(sandboxWhereTheseCommandsFail([]), [ownCommands([])], {
+      stopAtFirstFailure: true,
+      onResult: (result) => results.push(result),
+    });
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        outcome: "ok",
+        output: "1 run clean",
+        artifacts: ".cache/x",
+      }),
+    ]);
   });
 });
 

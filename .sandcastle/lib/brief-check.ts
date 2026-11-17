@@ -35,6 +35,7 @@ const briefCheckSchema = z.object({
   questions: z.array(z.string()).optional(),
   waitingOn: z.array(z.number().int().positive()).optional(),
   protectedPaths: z.array(z.string()).optional(),
+  verification: z.array(z.string()).optional(),
 });
 
 type BriefCheck = z.infer<typeof briefCheckSchema>;
@@ -47,7 +48,7 @@ export const readBriefCheckTag = (stdout: string): BriefCheck | null => {
 };
 
 const EMIT_THE_BRIEF_CHECK =
-  "End with <brief-check> JSON: ok, falsePremises, acceptance, plan, evidence, questions, waitingOn. Each false premise is an object with claim, evidence and why, not a string. A ready handoff has nonempty acceptance, plan and evidence arrays.";
+  "End with <brief-check> JSON: ok, falsePremises, acceptance, plan, evidence, questions, waitingOn, and verification for an admin or render change. Each false premise is an object with claim, evidence and why, not a string. A ready handoff has nonempty acceptance, plan and evidence arrays.";
 
 type AfterBriefCheck =
   | { readonly next: "implement"; readonly brief?: string }

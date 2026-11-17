@@ -29,6 +29,7 @@ import {
   reviewBranch,
   reviewUntilClosed,
 } from "./ticket.js";
+import { parseVerification } from "./verify-admin.js";
 
 const TICKET = { number: 42, title: "a feed is its archive's own entry query" };
 
@@ -400,6 +401,7 @@ describe("reviewBranch", () => {
       2,
       "body",
       "",
+      "",
     );
 
     expect(phases).toEqual(["review#2", "review#2:ask-again1"]);
@@ -419,6 +421,7 @@ describe("reviewBranch", () => {
       round,
       "body",
       "",
+      "",
     );
     return scope;
   };
@@ -434,6 +437,7 @@ describe("reviewBranch", () => {
       TICKET,
       1,
       "body",
+      "",
       "",
     );
     const prompt = readFileSync(join(PROMPT_DIR, "review.md"), "utf8");
@@ -469,6 +473,7 @@ describe("reviewBranch", () => {
       1,
       "body",
       "# 1 surviving line in 1 package\n",
+      "",
     );
 
     expect(promptArgs[0]).toMatchObject({
@@ -498,6 +503,7 @@ describe("reviewBranch", () => {
       TICKET,
       1,
       "body",
+      "",
       "",
     );
 
@@ -922,5 +928,137 @@ describe("commitsTheBranchCarries", () => {
 
   test("a git that cannot answer counts as none, so the ticket parks instead of shipping nothing", async () => {
     expect(await commitsTheBranchCarries(sandboxWhereGitSays("", 128))).toBe(0);
+  });
+});
+
+describe("the admin verification in the loop", () => {
+  const ranWith = (stdout: string, commits = 0) =>
+    ({
+      stdout,
+      commits: Array.from({ length: commits }, () => ({ sha: "abc" })),
+      iterations: [{ sessionId: "s2" }],
+    }) as unknown as Awaited<ReturnType<RunAgentPhase>>;
+
+  test("the review prompt receives the verification's report and screenshot paths", async () => {
+    let verification = "";
+    await reviewBranch(
+      async (_phase, _agent, options) => {
+        verification = String(options.promptArgs?.VERIFICATION);
+        return ranWith(reviewBlock({ summary: "", specGaps: [], notes: [] }));
+      },
+      { record: () => {} },
+      TICKET,
+      "publish",
+      "body",
+      "",
+      "report: .cache/sandcastle/verify-admin/runs/1/report.json\nscreenshots: .cache/sandcastle/verify-admin/runs/1/desktop-light.png",
+    );
+
+    expect(verification).toContain(
+      ".cache/sandcastle/verify-admin/runs/1/report.json",
+    );
+    expect(verification).toContain(
+      ".cache/sandcastle/verify-admin/runs/1/desktop-light.png",
+    );
+  });
+
+  test("the implement prompt's example declaration is one the harness reads", () => {
+    const prompt = readFileSync(join(PROMPT_DIR, "implement.md"), "utf8");
+    const examples = [
+      ...prompt.matchAll(/^<verify-admin>$([\s\S]*?)^<\/verify-admin>$/gm),
+    ].map(([, block]) => parseVerification(block ?? "").kind);
+
+    expect(examples).toEqual(["commands", "none"]);
+  });
+
+  test("a fix that only declares the verification declines nothing and hands the declaration on", async () => {
+    const declared: string[] = [];
+    const fixer = fixerFor(
+      async () =>
+        ranWith(
+          "<verify-admin>\npnpm verify:admin --site core --as admin --open /users\n</verify-admin>",
+        ),
+      "s1",
+      async (block) => {
+        declared.push(block);
+      },
+    );
+
+    const result = await fixer.apply("fix#final.1", "declared no verification");
+
+    expect(result.declined).toBeNull();
+    expect(declared).toEqual([
+      "pnpm verify:admin --site core --as admin --open /users",
+    ]);
+  });
+
+  const failingVerification = {
+    exec: async (command: string) => ({
+      exitCode: command === underAnOrphanReaper("verify") ? 1 : 0,
+      stdout: "",
+      stderr: "editor reached /users/create",
+      durationMs: 0,
+    }),
+  };
+  const verifyAdmin = {
+    name: "verify-admin",
+    command: "verify",
+    notInCi: true as const,
+  };
+
+  test("a verification failure the fixer declines blocks the ticket, since no CI check would run it instead", async () => {
+    const outcome = await gatesUntilGreen(
+      failingVerification,
+      [verifyAdmin],
+      { record: () => {} },
+      {
+        apply: async () => ({
+          declined: { reason: "the guard is right", notThisBranch: false },
+          pullRequestCopy: null,
+        }),
+      },
+      "final",
+    );
+
+    expect(outcome.blocked).toMatch(/the guard is right/);
+    expect(outcome.waived).toEqual([]);
+  });
+
+  test("a gate's evidence is kept in the run directory, and the journal points at the copy", async () => {
+    const recorded: { phase: string; artifacts?: readonly string[] }[] = [];
+    await gatesUntilGreen(
+      {
+        exec: async () => ({
+          exitCode: 0,
+          stdout: "",
+          stderr: "",
+          durationMs: 0,
+        }),
+      },
+      [
+        {
+          name: "verify-admin",
+          command: "the declared commands",
+          run: async () => ({
+            exitCode: 0,
+            output: "1 run clean",
+            artifacts: ".cache/sandcastle/verify-admin",
+          }),
+        },
+      ],
+      { record: ({ phase, artifacts }) => recorded.push({ phase, artifacts }) },
+      { apply: async () => ({ declined: null, pullRequestCopy: null }) },
+      "final",
+      (folder, phase) => `/runs/r1/evidence/${phase}/${folder}`,
+    );
+
+    expect(recorded).toEqual([
+      {
+        phase: "gate:verify-admin#final.1",
+        artifacts: [
+          "/runs/r1/evidence/gate:verify-admin#final.1/.cache/sandcastle/verify-admin",
+        ],
+      },
+    ]);
   });
 });
