@@ -66,6 +66,32 @@ describe("planSmokeCombos", () => {
     });
   });
 
+  it("names the runtime each combo serves on", () => {
+    const registry: Registry = {
+      runtimes: [runtime("bun", { packageManager: "bun" }), runtime("node")],
+      plugins: [],
+    };
+
+    const runtimes = new Set(
+      planSmokeCombos(registry).map(
+        (combo) => `${combo.name}:${combo.runtime}`,
+      ),
+    );
+
+    expect(runtimes).toEqual(
+      new Set([
+        "bun-blank:bun",
+        "bun-all-plugins:bun",
+        "bun-all-auth:bun",
+        "bun-typescript-7:bun",
+        "node-blank:node",
+        "node-all-plugins:node",
+        "node-all-auth:node",
+        "node-typescript-7:node",
+      ]),
+    );
+  });
+
   it("leaves out a plugin whose capability the runtime lacks, and says so", () => {
     const registry: Registry = {
       runtimes: [

@@ -1,6 +1,8 @@
 // Scaffolds representative projects and proves they typecheck, pass their own
-// tests, build and serve: each built server is started, requested and stopped with SIGTERM
-// before the next combo.
+// tests, build and serve: each built server is started, requested and stopped with SIGTERM.
+// Combos run in parallel, one per CPU, and each prints its output when it ends. A runtime
+// serves one combo at a time: two `wrangler dev` starting together can both claim the
+// inspector port they found free.
 // A combo that scaffolds magic link first proves its unedited build fails for
 // want of a mailer, then adds one.
 // Each runtime's all-plugins project then runs `plumix dev` and drives the
@@ -28,7 +30,7 @@
 // Verdaccio and booting `plumix dev` on Cloudflare. It is slower and gates
 // releases. This is the fast per-commit canary.
 
-import { execFileSync, execSync, spawn, spawnSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   cpSync,
   createWriteStream,
@@ -40,7 +42,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { delimiter, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseJsonc } from "jsonc-parser";
@@ -68,12 +70,46 @@ const {
   withStubMailer,
 } = await import(join(REPO, "packages/create-plumix-app/dist/smoke-plan.js"));
 
-const run = (cmd, args, cwd) =>
-  execFileSync(cmd, args, { cwd, stdio: "inherit", encoding: "utf8" });
+/**
+ * Runs a command to completion, its output appended to `log` rather than the
+ * terminal, so parallel combos don't interleave. Resolves to the exit status
+ * and output; `run` below rejects on a non-zero status.
+ */
+function exec(log, cmd, args, { cwd, env, shell = false } = {}) {
+  return new Promise((done, fail) => {
+    const child = spawn(cmd, args, {
+      cwd,
+      env,
+      shell,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    const read = (chunk) => {
+      output += chunk;
+    };
+    child.stdout.setEncoding("utf8").on("data", read);
+    child.stderr.setEncoding("utf8").on("data", read);
+    child.once("error", fail);
+    child.once("close", (code, signal) => {
+      log.push(output);
+      done({ status: code ?? signal, output });
+    });
+  });
+}
+
+async function run(log, cmd, args, options) {
+  const result = await exec(log, cmd, args, options);
+  if (result.status !== 0) {
+    throw new Error(
+      `\`${[cmd, ...args].join(" ")}\` exited with ${result.status}.`,
+    );
+  }
+  return result.output;
+}
 
 const isPlumix = (name) => name === "plumix" || name.startsWith("@plumix/");
 
-function packPlumixPackages(destination) {
+async function packPlumixPackages(destination) {
   const listed = JSON.parse(
     execFileSync("pnpm", ["-r", "list", "--depth", "-1", "--json"], {
       cwd: REPO,
@@ -99,18 +135,35 @@ function packPlumixPackages(destination) {
     );
   }
 
-  const tarballs = new Map();
-  for (const { name, version, path } of packed) {
-    if (!existsSync(join(path, "dist"))) {
-      throw new Error(
-        `${name} has no dist/ — run \`pnpm smoke:scaffold\` from the root.`,
-      );
-    }
-    run("pnpm", ["pack", "--pack-destination", destination], path);
-    const file = `${name.replace("@", "").replace("/", "-")}-${version}.tgz`;
-    tarballs.set(name, join(destination, file));
+  const missing = packed.filter(({ path }) => !existsSync(join(path, "dist")));
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.map(({ name }) => name).join(", ")} has no dist/ — run \`pnpm smoke:scaffold\` from the root.`,
+    );
   }
-  return tarballs;
+  // Each pack lists its tarball's contents; printed only when one fails.
+  const log = [];
+  try {
+    await Promise.all(
+      packed.map(({ path }) =>
+        run(log, "pnpm", ["pack", "--pack-destination", destination], {
+          cwd: path,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error(log.join(""));
+    throw err;
+  }
+  return new Map(
+    packed.map(({ name, version }) => [
+      name,
+      join(
+        destination,
+        `${name.replace("@", "").replace("/", "-")}-${version}.tgz`,
+      ),
+    ]),
+  );
 }
 
 function redirectToTarballs(appDir, install) {
@@ -474,14 +527,14 @@ async function assertServes(base, child) {
  * Through the runtime's cli, so the installed runtime's `diagnose` reads
  * the scaffold's config.
  */
-function assertDoctorClean(appDir) {
+async function assertDoctorClean(appDir, log) {
   const bin = join(appDir, "node_modules", ".bin");
   const runtime = installedRuntime(appDir);
   const { doctor } = planBoot(runtime.name, runtime.e2e);
-  const output = execSync(`${doctor} 2>&1`, {
+  const output = await run(log, doctor, [], {
     cwd: appDir,
     env: { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` },
-    encoding: "utf8",
+    shell: true,
   });
   const failure = doctorFailure(output);
   if (failure !== undefined) throw new Error(`${failure}:\n${output}`);
@@ -492,12 +545,11 @@ function assertDoctorClean(appDir) {
  * ship one that drops every sign-in link. The rest of the combo then builds
  * with a mailer that sends nowhere.
  */
-function assertBuildNeedsMailer(appDir, packageManager) {
-  const build = spawnSync(packageManager, ["run", "build"], {
+async function assertBuildNeedsMailer(appDir, packageManager, log) {
+  const build = await exec(log, packageManager, ["run", "build"], {
     cwd: appDir,
-    encoding: "utf8",
   });
-  const output = `${build.stdout}${build.stderr}`;
+  const output = build.output;
   const failure =
     build.status === 0
       ? "plumix build without a mailer succeeded"
@@ -507,7 +559,7 @@ function assertBuildNeedsMailer(appDir, packageManager) {
   writeFileSync(config, withStubMailer(readFileSync(config, "utf8")));
 }
 
-async function boot(appDir, combo) {
+async function boot(appDir, combo, log) {
   const runtime = installedRuntime(appDir);
   const plan = planBoot(runtime.name, runtime.e2e);
   // The project's bins first, so `plumix`, `wrangler` and whatever they spawn
@@ -515,11 +567,11 @@ async function boot(appDir, combo) {
   const bin = join(appDir, "node_modules", ".bin");
   const env = { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` };
   for (const command of plan.migrate) {
-    execSync(command, { cwd: appDir, env, stdio: "inherit" });
+    await run(log, command, [], { cwd: appDir, env, shell: true });
   }
 
   const logFile = join(appDir, "server.log");
-  const log = createWriteStream(logFile);
+  const serverLog = createWriteStream(logFile);
   const child = spawn(plan.start, {
     cwd: appDir,
     env: { ...env, PORT: "0" },
@@ -527,12 +579,12 @@ async function boot(appDir, combo) {
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
-  child.stdout.setEncoding("utf8").pipe(log);
-  child.stderr.setEncoding("utf8").pipe(log);
+  child.stdout.setEncoding("utf8").pipe(serverLog);
+  child.stderr.setEncoding("utf8").pipe(serverLog);
   const port = boundPort(child);
-  // The temp dir goes with the combo, so surface the server's output now.
+  // The temp dir goes with the combo, so keep the server's output now.
   const printLogTail = () =>
-    console.error(readFileSync(logFile, "utf8").slice(-4000));
+    log.push(readFileSync(logFile, "utf8").slice(-4000));
   try {
     await assertServes(`http://127.0.0.1:${await port}`, child);
   } catch (err) {
@@ -553,14 +605,15 @@ async function boot(appDir, combo) {
  * the installed plugins, which a production build never exercises. The spec's
  * config's webServer migrates afresh and runs the runtime's dev command.
  */
-async function driveEditorUnderDev(appDir, combo) {
+async function driveEditorUnderDev(appDir, combo, log) {
   renderEntryContent(appDir);
   cpSync(DEV_EDITOR, join(appDir, "dev-editor"), { recursive: true });
   const bin = join(appDir, "node_modules", ".bin");
   const jsonReport = join(appDir, "dev-editor-report.json");
   const results = join(DEV_EDITOR_RESULTS, combo.name);
   try {
-    execFileSync(
+    await run(
+      log,
       "playwright",
       [
         "test",
@@ -577,10 +630,11 @@ async function driveEditorUnderDev(appDir, combo) {
       ],
       {
         cwd: appDir,
-        stdio: "inherit",
         env: {
           ...process.env,
           PATH: `${bin}${delimiter}${process.env.PATH}`,
+          // Its own port, as other combos' editors run alongside.
+          PLUMIX_E2E_PORT_OFFSET: String(combo.index),
           PLAYWRIGHT_HTML_OUTPUT_DIR: join(DEV_EDITOR_REPORT, combo.name),
           PLAYWRIGHT_HTML_OPEN: "never",
           PLAYWRIGHT_JSON_OUTPUT_FILE: jsonReport,
@@ -608,13 +662,24 @@ async function driveEditorUnderDev(appDir, combo) {
   }
 }
 
-async function smoke(combo, tarballs) {
+const serving = new Map();
+
+/** Runs `task` once every earlier task holding `key` has settled. */
+function serially(key, task) {
+  const turn = (serving.get(key) ?? Promise.resolve()).then(task);
+  serving.set(
+    key,
+    turn.catch(() => {}),
+  );
+  return turn;
+}
+
+async function smoke(combo, tarballs, log) {
   const dir = mkdtempSync(join(tmpdir(), `plumix-smoke-${combo.name}-`));
   const app = join(dir, "app");
   const pm = combo.packageManager;
   try {
-    console.log(`\n=== ${combo.name} (${pm}) ===`);
-    run("node", [
+    await run(log, "node", [
       CLI,
       app,
       ...combo.args,
@@ -629,33 +694,74 @@ async function smoke(combo, tarballs) {
     const install = planInstall(pm, tarballs);
     redirectToTarballs(app, install);
     const [installer, ...installArgs] = install.command;
-    run(installer, installArgs, app);
+    await run(log, installer, installArgs, { cwd: app });
     assertNothingFromRegistry(app, pm);
     if (combo.typescript7) assertTypeScript7(app);
-    if (combo.magicLink) assertBuildNeedsMailer(app, pm);
+    if (combo.magicLink) await assertBuildNeedsMailer(app, pm, log);
 
-    run(pm, ["run", "typecheck"], app);
-    run(pm, ["run", "test"], app);
-    run(pm, ["run", "build"], app);
+    await run(log, pm, ["run", "typecheck"], { cwd: app });
+    await run(log, pm, ["run", "test"], { cwd: app });
+    await run(log, pm, ["run", "build"], { cwd: app });
     if (combo.secondLocale) assertCatalogsStaged(app, combo.excluded);
-    assertDoctorClean(app);
-    await boot(app, combo);
-    if (combo.devEditor) await driveEditorUnderDev(app, combo);
-    console.log(`=== ${combo.name}: ok ===`);
+    await assertDoctorClean(app, log);
+    await serially(combo.runtime, async () => {
+      await boot(app, combo, log);
+      if (combo.devEditor) await driveEditorUnderDev(app, combo, log);
+    });
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 }
 
+/** Prints a combo's output in one block when it ends, and records a failure. */
+async function report(combo, tarballs, failures) {
+  const log = [];
+  const started = Date.now();
+  let outcome = "ok";
+  try {
+    await smoke(combo, tarballs, log);
+  } catch (err) {
+    outcome = "failed";
+    failures.push(combo.name);
+    log.push(`\n${err.stack ?? err}\n`);
+  }
+  const seconds = ((Date.now() - started) / 1000).toFixed(1);
+  console.log(
+    `\n=== ${combo.name} (${combo.packageManager}) ===\n${log.join("")}` +
+      `=== ${combo.name}: ${outcome} in ${seconds} s ===`,
+  );
+}
+
 const packs = mkdtempSync(join(tmpdir(), "plumix-smoke-packs-"));
 try {
-  const tarballs = packPlumixPackages(packs);
+  const tarballs = await packPlumixPackages(packs);
   // From the registry, so a new runtime or plugin joins the matrix on its own.
-  const combos = planSmokeCombos(await loadRegistry(REPO));
-  for (const combo of combos) await smoke(combo, tarballs);
-  console.log(
-    `\nSmoke check passed: ${combos.length} generated projects typecheck, pass their tests, build, serve and stop.`,
+  // `SMOKE_SHARD=2/3` runs every third combo from the second, as CI splits
+  // them across runners; the index keeps each combo's port its own. An env
+  // var, not an argument: turbo hashes arguments into every build it runs.
+  const [part, parts] = (process.env.SMOKE_SHARD || "1/1")
+    .split("/")
+    .map(Number);
+  const combos = planSmokeCombos(await loadRegistry(REPO))
+    .map((combo, index) => ({ ...combo, index }))
+    .filter(({ index }) => index % parts === part - 1);
+  const queue = [...combos];
+  const failures = [];
+  await Promise.all(
+    Array.from({ length: availableParallelism() }, async () => {
+      for (let combo; (combo = queue.shift());) {
+        await report(combo, tarballs, failures);
+      }
+    }),
   );
+  if (failures.length > 0) {
+    console.error(`\nSmoke check failed: ${failures.join(", ")}.`);
+    process.exitCode = 1;
+  } else {
+    console.log(
+      `\nSmoke check passed: ${combos.length} generated projects typecheck, pass their tests, build, serve and stop.`,
+    );
+  }
 } finally {
   rmSync(packs, { recursive: true, force: true });
 }
