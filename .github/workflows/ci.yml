@@ -326,8 +326,7 @@ jobs:
       - test
       - smoke-shard
       - test-e2e-shard
-      - publint
-      - attw
+      - packages
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -341,8 +340,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
-  publint:
-    name: Publint
+  # The checks that read what a consumer installs. They share one build; each runs even when
+  # an earlier one failed, so one run reports every failure.
+  packages:
+    name: Package checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -351,18 +352,10 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm publint
-      - run: pnpm surface:check
-
-  attw:
-    name: Are The Types Wrong
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-      - run: pnpm attw
+      - if: ${{ !cancelled() }}
+        run: pnpm surface:check
+      - if: ${{ !cancelled() }}
+        run: pnpm attw
 
   spellcheck:
     name: Spellcheck
@@ -416,8 +409,7 @@ jobs:
       - smoke
       - test-e2e-shard
       - test-e2e
-      - publint
-      - attw
+      - packages
       - spellcheck
       - links
     if: always()

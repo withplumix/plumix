@@ -2,10 +2,10 @@ import { describe, expect, test } from "vitest";
 
 import type { Gate, GateResult } from "./gates.js";
 import {
-  gateBehindCheck,
   GATES,
   GATES_AFTER_A_RESOLVED_REBASE,
   GATES_LEFT_TO_CI,
+  gatesBehindCheck,
   runGates,
   underAnOrphanReaper,
 } from "./gates.js";
@@ -65,18 +65,20 @@ describe("runGates", () => {
   });
 });
 
-describe("gateBehindCheck", () => {
+describe("gatesBehindCheck", () => {
   test.each([
-    ["Commitlint", "commitlint"],
-    ["Are The Types Wrong", "attw"],
-    ["Changesets", "check-no-major"],
-  ])("CI's %s reproduces locally as the %s gate", (checkName, gateName) => {
-    expect(gateBehindCheck(checkName)?.name).toBe(gateName);
+    ["Commitlint", ["commitlint"]],
+    ["Changesets", ["check-no-major"]],
+    ["Package checks", ["publint", "attw"]],
+  ])("CI's %s reproduces locally as the %j gates", (checkName, gateNames) => {
+    expect(gatesBehindCheck(checkName).map(({ name }) => name)).toEqual(
+      gateNames,
+    );
   });
 
   test("a CI check the harness cannot reproduce is reported, not guessed at", () => {
-    expect(gateBehindCheck("Spellcheck")).toBeUndefined();
-    expect(gateBehindCheck("Smoke (scaffold)")).toBeUndefined();
+    expect(gatesBehindCheck("Spellcheck")).toEqual([]);
+    expect(gatesBehindCheck("Smoke (scaffold)")).toEqual([]);
   });
 });
 
