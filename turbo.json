@@ -411,6 +411,8 @@
     "FORCE_COLOR",
     "PLUMIX_VERBOSE",
     "PLUMIX_API_TOKEN",
-    "CLOUDFLARE_ENV"
+    "CLOUDFLARE_ENV",
+    // Where CI's Playwright image keeps its browsers.
+    "PLAYWRIGHT_BROWSERS_PATH"
   ]
 }

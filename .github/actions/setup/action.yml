@@ -18,15 +18,29 @@ inputs:
 runs:
   using: composite
   steps:
+    # A job container mounts the checkout apart from HOME, where pnpm keeps its store, and pnpm
+    # warns that it cannot hard-link across them. Its store sits beside the checkout instead.
+    - if: job.container.id != ''
+      shell: bash
+      run: echo "pnpm_config_store_dir=$(dirname "$GITHUB_WORKSPACE")/.pnpm-store" >> "$GITHUB_ENV"
+
     # CI also runs on main, so only the Release workflow saves the store, as before.
     - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
       with:
         cache: true
         save-cache: ${{ github.ref == 'refs/heads/main' && github.workflow == 'Release' }}
 
-    - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+    - if: job.container.id == ''
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       with:
         bun-version-file: ".bun-version"
+
+    # setup-bun unpacks a zip, and the Playwright image has no `unzip`. npm ships Bun as a tarball.
+    - if: job.container.id != ''
+      shell: bash
+      run: |
+        npm install --prefix "$RUNNER_TEMP/bun" --no-save --no-audit --no-fund "bun@$(cat .bun-version)"
+        echo "$RUNNER_TEMP/bun/node_modules/.bin" >> "$GITHUB_PATH"
 
     # The installed Playwright, not the lockfile: it is what names the browser build it downloads.
     - if: inputs.playwright == 'true'

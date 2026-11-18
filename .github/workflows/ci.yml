@@ -159,10 +159,23 @@ jobs:
   # Twelve combos took 3-4 min on one runner, run one after another. CPU bounds them, so each
   # shard runs its combos in parallel on its own runner. `SMOKE_SHARD` takes every third combo, so
   # a combo a new runtime or plugin adds runs somewhere.
+  #
+  # It runs in the Playwright image, which ships Chromium and the system packages it links against:
+  # installing those with apt took 20 s on a good run and 6.5 min on a bad one. `--user 1001` is the
+  # runner's own user, so the steps can write the checkout GitHub mounts in. `--init` reaps the
+  # processes the suites orphan, and `--ipc=host` spares Chromium Docker's 64 MB /dev/shm, as
+  # Playwright's Docker guide and packages/admin/screenshots/capture-browser.ts both do.
   smoke-shard:
     name: Smoke (scaffold, ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
+      options: --user 1001 --init --ipc=host
+    # A container's default shell is `sh`.
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -173,9 +186,8 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
-          playwright: "true"
-          playwright-save: ${{ matrix.shard == 1 }}
           turbo-cache-key: ${{ matrix.shard }}
+      - run: node .github/scripts/check-playwright-image.mjs
       - run: pnpm smoke:scaffold
         env:
           SMOKE_SHARD: ${{ matrix.shard }}/3
@@ -211,10 +223,24 @@ jobs:
   # each shard caches on its own. The other suites split by package, at most four per runner as
   # the root script's `--concurrency=4` allows. `suites-c` takes every suite no other entry
   # names, so a new suite runs somewhere.
+  #
+  # Each shard runs in the Playwright image, as `smoke-shard` above says why. `suites-c` stays on
+  # the runner: its docs screenshots render in that image too, started with `docker run`, which a
+  # job container has no Docker for. An empty `container` runs the job on the runner. The
+  # container's network has ::1 but no IPv6 route, so `plumix dev` binds ::1 for `localhost` while
+  # Node's fetch tries 127.0.0.1 alone, and admin's verify-admin specs never see their playground
+  # come up. Without IPv6, `localhost` is 127.0.0.1 for both.
   test-e2e-shard:
     name: Test (e2e, ${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    container:
+      image: ${{ !matrix.screenshots && 'mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f' || '' }}
+      options: --user 1001 --init --ipc=host --sysctl net.ipv6.conf.all.disable_ipv6=1
+    # A container's default shell is `sh`.
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -257,8 +283,10 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
         with:
-          playwright: "true"
+          playwright: ${{ matrix.screenshots && 'true' || 'false' }}
+          playwright-save: ${{ matrix.screenshots == true }}
           turbo-cache-key: ${{ matrix.shard }}
+      - run: node .github/scripts/check-playwright-image.mjs
 
       # `--concurrency=4` as the root `test:e2e` script sets it; turbo.json says why.
       - run: |

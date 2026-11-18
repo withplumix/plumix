@@ -124,3 +124,12 @@ updates:
     open-pull-requests-limit: 5
     cooldown:
       default-days: 7
+
+  # The Playwright image the Smoke and e2e jobs run in (.github/playwright/Dockerfile says how).
+  - package-ecosystem: "docker"
+    directory: "/.github/playwright"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    cooldown:
+      default-days: 7
