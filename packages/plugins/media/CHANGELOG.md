@@ -1,5 +1,11 @@
 # @plumix/plugin-media
 
+## 0.12.1
+
+### Patch Changes
+
+- [#3719](https://github.com/withplumix/plumix/pull/3719) [`997dfa5`](https://github.com/withplumix/plumix/commit/997dfa5b661d7206cef99363832420b9431e8225) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes the media library's "Copied" and alt-text "Saved" notices vanishing early after a second click or save; each now stays up for its full time after the latest one.
+
 ## 0.12.0
 
 ### Minor Changes

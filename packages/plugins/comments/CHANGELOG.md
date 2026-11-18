@@ -1,5 +1,13 @@
 # @plumix/plugin-comments
 
+## 0.7.1
+
+### Patch Changes
+
+- [#3693](https://github.com/withplumix/plumix/pull/3693) [`2ee90fc`](https://github.com/withplumix/plumix/commit/2ee90fccd7b487395400983320da84be68d311fe) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a cached comments response staying stale after its entry is published, unpublished or edited: the response now carries its entry's cache tag, so a change to the entry purges it. Needs `plumix` 0.28.0 or later.
+
+- [#3701](https://github.com/withplumix/plumix/pull/3701) [`c78b3d4`](https://github.com/withplumix/plumix/commit/c78b3d4a089d4414d3ebea078d59bc61d8ddb3bb) Thanks [@nasyrov](https://github.com/nasyrov)! - Reads the signed-in commenter from `ctx.user` instead of calling the site's authenticator, now that core resolves a public plugin route's principal. A JavaScript submit still carries the author, and a plain form post still submits anonymously. A submit carrying only an API token, with no session cookie, now posts anonymously.
+
 ## 0.7.0
 
 ### Minor Changes

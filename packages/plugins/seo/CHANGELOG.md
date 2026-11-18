@@ -1,5 +1,15 @@
 # @plumix/plugin-seo
 
+## 0.6.0
+
+### Minor Changes
+
+- [#3703](https://github.com/withplumix/plumix/pull/3703) [`dc5e944`](https://github.com/withplumix/plumix/commit/dc5e9447404747cbffef4eeaf90255359658129d) Thanks [@nasyrov](https://github.com/nasyrov)! - Pages each entry type's sub-sitemap by id instead of by page number, so a late page costs what the first does and no sitemap request sorts the whole type or reads every entry's meta. Breaking: an entry type's sub-sitemaps move from `/sitemap-entries-<type>-<page>.xml` to `/sitemap-entries-<type>-<after>.xml`, named by the id each page starts after (the first is `-0.xml`), and a `seo.sitemap.urls` subscriber gets that id as `after` for an entry type's scope instead of `page` (the new `SitemapPage` type; narrow with `"after" in at`). Take the URLs from `/sitemap.xml`. Entries marked **Hide from search engines** are now kept in a `seo_noindexed_entries` table that `plumix migrate` creates and fills from the entries already marked. Sitemaps now stay at the edge for a day (`s-maxage=86400`) instead of an hour; a publish still retires them.
+
+### Patch Changes
+
+- [#3691](https://github.com/withplumix/plumix/pull/3691) [`85a62af`](https://github.com/withplumix/plumix/commit/85a62afc069ed9ca1c077405d379fe909414bc69) Thanks [@nasyrov](https://github.com/nasyrov)! - Fixes a contributed sitemap source's `ctx.cache.reads` tagging the sitemap under seo's namespace: seo now runs the source's `count`, `urls` and `lastmod` in the contributing plugin's frame, so that plugin's `ctx.cache.changed` retires the sub-sitemap and the index. Needs `plumix` 0.28 or later.
+
 ## 0.5.0
 
 ### Minor Changes
