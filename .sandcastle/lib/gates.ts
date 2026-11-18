@@ -121,23 +121,26 @@ const isAvailable = async (
   return exitCode === 0;
 };
 
-const GATE_BEHIND_EACH_CI_CHECK: Readonly<Record<string, string>> = {
-  Commitlint: "commitlint",
-  Changesets: "check-no-major",
-  Lint: "lint",
-  Format: "format",
-  Typecheck: "typecheck",
-  Knip: "knip",
-  i18n: "i18n",
-  Test: "test",
-  "Test (e2e)": "e2e",
-  Publint: "publint",
-  "Are The Types Wrong": "attw",
-};
+const GATES_BEHIND_EACH_CI_CHECK: Readonly<Record<string, readonly string[]>> =
+  {
+    Commitlint: ["commitlint"],
+    Changesets: ["check-no-major"],
+    Lint: ["lint"],
+    Format: ["format"],
+    Typecheck: ["typecheck"],
+    Knip: ["knip"],
+    i18n: ["i18n"],
+    Test: ["test"],
+    "Test (e2e)": ["e2e"],
+    // One job runs publint, surface:check and attw, so its check name cannot say which failed.
+    "Package checks": ["publint", "attw"],
+  };
 
-export const gateBehindCheck = (checkName: string): Gate | undefined => {
-  const gateName = GATE_BEHIND_EACH_CI_CHECK[checkName];
-  return [...GATES, ...GATES_LEFT_TO_CI].find(({ name }) => name === gateName);
+export const gatesBehindCheck = (checkName: string): readonly Gate[] => {
+  const gateNames = GATES_BEHIND_EACH_CI_CHECK[checkName] ?? [];
+  return [...GATES, ...GATES_LEFT_TO_CI].filter(({ name }) =>
+    gateNames.includes(name),
+  );
 };
 
 export interface GateRunOutcome {

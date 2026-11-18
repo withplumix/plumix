@@ -14,10 +14,10 @@ import { agentPhaseRunner } from "./agent.js";
 import { decideOnTheBranch } from "./decide.js";
 import { rebaseOntoLatestMain, resolveTheRebase } from "./freshen.js";
 import {
-  gateBehindCheck,
   GATES,
   GATES_AFTER_A_RESOLVED_REBASE,
   GATES_LEFT_TO_CI,
+  gatesBehindCheck,
 } from "./gates.js";
 import {
   branchOfPullRequest,
@@ -126,7 +126,7 @@ export const gatesARepairRuns = (
 ): readonly Gate[] => {
   if (refusal.conflicted) return [];
   const failedInCi = new Set(
-    refusal.failingChecks.map(({ name }) => gateBehindCheck(name)),
+    refusal.failingChecks.flatMap(({ name }) => gatesBehindCheck(name)),
   );
   return [
     INSTALL_GATE,

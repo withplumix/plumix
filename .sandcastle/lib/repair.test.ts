@@ -138,12 +138,14 @@ describe("gatesARepairRuns", () => {
 
   test("a check CI alone runs is run locally once CI has failed it, so the fix is proven before the push", () => {
     expect(
-      namesOf(refused({ failingChecks: [{ name: "Are The Types Wrong" }] })),
+      namesOf(refused({ failingChecks: [{ name: "Package checks" }] })),
     ).toContain("attw");
   });
 
-  test("a Publint repair skips the slow gates CI already passed, and leaves them to CI", () => {
-    const names = namesOf(refused({ failingChecks: [{ name: "Publint" }] }));
+  test("a Package checks repair skips the slow gates CI already passed, and leaves them to CI", () => {
+    const names = namesOf(
+      refused({ failingChecks: [{ name: "Package checks" }] }),
+    );
 
     expect(names).toEqual(
       expect.arrayContaining(["install", "publint", "format", "typecheck"]),
@@ -151,7 +153,6 @@ describe("gatesARepairRuns", () => {
     expect(names).not.toContain("lint");
     expect(names).not.toContain("test");
     expect(names).not.toContain("e2e");
-    expect(names).not.toContain("attw");
   });
 
   test("a slow gate CI failed is run locally, so the fix is proven before the push", () => {
