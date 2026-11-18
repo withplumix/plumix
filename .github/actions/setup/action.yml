@@ -3,7 +3,7 @@ description: "Common setup steps for CI"
 
 inputs:
   playwright:
-    description: "Install Chromium and its system dependencies for Playwright"
+    description: "Install Chromium for Playwright"
     default: "false"
   playwright-save:
     description: "Save the Playwright browsers on main. One job per run sets it, so jobs don't race for the key"
@@ -49,14 +49,11 @@ runs:
         path: ~/.cache/ms-playwright
         key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
 
+    # No system packages: ubuntu-latest ships the libraries headless Chromium links against.
+    # Every suite runs headless, so only the headless shell is installed.
     - if: inputs.playwright == 'true' && steps.playwright-cache-save.outputs.cache-hit != 'true' && steps.playwright-cache-restore.outputs.cache-hit != 'true'
       shell: bash
-      run: pnpm --filter @plumix/admin exec playwright install --with-deps chromium
-
-    # The system packages Chromium links against live outside the cached directory.
-    - if: inputs.playwright == 'true' && (steps.playwright-cache-save.outputs.cache-hit == 'true' || steps.playwright-cache-restore.outputs.cache-hit == 'true')
-      shell: bash
-      run: pnpm --filter @plumix/admin exec playwright install-deps chromium
+      run: pnpm --filter @plumix/admin exec playwright install --only-shell chromium
 
     - if: inputs.turbo-cache == 'true'
       shell: bash
