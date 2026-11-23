@@ -141,12 +141,12 @@ catalogs:
     react: ^19.3.1
     react-dom: ^19.3.1
   tailwind:
-    "@tailwindcss/node": ^4.3.3
-    "@tailwindcss/oxide": ^4.3.3
-    "@tailwindcss/postcss": ^4.3.3
+    "@tailwindcss/node": ^4.3.5
+    "@tailwindcss/oxide": ^4.3.5
+    "@tailwindcss/postcss": ^4.3.5
     "@tailwindcss/typography": ^0.5.20
-    "@tailwindcss/vite": ^4.3.3
-    tailwindcss: ^4.3.3
+    "@tailwindcss/vite": ^4.3.5
+    tailwindcss: ^4.3.5
   tanstack:
     "@tanstack/react-query": ^5.105.2
     "@tanstack/react-query-devtools": ^5.105.2
