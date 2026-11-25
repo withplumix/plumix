@@ -15,6 +15,8 @@ import type {
 } from "./core.js";
 import type { FieldPipelineMode } from "./field-pipeline.js";
 import { resolveCapability } from "../access/contract/capability.js";
+import { now } from "../clock.js";
+import { nextToken } from "../db/concurrency.js";
 import { and, eq } from "../db/index.js";
 import { entries } from "../db/schema/entries.js";
 import { entry } from "../events-and-filters/entry.js";
@@ -236,14 +238,21 @@ export async function settleEntryMeta(
   ctx: AppContext,
   entry: SettledEntry,
   stored: JsonObject | null | undefined,
-): Promise<SettledRow> {
+): Promise<SettledRow & { readonly updatedAt: Date }> {
   const settled = settleStoredMeta(
     metaScope(listEntryMetaFields(ctx.plugins, entry.type)),
     stored,
   );
+  const updatedAt = await writeSettledEntryMeta(
+    ctx,
+    entry,
+    stored,
+    settled.patch,
+  );
   return {
     ...settled,
-    written: await writeSettledEntryMeta(ctx, entry, stored, settled.patch),
+    written: updatedAt !== undefined,
+    updatedAt: updatedAt ?? entry.updatedAt,
   };
 }
 
@@ -256,29 +265,29 @@ interface SettledEntry {
 
 /**
  * Lands only while the row holds the token it was read with, so a write in
- * between wins, and pins it: a settle is not an edit.
+ * between wins.
  */
 export async function writeSettledEntryMeta(
   ctx: AppContext,
   entry: SettledEntry,
   stored: JsonObject | null | undefined,
   patch: MetaPatch,
-): Promise<boolean> {
-  if (isEmptyMetaPatch(patch)) return false;
+): Promise<Date | undefined> {
+  if (isEmptyMetaPatch(patch)) return undefined;
+  const updatedAt = nextToken(entry.updatedAt, now());
   const written = await ctx.db
     .update(entries)
     .set({
       meta: patchedMetaBag(stored, patch),
-      // Set, so `$onUpdate` doesn't move it.
-      updatedAt: entry.updatedAt,
+      updatedAt,
     })
     .where(
       and(eq(entries.id, entry.id), eq(entries.updatedAt, entry.updatedAt)),
     )
     .returning({ id: entries.id });
-  if (written.length === 0) return false;
+  if (written.length === 0) return undefined;
   await announceEntryMetaChange(ctx, entry, patch);
-  return true;
+  return updatedAt;
 }
 
 export async function loadEntryMeta(

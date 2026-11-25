@@ -32,6 +32,7 @@ export const publicTermSchema = v.object({
   id: v.number(),
   name: v.string(),
   slug: v.string(),
+  updatedAt: v.date(),
 });
 
 /**

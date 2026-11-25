@@ -171,7 +171,9 @@ const STORES: Readonly<Record<MetaStore, StoreWalk>> = {
       (row) => ({
         scope: row.type,
         settled: settleStoredMeta(scope(row.type), row.meta),
-        write: (patch) => writeSettledEntryMeta(walk.ctx, row, row.meta, patch),
+        write: async (patch) =>
+          (await writeSettledEntryMeta(walk.ctx, row, row.meta, patch)) !==
+          undefined,
       }),
     );
   },
@@ -197,7 +199,9 @@ const STORES: Readonly<Record<MetaStore, StoreWalk>> = {
       (row) => ({
         scope: row.taxonomy,
         settled: settleStoredMeta(scope(row.taxonomy), row.meta),
-        write: (patch) => writeSettledTermMeta(walk.ctx, row, row.meta, patch),
+        write: async (patch) =>
+          (await writeSettledTermMeta(walk.ctx, row, row.meta, patch)) !==
+          undefined,
       }),
     );
   },

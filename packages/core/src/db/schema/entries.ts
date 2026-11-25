@@ -4,7 +4,6 @@ import { index, sqliteTable, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-valibot";
 
 import type { JsonObject } from "../../json.js";
-import { now } from "../../clock.js";
 import { ENTRY_STATUSES } from "../../entries/contract/status.js";
 import { users } from "./users.js";
 
@@ -49,12 +48,7 @@ export const entries = sqliteTable(
     updatedAt: t
       .integer({ mode: "timestamp" })
       .notNull()
-      .default(sql`(unixepoch())`)
-      // The concurrency token: an update that doesn't set it still moves it,
-      // past its own value when two writes share a second.
-      .$onUpdate(
-        () => sql`max(${Math.floor(now().getTime() / 1000)}, updated_at + 1)`,
-      ),
+      .default(sql`(unixepoch())`),
   }),
   (table) => [
     uniqueIndex("entries_type_slug_idx").on(table.type, table.slug),

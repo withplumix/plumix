@@ -14,9 +14,10 @@ export const get = base
     try {
       // The editor's read heals the row; the public read paths never write.
       const row = await findReadableTerm(context, input);
-      const { bag } = await settleTermMeta(context, row, row.meta);
+      const { bag, updatedAt } = await settleTermMeta(context, row, row.meta);
       const term = {
         ...row,
+        updatedAt: updatedAt ?? row.updatedAt,
         meta: await resolveTermMeta(context, row.taxonomy, bag),
       };
       return termWire(await context.filters.apply(termRpc.get.output, term));

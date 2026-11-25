@@ -10,7 +10,7 @@ import type {
   MetaPatchTarget,
   SettledRow,
 } from "./core.js";
-import { and, eq } from "../db/index.js";
+import { and, eq, sql } from "../db/index.js";
 import { terms } from "../db/schema/terms.js";
 import { term } from "../events-and-filters/term.js";
 import { findTermMetaField, listTermMetaFields } from "../plugin/manifest.js";
@@ -125,14 +125,21 @@ export async function settleTermMeta(
   ctx: AppContext,
   term: SettledTerm,
   stored: JsonObject | null | undefined,
-): Promise<SettledRow> {
+): Promise<SettledRow & { readonly updatedAt: Date | undefined }> {
   const settled = settleStoredMeta(
     metaScope(listTermMetaFields(ctx.plugins, term.taxonomy)),
     stored,
   );
+  const updatedAt = await writeSettledTermMeta(
+    ctx,
+    term,
+    stored,
+    settled.patch,
+  );
   return {
     ...settled,
-    written: await writeSettledTermMeta(ctx, term, stored, settled.patch),
+    written: updatedAt !== undefined,
+    updatedAt,
   };
 }
 
@@ -152,20 +159,21 @@ export async function writeSettledTermMeta(
   term: SettledTerm,
   stored: JsonObject | null | undefined,
   patch: MetaPatch,
-): Promise<boolean> {
-  if (isEmptyMetaPatch(patch)) return false;
-  const written = await ctx.db
+): Promise<Date | undefined> {
+  if (isEmptyMetaPatch(patch)) return undefined;
+  const [written] = await ctx.db
     .update(terms)
     .set({
       meta: patchedMetaBag(stored, patch),
       // Set, so `$onUpdate` doesn't move it.
       version: term.version,
+      updatedAt: sql`max(unixepoch(), ${terms.updatedAt} + 1)`,
     })
     .where(and(eq(terms.id, term.id), eq(terms.version, term.version)))
-    .returning({ id: terms.id });
-  if (written.length === 0) return false;
+    .returning({ updatedAt: terms.updatedAt });
+  if (!written) return undefined;
   await announceTermMetaChange(ctx, term, patch);
-  return true;
+  return written.updatedAt;
 }
 
 /** Emit `term.metaChanged` once a write carrying `patch` has landed. */

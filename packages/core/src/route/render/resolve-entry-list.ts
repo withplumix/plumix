@@ -204,6 +204,7 @@ export async function resolveEntries(
         meta: terms.meta,
         parentId: terms.parentId,
         version: terms.version,
+        updatedAt: terms.updatedAt,
       })
       .from(entryTerm)
       .innerJoin(terms, eq(entryTerm.termId, terms.id))

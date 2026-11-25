@@ -410,7 +410,7 @@ describe("entry.get settles an unsettled row", () => {
   const settled = { title: "42", count: 7, flag: true };
   // `updatedAt` is stored to the second, so a fixture made and settled in one
   // second couldn't tell a bump from no change.
-  const lastEdited = new Date("2026-01-01T00:00:00.000Z");
+  const lastEdited = new Date("2100-01-01T00:00:00.000Z");
   const spec = {
     title: { type: "string" },
     count: { type: "number" },
@@ -448,14 +448,12 @@ describe("entry.get settles an unsettled row", () => {
     expect((await storedRow(h, row.id))?.meta).toMatchObject(settled);
   });
 
-  // Moving `updatedAt` would float an opened entry to the top of "recently
-  // updated" and hand the editor a stale lock token.
-  test("opening the entry leaves its last-edit time alone", async () => {
+  test("opening an unsettled entry returns the timestamp of the normalized row", async () => {
     const { h, row } = await seedUnsettled();
 
     const got = await h.client.entry.get({ id: row.id });
-    expect(got.updatedAt).toEqual(lastEdited);
-    expect((await storedRow(h, row.id))?.updatedAt).toEqual(lastEdited);
+    expect(got.updatedAt).toEqual(new Date("2100-01-01T00:00:01Z"));
+    expect((await storedRow(h, row.id))?.updatedAt).toEqual(got.updatedAt);
   });
 
   // The editor's own save: it sends back the `updatedAt` it opened the entry
@@ -528,8 +526,6 @@ describe("writeSettledMeta", () => {
   });
 });
 
-// An entry's settle claims the row it read by its token, pinned rather than
-// moved: a settle is not an edit.
 describe("writeSettledEntryMeta", () => {
   test("a write that landed after the read wins, whichever key it touched", async () => {
     const h = await createRpcHarness({
@@ -554,7 +550,7 @@ describe("writeSettledEntryMeta", () => {
         upserts: new Map([["count", 7]]),
         deletes: [],
       }),
-    ).resolves.toBe(false);
+    ).resolves.toBeUndefined();
     expect(
       (await h.db.query.entries.findFirst({ where: eq(entries.id, row.id) }))
         ?.meta,
@@ -577,6 +573,6 @@ describe("writeSettledEntryMeta", () => {
         upserts: new Map(),
         deletes: [],
       }),
-    ).resolves.toBe(false);
+    ).resolves.toBeUndefined();
   });
 });

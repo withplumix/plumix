@@ -70,6 +70,9 @@ describe("applyCoreTestSchema", () => {
       "entries_change_feed_delete",
       "entries_change_feed_insert",
       "entries_change_feed_update",
+      "entries_content_timestamp",
+      "terms_content_timestamp",
+      "terms_initial_timestamp",
     ]);
   });
 });

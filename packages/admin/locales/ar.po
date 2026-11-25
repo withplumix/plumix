@@ -4139,6 +4139,11 @@ msgid "userEdit.description.self"
 msgstr "حدّث اسمك الظاهر. الدور وحالة الحساب يديرهما المدراء."
 
 #. js-lingui-explicit-id
+#: src/routes/_authenticated/terms/$name/index.tsx
+msgid "terms.list.column.updated"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: src/routes/_authenticated/entries/$slug/index.tsx
 msgid "entries.list.column.updated"
 msgstr "آخر تحديث"

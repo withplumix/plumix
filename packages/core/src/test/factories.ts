@@ -25,6 +25,7 @@ import type { NewUser, User } from "../db/schema/users.js";
 import type { DefaultRole } from "../users/contract/roles.js";
 import { createApiToken } from "../auth/api-tokens.js";
 import { generateToken, hashToken } from "../auth/tokens.js";
+import { sql } from "../db/index.js";
 import { authTokens } from "../db/schema/auth_tokens.js";
 import { credentials } from "../db/schema/credentials.js";
 import { deviceCodes } from "../db/schema/device_codes.js";
@@ -175,7 +176,10 @@ export const termFactory = Factory.define<
 >(({ sequence, transientParams, onCreate, params }) => {
   onCreate(async (attrs) => {
     const db = requireDb(transientParams);
-    const [row] = await db.insert(terms).values(attrs).returning();
+    const [row] = await db
+      .insert(terms)
+      .values({ ...attrs, updatedAt: attrs.updatedAt ?? sql`unixepoch()` })
+      .returning();
     if (!row) throw new Error("termFactory: insert returned no row");
     return row;
   });

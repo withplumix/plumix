@@ -7,9 +7,11 @@ import { ListPagination } from "@/components/data-table/list-pagination.js";
 import { DebouncedSearchInput } from "@/components/form/search-input.js";
 import { buildTermTree, flattenTree } from "@/components/taxonomy/tree.js";
 import { hasCap } from "@/lib/caps.js";
+import { toDate } from "@/lib/dates.js";
 import { findTermTaxonomyByName } from "@/lib/manifest.js";
 import { orpc } from "@/lib/orpc.js";
 import { termTaxonomyLabel } from "@/lib/type-labels.js";
+import { useFormatters } from "@/lib/use-formatters.js";
 import { useLabel } from "@/lib/use-label.js";
 import { defineMessage } from "@lingui/core/macro";
 import { Trans } from "@lingui/react";
@@ -45,6 +47,10 @@ const M = {
   columnDescription: defineMessage({
     id: "terms.list.column.description",
     message: "Description",
+  }),
+  columnUpdated: defineMessage({
+    id: "terms.list.column.updated",
+    message: "Updated",
   }),
   // Search / load-error / loading chrome read the WP-style cascade
   // from `termTaxonomyLabel`, with the noun-less generic descriptors
@@ -154,6 +160,7 @@ function TaxonomyListRoute(): ReactNode {
   const search = Route.useSearch();
   const { user, taxonomy } = Route.useRouteContext();
   const renderLabel = useLabel();
+  const { formatDate } = useFormatters();
   const isHierarchical = taxonomy.isHierarchical === true;
   const pageSize = isHierarchical ? TREE_PAGE_SIZE : FLAT_PAGE_SIZE;
 
@@ -239,8 +246,24 @@ function TaxonomyListRoute(): ReactNode {
           );
         },
       },
+      {
+        id: "updatedAt",
+        meta: { align: "end" },
+        header: renderLabel(M.columnUpdated),
+        cell: ({ row }) => (
+          <span
+            className="text-muted-foreground text-sm"
+            data-testid={`taxonomy-list-updated-${String(row.original.term.id)}`}
+          >
+            {formatDate(toDate(row.original.term.updatedAt), {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </span>
+        ),
+      },
     ];
-  }, [taxonomy.name, renderLabel]);
+  }, [taxonomy.name, renderLabel, formatDate]);
 
   return (
     <div className="flex flex-col gap-6">

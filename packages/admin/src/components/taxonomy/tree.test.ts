@@ -20,6 +20,7 @@ function term(overrides: Partial<Term> & { id: number; name: string }): Term {
     parentId: null,
     meta: {},
     etag: "0",
+    updatedAt: new Date("2026-04-20T00:00:00Z"),
     ...overrides,
   };
 }

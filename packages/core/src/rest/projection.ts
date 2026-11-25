@@ -6,9 +6,14 @@ import type { PublicEntry, PublicTerm } from "./schemas.js";
 import { projectImageRoles } from "../images/role-images.js";
 
 export function projectTerm(
-  term: Pick<Term, "id" | "name" | "slug">,
+  term: Pick<Term, "id" | "name" | "slug" | "updatedAt">,
 ): PublicTerm {
-  return { id: term.id, name: term.name, slug: term.slug };
+  return {
+    id: term.id,
+    name: term.name,
+    slug: term.slug,
+    updatedAt: term.updatedAt,
+  };
 }
 
 /**

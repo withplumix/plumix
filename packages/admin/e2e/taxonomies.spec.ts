@@ -28,6 +28,7 @@ function term(
     parentId: null,
     meta: {},
     etag: "0",
+    updatedAt: new Date("2026-04-20T00:00:00Z"),
     ...overrides,
   };
 }
@@ -61,6 +62,9 @@ test.describe("/terms/$name (hierarchical)", () => {
     await page.goto("terms/category");
     await expect(page.getByTestId("taxonomy-list-heading")).toHaveText(
       "Categories",
+    );
+    await expect(page.getByTestId("taxonomy-list-updated-1")).toContainText(
+      "2026",
     );
 
     // Tree ordering: root (Fruit) → child (Apple) → grandchild (Granny).
