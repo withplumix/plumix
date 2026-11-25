@@ -704,6 +704,7 @@ test.describe("/entries/$slug (list) — taxonomy filters", () => {
       parentId: null,
       meta: {},
       version: 0,
+      updatedAt: T0,
       ...overrides,
     };
   }

@@ -74,22 +74,22 @@ updated_at` (`version` for terms); no rows means a conflict. The update can
   update, then writes the changed keys, in one batch where the driver has one
   (D1, libSQL). A first save inserts the marker, and a second first save loses.
   An unsaved group's `etag` is zero.
-- **Every write moves the token.** drizzle's `$onUpdate` stamps `updated_at` on
-  any update that does not set it, as `max(unixepoch(), updated_at + 1)` rather
-  than `unixepoch()`, so a write that skips the helpers still moves the token
-  even within the same second, and an open copy conflicts rather than
-  overwriting it. A write that sets `updated_at` itself, such as the revision
-  upsert's `onConflictDoUpdate`, which `$onUpdate` does not reach, uses the
-  same rule; so does any write to `terms.version` or a settings marker. Core's
-  meta settle pins `updated_at` on purpose, because a settle is not an edit.
+- **An entry or term's `updated_at` changes only when its content changes.**
+  A direct update that leaves the timestamp alone uses a SQLite trigger to
+  compare the stored columns, including metadata. Guarded saves check the
+  token and calculate the timestamp in the update, so `RETURNING` sees it.
+  An identical entry save keeps its token. Entry term assignments count as
+  part of an entry edit and use the same token for the claim. An explicit
+  token-only claim still advances the token. Users and settings keep their
+  existing token rules.
   Plugin bookkeeping (a view counter, a cache) lives in the plugin's own tables,
   never in a guarded row, so editors never meet a conflict nobody caused.
 - **A draft save checks the token when read.** It writes only its author's own
   autosave row, never the shared entry, so no one else's work can be lost; the
   live write that publishes it claims the token.
-- **System writes move the token without checking it.** Scheduled publishing,
+- **System writes move the token when they edit a row.** Scheduled publishing,
   bulk actions, trash and restore, import and sync are not made from a copy.
-  Restoring a revision is an edit, not a rewind: it sets a fresh token.
+  Restoring a revision that changes the entry sets a fresh token.
 - **Every write answers with the new `etag`,** so a client chains saves without
   refetching. A token is required, never optional, because the caller always
   has one: it came with the copy.
@@ -145,9 +145,8 @@ COLUMN` with a constant default avoids the rebuild, but it is a column every
   saved group already has carries the token.
 - **The check and the merge in SQL** (rejected). `json_set` and a multi-row
   `INSERT … SELECT` need hand-written SQL and casts, and a long settings patch
-  passes D1's 100-parameter cap. The `$onUpdate` fallback is the one exception:
-  a single `max(unixepoch(), updated_at + 1)` with no parameters, built from
-  the scalar functions D1 already runs in today's `$onUpdate`.
+  passes D1's 100-parameter cap. Timestamp calculations use SQLite's scalar
+  functions and compare only the fields the statement writes.
 - **A field per resource such as `expectedLiveUpdatedAt`** (rejected). It names
   an implementation detail as the contract, and every resource grows its own
   spelling.
@@ -165,6 +164,17 @@ COLUMN` with a constant default avoids the rebuild, but it is a column every
   validation error rather than silent data loss.
 
 ## Consequences
+
+- Terms keep `version` as their concurrency token. This preserves outstanding
+  `etag` values and lets the menu claim a term before writing its items, while
+  a version-only write keeps `updated_at` in place. Old terms start at the
+  migration time because their historical edit times are unavailable.
+- The term migration adds a `NOT NULL` integer with a constant SQL default so
+  SQLite can add it without dropping the table and cascading foreign keys on
+  D1. An insert trigger supplies `unixepoch()` for raw inserts that omit the
+  column. Core inserts set it in the statement so it is available in
+  `RETURNING`. With raw SQL, an updated value produced by an `AFTER` trigger
+  is visible on a subsequent read.
 
 - This supersedes the 2026-08-30 decision not to build presence. The edit lease
   is not the polled co-author badge #1561 rejected: it prevents lost work, and

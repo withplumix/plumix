@@ -18,6 +18,7 @@ import {
   applyTermPatch,
   assertTermsPatchValid,
   buildTermsPatchGuards,
+  loadEntryTerms,
 } from "../../../entries/terms.js";
 import { loadReadableParent } from "../../../entries/visibility.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
@@ -106,6 +107,7 @@ async function writeGuarded(
   ifMatch: Date,
   patch: Partial<NewEntry>,
   meta: JsonObject | undefined,
+  termsChanged: boolean,
   guards: GuardedWriteGuards,
 ): Promise<Entry> {
   let toWrite: Partial<NewEntry> = {};
@@ -120,7 +122,10 @@ async function writeGuarded(
 
   let row;
   try {
-    row = await entryRows(context.db).claimRow(existing.id, ifMatch, toWrite);
+    row = await entryRows(context.db).claimRow(existing.id, ifMatch, {
+      ...toWrite,
+      termsChanged,
+    });
   } catch (error) {
     if (isUniqueConstraintError(error)) guards.slugTaken();
     throw error;
@@ -352,7 +357,7 @@ export async function updateEntry(
   // fails fast, before any write happens.
   const {
     id: _id,
-    terms: termsPatch,
+    terms: requestedTerms,
     meta: metaInput,
     template: templateChoice,
     access: accessChoice,
@@ -383,12 +388,25 @@ export async function updateEntry(
   metaPatch = withTemplateChoice(metaPatch, templateChoice);
   metaPatch = withAccessChoice(metaPatch, accessChoice);
   metaPatch = withStoredMeta(metaPatch, storedMeta);
-  if (termsPatch !== undefined) {
+  let termsPatch: Record<string, readonly number[]> | undefined;
+  if (requestedTerms !== undefined) {
     await assertTermsPatchValid(
       context,
-      termsPatch,
+      requestedTerms,
       buildTermsPatchGuards(errors),
     );
+    const assigned = await loadEntryTerms(context, existing.id);
+    const changed = Object.entries(requestedTerms).filter(([taxonomy, ids]) => {
+      const current = Object.hasOwn(assigned, taxonomy)
+        ? (assigned[taxonomy] ?? [])
+        : [];
+      const next = [...new Set(ids)];
+      return (
+        next.length !== current.length ||
+        next.some((id, index) => id !== current[index])
+      );
+    });
+    if (changed.length > 0) termsPatch = Object.fromEntries(changed);
   }
 
   // Publishing or scheduling checks the whole bag, catching required fields a
@@ -444,6 +462,7 @@ export async function updateEntry(
     ifMatch,
     patch,
     metaChanged ? patchedMetaBag(existing.meta, metaPatch) : undefined,
+    termsPatch !== undefined,
     {
       slugTaken: () => {
         throw errors.CONFLICT({ data: { reason: "slug_taken" } });

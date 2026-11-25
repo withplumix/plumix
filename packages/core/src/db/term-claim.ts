@@ -1,7 +1,8 @@
 import type { Db } from "../context/app-context.js";
 import type { NewTerm, Term } from "./schema/terms.js";
 import { claimVersion, ConflictError } from "./concurrency.js";
-import { and, eq } from "./index.js";
+import { contentTimestamp } from "./content-timestamp.js";
+import { and, eq, getTableColumns, sql } from "./index.js";
 import { terms } from "./schema/terms.js";
 
 /**
@@ -31,7 +32,18 @@ export async function claimTerm(
   const guard = claimVersion(terms.version, ifMatch);
   const [row] = await db
     .update(terms)
-    .set({ ...changes, ...guard.set })
+    .set({
+      ...changes,
+      ...guard.set,
+      updatedAt:
+        changes.updatedAt ??
+        contentTimestamp(
+          terms.updatedAt,
+          getTableColumns(terms),
+          changes,
+          sql`max(unixepoch(), ${terms.updatedAt} + 1)`,
+        ),
+    })
     .where(and(eq(terms.id, id), guard.where))
     .returning();
   if (row) return row;

@@ -17,6 +17,12 @@ export const terms = sqliteTable(
     parentId: t.integer().references((): AnySQLiteColumn => terms.id, {
       onDelete: "set null",
     }),
+    // An insert trigger handles SQL callers that use the constant default.
+    // Adding an expression default in place would require rebuilding terms.
+    updatedAt: t
+      .integer({ mode: "timestamp" })
+      .notNull()
+      .default(sql`0`),
     // The concurrency token (ADR 0048): an update that doesn't set it still
     // moves it by one.
     version: t

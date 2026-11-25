@@ -273,7 +273,7 @@ describe("upsertAutosave", () => {
     expect(second.excerpt).toBe("summary");
   });
 
-  test("a second save moves the autosave's updatedAt past its value, even ahead of the clock", async () => {
+  test("an identical second save keeps the autosave's updatedAt", async () => {
     const db = await createTestDb();
     const { author, entry } = await seedLiveEntry(db);
     const patch = {
@@ -299,7 +299,7 @@ describe("upsertAutosave", () => {
       patch,
     });
 
-    expect(second.updatedAt).toEqual(new Date("2100-01-01T00:00:01Z"));
+    expect(second.updatedAt).toEqual(new Date("2100-01-01T00:00:00Z"));
   });
 
   test("two different authors editing the same entry get distinct rows (per-user isolation)", async () => {

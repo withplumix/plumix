@@ -1330,7 +1330,12 @@ describe("REST API — term resources", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body).toEqual({ id: term.id, name: "News", slug: "news" });
+    expect(body).toEqual({
+      id: term.id,
+      name: "News",
+      slug: "news",
+      updatedAt: term.updatedAt.toISOString(),
+    });
   });
 
   test("an anonymous term read leaves an unsettled value as stored", async () => {
@@ -1653,7 +1658,14 @@ describe("REST API — entry term embed", () => {
 
     const body = (await res.json()) as { terms: Record<string, unknown> };
     expect(body.terms).toEqual({
-      category: [{ id: term.id, name: "News", slug: "news" }],
+      category: [
+        {
+          id: term.id,
+          name: "News",
+          slug: "news",
+          updatedAt: term.updatedAt.toISOString(),
+        },
+      ],
     });
   });
 
@@ -1684,7 +1696,14 @@ describe("REST API — entry term embed", () => {
       data: { terms: Record<string, unknown> }[];
     };
     expect(body.data[0]?.terms).toEqual({
-      category: [{ id: cat.id, name: "News", slug: "news" }],
+      category: [
+        {
+          id: cat.id,
+          name: "News",
+          slug: "news",
+          updatedAt: cat.updatedAt.toISOString(),
+        },
+      ],
     });
   });
 });

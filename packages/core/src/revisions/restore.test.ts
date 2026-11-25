@@ -314,7 +314,10 @@ describe("entry.revisions.restore", () => {
     const { h, entryId, revisionId } = await seedEntryWithRevision();
     await h.db
       .update(entries)
-      .set({ updatedAt: new Date("2100-01-01T00:00:00Z") })
+      .set({
+        title: "Edited after the snapshot",
+        updatedAt: new Date("2100-01-01T00:00:00Z"),
+      })
       .where(eq(entries.id, entryId));
 
     const restored = await h.client.entry.revisions.restore({

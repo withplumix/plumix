@@ -271,9 +271,7 @@ describe("sweepUnsettledMeta", () => {
     ]);
   });
 
-  // A normalization, not an edit: nothing floats to the top of "recently
-  // updated" for having been settled.
-  test("settling leaves a row's last-edit time alone", async () => {
+  test("settling changed entry metadata advances the row's timestamp", async () => {
     const { harness, ctx, post } = await seeded();
 
     await sweepUnsettledMeta(ctx, { write: true });
@@ -281,7 +279,9 @@ describe("sweepUnsettledMeta", () => {
     const after = await harness.db.query.entries.findFirst({
       where: eq(entries.id, post.id),
     });
-    expect(after?.updatedAt).toEqual(post.updatedAt);
+    expect(after?.updatedAt.getTime()).toBeGreaterThan(
+      post.updatedAt.getTime(),
+    );
   });
 
   // An autosave is the author's edits, settled when publish promotes it; a

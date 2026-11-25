@@ -8,6 +8,21 @@ import { terms } from "./schema/terms.js";
 import { assertTermCopyCurrent, claimTerm } from "./term-claim.js";
 
 describe("claimTerm", () => {
+  test("a token-only claim advances the version and preserves the timestamp", async () => {
+    const db = await createTestDb();
+    const term = await factoriesFor(db).term.create({
+      version: 7,
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
+    });
+
+    const claimed = await claimTerm(db, term.id, 7, {});
+
+    expect(claimed).toMatchObject({
+      version: 8,
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
+    });
+  });
+
   test("a claim from a copy another write overtook writes nothing and names the current token", async () => {
     const db = await createTestDb();
     const read = await factoriesFor(db).term.create({ name: "Read" });

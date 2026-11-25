@@ -22,11 +22,11 @@ export const get = base
       // Only the editor's read heals the row, since a human is about to see and
       // overwrite it. Public read paths never write.
       const row = await findReadableEntry(context, filtered);
-      const { bag } = await settleEntryMeta(context, row, row.meta);
-      const live = await resolveEntryRead(context, row, bag);
+      const { bag, updatedAt } = await settleEntryMeta(context, row, row.meta);
+      const live = await resolveEntryRead(context, { ...row, updatedAt }, bag);
       // The live row's token, on a preview too: a draft save is checked
       // against live.
-      const etag = etagOf(row.updatedAt);
+      const etag = etagOf(updatedAt);
       if (!filtered.preview) {
         const output = await context.filters.apply(entryRpc.get.output, live);
         return { ...output, etag };

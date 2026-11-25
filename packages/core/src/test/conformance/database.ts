@@ -307,6 +307,9 @@ export const databaseContractCases: readonly Case[] = [
           { name: "entries_change_feed_delete" },
           { name: "entries_change_feed_insert" },
           { name: "entries_change_feed_update" },
+          { name: "entries_content_timestamp" },
+          { name: "terms_content_timestamp" },
+          { name: "terms_initial_timestamp" },
         ]);
 
         const factories = factoriesFor(db);

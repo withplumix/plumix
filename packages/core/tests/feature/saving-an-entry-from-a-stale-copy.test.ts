@@ -42,6 +42,26 @@ const posts = definePlugin("posts", {
 const site = await testSite({ plugins: [posts] });
 
 describe("saving an entry", () => {
+  test("an identical save returns the same timestamp and etag", async () => {
+    const author = await site.factory.author.create();
+    const own = await site.factory.draft.create({
+      authorId: author.id,
+      title: "Same title",
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
+    });
+
+    const updated = await site.actingAs(author).rpc.entry.update({
+      id: own.id,
+      title: "Same title",
+      ifMatch: "4102444800",
+    });
+
+    expect(updated).toMatchObject({
+      etag: "4102444800",
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
+    });
+  });
+
   test("from the current copy lands and answers with the next etag", async () => {
     const author = await site.factory.author.create();
     const own = await site.factory.draft.create({

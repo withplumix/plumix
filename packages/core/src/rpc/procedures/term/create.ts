@@ -3,7 +3,7 @@ import type { TermCreateInput } from "./schemas.js";
 import type { TermWritten } from "./writes-shared.js";
 import { spellTermCapability } from "../../../access/contract/capability.js";
 import { etagOf } from "../../../db/concurrency.js";
-import { and, eq, isUniqueConstraintError } from "../../../db/index.js";
+import { and, eq, isUniqueConstraintError, sql } from "../../../db/index.js";
 import { terms } from "../../../db/schema/terms.js";
 import { term } from "../../../events-and-filters/term.js";
 import { isEmptyMetaPatch, patchedMetaBag } from "../../../meta/core.js";
@@ -110,6 +110,7 @@ export async function createTerm(
         description: filtered.description ?? null,
         parentId: filtered.parentId ?? null,
         meta: patchedMetaBag(starting, metaPatch),
+        updatedAt: sql`unixepoch()`,
       })
       .returning();
   } catch (error) {

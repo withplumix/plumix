@@ -26,10 +26,26 @@ const categories = definePlugin("categories", {
 const site = await testSite({ plugins: [categories] });
 
 describe("updating a term", () => {
+  test("an identical save keeps the timestamp", async () => {
+    const row = await site.factory.category.create({
+      name: "Same name",
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
+    });
+
+    const updated = await site.actingAs("editor").rpc.term.update({
+      id: row.id,
+      name: "Same name",
+      ifMatch: etagOf(row.version),
+    });
+
+    expect(updated.updatedAt).toEqual(new Date("2100-01-01T00:00:00Z"));
+  });
+
   test("by an editor renames it", async () => {
     const row = await site.factory.category.create({
       name: "Old",
       slug: "old",
+      updatedAt: new Date("2100-01-01T00:00:00Z"),
     });
 
     const updated = await site.actingAs("editor").rpc.term.update({
@@ -39,6 +55,7 @@ describe("updating a term", () => {
     });
 
     expect(updated.name).toBe("New Name");
+    expect(updated.updatedAt).toEqual(new Date("2100-01-01T00:00:01Z"));
   });
 
   test("by a member is forbidden", async () => {

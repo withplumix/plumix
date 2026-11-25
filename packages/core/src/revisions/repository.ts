@@ -2,6 +2,7 @@ import {
   and,
   desc,
   eq,
+  getTableColumns,
   gte,
   inArray,
   like,
@@ -15,6 +16,7 @@ import type { ApiTokenRef, Db } from "../context/app-context.js";
 import type { Entry, EntryContent, NewEntry } from "../db/schema/entries.js";
 import type { JsonObject } from "../json.js";
 import { ACCESS_POLICY_META_KEY } from "../access/contract/meta-key.js";
+import { contentTimestamp } from "../db/content-timestamp.js";
 import { isUniqueConstraintError } from "../db/errors.js";
 import { entries } from "../db/schema/entries.js";
 import { NAMED_TEMPLATE_META_KEY } from "../route/contract/named-template.js";
@@ -221,6 +223,12 @@ export async function upsertAutosave(
     }),
   };
   const slug = buildAutosaveSlug({ entryId: entry.id, authorId });
+  const changes = {
+    title: patch.title,
+    content: patch.content,
+    excerpt: patch.excerpt,
+    meta,
+  };
   const [row] = await db
     .insert(entries)
     .values({
@@ -241,13 +249,13 @@ export async function upsertAutosave(
       // Identity (type, slug, authorId) is fixed by the deterministic slug;
       // only editable fields and the envelope change.
       set: {
-        title: patch.title,
-        content: patch.content,
-        excerpt: patch.excerpt,
-        meta,
-        // An upsert bypasses `$onUpdate`, so it moves the token itself, strictly
-        // past its own value.
-        updatedAt: sql`max(unixepoch(), ${entries.updatedAt} + 1)`,
+        ...changes,
+        updatedAt: contentTimestamp(
+          entries.updatedAt,
+          getTableColumns(entries),
+          changes,
+          sql`max(unixepoch(), ${entries.updatedAt} + 1)`,
+        ),
       },
     })
     .returning();
@@ -400,7 +408,15 @@ export async function setRevisionMessage(
   }
   const [row] = await db
     .update(entries)
-    .set({ meta: nextMeta })
+    .set({
+      meta: nextMeta,
+      updatedAt: contentTimestamp(
+        entries.updatedAt,
+        getTableColumns(entries),
+        { meta: nextMeta },
+        sql`max(unixepoch(), ${entries.updatedAt} + 1)`,
+      ),
+    })
     .where(eq(entries.id, input.revisionId))
     .returning();
   return row;

@@ -191,6 +191,7 @@ function sampleTerm(target: SampleTarget): ResolvedTerm {
     images: {},
     parentId: null,
     version: 0,
+    updatedAt: SAMPLE_DATE,
     url: `/${target.type}/${target.slug}`,
   };
 }
